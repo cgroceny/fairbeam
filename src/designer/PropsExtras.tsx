@@ -1,4 +1,4 @@
-// Properties for the two navigation-tree items that had none (UX audit 2.1.8): a parameter (its
+// Properties for the two navigation-tree items that had none: a parameter (its
 // expression, evaluated value, unit and description; the same commit rules as the Parameters dock)
 // and a run (its facts, verdict, headline numbers and parameters, with two shortcuts). The Inspector
 // in DesignPane.tsx chooses between these and the shape inspectors.
@@ -142,7 +142,7 @@ export function RunInspector(props: { file: string }) {
   );
 }
 
-/** An optimization record (UX audit 2.4.7): method, goals, bounds, iterations, the best value and point,
+/** An optimization record: method, goals, bounds, iterations, the best value and point,
  * with the same commands as its tree node's menu. */
 export function OptimizationInspector(props: { id: string }) {
   const job = () => jobs().find((j) => j.id === props.id);

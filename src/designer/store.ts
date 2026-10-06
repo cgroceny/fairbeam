@@ -481,7 +481,7 @@ export function designScale(): number {
 
 export type ShapeKind = DesignPrimitive["kind"];
 
-/** A new shape at the origin, sized from the design (CST puts new shapes at the working origin too). */
+/** A new shape at the origin, sized from the design. */
 export function newPrimitive(kind: ShapeKind): DesignPrimitive {
   const a = designScale();
   const h = a / 2;
@@ -552,7 +552,7 @@ export function addPrimitiveToPart(i: number, kind: ShapeKind) {
   selectAddedGeometry({ type: "primitive", i, j: draft.parts[i].primitives.length - 1 });
 }
 
-// ------------------------------------------------------------------ transforms (CST "transform with copies")
+// ------------------------------------------------------------------ transforms (with copies)
 
 export function addTransform(i: number, type: DesignTransform["type"]) {
   openTransform(type, { type: "part", i });
@@ -666,7 +666,7 @@ export function copyCount(part: DesignPart): number | null {
   return n;
 }
 
-/** An old start/stop cylinder along x, y or z in the CST form (axis, center, radius, range). */
+/** An old start/stop cylinder along x, y or z in the axis form (axis, center, radius, range). */
 export function toAxisCylinder(i: number, j: number): boolean {
   const pr = draft.parts[i]?.primitives[j];
   if (!pr || pr.kind !== "cylinder" || !("start" in pr)) return false;

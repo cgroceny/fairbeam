@@ -1,4 +1,4 @@
-"""The automatic timestep budget and 35 µm copper drawn as an extruded outline (lane CONV).
+"""The automatic timestep budget and 35 µm copper drawn as an extruded outline.
 
 The reported design: an FR-4 patch whose ground plane is a 35 µm *extruded polygon* (not a brick). Thin
 metal built as sheets only flattened bricks, so that ground kept its thickness: the mesh got 11.7 µm cells,
@@ -104,7 +104,7 @@ class ExtrudedOutlineSheets(unittest.TestCase):
         ground = next(s for s in sheets if parts[s["part"]]["name"] == "ground")
         self.assertEqual((ground["axis"], ground["side"], round(ground["at"], 6)), (2, "max", -1.6))   # on the substrate's bottom face
         self.assertAlmostEqual(ground["thickness"], 0.035)
-        # "volume" no longer keeps 35 µm: cells across it would make the timestep 50x smaller (lane MCONV)
+        # "volume" no longer keeps 35 µm: cells across it would make the timestep 50x smaller
         vol = {**d, "mesh": {**d["mesh"], "thin_metal": "volume"}}
         self.assertEqual(sorted(parts[s["part"]]["name"] for s in thin_sheets(parts, thin_metal_limit(vol, names))),
                          ["feed", "ground", "patch"])

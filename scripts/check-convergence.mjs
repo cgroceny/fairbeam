@@ -129,7 +129,7 @@ ok(dialog.includes("setDensity(d, c)"), "the dialog applies the converged densit
 const server = src("python/fairbeam/server.py");
 ok(server.includes('r"/api/convergence"') && server.includes('r"/api/convergence/(cv-[\\w-]+)"'), "server routes");
 
-// 2b. no resonance in the band (UX test C): a minimum at the band edge is not a resonance, so a study
+// 2b. no resonance in the band: a minimum at the band edge is not a resonance, so a study
 // of such runs is not comparable and must never report "converged" (python/fairbeam/convergence.py)
 {
   const edge = (density) => member(density, 1.0e9, -3, null, { metrics: { f_res: 1.0e9, s11_db: -3, dmax_dbi: null, no_resonance: true, zin_re: 20, zin_im: -40, cells: density ** 3, wall_time_s: 5 } });

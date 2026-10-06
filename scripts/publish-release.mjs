@@ -1,7 +1,6 @@
 #!/usr/bin/env node
 // Publishes installers to the public release repository (ismailakdag/fairbeam-releases) and merges
 // the updater manifest latest.json. Only release files are public. See docs/RELEASES.md.
-// Adapted from the fastannotate release script.
 //
 //   node scripts/publish-release.mjs --version 0.2.0 [--notes-file notes.md] [--summary "text"]
 //     [--asset windows-x86_64=<setup.exe>]        signed updater artifact (<file>.sig beside it)
@@ -48,8 +47,6 @@ function parseArguments(argv) {
     else if (name === "--latest=false") options.latest = false;
     else throw new Error(`Unknown argument ${name}`);
   }
-  // The old product's release feed must never receive a Fairbeam build (its apps would offer it as an update).
-  if (/antenlab-releases/i.test(options.repo)) throw new Error(`--repo ${options.repo} is the previous product's release channel; Fairbeam publishes to ismailakdag/fairbeam-releases`);
   if (!/^\d+\.\d+\.\d+(-[0-9A-Za-z.-]+)?$/.test(options.version ?? "")) throw new Error("--version must be semantic, e.g. 0.2.1");
   if (!options.assets.length && !options.files.length && !options.notesFile) throw new Error("Nothing to publish");
   return options;

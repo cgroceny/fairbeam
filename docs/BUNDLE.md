@@ -128,7 +128,7 @@ Physical CSXCAD properties with their primitives, in order of first appearance. 
 | `tan_d` | number \| null | Loss tangent requested by the model (`null` if the property was created directly through CSXCAD) |
 | `tan_d_freq` | number \| null | Frequency in Hz at which `kappa` reproduces `tan_d` exactly (`kappa = tan_d · 2π f · ε0 · eps_r`). Defaults to the band center |
 | `isotropic` | boolean | `false` if epsilon or kappa differ between axes |
-| `dispersion` | object? | **Proposed, optional (#271, awaiting the maintainer's schema decision).** A frequency-dependent dielectric (`Simulation.dispersive`, `fairbeam.dispersion`). The CSXCAD property is then a `LorentzMaterial`, exported with `type: "Material"` so that viewers and exporters treat it as a dielectric. `eps_r`, `mu_r` and `tan_d` are its values at `tan_d_freq`, the band center, and `kappa` is the conductivity that gives its whole loss there (`kappa = tan_d · 2π f · ε0 · eps_r`, as for a constant material), so that a consumer that takes the loss as a conductivity keeps the band-center loss; the static conductivity is `dispersion.kappa`. Absent for constant materials, so existing bundles are unchanged |
+| `dispersion` | object? | **Optional.** A frequency-dependent dielectric (`Simulation.dispersive`, `fairbeam.dispersion`). The CSXCAD property is then a `LorentzMaterial`, exported with `type: "Material"` so that viewers and exporters treat it as a dielectric. `eps_r`, `mu_r` and `tan_d` are its values at `tan_d_freq`, the band center, and `kappa` is the conductivity that gives its whole loss there (`kappa = tan_d · 2π f · ε0 · eps_r`, as for a constant material), so that a consumer that takes the loss as a conductivity keeps the band-center loss; the static conductivity is `dispersion.kappa`. Absent for constant materials, so existing bundles are unchanged |
 
 `material.dispersion` is the model as simulated, with frequencies in Hz and times in s, in openEMS'
 conventions (e^{+jωt}):
@@ -171,7 +171,7 @@ The remaining fields depend on `kind`:
 - **`transformed`**: an exact affine instance of a supported primitive. `primitive` contains that exact local shape, `matrix` is a row-major 4×4 homogeneous matrix mapping column vectors from local to world coordinates, and `bbox` is the world-space axis-aligned bound. It is a separate kind so older readers cannot mistake local coordinates for world geometry. Readers that do not support the wrapper should use `bbox` as an explicitly approximate fallback.
 - **`bbox`**: fallback for CSXCAD primitive types Fairbeam does not export exactly. `source_kind` holds the CSXCAD type name, and only `bbox` describes the shape. When the native type is understood but its exact local geometry is not, the bound is transformed into world coordinates and `transformed: true` is set.
 
-Added in round 5 (additive): `curve`, `wire` and `polyhedron`. Older readers treat the new kinds as
+Added later (additive): `curve`, `wire` and `polyhedron`. Older readers treat the new kinds as
 unknown and should fall back to `bbox`. The drawing shows polyhedra by their hull and feature edges
 and wires as polylines.
 
@@ -267,7 +267,7 @@ cells=1)` (opt-in, rectangular TE10 ports on a Cartesian mesh) moves only the E/
 `cells` mesh intervals in from both broad walls; the excitation, mode origin, port corners and
 measurement plane stay where they are, and the power factor above is computed for the inset
 probes (TE10 is uniform along b). Call it on every port of the S-matrix after the mesh is final.
-Without it the probes span the full guide, as before (issue #300).
+Without it the probes span the full guide, as before.
 
 ## lumped_elements
 
@@ -288,8 +288,7 @@ along `direction`. It is not a part (it is excluded from `parts`) and not a port
 
 The combined native series element has not passed its ideal-circuit check
 ([rf-rlc-workflows](benchmarks/rf-rlc-workflows/README.md)); a series LC built from a separate
-`lumped_inductor` and `lumped_capacitor` connected geometrically in series is the alternative
-(issue #300).
+`lumped_inductor` and `lumped_capacitor` connected geometrically in series is the alternative.
 
 ## Half space and mirror planes
 
@@ -406,7 +405,7 @@ each with its own reflection from the run in which it was driven.
 | `realized_gain_dbi` | number? | `10·log10(efficiency · Dmax · (1 − \|S11\|²))`. Present only if efficiency > 0 |
 | `mirror_planes` | number | Number of PEC/PMC boundaries used for the correction. See above |
 | `port` | number? | Port that was driven for this entry (bundles since multi-port support). Multi-port runs have one entry per excited port and pattern frequency, all at the same frequencies |
-| `cp` | object? | Circular polarisation, for models that set `sim.cp_outputs = True` (round 5). See below |
+| `cp` | object? | Circular polarisation, for models that set `sim.cp_outputs = True`. See below |
 
 **cp.** With the IEEE convention and openEMS' e^{jωt} phasors, the right- and left-hand circular
 components of the far field are E_R = (E_θ + jE_φ)/√2 and E_L = (E_θ − jE_φ)/√2 (for a wave along +z,
@@ -431,7 +430,7 @@ only measures how well the two numerical powers agree. A Python model says so wi
 a resistor voids it, with a warning) and then reports `rad_efficiency` 1, gain = directivity, while
 the measured ratio is within 5 % of 1, keeping it in `rad_efficiency_raw` and a note; beyond 5 %
 the measured value is reported with a warning. `prad_w` and `pacc_w` are never altered. The horn
-(#12) read Prad / Pacc 1.037 at cpw 20 and 1.08 at cpw 30. The NF2FF box was not the cause: an
+read Prad / Pacc 1.037 at cpw 20 and 1.08 at cpw 30. The NF2FF box was not the cause: an
 exact Poynting flux (raw E and H on the Yee lattice) through the feed guide, the five-face box and
 planes across the horn agree to 0.1-0.4 %, whereas the waveguide port's mode-matching probes read
 the guide power 4.3 % (cpw 20) and 8.6 % (cpw 30) low. The earlier "box +2.4 % / +5.8 % against the

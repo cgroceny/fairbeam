@@ -1,4 +1,4 @@
-// Compact Subtract (the UX testers' cases, 0.6.0): a box minus a box must not be partitioned into many bricks.
+// Compact Subtract: a box minus a box must not be partitioned into many bricks.
 // Sheets give one polygon where possible, prisms on a common axis extruded polygons, otherwise the brick stays
 // whole and the cutter becomes an exact vacuum cut-out. The result keeps a later Add or Subtract working, a sheet
 // can be cut by a thick brick, an operand with a round cut can be added, every refusal names the operation chosen

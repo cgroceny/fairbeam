@@ -128,7 +128,7 @@ class Http(unittest.TestCase):
 
     def test_no_response_can_be_framed(self):
         # a page on another localhost port is same-site: without these it could frame the app and
-        # overlay its buttons (clickjacking, #108). Pages, the SPA fallback, 404s and the API all say so.
+        # overlay its buttons (clickjacking). Pages, the SPA fallback, 404s and the API all say so.
         for path in ("/", "/editor/some/route", "/missing.js", "/api/health", "/api/no-such-route"):
             with self.subTest(path=path):
                 r, _ = self.get(path)

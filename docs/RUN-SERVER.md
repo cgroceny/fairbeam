@@ -100,8 +100,8 @@ their unused NF2FF E/H recording properties before solving. This avoids unnecess
 writes as well as the later transform. A requested far field, a directivity goal or an efficiency
 monitor keeps the recordings. Other field monitors, the mesh and stopping criteria are unchanged.
 Older CSXCAD bindings without property deletion retain the recording overhead and report that
-compatibility limitation. This common optimization also applies on Windows; no universal speed-up
-or new default thread count is implied.
+compatibility limitation. This applies on every platform; it does not change the default thread
+count or promise a fixed speed-up.
 
 ## Compare projects
 

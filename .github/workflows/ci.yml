@@ -1,4 +1,4 @@
-# Checks on every push to main and on pull requests:
+# Checks, started by hand (see `on:` below):
 #   web      type check, the legal and old-name guards, build, CST self-test and the export / drawing /
 #            bundle checks (Linux)
 #   windows  the official openEMS MSVC build + its Python wheels, the Python test suite and one
@@ -6,9 +6,7 @@
 #            groups, DLL lookup) against a real openEMS
 name: ci
 
-# Manual only for now: GitHub Actions minutes are not available on this account (private repo,
-# billing). Run it from the Actions tab (or `gh workflow run ci`) once minutes are available, and
-# switch back to push / pull_request triggers.
+# Run it from the Actions tab or with `gh workflow run ci`.
 on:
   workflow_dispatch:
 

@@ -29,16 +29,11 @@ const ALLOW = [
   { glob: "scripts/check-legacy-formats.mjs", reason: "proof that files of the old app still open" },
   { glob: "docs/MIGRATING-FROM-ANTENLAB.md", reason: "the migration page for users of the old app" },
   { glob: "**", line: /MIGRATING-FROM-ANTENLAB\.md|Migrating from antenlab/, reason: "links to the migration page" },
-  { glob: "docs/DESKTOP.md", line: /Coming from antenlab/, reason: "the heading of the section that links to the migration page" },
   { glob: "package.json", line: /check[:-]no-antenlab/, reason: "the name of this guard" },
-  { glob: "AGENTS.md", line: /check[:-]no-antenlab/, reason: "the name of this guard" },
   { glob: ".github/workflows/ci.yml", line: /check[:-]no-antenlab/, reason: "the name of this guard" },
   { glob: "scripts/check-legal.mjs", line: /check[:-]no-antenlab/, reason: "the name of this guard" },
-  { glob: "scripts/publish-release.mjs", line: /\/antenlab-releases\//, reason: "the refusal to publish to the old release channel" },
   { glob: "vercel.json", line: /"value": "antenlab\.akdag\.dev"/, reason: "the host the redirect to fairbeam.org matches (pages only; old apps keep pinging its /api)" },
   { glob: "scripts/check-telemetry-api.mjs", line: /antenlab\.akdag\.dev/, reason: "proof that pings and the redirect rule for the old host still work" },
-  { glob: "docs/DEPLOY.md", line: /antenlab\.akdag\.dev/, reason: "documents the old domain that is kept for installed old apps" },
-  { glob: "docs/TELEMETRY.md", line: /antenlab\.akdag\.dev/, reason: "says that installed old apps keep pinging the old host" },
 ].map((e) => ({ ...e, re: globToRegExp(e.glob), used: false }));
 
 /** The allowlist entries that cover `path`: whole-file ones and per-line ones. */

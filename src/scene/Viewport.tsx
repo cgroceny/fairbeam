@@ -271,7 +271,7 @@ export default function Viewport() {
     const gizmoCam = new THREE.OrthographicCamera(-1.6, 1.6, 1.6, -1.6, 0.1, 10);
     gizmoCam.up.set(0, 0, 1);
     const axisColors = ["#c8553d", "#4b9b4b", "#3f7fd1"];
-    // x, y, z for the global WCS; u, v, w along the local WCS' axes while one is active (CST)
+    // x, y, z for the global WCS; u, v, w along the local WCS' axes while one is active
     const gizmoAxes = new THREE.Group();
     gizmo.add(gizmoAxes);
     function buildGizmo() {
@@ -1453,7 +1453,7 @@ export default function Viewport() {
         <Show when={meshNote()}>{(n) => <span class="readout" role="note">{n()}</span>}</Show>
         <Show when={cursor()}>
           {(c) => {
-            // u, v, w of the local WCS while one is active (CST), else x, y, z
+            // u, v, w of the local WCS while one is active, else x, y, z
             const local = () => (!wcsIsGlobal() && appMode() === "design" ? worldToWcs([c().x, c().y, c().z]) : null);
             return (
               <span class="readout">

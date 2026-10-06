@@ -1,4 +1,4 @@
-// Where a newly added lumped port goes (UX audit 2.2.5): across the nearest gap between two metal
+// Where a newly added lumped port goes: across the nearest gap between two metal
 // parts (a probe between a patch and its ground plane) instead of floating at the origin. Pure (no
 // Solid, no DOM); store.ts addPort feeds it the metal parts' bounds.
 import type { Axis, Vec3 } from "./types";

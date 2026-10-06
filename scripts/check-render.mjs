@@ -1,5 +1,5 @@
 // The rendered view and Render image: material looks, options, port placement, camera framing, file names.
-// Pure data and geometry: no GL context is needed (the live scene is checked in a browser by the lane's UI tests).
+// Pure data and geometry: no GL context is needed (the live scene is checked in a browser by the UI tests).
 //
 //   node --experimental-strip-types scripts/check-render.mjs
 import assert from "node:assert/strict";

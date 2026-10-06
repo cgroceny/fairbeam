@@ -21,10 +21,9 @@ was established. Earlier R/parallel error passes must not be presented as full p
 validation. Historical measurements and thresholds are retained unchanged.
 
 This later run saved the actual native XML and loaded DLL paths/hashes inside solver
-process 57328, before `Run`, under the external evidence directory
-`E:/fairbeam-benchmarks/rlc-precision-A-20261002/live-experiment-20261002-213205`.
-The separate candidate binary remains outside the application preview. Further experiments
-must declare their stopping rule before solving and preserve this rejected baseline.
+process 57328, before `Run`, under an external evidence directory that is not distributed with
+the repository. The separate candidate binary is not part of the application. Further
+experiments must declare their stopping rule before solving and preserve this rejected baseline.
 
 The initial 41³-grid, 1 mm-unit fixture had 20.95–32.02% circuit errors. Reducing all
 physical dimensions tenfold with the same grid and a 60k cap stopped before the excitation
@@ -51,16 +50,16 @@ Caps does not change the recorded R/L/C or topology, though terminals can influe
 field coupling. The observed series discrepancy has no established cause; neither terminal
 parasitics nor a solver-precision defect has been proved. No native-engine changes were made.
 
-A subsequent [source-derived numerical replay](conditioning/README.md), prompted by an
-independent Claude Opus 5.5 review and checked separately, found float32 coefficient sensitivity.
+A subsequent [source-derived numerical replay](conditioning/README.md), checked separately,
+found float32 coefficient sensitivity.
 Its double-precision control passes below 0.34%, while the float32 replay differs by about 16%.
 It does **not** reproduce the measured failure within the frozen 3 Ω diagnostic criterion;
 this is a demonstrated vulnerability, not an established cause or a validated solver fix.
 The replay does not execute openEMS or change any of the native results above.
 
 `runtime.json` observes modules from a fresh process with the same interpreter/environment,
-after these runs. The Python extensions reside in the shared E:/opt/openEMS-gpu virtual
-environment; **loaded openEMS.dll and CSXCAD.dll are the requested optimized benchmark
+after these runs. The Python extensions reside in the openEMS GPU virtual environment used for
+the benchmark; **loaded openEMS.dll and CSXCAD.dll are the requested optimized benchmark
 runtime**, with hashes recorded. This is a post-run reproduction of loading, not a live
 module capture from the completed solvers.
 

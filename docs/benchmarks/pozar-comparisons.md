@@ -2,21 +2,19 @@
 
 This record supports the multiport and waveguide validation work. Example numbers
 identify the motivating applications; all model parameters, equations and numerical records below
-are our own. No textbook text, figures, tables, solution steps or PDF excerpts are reproduced.
-Raw solver outputs and generated bundles are local working files, not distributed artifacts.
+are our own. Raw solver outputs and generated bundles are not included in the repository.
 
 ## Accepted scope
 
 The WR-90 comparison associated with Example 3.9 establishes agreement and mesh stability of
 complex S21 over 8.2-11.8 GHz and of its phase at 10 GHz, within the tolerances below. It does not
-validate the full example: group velocity failed its separate convergence criterion. The ten
-original coarse campaign examples remain unvalidated. Other geometries, higher modes, losses,
-antenna quantities and measurements are outside this record's scope.
+validate the full example: group velocity failed its separate convergence criterion. Other
+examples are not validated by this record. Other geometries, higher modes, losses, antenna
+quantities and measurements are outside this record's scope.
 
 ## Fixed model and reference
 
-Source: `python/examples/waveguide_thru.py` at commit
-`1db0b2f2f0d337bdc5557a5a3b5bdb01c594beef`. No model changes or pending code PRs are needed.
+Source: `python/examples/waveguide_thru.py`.
 The guide has a = 22.86 mm, b = 10.16 mm, PEC side walls, vacuum filling and TE10 ports at both
 ends. Each port is driven separately; Fairbeam assembles the full S matrix with `B A^-1` and the
 frequency-dependent TE10 reference impedance. The axial boundaries use PML_8.

@@ -1,4 +1,4 @@
-# Benchmarks: the 14 examples on Windows and on the Mac
+# Benchmarks: the 14 examples on a Ryzen 9 7900X (Windows) and an Apple M5 Pro (macOS)
 
 The reference bundles in `public/projects/` were computed on an Apple M5 Pro: some models on the
 CPU engine with 4 threads, the others on the Metal GPU engine ([GPU.md](GPU.md)). This page adds a
@@ -13,7 +13,7 @@ Windows desktop and compares both the results and the solver times.
 | GPU | NVIDIA GeForce RTX 3060, 12 GB (used only by the CUDA runs below) |
 | OS | Windows 11 Pro 25H2, build 26200 |
 | openEMS | v0.37.0-rc3, official MSVC build (CPU engine "compressed SSE + multi-threading") |
-| Python | 3.13.15, repository venv (`docs/WINDOWS.md`), the project's 0.2.0 development build |
+| Python | 3.13.15, repository venv (`docs/WINDOWS.md`) |
 
 Normal desktop programs (browser, chat clients) were open; the idle load was 5 to 11 %.
 
@@ -36,10 +36,10 @@ The raw numbers are in [benchmarks/windows-7900x.json](benchmarks/windows-7900x.
 
 ## Results
 
-Solver times are the sum over all port runs. "Ref" is the committed Mac bundle: `cpu/4` is the
-CPU engine with 4 threads, `gpu` the Metal engine. Δ is Windows (4 threads) minus Mac.
+Solver times are the sum over all port runs. The M5 Pro columns are the committed bundles: `cpu/4`
+is the CPU engine with 4 threads, `gpu` the Metal engine. Δ is Windows (4 threads) minus M5 Pro.
 
-| Model | Cells | Timesteps Mac → Windows | Windows 4 threads | Windows 24 threads | Mac | Mac engine | Δ\|S11\| min | ΔDmax | Δ efficiency | max Δ\|Sij\| (above −30 dB) |
+| Model | Cells | Timesteps M5 Pro → Windows | Windows 4 threads | Windows 24 threads | M5 Pro | M5 Pro engine | Δ\|S11\| min | ΔDmax | Δ efficiency | max Δ\|Sij\| (above −30 dB) |
 |---|---:|---|---:|---:|---:|---|---:|---:|---:|---:|
 | Dipole | 194,940 | 10842 → 8505 | 49.2 s | 46.7 s | 16.1 s | cpu/4 | +4.40 dB | +0.004 dB | +0.001 | – |
 | Inset-fed patch | 173,932 | 9440 → 6966 | 45.7 s | 54.3 s | 12.1 s | cpu/4 | −0.34 dB | +0.001 dB | −0.007 | – |
@@ -71,22 +71,23 @@ it; the website counts cells between lines (patch antenna: 68 × 68 × 57 = 0.26
 ### What the comparison shows
 
 - **Same stopping timestep, same results.** Where both platforms stopped at the same timestep
-  (microstrip line, both patch arrays, Wilkinson divider), Windows' CPU engine and the Mac's Metal
-  GPU engine agree to within 0.1 dB in every S-parameter above −30 dB, and to within 0.004 dB in
-  Dmax.
-- **Different stopping timestep for the older Mac CPU bundles.** They were made before Fairbeam
+  (microstrip line, both patch arrays, Wilkinson divider), Windows' CPU engine and the M5 Pro's
+  Metal GPU engine agree to within 0.1 dB in every S-parameter above −30 dB, and to within
+  0.004 dB in Dmax.
+- **Different stopping timestep for the older M5 Pro CPU bundles.** They were made before Fairbeam
   checked the end criterion on a fixed timestep schedule (`exact_endcriteria`); openEMS then
   checked it every ~4 s of wall time, so the run stopped wherever the next check fell. The dipole,
   for example, ran 10842 timesteps (checks at 2808, 5538, 8268, 10842) where Windows stops at 8505,
   the first Nyquist-period check below −60 dB. Dmax still agrees to within 0.007 dB and the
   efficiency to within 0.016; only very deep |S11| nulls move by up to 4.4 dB.
 - **Branch-line coupler and stepped low-pass:** the bundles the Windows run was compared with
-  were older than the model code's mesh (round 5 of the mesher, [MESHING.md](MESHING.md)), so the
-  grids differed. Both were re-run on the Mac's Metal engine on 2026-09-25 and re-committed; their
-  rows above compare the new bundles with the numbers in `windows-7900x.json` (the Windows bundles
-  themselves were not kept). Grid, stopping timestep and |S11| minimum now agree exactly
-  (branch-line −34.845 dB at 2.4137 GHz, low-pass −48.0 dB at 2.027 GHz, both platforms). The
-  JSON has no full S-matrix, so max Δ|Sij| cannot be given for these two.
+  were older than the model code's mesh (the split-gap grading fix of the mesher,
+  [MESHING.md](MESHING.md)), so the grids differed. Both were re-run on the M5 Pro's Metal engine
+  on 2026-09-25 and re-committed; their rows above compare the new bundles with the numbers in
+  `windows-7900x.json` (the Windows bundles themselves were not kept). Grid, stopping timestep and
+  |S11| minimum now agree exactly (branch-line −34.845 dB at 2.4137 GHz, low-pass −48.0 dB at
+  2.027 GHz, both platforms). The JSON has no full S-matrix, so max Δ|Sij| cannot be given for
+  these two.
 - **Speed.** Per cell and timestep, the M5 Pro's CPU engine with 4 threads is 4 to 8 times as fast
   as this Windows build with 4 threads (patch antenna 318 against 75 MCells/s).
 - **Threads.** More threads help the Windows build only for some models: from 4 to 24 threads, the
@@ -150,9 +151,10 @@ python scripts\bench_compare.py --run "cuda=$B\gpu" --ref "$B\t4" --json docs\be
 
 Patch antenna on CUDA, three runs: 2.53, 2.56 and 2.58 s (median 2.56 s, ±1 %). Every run's log
 names the backend, `CUDA (NVIDIA GeForce RTX 3060)`, and every bundle records `run.engine: gpu`.
-Against the Mac's Metal bundles (horn, 4 × 1 array and Wilkinson, all at the same timestep), the
-CUDA results agree within 0.1 dB in every S-parameter above −30 dB and 0.005 dB in Dmax. The raw
-numbers are in [benchmarks/windows-7900x-rtx3060-cuda.json](benchmarks/windows-7900x-rtx3060-cuda.json).
+Against the Apple M5 Pro Metal bundles (horn, 4 × 1 array and Wilkinson, all at the same
+timestep), the CUDA results agree within 0.1 dB in every S-parameter above −30 dB and 0.005 dB in
+Dmax. The raw numbers are in
+[benchmarks/windows-7900x-rtx3060-cuda.json](benchmarks/windows-7900x-rtx3060-cuda.json).
 
 The website's "Solver time" table (`landing/index.html`, `#results`) made from these numbers, at desktop and phone width:
 

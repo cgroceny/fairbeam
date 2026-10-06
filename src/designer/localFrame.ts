@@ -174,7 +174,7 @@ export function orientationOfBasis(basis: Basis): { normal: Axis; angle: LocalFr
 const cosSin = (quarterTurns: number): [number, number] => [[1, 0], [0, 1], [-1, 0], [0, -1]][((quarterTurns % 4) + 4) % 4] as [number, number];
 const combine = (a: NumVec, b: NumVec, ca: number, cb: number): NumVec => [0, 1, 2].map((k) => ca * a[k] + cb * b[k]) as NumVec;
 
-/** Rotate the WCS about its own u, v or w axis by whole quarter turns (right-handed, as CST does).
+/** Rotate the WCS about its own u, v or w axis by whole quarter turns (right-handed).
  * The new orientation as (normal, angle, flip). */
 export function rotateOrientation(normal: Axis, frame: Pick<LocalFrame, "angle" | "flip">, about: "u" | "v" | "w", quarterTurns: number) {
   const [u, v, w] = frameBasis(normal, frame);
@@ -217,7 +217,7 @@ export function wcsAxisName(axis: Axis, normal: Axis, upper = false): string {
 
 export type WcsTransformError = "angle" | "orientation" | "value";
 
-/** CST: WCS > Transform WCS. Move the origin by (du, dv, dw) along the current u, v, w, then rotate
+/** Transform WCS: move the origin by (du, dv, dw) along the current u, v, w, then rotate
  * about u, then about v, then about w (each about the axes as the previous turn left them). Turns
  * are whole quarter turns because the geometry stays axis aligned; a turn that cannot be expressed
  * (never the case for multiples of 90 degrees) or an unevaluable value is reported, not applied. */

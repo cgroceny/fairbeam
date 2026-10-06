@@ -87,5 +87,6 @@ free memory immediately before entering the solver.
 - Measure memory after repeated open/close cycles and large field results; do not infer savings
   from a single renderer alone.
 
-Keep existing EN/TR lifecycle, rename, export and result tests passing at every phase. Mac/Linux
-native window and ownership-lock checks remain platform work; Windows results do not establish them.
+Keep existing EN/TR lifecycle, rename, export and result tests passing at every phase. Native window
+and ownership-lock checks on macOS and Linux have not been run yet; the Windows results do not
+cover them.

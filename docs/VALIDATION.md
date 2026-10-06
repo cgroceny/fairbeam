@@ -4,7 +4,7 @@ This page compares Fairbeam/openEMS results with closed-form theory (analytical 
 converged numbers. Every run listed here can be reproduced with the commands shown. The study files
 (`fairbeam.study/1`, see [STUDIES.md](STUDIES.md)) and their member bundles for the gallery studies
 are committed in `public/projects/studies/`. The focused comparison in section 18 has a separate
-numerical record; its raw simulation outputs are kept locally.
+numerical record; its raw simulation outputs are not committed to the repository.
 
 **Summary**
 
@@ -19,14 +19,14 @@ numerical record; its raw simulation outputs are kept locally.
 | Patch efficiency (tan δ = 0.001) | 0.95-0.965, consistent with 1 − Q/Q_d ≈ 0.953 |
 | Half-space mirror correction | radiation efficiency 0.985-0.995 on the Sierpinski model; without the correction it would read ~1.99 |
 | 50 Ω microstrip line (two-port) | Z0 48.3 Ω at the default mesh, converging to ≈ 49.3 Ω (Hammerstad: 50.0 Ω); ε_eff 2.75 vs 2.68 (+2.7 %); \|S11\| ≤ −22 dB to 6 GHz; dielectric loss matches the constant-conductivity model |
-| Wilkinson divider, 2.4 GHz | S21 = S31 = −3.09 dB, S11 −24 dB, S23 −22 dB with the textbook 100 Ω resistor, but S22 = S33 only −18.4 dB. With a 70 Ω resistor all reflections and the isolation are below −25 dB. The resistor model is exact (checked in round 4); the cause is not yet known (see section 8) |
+| Wilkinson divider, 2.4 GHz | S21 = S31 = −3.09 dB, S11 −24 dB, S23 −22 dB with the textbook 100 Ω resistor, but S22 = S33 only −18.4 dB. With a 70 Ω resistor all reflections and the isolation are below −25 dB. The resistor model is exact (measured directly at the element); the cause is not yet known (see section 8) |
 | openEMS lumped resistor | exact to < 0.1 % (real part) from 0.5 to 6 GHz, measured at the element; independent of value, mesh and caps ([openems-lumped-resistor.md](openems-lumped-resistor.md)) |
 | Array superposition | a single driven element through `fairbeam.array.combine` reproduces openEMS' realized gain (6.019 dBi) and pattern Dmax exactly; 2×1 patch coupling S21 −17.3 dB |
 | Automatic mesh | dipole −0.07 % and patch −0.10 % from the converged hand-meshed resonances, with similar or fewer cells ([MESHING.md](MESHING.md)) |
 | Branch-line coupler, 2.4 GHz | S21 −3.21 / S31 −2.99 dB, 90.0°, S11 −34 dB, S41 −35 dB at 2.4 GHz (branches trimmed 3.5 %; textbook lengths center 3.8 % high) |
 | Stepped-impedance low-pass | Chebyshev passband (0.42 dB ripple) reproduced; −3 dB cutoff 2.36 GHz vs 2.49 GHz ideal-line and 2.65 GHz lumped prototype (step discontinuities and βl up to 1 rad) |
 | Waveguide port (WR-90 through guide) | \|S11\| < −40 dB, \|S21\| = 0 ± 0.004 dB, β within 0.2 % of theory over 8-12 GHz |
-| Focused WR-90 transmission comparison (#300) | On 30/40/50 cells/λ meshes, complex S21 and its 10 GHz phase meet the declared target and both mesh-step tolerances; finest max \|ΔS21\| 0.00632 over 8.2-11.8 GHz and phase error −0.137°. Scope and reproduction are in section 18. |
+| Focused WR-90 transmission comparison | On 30/40/50 cells/λ meshes, complex S21 and its 10 GHz phase meet the declared target and both mesh-step tolerances; finest max \|ΔS21\| 0.00632 over 8.2-11.8 GHz and phase error −0.137°. Scope and reproduction are in section 18. |
 | Pyramidal horn, 10 GHz, WR-90 port | D = 14.73 / 15.52 / 15.70 dBi at 8 / 10 / 12 GHz vs 14.38 / 15.39 / 15.85 dBi from the aperture model with phase error (Balanis eq. 13-54); E/H-plane HPBW within 1.2° / 1.8° of the same model; S11 ≤ −16.6 dB over 8-12 GHz |
 | Axial-mode helix, 2.4 GHz | RHCP, D = 11.6 dBi (Kraus 13.85 dBi, known to be high), AR 0.9 dB at boresight (Kraus 0.6 dB), HPBW 42-45° (Kraus 41°), R_in 164 Ω mean over 2.0-2.9 GHz (Kraus 140 Ω; mesh-dependent for a thin wire) |
 | Plane-wave material cell, dielectric slab (ε_r 4, 10 mm, 1-10 GHz) | complex S11 and S21 within 0.006 / 0.009 of the transfer-matrix slab at 20 cells/λ (0.005 / 0.003 at 40), \|S21\| within 0.03 dB and 0.5°; lossless power balance within 0.7 %; the same with tan δ = 0.05 |
@@ -244,7 +244,7 @@ which a staircase mesh needs.
 - The mirror correction checks out. Radiation efficiency at the three pattern frequencies is 0.994 / 0.985 / 0.988 with the 2^m
   correction (m = 1); without it, it would be ~1.98. openEMS' Dmax and the pattern-integrated Dmax
   agree within 0.07 dB (9.26 / 9.33, 11.14 / 11.15, 13.38 / 13.36 dBi).
-- Not re-run at a finer mesh (budget), so no band positions are claimed here.
+- Not re-run at a finer mesh (the run is already 1.96 M cells), so no band positions are claimed here.
 
 ## 3b. Surface current (qualitative check)
 
@@ -376,7 +376,7 @@ Ideal theory (Pozar sec. 7.3): S21 = S31 = −3.01 dB and S11 = S22 = S33 = S23 
   S22 = (Γe + Γo)/2 and S23 = (Γe − Γo)/2. At 2.4 GHz the odd-mode impedance seen at the outputs is
   about 34 Ω, not 50 Ω, and across a resistor sweep it scales as 1/R (Z_odd ≈ 1700 Ω² / (R/2)).
   With the textbook R = 100 Ω, S22 therefore stalls at −18 dB and S23 at −22 dB.
-- **Investigation (round 3; four extra runs).** Result: the odd-mode impedance at the resistor node is
+- **Investigation (four extra runs).** Result: the odd-mode impedance at the resistor node is
   about 62-66 Ω of nearly pure resistance, not R/2 = 50 Ω.
   - The output path from the node to each port (feed line, jog and stub) is 21 mm, about λg/4 at
     2.4 GHz. That explains the 1/R law: Z_seen = Z_line² / Z_node. With the 47.5 Ω line of this
@@ -385,11 +385,11 @@ Ideal theory (Pozar sec. 7.3): S21 = S31 = −3.01 dB and S11 = S22 = S33 = S23 
     directly: Z_odd = 61.4 − j2.4 Ω. S22 improves to −24.8 dB only because the transformation changed.
   - The odd-mode arm stub is open at 2.4 GHz (|X| > 2 kΩ), so it cannot supply the missing
     conductance.
-  - **The resistor is not the cause (round 4; corrects round 3).** Measured directly at the
+  - **The resistor is not the cause (this corrects an earlier reading).** Measured directly at the
     element (−U/I of a passive lumped port), an openEMS lumped resistor is exact to < 0.1 % in its
     real part from 0.5 to 6 GHz, for 30-300 Ω, 1-8 cells along or across, with or without `caps`.
     A lossy-material block behaves identically ([openems-lumped-resistor.md](openems-lumped-resistor.md)).
-    The "+10 % at 2.4 GHz" reported in round 3 came from de-embedding a microstrip test line
+    The earlier "+10 % at 2.4 GHz" reading came from de-embedding a microstrip test line
     against a differently meshed reference line, and was wrong. Replacing the Wilkinson's lumped
     resistor with a lossy-material resistor body of the same 100 Ω gives the same odd-mode
     impedance: 34.2 + j3 Ω, against 34.1 + j3 Ω.
@@ -439,7 +439,7 @@ GPU engine, −60 dB: the dipole (`--set mesh=auto`, 219 k cells) resonates at 2
 2.4525 GHz with 264 k cells), with Dmax 6.89 dBi (0.1 dB above the hand mesh, attributed to the MUR
 walls meeting λ/20 instead of λ/30 cells).
 
-Round 5 fixed the grading next to split gaps ([MESHING.md](MESHING.md), rule 7), which changes the
+A fix to the grading next to split gaps ([MESHING.md](MESHING.md), rule 7) changes the
 meshes of the branch-line coupler (69 k → 76 k cells) and the low-pass filter (100 k → 126 k); the
 dipole, patch and array meshes are identical. The bundles of sections 11 and 12 were re-run with the
 fixed mesher on 2026-09-25 (GPU engine) and the sections below give the new numbers: branch-line
@@ -461,7 +461,7 @@ S31 = −1/√2 (−3.01 dB each, 90° apart), with S11 = S41 = 0 at f0.
 | 1.000 (textbook)¹ | 2.493 GHz (+3.8 %) | −21.6 dB | −21.8 dB | −3.27 dB | −3.05 dB | 90.2° |
 | **1.035 (default)** | 2.414 GHz | **−33.7 dB** | **−35.4 dB** | **−3.21 dB** | **−2.99 dB** | **90.0°** |
 
-¹ Made with the mesh before round 5 (section 10), not re-run.
+¹ Made with the mesh before the split-gap grading fix (section 10), not re-run.
 
 - With the textbook lengths the coupler centers 3.8 % high. The junction squares shorten the
   electrical length of the branches, which is the usual T-junction correction. Even so, it already
@@ -497,8 +497,8 @@ line. Mesh from `auto_mesh`: 126 k cells, including 4 cells across the 0.375 mm 
   1.0 rad for the middle capacitor, well past the π/4 guideline. The remaining −5.2 % is the step
   discontinuities. Each 20 Ω / 110 Ω step adds fringing capacitance and the wide sections look
   electrically longer, plus the ~1.3 % slow phase of the FDTD microstrip (section 7).
-- **Edge sensitivity**: in round 3 the mesher put lines exactly on the collinear edges of the three
-  20 Ω sections instead of applying the thirds rule; that was an automesh bug, fixed in round 4.
+- **Edge sensitivity**: an earlier mesher version put lines exactly on the collinear edges of the three
+  20 Ω sections instead of applying the thirds rule; that was an automesh bug, since fixed.
   That run gave −3 dB at 2.243 GHz, 4.8 % lower. This is the edge bias of section 1c again: wide
   low-impedance sections with edges on mesh lines look wider, so they carry more capacitance. Pozar notes
   the same downward shift for this filter type. A design meant to hit 2.5 GHz exactly would
@@ -564,7 +564,7 @@ the usual numerical dispersion at 20 cells/λ). Reciprocal to 1e-6, column power
   guided TE10 power inside the guide is counted as radiation: D drops to 12.4 dBi and Prad/Pacc
   reads 2.3. Skipping that face (`add_nf2ff_box(directions=[1, 1, 1, 1, 0, 1])`) leaves out only the
   horn's back radiation below the throat plane, which is small for a horn.
-- **Power balance (#12).** A PEC horn has an efficiency of 1, but Prad/Pacc read 1.037 (1.08 at 30
+- **Power balance.** A PEC horn has an efficiency of 1, but Prad/Pacc read 1.037 (1.08 at 30
   cells/λ). The NF2FF box was right and the port's accepted power was low: an exact Yee-lattice
   Poynting flux (raw E and H at their staggered positions, H interpolated to the plane) through the
   feed guide, the five-face NF2FF box and planes across the horn agree to 0.1-0.4 % (closed
@@ -635,7 +635,7 @@ R_in = 140 C/λ Ω.
 ## 15. Plane-wave material cell (homogeneous slab)
 
 Model: `python/examples/slab_cell.py`, a dielectric slab (10 mm, ε_r 4, optionally lossy) at
-normal incidence, 1-10 GHz, built with `fairbeam.material_cell.PlaneWaveCell` (issue #271). The
+normal incidence, 1-10 GHz, built with `fairbeam.material_cell.PlaneWaveCell`. The
 cell is 5 × 5 mm with PMC walls normal to H (x) and PEC walls normal to E (y), so the TEM wave
 sees a laterally infinite slab; both ends run into PML_8. A soft E_y sheet over the whole
 cross-section launches the wave, and voltage probes from the y− to the y+ wall sit on reference
@@ -858,7 +858,7 @@ crosses zero):
   which equals the empty cell's step here.
 
 **NRW branch for dispersive samples.** On synthetic slabs (Debye, Drude and four Lorentz cases,
-5-60 mm, 801 points), #279's single branch from the band median failed for thick Lorentz slabs,
+5-60 mm, 801 points), a single branch taken from the band median failed for thick Lorentz slabs,
 and a branch from the low end of the band alone still failed above an absorption line. NRW now takes the branch
 per stretch between opaque frequencies (|S21| < −60 dB) at the less dispersive end. A stretch
 that does not start at the band's lowest frequency is unreliable unless the sample is declared
@@ -866,7 +866,7 @@ non-magnetic (`--nist`) and exactly one branch keeps μr within 0.1 of 1 over it
 of the 24 cases has a wrong value among its reliable frequencies. Without `--nist`, 77 % of the
 frequencies are reliable; with it, 86 %.
 
-The maintainer's review of #284 found three cases the first version got wrong:
+The first version got three cases wrong:
 
 - A Drude slab (ε∞ 2, f_p 6 GHz, τ 1 ns, 1-10 GHz, 101 points) that is opaque from the bottom of
   the band was taken as known from its first visible frequency. At 60 mm it had 47 reliable
@@ -902,7 +902,7 @@ tan δ 0.02 at 5.5 GHz would give 0.11 → 0.011 instead.
 
 Model: `python/examples/wr90_fixture.py`, a homogeneous sample 10 mm thick filling a WR-90 guide
 (22.86 × 10.16 mm) over its band, 8.2-12.4 GHz. It is built with
-`fairbeam.waveguide_fixture.WaveguideFixture` (issue #275). PEC walls in x and y; at each end a
+`fairbeam.waveguide_fixture.WaveguideFixture`. PEC walls in x and y; at each end a
 TE10 waveguide port (`Simulation.waveguide_port`) with its probes one guide width (22.86 mm) from
 the sample face and its excitation plane two cells further out, then PML_8. Port 1 is driven and
 port 2 is terminated.
@@ -1003,7 +1003,7 @@ all 401 for the empty guide; tan δ errors are absolute):
 
 The same fixture with an air gap between the sample and each broad wall (`gap_y`, where TE10's
 E field crosses the gap) or each narrow wall (`gap_x`, where the field is near zero), the same
-on both sides (issue #275). Sample: εr 4, tan δ 0.02 at 10.3 GHz, 10 mm. `fairbeam
+on both sides. Sample: εr 4, tan δ 0.02 at 10.3 GHz, 10 mm. `fairbeam
 material-cell` extracts the apparent εr (the one a full sample would need for the measured
 propagation constant) and corrects it with `fairbeam.waveguide_fixture.gap_correction`. Its two
 models follow NIST Technical Note 1355-R (Baker-Jarvis et al., 1993), Appendix C; the formulas are
@@ -1096,7 +1096,7 @@ over 8.2-12.4 GHz (401 frequencies), with its largest value over the band in bra
     two cells in a gap, grading ≤ 1.3, no change without a gap), the moved reference planes;
   - both corrections in the result file, with `--tol-material` checking the resonance one.
 
-## 18. Focused comparisons for #300
+## 18. Focused WR-90 transmission comparison
 
 [Pozar comparison record](benchmarks/pozar-comparisons.md) documents a limited WR-90 transmission
 check associated with Example 3.9. It uses the existing `python/examples/waveguide_thru.py`, fixed
@@ -1105,8 +1105,6 @@ measurement planes and three meshes with the bundled openEMS 0.37.0rc3 runtime o
 The accepted quantities are complex S21 over 8.2-11.8 GHz and its phase at 10 GHz, subject to the
 recorded reflection guard and energy stops. Every target check and both consecutive mesh comparisons
 pass at the tolerances declared before the runs. The full Example 3.9 remains unvalidated because
-the separately measured group velocity did not meet its convergence criterion. The original ten
-coarse campaign examples are not upgraded to validated by this limited comparison.
+the separately measured group velocity did not meet its convergence criterion. No other example is upgraded to validated by this limited comparison.
 
-The record contains our model parameters, equations and numerical results. It contains no textbook
-text, figures, tables, solution steps or PDF excerpts, and adds no gallery bundles.
+The record contains our model parameters, equations and numerical results, and adds no gallery bundles.

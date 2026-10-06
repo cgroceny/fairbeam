@@ -5,7 +5,7 @@ import assert from "node:assert/strict";
 import { ALLOWED_ORIGINS, MAX_FILE_BYTES, SCHEMA, handlePing, hashId, validatePing } from "../api/_ping-core.js";
 
 const NOW = Date.parse("2026-09-28T09:00:00Z");
-const ENV = { STATS_GITHUB_TOKEN: "test-token", STATS_SALT: "test-salt" };
+const ENV = { STATS_GITHUB_TOKEN: "test-token", STATS_SALT: "test-salt", STATS_REPO: "example/usage-stats" };
 const ID = "1b4e28ba-2fa1-4d3b-a3f5-ef19b5a7633b";
 const good = (over = {}) => ({
   schema: "fairbeam.ping/1", install_id: ID, app_version: "0.4.4", os: "macos", arch: "aarch64",
@@ -22,7 +22,7 @@ function fakeGitHub({ conflicts = 0, files = {} } = {}) {
     const u = new URL(url);
     assert.equal(u.origin, "https://api.github.com");
     assert.equal(init.headers.authorization, "Bearer test-token");
-    const path = decodeURIComponent(u.pathname.replace("/repos/ismailakdag/fairbeam-stats/contents/", ""));
+    const path = decodeURIComponent(u.pathname.replace(`/repos/${ENV.STATS_REPO}/contents/`, ""));
     calls.push(`${init.method ?? "GET"} ${path}`);
     if (!init.method) {
       const f = store.get(path);
@@ -78,19 +78,19 @@ assert.equal((await call(req(null, { raw: "{not json" }), { env: ENV, fetch: noN
 const tooMany = Object.fromEntries(SCHEMA.keys.slice(0, 1).map((k) => [k, 1]));
 for (let i = 0; i <= SCHEMA.max_keys; i++) tooMany[`app.update_from.0.0.${i}`] = 1;
 const invalid = {
-  "an extra field": good({ hostname: "ismail-mac" }),
+  "an extra field": good({ hostname: "alice-laptop" }),
   "a missing field": (({ gpu_available, ...rest }) => rest)(good()),
   "another schema": good({ schema: "fairbeam.ping/2" }),
-  "a non-UUID id": good({ install_id: "ismail@example.com" }),
+  "a non-UUID id": good({ install_id: "alice@example.com" }),
   "a v1 UUID": good({ install_id: "1b4e28ba-2fa1-11d2-883f-0016d3cca427" }),
-  "a free-text version": good({ app_version: "0.4.4 on /Users/ismail" }),
+  "a free-text version": good({ app_version: "0.4.4 on /Users/alice" }),
   "an unknown os": good({ os: "freebsd" }),
   "an unknown arch": good({ arch: "riscv64" }),
   "a string gpu flag": good({ gpu_available: "yes" }),
   "a future day": good({ day: "2026-09-30" }),
   "an old day": good({ day: "2026-07-01" }),
   "a malformed day": good({ day: "2026-02-30" }),
-  "a path as a counter key": good({ counters: { "/Users/ismail/patch.design.json": 1 } }),
+  "a path as a counter key": good({ counters: { "/Users/alice/patch.design.json": 1 } }),
   "a parameter as a counter key": good({ counters: { "param.W": 12 } }),
   "a model name": good({ counters: { "sim.started.cpu.my_patch": 1 } }),
   "a bad update version": good({ counters: { "app.update_from.0.4.3-evil": 1 } }),

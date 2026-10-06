@@ -61,7 +61,7 @@ function setPref<K extends keyof Prefs>(k: K, v: Prefs[K]) {
     if (k === "confirm") writeGeneralSettings({ ...readGeneralSettings(), confirmShapes: Boolean(v) });
   } catch { /* private window: keep it for this session only */ }
 }
-/** open the shape dialog when a drawn shape is finished (CST); off: add it at once */
+/** open the shape dialog when a drawn shape is finished; off: add it at once */
 export const confirmShapes = () => prefs().confirm;
 export const setConfirmShapes = (v: boolean) => setPref("confirm", v);
 /** show the local WCS (its u, v, w arrows) in the 3D view */
@@ -79,7 +79,7 @@ const GLOBAL_WCS: DesignWcs = { normal: "z", origin: [0, 0, 0], angle: 0 };
  * the design and goes through the undo history. */
 export const wcs = (): DesignWcs => draft.wcs ?? GLOBAL_WCS;
 /** The drawing plane is the WCS' u-v plane: w is its normal, and the elevation is always 0 (the WCS
- * origin carries the offset, as in CST). */
+ * origin carries the offset). */
 export const plane = createRoot(() => createMemo<WorkPlane>(() => ({ normal: wcs().normal, elevation: 0, originU: 0, originV: 0 })));
 /** The WCS origin and quarter turn as the frame the drawing tools map through. New framed geometry
  * stores it on its own part as ordinary transforms. */
@@ -194,7 +194,7 @@ export function setWcs(next: DesignWcs | null, label?: string) {
   edit((d) => { if (clean) d.wcs = clean; else delete d.wcs; }, "", label ?? t("history.wcs")); // no key: every WCS change is its own undo step
   setDrawn([]);
 }
-/** Align the WCS with the global coordinates (CST: WCS > Align WCS with global coordinates): u, v, w
+/** Align the WCS with the global coordinates: u, v, w
  * are x, y, z and the origin is 0. Shapes already drawn stay where they are. */
 export function resetWcsToGlobal() {
   setWcs(null, t("history.wcsGlobal"));
@@ -297,7 +297,7 @@ export function faceElevation(normal: Axis, value: number, part: string | null):
   return { elevation: round(value), label: `${normal} = ${fmt(value)}` };
 }
 
-/** CST: WCS > Align WCS with face. The origin goes to the face centre and w along its outward normal;
+/** Align WCS with face: the origin goes to the face centre and w along its outward normal;
  * u points along +x (along +y on a face looking along x), v completes the right-handed set. The face's own elevation
  * expression is kept for the origin, so a WCS on "Substrate: top" follows the substrate height. */
 export function alignWcsWithFace(face: PickedFace) {
@@ -469,7 +469,7 @@ export function finishHeight(value?: Expr) {
     return;
   }
   const into = -1;
-  // The shape is finished: leave the drawing mode (CST). OK in the dialog, or the shape added at once,
+  // The shape is finished: leave the drawing mode. OK in the dialog, or the shape added at once,
   // then ends with the new part selected and no tool left to cancel with Esc.
   setTool(null);
   const frameInfo = capturedFrame.local ? { frameTransforms: transforms, frame: capturedFrame.frame, frameNormal: capturedFrame.normal } : {};

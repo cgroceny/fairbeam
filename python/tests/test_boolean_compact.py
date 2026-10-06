@@ -1,4 +1,4 @@
-"""Compact Subtract (the UX testers' cases, 0.6.0): a box minus a box must not be partitioned into many bricks.
+"""Compact Subtract: a box minus a box must not be partitioned into many bricks.
 Sheets give one polygon where possible, prisms on a common axis extruded polygons, and otherwise the brick stays whole
 with the cutter as an exact vacuum cut-out. The result keeps a later Add or Subtract working. The designer's
 booleanParts.ts gives the same shapes (boolean_parity.json has these cases)."""

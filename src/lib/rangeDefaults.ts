@@ -1,4 +1,4 @@
-// Default ranges for a new sweep axis and for the optimizer's bounds (UX audit 2.4): a small window
+// Default ranges for a new sweep axis and for the optimizer's bounds: a small window
 // around the parameter's current value, clipped to its limits; never the parameter's whole min..max
 // (f0 = 0.1..30 GHz), and never the design frequency or the band as the parameter to vary.
 // Pure (no Solid, no DOM), so scripts/check-range-defaults.mjs tests it.

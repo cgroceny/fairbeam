@@ -1,49 +1,49 @@
 {
   "observation": "same configured interpreter and environment, imports only after native runs",
-  "executable": "E:\\fairbeam-benchmarks\\cpu-refresh-20261001-v002\\stages\\optimized\\bin\\venv\\Scripts\\python.exe",
+  "executable": "<benchmark-root>\\cpu-refresh-20261001-v002\\stages\\optimized\\bin\\venv\\Scripts\\python.exe",
   "loaded_modules": [
     {
-      "path": "E:\\opt\\openEMS-gpu\\venv\\Lib\\site-packages\\CSXCAD\\CSXCAD.cp313-win_amd64.pyd",
+      "path": "<openems-gpu>\\venv\\Lib\\site-packages\\CSXCAD\\CSXCAD.cp313-win_amd64.pyd",
       "sha256": "4d2205ac3c1320bf438c0e6b6774b08ac53347493588e86b4db0a3473e8d543f"
     },
     {
-      "path": "E:\\fairbeam-benchmarks\\cpu-refresh-20261001-v002\\stages\\optimized\\bin\\CSXCAD.dll",
+      "path": "<benchmark-root>\\cpu-refresh-20261001-v002\\stages\\optimized\\bin\\CSXCAD.dll",
       "sha256": "4b409b9fb98626e22b3a8e42a757afe6d5fa37bea27edbe3cd992dbeca35b481"
     },
     {
-      "path": "E:\\opt\\openEMS-gpu\\venv\\Lib\\site-packages\\CSXCAD\\ParameterObjects.cp313-win_amd64.pyd",
+      "path": "<openems-gpu>\\venv\\Lib\\site-packages\\CSXCAD\\ParameterObjects.cp313-win_amd64.pyd",
       "sha256": "ed8c573ca6de7550d9a4da8e385a630c954bf962fbfdacb50e09f12606e9f823"
     },
     {
-      "path": "E:\\opt\\openEMS-gpu\\venv\\Lib\\site-packages\\CSXCAD\\Utilities.cp313-win_amd64.pyd",
+      "path": "<openems-gpu>\\venv\\Lib\\site-packages\\CSXCAD\\Utilities.cp313-win_amd64.pyd",
       "sha256": "4238b086ce04ec853d355725079973d8ca0c66e3ac70262e9a55fadaa56efa71"
     },
     {
-      "path": "E:\\opt\\openEMS-gpu\\venv\\Lib\\site-packages\\CSXCAD\\CSTransform.cp313-win_amd64.pyd",
+      "path": "<openems-gpu>\\venv\\Lib\\site-packages\\CSXCAD\\CSTransform.cp313-win_amd64.pyd",
       "sha256": "5c8100828aa9bf122a32d094cb1cee6a20251d3924258aea1462f214aba6a174"
     },
     {
-      "path": "E:\\opt\\openEMS-gpu\\venv\\Lib\\site-packages\\CSXCAD\\CSRectGrid.cp313-win_amd64.pyd",
+      "path": "<openems-gpu>\\venv\\Lib\\site-packages\\CSXCAD\\CSRectGrid.cp313-win_amd64.pyd",
       "sha256": "621d153c9c288dfc74be463870701f4cf6bdd38a91f5253c2e48d684878f7241"
     },
     {
-      "path": "E:\\opt\\openEMS-gpu\\venv\\Lib\\site-packages\\CSXCAD\\CSProperties.cp313-win_amd64.pyd",
+      "path": "<openems-gpu>\\venv\\Lib\\site-packages\\CSXCAD\\CSProperties.cp313-win_amd64.pyd",
       "sha256": "763dc1a0c26a5258070a34af4bad4046b56af89a14a8d5e306c9b8883da99e18"
     },
     {
-      "path": "E:\\opt\\openEMS-gpu\\venv\\Lib\\site-packages\\CSXCAD\\CSPrimitives.cp313-win_amd64.pyd",
+      "path": "<openems-gpu>\\venv\\Lib\\site-packages\\CSXCAD\\CSPrimitives.cp313-win_amd64.pyd",
       "sha256": "9ba624898373195b58c2326de8eb9cccfb52dac6fbbbf728d0b81def91a599f1"
     },
     {
-      "path": "E:\\opt\\openEMS-gpu\\venv\\Lib\\site-packages\\openEMS\\openEMS.cp313-win_amd64.pyd",
+      "path": "<openems-gpu>\\venv\\Lib\\site-packages\\openEMS\\openEMS.cp313-win_amd64.pyd",
       "sha256": "fcad4a51246113247839673fc32e1de27612a4f62ece7028b980a7f026b2647f"
     },
     {
-      "path": "E:\\fairbeam-benchmarks\\cpu-refresh-20261001-v002\\stages\\optimized\\bin\\openEMS.dll",
+      "path": "<benchmark-root>\\cpu-refresh-20261001-v002\\stages\\optimized\\bin\\openEMS.dll",
       "sha256": "672e0a95f10da056ae6ed50ed07dc0b52a9541ee9a9ba6283cd01451dcf18071"
     },
     {
-      "path": "E:\\opt\\openEMS-gpu\\venv\\Lib\\site-packages\\openEMS\\_nf2ff.cp313-win_amd64.pyd",
+      "path": "<openems-gpu>\\venv\\Lib\\site-packages\\openEMS\\_nf2ff.cp313-win_amd64.pyd",
       "sha256": "f4115e3a639399b5b536b5900f5213afae53d86f24911e268f4041280d2cdda7"
     }
   ]

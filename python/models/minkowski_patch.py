@@ -5,7 +5,7 @@ is pushed inward by ``depth`` times a third of the segment length, and this repe
 ``iterations``. The longer current path lowers the TM10 resonance of a patch of the same outer size.
 That is the miniaturisation effect described by Gianvittorio and Rahmat-Samii. All edges are
 axis-aligned, so the staircase FDTD mesh represents the geometry exactly (no slanted-edge error),
-which makes this a clean model for comparison with CST.
+which makes this a clean model for mesh-convergence studies.
 
 Mesh lines sit on every metal edge. There is no thirds rule, because the indentations are too close
 together for it. Such edges read electrically slightly large, so check with
@@ -38,7 +38,7 @@ PARAMS = [
     Param("cell", 1.25, "Mesh cell on the patch", "mm", minimum=0.1, maximum=5),
     Param("mesh_div", 20, "Max cell = lambda(f_max) / mesh_div", "", minimum=8, maximum=60),
     Param("boundary", "MUR", "Absorbing boundary", "",
-          "MUR (fast; fine for a patch radiating away from the boundaries) or PML_8 (for CST comparison)"),
+          "MUR (fast; fine for a patch radiating away from the boundaries) or PML_8 (an accurate open boundary)"),
     Param("f_min", 1.6, "Band start", "GHz", minimum=0.1),
     Param("f_max", 3.2, "Band stop", "GHz", minimum=0.2),
 ]

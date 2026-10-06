@@ -1,4 +1,4 @@
-// The Summary result tab (UX audit bet 3): the Examples dock's Run card for a design's run. One run
+// The Summary result tab: the Examples dock's Run card for a design's run. One run
 // shows its verdict, the headline numbers, the matched bands, the far-field values, the efficiency and
 // what the solver did; several runs (the Compare picker, Ctrl/⌘-click in the tree) show one row per
 // run with the parameters that differ between them (resultTabs.ts differingParams, the same columns as

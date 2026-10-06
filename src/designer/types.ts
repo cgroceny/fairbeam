@@ -61,7 +61,7 @@ export interface WirePrimitive { kind: "wire"; points: Vec3[]; radius: Expr; pri
 export interface PolyhedronPrimitive { kind: "polyhedron"; vertices: Vec3[]; faces: number[][]; priority?: number }
 export type DesignPrimitive = (BoxPrimitive | AxisCylinder | PointsCylinder | SpherePrimitive | PolygonPrimitive | LinPolyPrimitive | ConePrimitive | TorusPrimitive | WirePrimitive | PolyhedronPrimitive) & { label?: string; void?: boolean };
 
-/** CST "transform with copies", applied in order to all shapes of a part and expanded exactly. */
+/** A transform with copies, applied in order to all shapes of a part and expanded exactly. */
 export type DesignTransform =
   /** shift the existing geometry, without adding copies */
   | { type: "move"; offset: Vec3 }
@@ -181,7 +181,7 @@ export interface Design {
   };
   far_field: { enabled: boolean; frequencies?: Expr[]; phase_center?: [Expr, Expr, Expr]; /** which NF2FF box faces record (x-, x+, y-, y+, z-, z+); omitted: all */ faces?: boolean[] };
   parameter_sweep?: ParameterSweepDefinition;
-  /** The work coordinate system (CST WCS) the drawing tools use; absent: the global one. w points
+  /** The work coordinate system (WCS) the drawing tools use; absent: the global one. w points
    * along `normal` (negative with `flip`), `origin` is in global coordinates, `angle` turns u and v
    * about `normal`. Geometry never depends on it: shapes drawn in a local WCS store their own transforms. */
   wcs?: DesignWcs;

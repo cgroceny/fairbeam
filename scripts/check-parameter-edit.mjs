@@ -1,4 +1,4 @@
-// Parameter edits must not be lost (UX audit 2.1): the Parameters dock applies every keystroke to the
+// Parameter edits must not be lost: the Parameters dock applies every keystroke to the
 // draft at once, so Enter, Escape and leaving a cell decide what Escape can still undo
 // (src/designer/rowEdit.ts). Escape reverts only the typing since the last commit; Enter and moving
 // on commit. Run in a browser too: the dock's key handler is in ParametersDock.tsx (asserted below).
@@ -23,7 +23,7 @@ function dock(initial) {
   };
 }
 
-// the auditor's case: type 0.466, Enter, Escape must keep 0.466
+// the reported case: type 0.466, Enter, Escape must keep 0.466
 {
   const d = dock({ key: "k", default: 0.48 });
   d.focus(); d.type("default", 0.466); d.enter();

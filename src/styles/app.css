@@ -495,7 +495,7 @@ input[type="range"] { height: var(--al-control-h-sm); margin: 0; accent-color: v
 .scalebar::after { right: 0; }
 .vp-scales { flex-direction: row; align-items: flex-start; gap: var(--al-space-2); }
 /* the scales end above the bottom-right readouts (scale bar, cursor), so a tall card scrolls inside
-   the 3D view instead of running under them or past its bottom edge (#175) */
+   the 3D view instead of running under them or past its bottom edge */
 .vp-hud-tr.vp-scales { bottom: calc(var(--al-pad-hud) + var(--al-control-h-sm) + var(--al-space-2)); }
 .vp-scales > .colorbar { max-height: 100%; overflow-y: auto; scrollbar-width: thin; }
 /* two scales (pattern + surface current): side by side, a shorter ramp, same tick positions */

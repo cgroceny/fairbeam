@@ -1,6 +1,6 @@
 # Turkish UI glossary (TR/EN)
 
-The terms the Turkish interface uses, for the maintainer to review. The UI texts are in
+The terms the Turkish interface uses, and why they were chosen. The UI texts are in
 `src/i18n/en.json` and `src/i18n/tr.json` (keys `area.item`, English is the fallback), the native
 menus and update dialogs in `src-tauri/src/i18n.rs`, the splash/setup page in its own table in
 `src-tauri/splash/index.html`. `node scripts/check-i18n.mjs` (part of `npm run check:designer`)
@@ -24,9 +24,9 @@ Turkish students and Teknofest teams are welcome.
   name mechanically in a Turkish string.
 - The product name is **Fairbeam**: one word, capital F, never translated or hyphenated, in every
   language. It is lower case only where it is code: the command `fairbeam`, the Python module, the
-  `fairbeam_` names and the `fairbeam.*` file-format ids. The previous name appears only in the
-  importer's texts and in the migration page; there it takes back-vowel suffixes (it ends in "lab",
-  a back vowel). A repository check enforces this (see AGENTS.md).
+  `fairbeam_` names and the `fairbeam.*` file-format ids. The previous app's name appears only in the
+  importer's texts and on the migration page, where it takes back-vowel suffixes. A repository check
+  enforces this.
 - Numbers shown as text use the Turkish decimal comma (2,45 GHz) and digit grouping with a point
   (1.234.567 hücre), and a negative number starts with the typographic minus U+2212 (−10 dB), all
   three through the same helpers (`fmt` in `src/i18n`, `shown` in `src/designer/displayNumber.ts`,
@@ -203,7 +203,7 @@ and `src/designer/checks.ts`, not here.
 - Numbers shown as text use the decimal comma; lists of coordinates and frequencies then separate with
   a semicolon ("0,5; 1,2; 3"), so a comma is never both a decimal and a separator.
 
-## For the maintainer's review
+## Terms with alternatives
 
 Choices where a Turkish reader could reasonably prefer another word. Change one by searching for the
 word in `src/i18n/tr.json` (and `src-tauri/src/i18n.rs` for menu labels).

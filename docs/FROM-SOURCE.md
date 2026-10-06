@@ -57,19 +57,19 @@ PYTHONPATH=python ~/opt/openEMS/venv/bin/python -m unittest discover -s python/t
 | `test_nrw.py` | material extraction: NRW (lossless, lossy, magnetic, Debye; group-delay branch on a thick sample; half-wave mask), NIST iterative (whole band, noise at the resonance), result-file fields, `Simulation.dielectric(mu_r=...)` |
 | `test_dispersion.py` | dispersive materials: Debye / Lorentz / Drude against openEMS' own formulas, CSXCAD properties, the pole rules (no magnetic Debye, Debye poles realized as Lorentz poles), Djordjevic-Sarkar, pole resolution, `Simulation.dispersive` and its bundle record, frequency-dependent analytic layers |
 | `test_debye_fit.py` | pole fitting: NNLS against brute force, Djordjevic-Sarkar FR4 over the band, the timestep bound on the poles, Debye poles next to kept Lorentz / Drude poles, fits to pole models, noisy and conductive data, CSV and `.cell.json` input, the `debye-fit` command |
-| `test_dispersion_validation.py` | #284 review regressions: NRW above an initially opaque band, all-opaque and isolated samples, a false non-magnetic declaration (above an opaque band, and a thick magnetic sample in a narrow band), NaN/infinite material constants, poles and fit controls, ε′ = 0 at the band centre |
+| `test_dispersion_validation.py` | regression cases: NRW above an initially opaque band, all-opaque and isolated samples, a false non-magnetic declaration (above an opaque band, and a thick magnetic sample in a narrow band), NaN/infinite material constants, poles and fit controls, ε′ = 0 at the band centre |
 | `test_material_cell.py` | plane-wave material cell: transfer-matrix slab vs the closed-form Fresnel slab (lossy, magnetic, cascaded), S11/S21 from synthetic probe voltages, cell boundaries, mesh, source and probes, the empty reference cell, both runs at one timestep (read back from the probe file) |
 | `test_waveguide_fixture.py` | waveguide material fixture: guided slab vs the closed form, guided NRW/NIST recovery (with a numerical β0), de-embedding, cut-offs and band check, fixture mesh and ports, the runner with timestep matching and its result-file fields, a dispersive (Debye) sample; the air gap: resonance and capacitor corrections (TN 1355-R C.1 and C.23-C.24), the modes a gap excites, the graded transverse mesh, moved reference planes, corrected values in the result |
 
 The table lists the core modules. `python/tests/` has more, for example designs and their checks (`test_design.py`, `test_design_checks.py`, `test_example_designs.py`), the run server and job queue (`test_server.py`, `test_jobs.py`), the optimizer, the VBA macro importer and telemetry.
 
-### Opt-in guided-wave fixtures (issue #300)
+### Opt-in guided-wave fixtures
 
 Three test modules also carry a manual openEMS study. Test discovery checks only their analytical references and analysis code; the solver runs only with an explicit `--fdtd`. Each case runs in its own process (30-minute limit, at most four solver threads) and writes raw modal spectra, `report.json` and, after a mesh study, `comparison.json` to the `--out` folder. Use a new folder outside the repository: these are research records, not bundles. A scope counts as validated only with three meshes, energy stops on all of them and two consecutive mesh comparisons within the stated limits.
 
 | Module | Structure | Compared with |
 | --- | --- | --- |
-| `test_circular_guide_loss.py` (`circular_guide_fixture.py`) | dielectric-filled circular guide, TE11 (Pozar Example 3.2 parameters) | β and dielectric/conductor attenuation from the closed form; the gold wall is a resistive-sheet surrogate with a known discrepancy (about 8 % in #346), so it is not validated |
+| `test_circular_guide_loss.py` (`circular_guide_fixture.py`) | dielectric-filled circular guide, TE11 (Pozar Example 3.2 parameters) | β and dielectric/conductor attenuation from the closed form; the gold wall is a resistive-sheet surrogate with a known discrepancy (about 8 %), so it is not validated |
 | `test_coax_cutoff.py` (`coax_cutoff_fixture.py`) | coaxial (annular) guide, TE11 cut-off (Example 3.3 parameters) | the exact Bessel eigenvalue; the approximate textbook value is a different target |
 | `test_surface_wave.py` (`surface_wave_fixture.py`) | grounded dielectric sheet, TM0/TE1/TM1 (Example 3.4 parameters) | β from the interface equations at twelve mode/thickness points |
 

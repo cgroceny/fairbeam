@@ -1,6 +1,6 @@
 // openBundle (src/state.ts) must not make its caller depend on bundle(): an effect that opens a
 // bundle (e.g. the History dialog's) re-ran on its own write and looped until "Maximum call stack
-// size exceeded" (#132 review). Also checks that part visibility survives a reopen of the same
+// size exceeded". Also checks that part visibility survives a reopen of the same
 // model and resets for a different one. Real Solid stores, no DOM.
 //
 //   node scripts/check-open-bundle.mjs

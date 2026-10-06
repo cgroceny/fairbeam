@@ -73,7 +73,7 @@ export function ungroupComponent(path: string) {
   setMessage({ tone: "good", text: t("componentOps.ungroup.done", { name: label(path), count: members.length, parent: parent || t("componentOps.topLevel") }) });
 }
 
-/** Delete folder `path` with every part in it (CST deletes a component with its shapes). Undo
+/** Delete folder `path` with every part in it and their shapes. Undo
  * brings them back. */
 export function deleteComponent(path: string) {
   const members = componentMembers(draft.parts, path);

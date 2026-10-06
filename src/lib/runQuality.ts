@@ -1,4 +1,4 @@
-// A run's quality verdict (the UX review: a run that did not converge looked like a good result).
+// A run's quality verdict, so that a run that did not converge no longer looks like a good result.
 // Pure (no Solid, no DOM), so scripts/check-run-quality.mjs runs it on the example bundles.
 //   converged      every port's run reached the energy end criterion and nothing looks unphysical
 //   not-converged  a run stopped at the timestep limit: the results are truncated, S11 and the far

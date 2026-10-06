@@ -117,7 +117,7 @@
           <p>The app sends the message over HTTPS to <code>fairbeam.org/api/ping</code>, a function on this website (hosted by Vercel). There:</p>
           <ul>
             <li>the random id is replaced by a keyed hash, so even the stored data does not contain it;</li>
-            <li>the counts are appended to a daily file in a private GitHub repository that only the developer can read;</li>
+            <li>the counts are appended to a daily file that only the developer can read;</li>
             <li>the IP address and the exact time are not stored. Vercel's request logs keep the IP address for a short time, as for every page of this site.</li>
           </ul>
           <p>The counts are only ever used added up: how many installs are active per day and per week, which versions and systems are in use, how many simulations run and which features matter. Nothing is sold or shared.</p>

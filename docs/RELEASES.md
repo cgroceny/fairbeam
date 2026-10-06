@@ -17,19 +17,16 @@ pack. It holds release files and the issue tracker for app users, and no source.
   failed with the error). See "Shell" in [DESKTOP.md](DESKTOP.md).
 - Every updater artifact referenced by `latest.json` is signed with the Fairbeam updater key. The
   public key is in `src-tauri/tauri.conf.json` (`plugins.updater.pubkey`).
-- The **private key** is `~/.tauri/fairbeam-updater.key` on the maintainer's Mac. It was made once with
-  `npx tauri signer generate -w ~/.tauri/fairbeam-updater.key`. It has no password, is outside the
-  repository, and must never be committed, printed, logged or pasted anywhere. It goes only into the
-  environment of the build shell. **Back it up**, for example in a password manager. Without it, the
-  installed apps can no longer be updated.
+- The **private key** is `~/.tauri/fairbeam-updater.key` on the machine that builds the release.
+  It was made once with `npx tauri signer generate -w ~/.tauri/fairbeam-updater.key`. It has no
+  password, is outside the repository, and must never be committed, printed, logged or pasted
+  anywhere. It goes only into the environment of the build shell. **Back it up**, for example in a
+  password manager. Without it, the installed apps can no longer be updated.
 - Windows installs updates in passive mode, with a small progress window and no questions.
 - The dialog shows `latest.json`'s `notes`: a short plain-text summary (`publish-release.mjs
   --summary "..."`, else the notes' first paragraph without Markdown) and a link to the release page,
   which has the full notes. A native message box cannot scroll, so the app also strips Markdown and
   caps the text at 480 characters (`updater.rs` `dialog_notes`).
-- The release feed of the previous product is a different channel. Fairbeam never publishes there
-  (`publish-release.mjs` refuses that `--repo`), and its apps never see a Fairbeam update. People
-  move over with the import in [MIGRATING-FROM-ANTENLAB.md](MIGRATING-FROM-ANTENLAB.md).
 
 ### Updates on macOS
 
@@ -49,7 +46,7 @@ pack. It holds release files and the issue tracker for app users, and no source.
 ## Publishing a version
 
 Build only from a tag on `main` of the source repository (`git tag v<version>`), after the checks in
-[AGENTS.md](../AGENTS.md) pass.
+[CONTRIBUTING.md](../CONTRIBUTING.md) pass.
 
 1. Bump the version in `src-tauri/tauri.conf.json`, `src-tauri/Cargo.toml` and
    `python/fairbeam/_meta.py`. The runtime refreshes its copy of the Python package when the bundled

@@ -1,4 +1,4 @@
-// Result summaries in Design (UX audit bet 3): the headline numbers of a run (src/designer/runSummary.ts)
+// Result summaries in Design: the headline numbers of a run (src/designer/runSummary.ts)
 // on the bundled example results and on edited copies, the Summary result tab's registration (focus,
 // tabs, tree, ribbon, main area, Runs table), and the Copy / CSV table (English headers, decimal points).
 // No DOM, no build.
@@ -319,7 +319,7 @@ assert.ok(metrics.size >= 10, "the example bundles were read");
   assert.equal(metricDeltas(ref, withFf({ f0: Infinity })).f0, null);
 }
 
-// ---- no resonance in the band (UX test C): the |S11| minimum at a band edge with nothing below -10 dB
+// ---- no resonance in the band: the |S11| minimum at a band edge with nothing below -10 dB
 {
   const a = load("patch-antenna.json");
   const n = a.results.frequency.length;
@@ -365,7 +365,7 @@ assert.ok(metrics.size >= 10, "the example bundles were read");
   has("src/designer/runSummary.ts", /if \(m\.noResonance\) parts\.push\(t\("summary\.noResonance"\)\)/, "the tree line says no resonance");
 }
 
-// ---- the reference run of the differences (UX test C): not the first row (the newest run), a choice
+// ---- the reference run of the differences: not the first row (the newest run), a choice
 {
   const a = load("patch-antenna.json");
   const older = structuredClone(a); older.created = "2026-09-01T10:00:00+0300"; older.results.bands[0].f_center -= 20e6;

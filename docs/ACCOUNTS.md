@@ -168,7 +168,7 @@ same `SecretStore` trait.
 - `npm run check:account`: with the flag off (or outside the shell) nothing renders and no call
   reaches the shell; the components are gated and never call out directly.
 
-## Turning it on (maintainer)
+## Turning it on
 
 
 1. GitHub: Settings › Developer settings › OAuth Apps › New OAuth App. Homepage
@@ -186,40 +186,4 @@ same `SecretStore` trait.
    (`beforeBuildCommand` runs `npm run build`, which sees `VITE_FAIRBEAM_ACCOUNTS`.) The release
    build (`npm run desktop:release`, [RELEASES.md](RELEASES.md)) needs the same variables and
    `--features accounts` once it ships.
-4. Publish the privacy notice (below) on the site before the first release that has it on.
-
-## Later: a "who uses it" registry (documented, not built)
-
-The maintainer may want to see who signed in, still without a database. The site's Vercel project
-could get a function next to the telemetry one (`api/ping`, which writes to a private GitHub repo):
-
-- `POST /api/register` from the desktop app, **only after a separate, explicit opt-in** in the
-  account dialog ("Let the maintainer see that I use Fairbeam: my GitHub login or Google email and
-  the date I first signed in"), unticked by default and independent of signing in.
-- The function verifies the identity instead of trusting the body: for GitHub it calls
-  `GET https://api.github.com/user` with the user's token (used once, not stored); for Google it
-  checks the `id_token` (Google's JWKS or `tokeninfo`, `aud` = our client id).
-- It writes one file per person to a private repo with the GitHub Contents API, create-only so the
-  first-seen date never changes: `users/github-<login>.json` or `users/google-<sha256(email)>.json`
-  containing `{provider, login or email, first_seen, consent_version}`. The token is a fine-grained
-  PAT with Contents: write on that one repo, kept in a Vercel environment variable.
-- It does not store the IP address and does not log request bodies.
-- `DELETE /api/register` (same identity check) removes the file: "Remove me" next to the opt-in and
-  in General settings, and withdrawing consent does the same.
-
-KVKK (Law No. 6698) and GDPR notes, to be checked by someone qualified before it ships:
-
-- Signing in alone sends nothing to the maintainer: the data stays on the user's computer and with
-  the provider the user chose. The registry is a separate processing activity with its own consent
-  (KVKK açık rıza, GDPR Art. 6(1)(a)): specific, informed, freely given, as easy to withdraw.
-- A privacy notice (KVKK aydınlatma metni, GDPR Art. 13) on the site, linked from the opt-in: who the
-  controller is, what is stored (login or email, first-seen date), why (to know who uses Fairbeam),
-  where (GitHub and Vercel, both outside Türkiye: cross-border transfer under KVKK Art. 9 as amended
-  in 2024), how long (until deletion or two years without use), and the rights (KVKK Art. 11,
-  GDPR Arts. 15-17 and 21) with a contact address.
-- Account deletion: the in-app "Remove me" deletes the registry file; Sign out deletes everything
-  local; an email to the contact address works too. Answer requests within 30 days (KVKK Art. 13,
-  GDPR Art. 12(3): one month).
-- Data minimization: no IP, no device id, no usage events in the registry. The anonymous telemetry
-  (separate document) must never be joined with it.
-- Check whether VERBİS registration applies (small controllers are often exempt).
+4. Publish a privacy notice for sign-in on the site before the first release that has it on.

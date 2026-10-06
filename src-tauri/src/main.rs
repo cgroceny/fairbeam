@@ -500,7 +500,7 @@ mod fit_tests {
                 min: (1024.0, 700.0)
             }
         );
-        // the Windows PC of #175: a 2560 × 1380 px work area at 156 % is 1641 × 885 points
+        // a 2560 × 1380 px work area at 156 % is 1641 × 885 points
         assert!(fit_for(2560.0 / 1.56, 1380.0 / 1.56).maximize);
         // a 1352 × 878 MacBook work area
         assert_eq!(
@@ -1212,7 +1212,8 @@ async fn get_general_settings(app: AppHandle) -> Value {
     let gpu_installing = *app.state::<Shell>().gpu_installing.lock().unwrap();
     let external = s.external();
     // a Python chosen in the setup screen comes first; when its openEMS lists the gpu engine it
-    // is the GPU build as far as Settings is concerned (#175: E:\opt\openEMS-gpu chosen by hand)
+    // is the GPU build as far as Settings is concerned (for example one installed on another
+    // drive and chosen by hand)
     let external_gpu = external.as_deref().filter(|py| runtime::has_gpu_engine(py));
     let gpu_build = match external_gpu {
         Some(py) => Some(runtime::install_folder(py).display().to_string()),
@@ -2009,7 +2010,7 @@ fn main() {
                 .build()?;
             let _ = window.show();
             // Windows: the maximized state of a hidden window does not survive (the resize to the
-            // monitor's scale factor clears it, and show() then opens it Normal, #175), so it is
+            // monitor's scale factor clears it, and show() then opens it Normal), so it is
             // maximized again once visible. A no-op when it is maximized already (macOS).
             if fit.maximize {
                 let _ = window.maximize();

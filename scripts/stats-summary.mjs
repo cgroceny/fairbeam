@@ -4,15 +4,16 @@
 //   1. Numbers that exist without any telemetry: the download counts of every release asset of
 //      ismailakdag/fairbeam-releases (gh api). The updater fetches latest.json from the latest
 //      release on every update check, so its count is a rough proxy for launches.
-//   2. The usage pings (once usage statistics are turned on): the jsonl lines of the private
-//      stats repository, from a local clone (--dir) or through gh api (--gh). They give the daily
+//   2. The usage pings (once usage statistics are turned on): the jsonl lines of the stats
+//      repository (the STATS_REPO of api/_ping-core.js), from a local clone (--dir) or through
+//      gh api (--gh, with --repo or STATS_REPO). They give the daily
 //      and weekly active installs, the OS/GPU/version shares, simulations per day with the engine
 //      split, failures by category and the feature usage.
 //
 // Usage:
 //   node scripts/stats-summary.mjs --releases-only
-//   node scripts/stats-summary.mjs --dir ../fairbeam-stats/data [--days 28]
-//   node scripts/stats-summary.mjs --gh [--repo ismailakdag/fairbeam-stats] [--days 28] [--no-releases]
+//   node scripts/stats-summary.mjs --dir <stats-clone>/data [--days 28]
+//   node scripts/stats-summary.mjs --gh --repo <owner>/<stats-repo> [--days 28] [--no-releases]
 import { execFileSync } from "node:child_process";
 import { existsSync, readFileSync, readdirSync } from "node:fs";
 import { join } from "node:path";
@@ -186,7 +187,7 @@ function printUsage(s) {
 }
 
 function main(argv) {
-  const opt = { days: 28, repo: "ismailakdag/fairbeam-stats", releases: true, only: false, dir: null, gh: false };
+  const opt = { days: 28, repo: process.env.STATS_REPO ?? null, releases: true, only: false, dir: null, gh: false };
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i];
     if (a === "--dir") opt.dir = argv[++i];
@@ -195,8 +196,9 @@ function main(argv) {
     else if (a === "--days") opt.days = Math.max(1, Number(argv[++i]) || 28);
     else if (a === "--no-releases") opt.releases = false;
     else if (a === "--releases-only") opt.only = true;
-    else { console.error(`unknown option ${a}\nusage: stats-summary.mjs [--releases-only] [--dir <data folder> | --gh [--repo owner/name]] [--days N] [--no-releases]`); process.exit(2); }
+    else { console.error(`unknown option ${a}\nusage: stats-summary.mjs [--releases-only] [--dir <data folder> | --gh --repo owner/name] [--days N] [--no-releases]`); process.exit(2); }
   }
+  if (opt.gh && !opt.dir && !opt.repo) { console.error("--gh needs --repo <owner>/<stats-repo> (or the STATS_REPO environment variable)"); process.exit(2); }
   if (opt.releases || opt.only) {
     try { printReleases(summarizeReleases(fetchReleases())); }
     catch (e) { console.error(`release downloads: ${e.message.split("\n")[0]} (is gh installed and logged in?)`); }

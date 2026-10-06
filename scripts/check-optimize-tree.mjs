@@ -23,7 +23,7 @@ const cancelled = optimizationNodes([{ ...job, id: "stopped", status: "cancelled
 assert.match(cancelled[0].label, /stopped$/, "a stopped optimization keeps its partial history");
 assert.equal(cancelled[0].children[0].action.kind, "optimization-history");
 
-// the tree filters by the design's file id (a job's `model`), not the design's model.id (#150 review)
+// the tree filters by the design's file id (a job's `model`), not the design's model.id
 const byFile = { ...job, id: "file-id", model: "zz_opt", model_id: "zz-opt" };
 assert.equal(optimizationNodes([byFile], "zz_opt").length, 1, "jobs match the design file id");
 assert.equal(optimizationNodes([byFile], "zz-opt").length, 0, "model.id is not the job's model key");

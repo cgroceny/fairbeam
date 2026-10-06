@@ -380,7 +380,7 @@ class MeshChecks(unittest.TestCase):
 
 
 def pcb_design(thin_metal=None):
-    """The blank patch with its ground and patch drawn as 35 µm copper, as in CST, and the probe
+    """The blank patch with its ground and patch drawn as 35 µm copper, and the probe
     drawn from the bottom of the ground to the top of the patch."""
     d = blank_design("t", "T")
     d["parts"][1]["primitives"][0] = {"kind": "box", "start": ["-G/2", "-G/2", "-0.035"], "stop": ["G/2", "G/2", "0"]}
@@ -799,7 +799,7 @@ class OneClickFixes(unittest.TestCase):
     def dipole(self, angle=None, axis="y", gap=1.0, radius=1.0):
         """Two cylindrical arms along z with a 2 x gap between them and a lumped port across it; the
         arms are turned about `axis` through the origin by `angle` degrees when given (ports do not
-        follow a transform: the UX test's rotated dipole)."""
+        follow a transform: a rotated dipole)."""
         d = blank_design("t", "T")
         d["parts"] = [
             {"name": "arm_a", "material": "copper", "primitives": [
@@ -1111,7 +1111,7 @@ class ChecksApi(unittest.TestCase):
         self.assertIn("end_criteria_db", errs)
 
 def overlaid_arrays(copies=999, priorities=(10, 10, 10), shifts=(0, 0, 0)):
-    """The review's hidden-part profile (#105): equal copper arrays of sheet squares, one per part,
+    """The hidden-part profile: equal copper arrays of sheet squares, one per part,
     each copy on top of the same copy of the others."""
     d = blank_design("lint", "Overlaid arrays")
     for i, (prio, dx) in enumerate(zip(priorities, shifts)):

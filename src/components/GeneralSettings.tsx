@@ -57,7 +57,7 @@ export default function GeneralSettingsDialog(props: { open: boolean; close: () 
   // the openEMS build the desktop app starts with: the GPU build has both engines (GPU.md)
   const [gpuBuild, setGpuBuild] = createSignal<string | null>(null);
   const [externalPython, setExternalPython] = createSignal<string | null>(null);
-  // the Python chosen in the setup screen is itself a GPU build (E:\opt\openEMS-gpu, #175)
+  // the Python chosen in the setup screen is itself a GPU build
   const [externalIsGpu, setExternalIsGpu] = createSignal(false);
   const [gpuChanged, setGpuChanged] = createSignal(false);
   const [gpuRuntime, setGpuRuntime] = createSignal("");

@@ -25,7 +25,7 @@ assert.match(history, /saveDownload\(.*text\/csv;charset=utf-8/s);
 assert.match(history, /<SweepSummary group=\{g\(\)\} \/>/);
 assert.match(progress, /cancelSweep\(job\(\)\.sweep!\.id\)/);
 assert.match(progress, /sweepProgress\(\)\?\.done.*sw\(\)\.total/);
-// run order (#151 review): by the server's run index, which runs across the sequences in order
+// run order: by the server's run index, which runs across the sequences in order
 assert.match(sweep, /g\.jobs\.sort\(\(a, b\) => a\.sweep!\.index - b\.sweep!\.index\)/);
 assert.doesNotMatch(sweep, /sequence_index \?\? a\.sweep!\.index/, "sequence_index alone ties within a sequence");
 // the designer dialog: live progress while active, Stop only then, errors of Stop shown, a11y

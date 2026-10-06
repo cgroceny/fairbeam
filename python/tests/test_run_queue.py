@@ -370,7 +370,7 @@ class CliFolders(unittest.TestCase):
         return path, out.getvalue()
 
     def test_a_cli_result_never_replaces_a_bundle_of_the_workspace(self):
-        # the packaged CLI writing into the app's workspace (the review's repro): a seeded example, or
+        # the packaged CLI writing into the app's workspace: a seeded example, or
         # the app's own first run of the same model and parameters, has the CLI's file name
         self.record()
         folders = appstate.cli_defaults(self.runtime)

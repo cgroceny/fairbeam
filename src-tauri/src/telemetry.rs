@@ -781,7 +781,7 @@ mod tests {
     fn payload_has_the_schema_fields_and_nothing_else() {
         let mut counts = BTreeMap::new();
         counts.insert("sim.started.cpu.design".to_string(), 2);
-        counts.insert("/Users/ismail/Documents/fairbeam/models/secret.design.json".to_string(), 1);
+        counts.insert("/Users/ada/Documents/fairbeam/models/secret.design.json".to_string(), 1);
         counts.insert("param.patch_width".to_string(), 1);
         counts.insert("user@example.com".to_string(), 1);
         counts.insert("monitor.far_field".to_string(), 0);

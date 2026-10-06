@@ -84,7 +84,7 @@ store.undo();
 assert.deepEqual(store.draft.parts[1].primitives[0].start, [3, 3, 0], 'one undo takes the pin and the cut back together');
 assert.deepEqual(store.draft.parts[0].booleanHistory.B.primitives[0].start, [3, 3, 0]);
 
-// ---- the CST keys: with a solid selected, a key starts the operation with it as A; the next pick is B; Enter applies
+// ---- the Boolean keys: with a solid selected, a key starts the operation with it as A; the next pick is B; Enter applies
 const select = (i) => store.setSelection({ type: 'part', i });
 open([part('brick', [box([0, 0, 0], [10, 10, 4])]), part('brick2', [box([3, 3, 2], [7, 7, 5])])]);
 select(0);
@@ -161,4 +161,4 @@ assert.equal(store.message().tone, 'warn');
   assert.equal(Number(slot.start[0]), 9, 'the slot moved with the parameter');
 }
 
-console.log('Boolean UI: toast, one undo step, refusal before applying, Insert following edits, the CST keys, removed volume and parametric cut-outs passed.');
+console.log('Boolean UI: toast, one undo step, refusal before applying, Insert following edits, the Boolean keys, removed volume and parametric cut-outs passed.');

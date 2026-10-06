@@ -1,4 +1,4 @@
-// Hands-on fixes: "Run a Python model" on Start, the Boolean's selection requirements, the Transform
+// Start, Boolean and Transform fixes: "Run a Python model" on Start, the Boolean's selection requirements, the Transform
 // dialog (live preview, a reason for a disabled OK), and Color… from the right-click menus.
 // The real Solid stores, without a DOM or solver.
 //
@@ -14,14 +14,14 @@ const modules = ['designer/store.ts', 'designer/booleanUi.ts', 'designer/colors.
 const built = await build({
   root, configFile: false, logLevel: 'silent', resolve: { conditions: ['browser'] }, css: { postcss: {} },
   plugins: [solid(), {
-    name: 'hands-on-entry',
-    resolveId(id) { if (id.endsWith('hands-on-entry')) return '\0hands-on-entry'; },
+    name: 'check-entry',
+    resolveId(id) { if (id.endsWith('check-entry')) return '\0check-entry'; },
     load(id) {
-      if (id !== '\0hands-on-entry') return;
+      if (id !== '\0check-entry') return;
       return modules.map((path, i) => `export * as m${i} from ${JSON.stringify(`${root}src/${path}`)};`).join('\n');
     },
   }],
-  build: { write: false, minify: false, cssCodeSplit: false, lib: { entry: 'hands-on-entry', formats: ['es'] } },
+  build: { write: false, minify: false, cssCodeSplit: false, lib: { entry: 'check-entry', formats: ['es'] } },
 });
 const chunk = (Array.isArray(built) ? built[0] : built).output.find((o) => o.type === 'chunk');
 const stub = { addEventListener() {}, removeEventListener() {}, dispatchEvent() {}, querySelector: () => null, getElementById: () => null };
@@ -131,4 +131,4 @@ assert.equal(store.draft.python_source_hash, 'a'.repeat(64));
 store.redo();
 assert.equal(store.draft.python_source_model, undefined, 'redo detaches the source again');
 
-console.log('Hands-on fixes: Start Python model, Boolean requirements, Transform live preview, Color… menus and imported source edit/undo lifecycle passed.');
+console.log('Start, Boolean and Transform fixes: Start Python model, Boolean requirements, Transform live preview, Color… menus and imported source edit/undo lifecycle passed.');

@@ -82,7 +82,7 @@ export function usePointTools() {
 function start(mode: PointPickMode) { setMode(mode); setHover(null); }
 function align() {
   const a = alignSource(), b = alignTarget();
-  // The solid that owns the first pick moves, whatever is selected (CST: the picked shape moves).
+  // The solid that owns the first pick moves, whatever is selected.
   const name = a?.part ?? "";
   if (!a || !b || !draft.parts.some((p) => p.name === name)) {
     setMessage({ tone: "warn", text: t("pointTools.needAlignPicks") });

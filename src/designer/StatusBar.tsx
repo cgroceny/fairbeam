@@ -58,7 +58,7 @@ export default function StatusBar() {
     const p = liveProgress();
     return Math.round(100 * Math.max(0, Math.min(1, p?.energy_fraction ?? p?.timestep_fraction ?? 0)));
   };
-  /** The cursor in the active WCS: x y z for the global one, u v w for a local one (CST). */
+  /** The cursor in the active WCS: x y z for the global one, u v w for a local one. */
   const cursorText = () => {
     const p = c();
     if (!p) return wcsIsGlobal() ? "x —  y —  z —" : "u —  v —  w —";

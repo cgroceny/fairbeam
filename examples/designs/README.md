@@ -71,9 +71,9 @@ same design resonated at 0.843 GHz instead of 0.904 GHz, and the scan gave the s
 | Zenith (θ = 0°) / below the skin | −10.8 dBi / up to −1.1 dBi |
 
 **Mesh convergence.** The resonance is converged at the default density: the lowest |S11| is at
-0.904 GHz at 20 cells per wavelength and at 0.907 and 0.908 GHz at 30 and 40 (CST 2026 gives
-0.923 GHz for the same blade). Before the cells next to the blade were refined it was 0.843, 0.890
-and 0.906 GHz at 20, 30 and 40, and 0.908 GHz only from 50. The 0.7–2.0 GHz run meshes 867 MHz at
+0.904 GHz at 20 cells per wavelength and at 0.907 and 0.908 GHz at 30 and 40. Before the cells
+next to the blade were refined it was 0.843, 0.890 and 0.906 GHz at 20, 30 and 40, and 0.908 GHz
+only from 50. The 0.7–2.0 GHz run meshes 867 MHz at
 about 46 cells per wavelength, so it also checks the mesh. Dmax changed by 0.02 dB, |S11| at 867 MHz
 went to −18 dB and Zin to 49.2 + j12.6 Ω (30 cells per wavelength at 2 GHz: −16 dB, 48.3 + j15.3 Ω).
 The feed reactance is the least converged number (it keeps rising with density, probably with how
@@ -700,7 +700,7 @@ or overflights, the sleeve dipole's 78° beam is the more robust choice.
   below the board, or fit a ferrite on it at the board edge.
 - **Match.** The match across 863–870 MHz is −12 dB, not the −19 dB of the sleeve dipole. The band
   is wide (15.7 %), but it has two minima, with −11.5 dB at about 880 MHz between them. Its center
-  sits 3 % above 867 MHz, not the 1 % aimed for. The run budget ran out before a deeper match. The
+  sits 3 % above 867 MHz, not the 1 % aimed for. No further tuning runs were made. The
   next steps are a slightly wider trace `w_t` (a lower line impedance), or re-tuning `l_t` by a
   millimeter or two around 58 mm. The mismatch costs 0.28 dB of realized gain.
 - **Radome.** A thin glass-fiber shell lowers the frequency by a few per cent. The band reaches

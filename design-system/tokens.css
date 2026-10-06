@@ -2,7 +2,7 @@
    Components use role tokens (--al-*) only; never raw hex.
    Identity: a measuring instrument. Warm paper neutrals, one accent (copper, the material the
    antennas are made of), numbers in a monospace face. Light is the default; dark is selected per
-   step, not inverted. Chart colours follow the validated reference palette (dataviz). */
+   step, not inverted. Chart colours follow a validated reference palette. */
 
 :root {
   --al-chart-line-weight: 2;
@@ -113,7 +113,7 @@
   --al-series-1:        #2a78d6;
   --al-series-2:        #eb6834;
   --al-series-3:        #1baf7a;
-  /* slots 4-8 (dataviz reference palette): compared runs past three; validated on the adjacent
+  /* slots 4-8 (reference palette): compared runs past three; validated on the adjacent
      pairlist for lines, below 3:1 on the light surface for 4 and 5, so the table view is the relief */
   --al-series-4:        #eda100;
   --al-series-5:        #e87ba4;
@@ -126,7 +126,7 @@
   --al-seq-3: #1c5cab; --al-seq-4: #104281; --al-seq-5: #0d366b;
   /* field colour map for 3D field quantities (directivity surface, surface current): Turbo,
      trimmed at both ends so the lowest values stay visible on the dark viewport. Same in both
-     themes, low -> high; reads like the rainbow maps in CST/HFSS but is perceptually ordered. */
+     themes, low -> high; a perceptually ordered rainbow map. */
   --al-field-0: #493dab; --al-field-1: #3789f9; --al-field-2: #25cdd0;
   --al-field-3: #48f789; --al-field-4: #96fa50; --al-field-5: #e5d730;
   --al-field-6: #ff9520; --al-field-7: #e54813; --al-field-8: #a01101;

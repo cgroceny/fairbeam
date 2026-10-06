@@ -32,7 +32,7 @@ const fixture = (file) => JSON.parse(src(`public/projects/${file}.json`));
 let checks = 0;
 const ok = (fn) => { fn(); checks++; };
 
-// ------------------------------------------------------------------ Run again (review 02-01)
+// ------------------------------------------------------------------ Run again
 const it3 = fixture('sierpinski-monopole--iterations-3');
 const it0 = fixture('sierpinski-monopole--iterations-0');
 const dipole = fixture('dipole');
@@ -59,7 +59,7 @@ state.openBundle(it3, 'sierpinski-monopole--iterations-3.json');
 await runAgain();
 ok(() => assert.deepEqual(form(), { key: 'sierpinski_monopole', iterations: '3', height: '48' }, 'iterations=3: Run again loads 3'));
 ok(() => assert.equal(runner.runOpen(), true));
-// the review's step 2: the panel stays open, the project picker selects iterations=0, Run again
+// second step: the panel stays open, the project picker selects iterations=0, Run again
 state.openBundle(it0, 'sierpinski-monopole--iterations-0.json');
 await runAgain();
 ok(() => assert.deepEqual(form(), { key: 'sierpinski_monopole', iterations: '0', height: '48' }, 'iterations=0 after 3: Run again loads 0'));
@@ -101,7 +101,7 @@ ok(() => assert.equal(state.bundle().model.id, it3.model.id, 'closing the previe
 runner.invalidatePreview();
 
 // the entry points stay wired: Examples has no Run action; the designer
-// header keeps #85's Run dialog for an open design (review 11-01, regression only); Start passes its pick
+// header keeps the Run dialog for an open design (regression only); Start passes its pick
 const panel = src('src/components/ModelPanel.tsx');
 ok(() => assert.doesNotMatch(panel, /openRunPanelFrom|Run again|openRunPanel\(/, 'Examples has no Run action'));
 const toggle = src('src/runner/RunToggle.tsx');
@@ -109,7 +109,7 @@ ok(() => assert.match(toggle, /appMode\(\) === "design" && designFile\(\)\) \{ s
   'designer header Run opens the design Run dialog (#85) and keeps the design preview (#117)'));
 ok(() => assert.match(src('src/runner/startPython.ts'), /await openRunPanel\(key\)/, 'Start passes its pick'));
 
-// ------------------------------------------------------------------ file drops (review 03-01)
+// ------------------------------------------------------------------ file drops
 const PART_DRAG = src('src/designer/NavTree.tsx').match(/const PART_DRAG = "([^"]+)"/)[1];
 ok(() => assert.equal(PART_DRAG, 'application/x-fairbeam-part'));
 const event = (types, files = []) => {

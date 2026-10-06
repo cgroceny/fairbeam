@@ -1,6 +1,6 @@
 // The options of a rendered image, kept in one plain object so every renderer reads the same thing:
-// the in-app one (src/render/capture.ts, three.js) and the Blender one (a separate lane that adds
-// src/render/blender.ts and a server endpoint, and takes this object as it is).
+// the in-app one (src/render/capture.ts, three.js) and the Blender one (src/render/blender.ts and a
+// server endpoint, which take this object as it is).
 //
 // No three.js and no DOM here: this file is loaded straight into Node by scripts/check-render.mjs.
 import type { ViewName } from "../scene/cameraViews.ts";
@@ -12,7 +12,7 @@ export type RenderBackground = "transparent" | "studio" | "dark";
 export type RenderPorts = "connector" | "marker" | "hidden";
 export type SolderMask = "none" | "green";
 export type RenderProjection = "perspective" | "orthographic";
-/** "app": drawn here with three.js; "blender": the user's Blender (src/render/blender.ts, the other lane). */
+/** "app": drawn here with three.js; "blender": the user's Blender (src/render/blender.ts). */
 export type RenderEngine = "app" | "blender";
 /** draft: no supersampling; standard: 2x supersampling; high: 3x (each capped by the GPU and a pixel budget). */
 export type RenderQuality = "draft" | "standard" | "high";
@@ -67,9 +67,9 @@ function side(value: unknown, fallback: number): number {
   return Number.isFinite(n) ? Math.min(MAX_SIDE, Math.max(MIN_SIDE, Math.round(n))) : fallback;
 }
 
-/** A complete, valid options object from anything (a stored draft, a half-filled form, another lane's
- *  request): unknown values fall back to the defaults, sizes are rounded and clamped, angles are
- *  deduplicated and put in the standard order, and at least one angle is always kept. */
+/** A complete, valid options object from anything (a stored draft, a half-filled form, the Blender
+ *  engine's request): unknown values fall back to the defaults, sizes are rounded and clamped,
+ *  angles are deduplicated and put in the standard order, and at least one angle is always kept. */
 export function normalizeRenderOptions(input: Partial<Record<keyof RenderOptions, unknown>> = {}): RenderOptions {
   const d = DEFAULT_RENDER_OPTIONS;
   const asked = Array.isArray(input.angles) ? input.angles : d.angles;

@@ -49,18 +49,12 @@ values are reported literally and their notes identify the manual override. Adap
 build time, so they are not written back into design JSON. Missing mode and `mode: auto` retain
 the legacy choices.
 
-A four-design GPU comparison (its report is not in this repository) kept this mode opt-in for existing files. Against a
-45 cells/λ openEMS reference with exact edges, the adaptive S11 MAE was slightly higher than
-the legacy mesh on the patch (0.724 vs 0.696 dB), dipole (2.864 vs 2.852 dB), and microstrip
-(2.823 vs 2.596 dB). The RFID result improved (0.861 vs 0.996 dB against openEMS). These are single runs and the finer
-reference is a numerical comparison, not a guaranteed converged solution. Inspect the reported
-choices and use per-field overrides for the design at hand.
-
-For the RFID design in the Q1 mesh study, an exact edge line with 30 cells/λ at features,
-10 cells/λ in outer air, 1.4 grading ratio, and λ(f_min)/8 padding reduced the mesh to
-580,320 cells from 637,032 at the old 20 cells/λ default. This is a measured option
-for that model, not a universal default; the thirds rule remains the default for the other
-validated antennas. The test uses MUR boundaries and a −50 dB stop criterion.
+A GPU comparison on the patch, dipole and microstrip designs kept this mode opt-in for existing
+files. Against a 45 cells/λ openEMS reference with exact edges, the adaptive S11 MAE was slightly
+higher than the legacy mesh on the patch (0.724 vs 0.696 dB), dipole (2.864 vs 2.852 dB), and
+microstrip (2.823 vs 2.596 dB). These are single runs and the finer reference is a numerical
+comparison, not a guaranteed converged solution. Inspect the reported choices and use per-field
+overrides for the design at hand.
 
 ## Rules
 
@@ -197,7 +191,7 @@ judge the resonance and Dmax.
   for convergence checks ([Convergence study](#convergence-study) for a design;
   `fairbeam converge ... --param auto_cpw=15,20,30` or your own mesh parameter for a Python model).
 - Rotated or transformed primitives are meshed by their bounding box.
-- Round 5 fixed the grading next to split gaps (rule 7). Before, the gap across such a line graded
+- The grading next to split gaps (rule 7) has been fixed. Before, the gap across such a line graded
   from the unsplit gap, so the branch-line coupler, the low-pass filter, the microstrip template and
   the helix had neighbor ratios up to 2.1. Their meshes change (branch-line 69 k → 76 k cells,
   low-pass 100 k → 126 k); the dipole, patch, arrays and the other templates are unchanged. The

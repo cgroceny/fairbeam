@@ -866,7 +866,7 @@ class Build(unittest.TestCase):
 
 
 def detailed_array(level=3, copies=3):
-    """A small version of the review's large-preview fixture (#105): a copies+1 square array of
+    """A small version of the large-preview fixture: a copies+1 square array of
     35 µm copper squares, each topped by a Koch outline, over a substrate and a ground plane."""
     from test_automesh import koch
 

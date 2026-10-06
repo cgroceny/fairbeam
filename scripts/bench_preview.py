@@ -3,7 +3,7 @@
 
     python scripts/bench_preview.py [--repeat 5]
 
-``large preview``: the review's detailed-array fixture (rp1_perf_big): an 8 x 8 array of 35 um
+``large preview``: a detailed-array fixture (rp1_perf_big): an 8 x 8 array of 35 um
 copper squares, each topped by a level-4 Koch outline (768 points), on a 180 mm substrate. It is
 built as the preview worker builds an unsaved design (fairbeam.preview.build_preview: resolve,
 CSXCAD, automatic mesh, bundle) and linted with that bundle.
