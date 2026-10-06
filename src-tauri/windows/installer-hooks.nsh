@@ -11,6 +11,12 @@
 ;   .fairbeam-resources  all six subfolders are the app's own: replace on update, remove on uninstall
 ;   .fairbeam-shared     the folder had its own subfolders of these names: never remove them
 
+; Version info: Tauri's template writes ProductName, FileDescription, LegalCopyright (from
+; bundle.copyright) and the versions, but no CompanyName. This file is included before the
+; template's !defines, so ${MANUFACTURER} is not known yet: keep the text equal to bundle.publisher
+; in tauri.conf.json (scripts/check-installer-info.mjs checks it).
+VIAddVersionKey "CompanyName" "Fairbeam"
+
 ; 0 shared, 1 resources
 Var FairbeamOwnsResources
 

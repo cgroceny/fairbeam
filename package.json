@@ -70,6 +70,7 @@
     "check:menu-actions": "node --experimental-strip-types scripts/check-menu-actions.mjs",
     "check:python-panel": "node scripts/check-python-panel.mjs",
     "check:native-dialogs": "node scripts/check-native-dialogs.mjs",
+    "check:installer-info": "node scripts/check-installer-info.mjs",
     "check:draft-lifecycle": "node scripts/check-draft-lifecycle.mjs",
     "check:flat-circles": "node --experimental-strip-types scripts/check-flat-circles.mjs",
     "check:modeling-workflows": "node --experimental-strip-types scripts/check-modeling-workflows.mjs",
