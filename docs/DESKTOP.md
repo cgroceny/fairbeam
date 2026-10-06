@@ -281,7 +281,7 @@ process.
 | Bundle | `Fairbeam.app` in a `.dmg` | NSIS installer `.exe`, per-user, no admin |
 | WebView | WKWebView (system) | WebView2 (bootstrapper included) |
 | Build | `npm run desktop:build` on a Mac | `npm run desktop:build` on Windows (Rust MSVC toolchain) |
-| Signing | Developer ID, notarized and stapled (a plain `npm run desktop:build` is only ad-hoc signed; [RELEASES.md](RELEASES.md)) | none yet (SmartScreen warns) |
+| Signing | Developer ID, notarized and stapled (a plain `npm run desktop:build` is only ad-hoc signed; [RELEASES.md](RELEASES.md)) | none: the installer is not code-signed (SmartScreen warns; More info › Run anyway) |
 
 **[win]** `src-tauri/tauri.windows.conf.json` is merged over `tauri.conf.json` on Windows (JSON
 merge patch: arrays are replaced). It sets the `nsis` target, the icons without `.icns`, WebView2

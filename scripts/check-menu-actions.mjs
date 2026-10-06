@@ -67,8 +67,8 @@ assert.doesNotMatch(shell, /fn open_external_link\(url/);
 const about = readFileSync(new URL("../src/components/AboutDialog.tsx", import.meta.url), "utf8");
 assert.doesNotMatch(about, /invoke\("open_external_link", \{ url/);
 assert.doesNotMatch(about, /@[a-z0-9-]+\.[a-z]/i, "no e-mail address in About");
-// Help › Getting Started Guide and Report a Problem…, and About, open only public places: the
-// source repository is private (the website's guide and the fairbeam-releases repository instead)
+// Help › Getting Started Guide and Report a Problem…, and About, open only fixed public places: the
+// website's guide, the fairbeam-releases repository (installers, issue forms) and the source repository
 assert.match(shell, /\("help-docs", tx\("help-docs"\)\)/);
 assert.match(shell, /\("help-issues", tx\("help-issues"\)\)/);
 assert.match(shellText, /\("help-docs", "Getting Started Guide", "Başlangıç Kılavuzu"\)/i);
@@ -77,7 +77,9 @@ assert.match(shellText, /\("help-issues", "Report a Problem…", "Sorun Bildir�
 assert.match(shell, /fn set_language\(app: AppHandle, lang: String\)[\s\S]*?app\.set_menu\(app_menu\(&app\)/);
 assert.match(shell, /"docs" => "https:\/\/fairbeam\.org\/guide\.html"/);
 assert.match(shell, /"issues" => "https:\/\/github\.com\/ismailakdag\/fairbeam-releases\/issues\/new\/choose"/);
-const privateRepo = /github\.com\/ismailakdag\/fairbeam(?![\w-])/;
-assert.doesNotMatch(shell, privateRepo, "no link to the private source repository in the desktop shell");
-assert.doesNotMatch(about, privateRepo, "no link to the private source repository in About");
+assert.match(shell, /"source" => "https:\/\/github\.com\/ismailakdag\/fairbeam",/);
+assert.match(about, /link\("source", t\("about\.sourceLink"\)\)/, "About links the public source repository");
+assert.match(about, /link\("docs", t\("about\.guide"\)\)/, "About links the getting-started guide");
+// About names neither the former product nor the trademark holder (NOTICE.md carries the notice)
+assert.doesNotMatch(about, /about\.(formerly|trademark)/);
 console.log("menu action allowlist, dispatch, rejection, recent-file decoding and lifecycle: ok");

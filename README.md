@@ -19,9 +19,10 @@ installs its own runtime (Python and openEMS) for your user on first start and u
 [Getting started](docs/GETTING-STARTED.md) takes you from installing to reading the results of a
 patch antenna in five minutes.
 
-The Windows installer is not code-signed yet, so SmartScreen asks for confirmation on the first
-run. The [browser demo](https://fairbeam.org/app/) opens the example projects read-only, without
-installing anything.
+The Windows installer is not code-signed. On the first run SmartScreen shows "Windows protected
+your PC": choose **More info › Run anyway**. The macOS app is signed and notarized. The
+[browser demo](https://fairbeam.org/app/) opens the example projects read-only, without installing
+anything.
 
 ## What it does
 
@@ -90,11 +91,18 @@ npm run dev       # the viewer and designer on http://127.0.0.1:5310
   fills in the version and the operating system.
 - Code and documentation contributions are welcome as pull requests here. Read
   [CONTRIBUTING.md](CONTRIBUTING.md) first.
-- Fairbeam is developed with AI coding agents under human review. How that works, and the rules for
-  AI-assisted contributions, are in the [AI policy](AI_POLICY.md).
+- Fairbeam is developed with AI coding assistance. How that works, and the rules for AI-assisted
+  contributions, are in the [AI policy](AI_POLICY.md).
 
 ## Credits
 
+- **Maintainer:** [İsmail Akdağ](https://akdag.dev).
+- **Contributors:** [Cem Göçen](https://github.com/cgroceny):
+  - the material cell (NRW/NIST extraction);
+  - dispersive materials (Debye, Lorentz, Drude, Djordjevic-Sarkar);
+  - waveguide, coaxial, stripline and surface-wave reference fixtures;
+  - two-line calibration, ideal network and L/C references;
+  - grouped discrete ports and multiport convergence criteria.
 - **Solvers:** Fairbeam runs [openEMS](https://openems.de) and [CSXCAD](https://github.com/thliebig/CSXCAD)
   by Thorsten Liebig and contributors. The optional GPU engine is
   [SeanMollet/openEMS](https://github.com/SeanMollet/openEMS).
@@ -106,8 +114,5 @@ npm run dev       # the viewer and designer on http://127.0.0.1:5310
 
 Fairbeam is free software under the GNU General Public License, version 3 or later
 ([LICENSE](LICENSE)). openEMS is GPL-3.0-or-later; CSXCAD and fparser are LGPL-3.0-or-later. Project
-bundles are plain data produced by your own models.
-
-## Trademarks
-
-CST and CST Studio Suite are trademarks or registered trademarks of Dassault Systèmes or its subsidiaries. Fairbeam is an independent open-source project and is not affiliated with, sponsored by or endorsed by Dassault Systèmes.
+bundles are plain data produced by your own models. Third-party notices are in
+[NOTICE.md](NOTICE.md).
