@@ -92,7 +92,9 @@ project or another domain.
 | `www.fairbeam.org` | Redirects to the apex (set it in *Settings → Domains*, "Redirect to fairbeam.org"). |
 | `antenlab.akdag.dev` | Kept for installed old apps, which call `https://antenlab.akdag.dev/api/ping` and open its guide and privacy pages. Pages redirect permanently to the same path on `fairbeam.org` (a host-based rule in `vercel.json`); `/api/*` is not redirected and keeps working. |
 
-All three domains are attached to the same Vercel project. The ping function does not check the host
+All three domains are attached to the same Vercel project, `fairbeam` (renamed on 2026-10-06; the project
+id and its settings are unchanged). GitHub's Deployments list shows that project's per-deployment
+`*.vercel.app` URLs; the repository's homepage is `https://fairbeam.org`. The ping function does not check the host
 (only the browser origin, see `api/_ping-core.js`), so no code change is needed to accept both.
 `npm run check:telemetry` asserts both that the old host's pings are stored and that the redirect rule
 never matches `/api`. Keep the old domain for as long as old apps are installed.

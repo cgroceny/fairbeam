@@ -1,60 +1,112 @@
 # Fairbeam
 
-**The open electromagnetic workbench.** *(formerly antenlab)*
+**The open electromagnetic workbench.** Design, simulate and document antennas and RF circuits on
+the open-source [openEMS](https://openems.de) FDTD solver, from a ribbon-based 3D designer or from
+parametric Python models.
 
-Fairbeam designs, simulates and documents antennas on the open-source openEMS FDTD solver, from parametric Python models to a ribbon-based 3D designer. It is built with the FAIR principles in mind: results are **findable** and self-describing (versioned project bundles that record the generator, version and run settings), **accessible** in open formats with no licence server, **interoperable** (Touchstone, CSV, STL, CST-compatible VBA macros, Gerber/Excellon, Blender), and **reusable** (GPL-3.0 parametric models and recorded inputs).
+[Website](https://fairbeam.org) · [Download](https://github.com/ismailakdag/fairbeam-releases/releases/latest) ·
+[Browser demo](https://fairbeam.org/app/) · [Getting started](docs/GETTING-STARTED.md) ·
+[Documentation](docs/README.md)
 
-Fairbeam is an antenna simulation workbench built around [openEMS](https://openems.de), the open-source FDTD solver. Antennas are described as small parametric Python models. The `fairbeam` CLI runs openEMS on them and post-processes S11, input impedance, matched bands and the far field (directivity, efficiency, gain, realized gain). Each run is written to a self-contained JSON project bundle. A browser-based viewer (SolidJS + three.js) loads these bundles and shows the exact 3D geometry, mesh and radiation pattern, with charts, a table view for every chart, and a full spec sheet. It can also export the model as a CST-compatible VBA macro.
+![A finished run in the Fairbeam designer: S-parameters with markers beside the 3D view](landing/media/designer-sparams.jpg)
+
+## Download
+
+The desktop app is free, for **macOS** (Apple silicon, signed and notarized) and **Windows** x64.
+Get the latest version from
+[fairbeam-releases](https://github.com/ismailakdag/fairbeam-releases/releases/latest). The app
+installs its own runtime (Python and openEMS) for your user on first start and updates itself.
+[Getting started](docs/GETTING-STARTED.md) takes you from installing to reading the results of a
+patch antenna in five minutes.
+
+The Windows installer is not code-signed yet, so SmartScreen asks for confirmation on the first
+run. The [browser demo](https://fairbeam.org/app/) opens the example projects read-only, without
+installing anything.
+
+## What it does
+
+- **Designer.** Draw parametric solids and sheets, use Boolean operations, transforms and a working
+  coordinate system, add ports and lumped elements, check the model, mesh it and run it, in one
+  window ([designer guide](docs/DESIGNER.md)).
+- **Simulation.** openEMS on the CPU, or the optional GPU engine (Metal on Apple silicon, CUDA on
+  NVIDIA cards). Automatic meshing, mesh convergence, parameter sweeps and a goal-driven optimizer
+  ([meshing](docs/MESHING.md), [run server](docs/RUN-SERVER.md), [optimizer](docs/OPTIMIZE.md),
+  [GPU engine](docs/GPU.md)).
+- **Results.** S-parameters with markers, impedance, VSWR, Smith and polar charts, 2D and 3D
+  far-field patterns (directivity, gain, realized gain, efficiency), surface currents and field
+  planes, multi-port S-matrices and arrays with beam steering. Every chart has a table, and runs
+  can be compared ([results](docs/RESULTS.md), [multi-port](docs/MULTIPORT.md),
+  [arrays](docs/ARRAYS.md)).
+- **Python models and CLI.** One Python file per antenna or circuit, with templates; the `fairbeam`
+  CLI runs, sweeps, converges and optimizes them ([writing models](docs/MODELS.md),
+  [CLI](docs/CLI.md)).
+- **Outputs.** B&W technical drawings, publication figures, a PDF report and an export package;
+  Touchstone and CSV; STL, glTF and Blender scenes, with optional rendered images; fabrication files
+  (Gerber X2, Excellon, DXF; preview) ([exports](docs/EXPORTS.md)).
+- **File compatibility.** CST-compatible VBA macro export (`.bas`) and macro import (`.bas`,
+  `.mcs`, `.txt`) ([designer guide](docs/DESIGNER.md#importing-a-vba-macro)).
+
+## Open and reproducible
+
+Fairbeam follows the FAIR principles:
+- **Findable** results: versioned, self-describing project bundles that record the generator, the
+  versions and the run settings (`fairbeam.project/1`).
+- **Accessible:** open formats and no licence server.
+- **Interoperable:** Touchstone, CSV, STL, glTF, Gerber/Excellon and VBA macros.
+- **Reusable:** GPL-3.0 parametric models with their recorded inputs.
+
+Results are checked against analytical references ([validation](docs/VALIDATION.md),
+[how results are computed](docs/RESULTS.md)).
 
 ## Status
 
-Development preview. The Python pipeline and the viewer work end to end on macOS (Apple silicon) and on Windows 11. The Gerber/Excellon fabrication output has not yet been checked in a Gerber viewer or by a fab. The desktop app is released for macOS (Apple silicon) and Windows x64 (0.7.0 is the first release of Fairbeam); the macOS build is signed and notarized, the Windows installer is not signed yet. The bundle schema is versioned (`fairbeam.project/1`); breaking changes will bump the version.
+Fairbeam 0.7 is a development release. The Python pipeline, the designer and the desktop app work
+end to end on macOS (Apple silicon) and on Windows 11. The project file format is versioned, and
+breaking changes bump its version. The fabrication outputs
+have not yet been checked by a fab. Known gaps and plans are in
+[the roadmap](docs/ARCHITECTURE.md#roadmap).
 
-## Quick start
+## From source
 
-**Trying the desktop app?** Follow [Getting started](docs/GETTING-STARTED.md): install on macOS or
-Windows, then design, simulate and read a patch antenna in five minutes.
-
-From source, requirements: macOS with Homebrew, Xcode command line tools, Python 3.10+ (the python.org build is recommended) and Node.js 20+.
+Requirements: Python 3.10+, Node.js 20+ and an openEMS build. On macOS (and Linux) a script builds
+openEMS for you:
 
 ```bash
-# 1. Build openEMS + CSXCAD from source into ~/opt/openEMS and install fairbeam into its venv
-#    (about 5-10 minutes; the VTK step heats the CPU)
-scripts/install-openems-macos.sh
-
-# 2. Run a model. This writes public/projects/<slug>.json and updates public/projects/index.json
+scripts/install-openems-macos.sh                              # openEMS + CSXCAD into ~/opt/openEMS (5-10 min)
 ~/opt/openEMS/venv/bin/fairbeam run python/models/patch_antenna.py
-
-# 3. Open the viewer on http://127.0.0.1:5310, with the run server for the Run panel
 npm install
-npm run serve &      # optional: fairbeam serve on port 5320 (Run panel, sweeps, optimizer, editor)
-npm run dev
-
-# or as a native window: npm run desktop (development), or npm run desktop:build and open the app (docs/DESKTOP.md)
+npm run serve &   # the run server on port 5320 (Run panel, sweeps, optimizer)
+npm run dev       # the viewer and designer on http://127.0.0.1:5310
 ```
 
-Details, install options and the test suite: [docs/FROM-SOURCE.md](docs/FROM-SOURCE.md).
+- Windows: [docs/WINDOWS.md](docs/WINDOWS.md).
+- The desktop app: [docs/DESKTOP.md](docs/DESKTOP.md).
+- Everything else, including the test suite: [docs/FROM-SOURCE.md](docs/FROM-SOURCE.md).
 
-## Features
+## Contributing and feedback
 
-- **Designer**: a visual workspace to draw a parametric model, set up the simulation, run it and read the results in one place ([designer guide](docs/DESIGNER.md)).
-- **Parametric models**: one Python file per antenna or circuit, with templates and automatic meshing ([writing models](docs/MODELS.md), [meshing](docs/MESHING.md)).
-- **CLI**: `run`, `sweep`, `converge`, `optimize`, `touchstone`, `serve` and more ([CLI reference](docs/CLI.md)).
-- **Viewer**: exact 3D primitives, mesh plane, far-field pattern and surface currents, |S11|, impedance, Smith and polar charts, each with a table ([design](docs/DESIGN.md)).
-- **Run server and Run panel**: parameter form with live geometry preview, job queue with live convergence, sweeps, comparison overlays, a goal-driven optimizer and an in-app model editor ([run server](docs/RUN-SERVER.md), [optimizer](docs/OPTIMIZE.md), [studies](docs/STUDIES.md)).
-- **Multi-port structures and arrays**: full S-matrices, embedded element patterns and beam steering ([multi-port](docs/MULTIPORT.md), [arrays](docs/ARRAYS.md)).
-- **3D antennas**: slanted solids (polyhedra), thin wires, rectangular waveguide ports and circular-polarisation outputs, shown on a pyramidal horn and an axial-mode helix ([included models](docs/MODELS.md#included-models)).
-- **Exports**: B&W technical drawings and publication figures, PDF report, export package, fabrication files (Gerber X2, Excellon, DXF; preview) ([exports](docs/EXPORTS.md)).
-- **VBA macros**: CST-compatible VBA macro export (`.bas`) and macro import (`.bas`, `.mcs`, `.txt`) ([exports](docs/EXPORTS.md), [designer guide](docs/DESIGNER.md#importing-a-vba-macro)).
-- **GPU engine** (optional): the openEMS GPU build, Metal on Apple silicon and CUDA on Windows with a supported NVIDIA card, several times faster with identical results. It is installed separately from the managed runtime ([GPU engine](docs/GPU.md)).
-- **Validation**: analytical results ([validation](docs/VALIDATION.md), [how results are computed](docs/RESULTS.md)).
-- **Public demo**: a read-only build of the viewer with the example projects ([deploy](docs/DEPLOY.md)).
+- Found a problem or missing something? Use **Help › Report a problem** in the app, or open an
+  issue at [fairbeam-releases](https://github.com/ismailakdag/fairbeam-releases/issues). The app
+  fills in the version and the operating system.
+- Code and documentation contributions are welcome as pull requests here. Read
+  [CONTRIBUTING.md](CONTRIBUTING.md) first.
+- Fairbeam is developed with AI coding agents under human review. How that works, and the rules for
+  AI-assisted contributions, are in the [AI policy](AI_POLICY.md).
 
-All guides are listed in [docs/README.md](docs/README.md). Roadmap: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md#roadmap).
+## Credits
+
+- **Solvers:** Fairbeam runs [openEMS](https://openems.de) and [CSXCAD](https://github.com/thliebig/CSXCAD)
+  by Thorsten Liebig and contributors. The optional GPU engine is
+  [SeanMollet/openEMS](https://github.com/SeanMollet/openEMS).
+- **Libraries:** the viewer uses [SolidJS](https://www.solidjs.com) and
+  [three.js](https://threejs.org), and the desktop shell is built with [Tauri](https://tauri.app).
+- **Details:** every bundled component, with its licence and source, is listed in [NOTICE.md](NOTICE.md).
 
 ## License
 
-Fairbeam is licensed under GPL-3.0-or-later (`LICENSE`). openEMS is GPL-3.0-or-later; CSXCAD and fparser are LGPL-3.0-or-later. The released installers come with a written offer of the complete corresponding source; see `NOTICE.md`. The bundle JSON files are plain data produced by your own models.
+Fairbeam is free software under the GNU General Public License, version 3 or later
+([LICENSE](LICENSE)). openEMS is GPL-3.0-or-later; CSXCAD and fparser are LGPL-3.0-or-later. Project
+bundles are plain data produced by your own models.
 
 ## Trademarks
 

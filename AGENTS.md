@@ -23,6 +23,8 @@ npm run check:no-antenlab                                 # the old name appears
 cd python && python -m unittest discover -s tests -q      # the venv that has openEMS
 npm run check:scenarios -- --skip-run                     # browser scenarios; needs Chrome
 ```
+- Follow [AI_POLICY.md](AI_POLICY.md): name the model in a `Co-Authored-By:` trailer, report what
+  you ran and saw, and never present a model's statement as a measured result.
 - A design-format change must stay in step between Python (`design.py`, `design_checks.py`) and TS
   (`src/designer/checks.ts`, and so on). `python/tests/fixtures/designer_parity.json` is the shared
   fixture.

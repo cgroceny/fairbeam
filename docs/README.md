@@ -2,7 +2,8 @@
 
 **New to Fairbeam? Start with [Getting started](GETTING-STARTED.md)**: install the desktop app and
 design, run and read a patch antenna in five minutes. The repository [README](../README.md) is the
-short overview.
+short overview. To contribute, read [CONTRIBUTING.md](../CONTRIBUTING.md) and the
+[AI policy](../AI_POLICY.md).
 
 ## Using Fairbeam
 
