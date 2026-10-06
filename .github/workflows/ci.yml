@@ -33,6 +33,7 @@ jobs:
       - run: npx tsc --noEmit
       - run: npm run -s check:legal
       - run: npm run -s check:no-antenlab
+      - run: npm run -s check:installer-info
       - run: npm run -s build
       - run: npm run -s check:cst
       - run: npm run -s check:exports

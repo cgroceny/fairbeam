@@ -150,6 +150,10 @@ See [DESKTOP.md](DESKTOP.md) for the contract. On Windows:
   the embedded bootstrapper (`src-tauri/tauri.windows.conf.json`). Windows 11 already has WebView2.
   Updates are offered in the app and install in passive mode (`plugins.updater.windows.installMode`
   in `src-tauri/tauri.conf.json`).
+- Version info of the installer and `fairbeam.exe`: CompanyName "Fairbeam", LegalCopyright from
+  `bundle.copyright`. Tauri's NSIS template writes no CompanyName, so
+  `src-tauri/windows/installer-hooks.nsh` adds it; `npm run check:installer-info` keeps it equal to
+  `bundle.publisher`.
 - Runtime: `%LOCALAPPDATA%\org.fairbeam.desktop\runtime`, created on first start by
   `runtime\setup-runtime.ps1` (Windows PowerShell 5.1) and `runtime\install.py`. Verified: fresh
   install, re-run, `-Repair`, `--app-only`, damaged downloads, no network, paths with spaces and
