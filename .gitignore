@@ -28,3 +28,6 @@ python/materials.json
 
 .vercel
 .env*
+
+# local editor/agent configuration
+.claude/
