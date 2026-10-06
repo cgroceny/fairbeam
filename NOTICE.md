@@ -1,6 +1,6 @@
 # Fairbeam: license and source
 
-Fairbeam (formerly antenlab) is free software under the **GNU General Public License, version 3 or later**
+Fairbeam is free software under the **GNU General Public License, version 3 or later**
 (GPL-3.0-or-later); the full text is in `LICENSE`. It comes with no warranty.
 
 ## Source code (written offer)

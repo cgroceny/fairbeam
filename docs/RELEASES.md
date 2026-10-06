@@ -166,7 +166,7 @@ editing them, or the prefill stops working.
 One entry per release, newest first. The installers are on the
 [release page](https://github.com/ismailakdag/fairbeam-releases/releases) of each version.
 
-### 0.7.0 — first release of Fairbeam (formerly antenlab), 2026-10-06
+### 0.7.0 — first release of Fairbeam, 2026-10-06
 
 Fairbeam is a desktop app for macOS (Apple silicon) and Windows x64 that designs, simulates and
 documents antennas on the open-source openEMS FDTD solver. It installs its own runtime on first
