@@ -1,0 +1,110 @@
+/* The designer's navigation tree (src/designer/NavTree.tsx, #52): the filter box, the rows of the
+   flat role="tree" (the .dz-node look from designer.css), section headings, the dock's
+   comparison key and surface-current panel (RunDock.tsx), and the Examples actions (ModelPanel.tsx).
+   Imported by NavTree.tsx, which the app loads with the designer. */
+.nt { display: flex; flex-direction: column; min-width: 0; }
+.nt-filter {
+  display: flex; align-items: center; gap: var(--al-space-1); margin: var(--al-space-2) var(--al-space-2) 0;
+  padding: 0 var(--al-space-1) 0 var(--al-space-2); border: 1px solid var(--al-control-border); border-radius: var(--al-radius-sm); background: var(--al-surface);
+  color: var(--al-text-3);
+}
+/* the filter and the tree's collapse button (« : a thin strip at the left edge, designer.css) */
+.nt-head { display: flex; align-items: center; gap: var(--al-space-1); margin: var(--al-space-2) var(--al-space-1) 0 var(--al-space-2); }
+.nt-head > .nt-filter { flex: 1; min-width: 0; margin: 0; }
+.nt-collapse { flex: none; color: var(--al-text-3); }
+.nt-filter:focus-within { border-color: var(--al-focus); }
+.nt-filter-input.rp-input { flex: 1; min-width: 0; border: 0; background: transparent; padding-left: 0; height: var(--al-control-h-sm); }
+.nt-filter-input:focus-visible { outline: none; }
+.nt-note { margin: 0 var(--al-space-3); min-height: 0; font-size: var(--al-text-xs); color: var(--al-warn); }
+.nt-note:empty { display: none; }
+.nt-help { margin: var(--al-space-2) var(--al-space-2) 0; font-size: var(--al-text-xs); line-height: 1.4; }
+/* inline-size container: the secondary-text column (--nt-sub-w) is a share of the tree's width, the
+   same on every level (a percentage of the row would shrink with its indentation) */
+.nt-tree { min-width: 0; padding-top: var(--al-space-1); container-type: inline-size; }
+.nt-empty { padding: var(--al-space-2) var(--al-space-3); font-size: var(--al-text-sm); }
+
+.nt-row {
+  position: relative; display: flex; align-items: center; gap: 4px; box-sizing: border-box;
+  min-width: 0; min-height: 29px; height: 29px; padding-top: 0; padding-right: var(--al-space-1); padding-bottom: 0;
+  line-height: 1.25; -webkit-user-select: none; user-select: none;
+}
+/* Row layout: twisty, icon, name [count] ... secondary text | one 24 px button column (eye, add, or an
+   empty .nt-slot when the row has secondary text). The secondary text is a column that starts at the
+   same x on every row while the names fit; a longer name pushes it right and it gives way first, and
+   a name only truncates once there is no room left for it (rows without secondary text use the
+   whole width). Twisty and icon are 13 px like the icons, so names get the room they had before. */
+.nt-row { --nt-sub-w: clamp(48px, 24cqw, 140px); }
+.nt-row > .nt-twisty, .nt-row > .nt-icon {
+  display: inline-flex; flex: 0 0 13px; width: 13px; min-width: 13px; height: 20px;
+  align-items: center; justify-content: center; align-self: center;
+}
+.nt-row > .nt-twisty { color: var(--al-text-3); cursor: pointer; }
+.nt-twisty svg { color: inherit; }
+.nt-row > svg { flex: 0 0 13px; width: 13px; height: 13px; align-self: center; color: var(--al-text-3); }
+.nt-row .dz-node-label { flex: 0 1 auto; min-width: 0; align-self: center; line-height: inherit; position: relative; /* contains the visually-hidden "shown" suffix, so it cannot widen the row */ }
+/* with secondary text the name does not shrink until it would leave no room at all:
+   100% minus twisty, icon, button column and the four gaps */
+.nt-row.nt-has-sub .dz-node-label { flex-shrink: 0; max-width: calc(100% - 2 * 13px - 24px - 4 * 4px); }
+.nt-row .dz-node-sub {
+  flex: 0 1 var(--nt-sub-w); min-width: 0; max-width: none; margin-left: auto; padding-left: 0;
+  text-align: left; align-self: center; line-height: inherit;
+}
+/* a section's summary ("none yet: Simulation › Run") is a sentence, not a column value */
+.nt-section .dz-node-sub { flex-basis: auto; }
+.nt-row .nt-count { flex: none; margin-left: 2px; }
+.nt-row > .nt-eye, .nt-row > .nt-menu {
+  display: inline-flex; flex: 0 0 24px; width: 24px; min-width: 24px; height: 24px;
+  align-items: center; justify-content: center; align-self: center; margin: 0; padding: 0;
+  border: 0; border-radius: var(--al-radius-sm); background: transparent; color: var(--al-text-3);
+  cursor: pointer;
+}
+.nt-row > .nt-eye:hover, .nt-row > .nt-menu:hover,
+.nt-row > .nt-eye:focus-visible, .nt-row > .nt-menu:focus-visible { background: var(--al-surface); color: var(--al-text); }
+.nt-row > .nt-eye:focus-visible, .nt-row > .nt-menu:focus-visible { outline: 2px solid var(--al-focus); outline-offset: -2px; }
+/* the button column: eye, add or the empty slot, at the right edge with or without secondary text */
+.nt-row > .nt-eye, .nt-row > .nt-add, .nt-row > .nt-slot { margin-left: auto; }
+.nt-row > .nt-add, .nt-row > .nt-slot { flex: 0 0 24px; width: 24px; min-width: 24px; align-self: center; }
+.nt-row .dz-node-sub + .nt-eye, .nt-row .dz-node-sub + .nt-add, .nt-row .dz-node-sub + .nt-slot { margin-left: 0; }
+/* a shown result (a main-area tab, or drawn in the 3D view): a dot, which turns into × (close) while
+   the row is hovered or focused */
+.nt-row > .nt-shown-btn {
+  display: inline-flex; flex: 0 0 24px; width: 24px; min-width: 24px; height: 24px; margin-left: auto;
+  align-items: center; justify-content: center; align-self: center; padding: 0; border: 0; border-radius: var(--al-radius-sm);
+  background: transparent; color: var(--al-text-3); cursor: pointer;
+}
+.nt-shown-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--al-accent-line); }
+.nt-shown-btn > .nt-shown-x { display: none; }
+.nt-row:is(:hover, :focus-visible) > .nt-shown-btn > .nt-shown-dot { display: none; }
+.nt-row:is(:hover, :focus-visible) > .nt-shown-btn > .nt-shown-x { display: block; }
+.nt-row > .nt-shown-btn:hover { background: var(--al-surface); color: var(--al-text); }
+.nt-row[aria-hidden="true"], .nt-row[data-hidden="true"], .nt-row.nt-hidden { opacity: 0.58; }
+.nt-count { font-size: var(--al-text-xs); color: var(--al-text-3); font-weight: 400; letter-spacing: 0; }
+/* a section reads like the old group headings: small capitals, a little space above */
+.nt-section {
+  margin-top: var(--al-space-2); border-top: 1px solid var(--al-border); padding-top: 2px;
+  font-size: var(--al-text-xs); font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: var(--al-text-3);
+}
+.nt-section .dz-node-sub { text-transform: none; letter-spacing: 0; font-weight: 400; }
+.nt-section:first-child { margin-top: 0; border-top: 0; }
+/* a run row with its headline numbers: they wrap onto a second line under the name, past the twisty and icon */
+.nt-row.nt-has-metrics { height: auto; flex-wrap: wrap; padding-bottom: 3px; }
+.nt-row > .nt-metrics {
+  flex: 1 0 100%; box-sizing: border-box; min-width: 0; padding-left: calc(2 * 13px + 2 * 4px); margin-top: -3px;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  font-size: var(--al-text-xs); font-variant-numeric: tabular-nums; color: var(--al-text-3);
+}
+.nt-row[aria-selected="true"] > .nt-metrics { color: var(--al-text-2); }
+.nt-row[aria-selected="true"] { background: var(--al-accent-soft); color: var(--al-text); box-shadow: inset 2px 0 0 var(--al-accent-line); }
+.nt-row[aria-selected="true"] > .nt-twisty, .nt-row[aria-selected="true"] > svg { color: var(--al-text-2); }
+.nt-row[aria-selected="true"] .dz-node-sub, .nt-row[aria-selected="true"] .nt-count { color: var(--al-text-2); }
+.nt-row:focus-visible { outline: 2px solid var(--al-focus); outline-offset: -2px; z-index: 1; }
+.nt-rename { margin: 1px var(--al-space-2) 1px 0; width: auto; }
+
+/* dock: the surface-current panel, the shown run */
+.rdk-currents { border-left: 0; max-width: 60ch; }
+.rdk-currents p { margin: 0 0 var(--al-space-2); }
+.rdk-shown { max-width: 24ch; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.rdk-key-note { margin: 0 0 var(--al-space-2); font-size: var(--al-text-xs); color: var(--al-text-3); }
+
+/* Examples mode: Run again / Open in designer under the example's description (ModelPanel.tsx) */
+.ex-actions { margin-top: var(--al-space-3); }

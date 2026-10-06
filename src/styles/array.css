@@ -1,0 +1,36 @@
+/* Multi-port S-parameter picker and the Array (beam steering) dock tab. Role tokens only. */
+
+/* ------------------------------------------------------------------ S_ij picker */
+.sp-menu { min-width: 0; }
+.sp-grid { display: grid; gap: var(--al-space-1); padding: var(--al-space-1); justify-content: start; }
+.sp-grid .chip-btn { font-family: var(--al-font-mono); min-width: 44px; justify-content: center; }
+
+/* ------------------------------------------------------------------ array panel */
+/* the three blocks sit side by side when the dock is wide enough, else they stack */
+.array-wrap { height: 100%; container-type: inline-size; container-name: array; }
+.array-panel {
+  height: 100%; overflow: auto;
+  display: grid; grid-template-columns: minmax(340px, 1.4fr) minmax(200px, 1fr) minmax(200px, 1fr); align-items: start;
+  gap: var(--al-space-4); padding: var(--al-space-3) var(--al-space-4);
+}
+.array-block { min-width: 0; }
+/* every column heading as tall as the Uniform button, so the three headings share a baseline */
+.array-block > .section-label { min-height: var(--al-control-h-sm); }
+.array-table-wrap { overflow-x: auto; }
+.array-table-wrap .table td { vertical-align: middle; }
+.array-input { width: 64px; flex: none; height: var(--al-control-h-sm); text-align: right; }
+.array-steer { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: var(--al-space-2) var(--al-space-3); align-items: center; }
+.array-steer .seg { justify-self: start; }
+.array-scan { display: flex; align-items: center; gap: var(--al-space-2); min-width: 0; }
+.array-scan input[type="range"] { flex: 1; min-width: 80px; accent-color: var(--al-action); }
+.array-scan .rp-unit { width: auto; }
+/* feed phasor: unit circle, arrow at the port phase, length by amplitude */
+.array-phasor { display: block; }
+.array-phasor circle { fill: none; stroke: var(--al-border-strong); stroke-width: 1; }
+.array-phasor line { stroke: var(--al-accent-text); stroke-width: 2; stroke-linecap: round; }
+.array-phasor .array-phasor-tip { fill: var(--al-accent-text); stroke: none; }
+.array-block .note { margin-top: 0; }
+
+@container array (max-width: 800px) {
+  .array-panel { grid-template-columns: minmax(0, 1fr); }
+}

@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes" ?>
+<ContinuousStructure CoordSystem="0">
+    <RectilinearGrid DeltaUnit="0.0001" CoordSystem="0">
+        <XLines Qty="15">-4,-2,-1,-0.6,-0.5,-0.3,-0.2,0,0.2,0.3,0.5,0.6,1,2,4</XLines>
+        <YLines Qty="15">-4,-2,-1,-0.6,-0.5,-0.3,-0.2,0,0.2,0.3,0.5,0.6,1,2,4</YLines>
+        <ZLines Qty="15">-4,-2,-1,-0.6,-0.5,-0.3,-0.2,0,0.2,0.3,0.5,0.6,1,2,4</ZLines>
+    </RectilinearGrid>
+    <BackgroundMaterial Epsilon="1" Mue="1" Kappa="0" Sigma="0" />
+    <ParameterSet />
+    <Properties>
+        <Metal ID="0" Name="plates">
+            <FillColor R="219" G="60" B="135" a="255" />
+            <EdgeColor R="219" G="60" B="135" a="255" />
+            <Primitives>
+                <Box Priority="10">
+                    <P1 X="-6.000000e-01" Y="-4.000000e-01" Z="0.000000e+00" />
+                    <P2 X="6.000000e-01" Y="4.000000e-01" Z="0.000000e+00" />
+                </Box>
+                <Box Priority="10">
+                    <P1 X="-6.000000e-01" Y="-4.000000e-01" Z="2.000000e-01" />
+                    <P2 X="6.000000e-01" Y="4.000000e-01" Z="2.000000e-01" />
+                </Box>
+            </Primitives>
+        </Metal>
+        <LumpedElement ID="1" Name="port_resist_1" Direction="2" Caps="1" R="5.000000e+01" LEtype="0.000000e+00">
+            <FillColor R="12" G="62" B="153" a="255" />
+            <EdgeColor R="12" G="62" B="153" a="255" />
+            <Primitives>
+                <Box Priority="0">
+                    <P1 X="-5.000000e-01" Y="-2.000000e-01" Z="0.000000e+00" />
+                    <P2 X="-3.000000e-01" Y="2.000000e-01" Z="2.000000e-01" />
+                </Box>
+            </Primitives>
+        </LumpedElement>
+        <Excitation ID="2" Name="port_excite_1" Number="0" Enabled="1" Frequency="0.000000e+00" Delay="0.000000e+00" Type="0" Excite="0.000000e+00,0.000000e+00,-1.000000e+00" PropDir="0.000000e+00,0.000000e+00,0.000000e+00">
+            <FillColor R="36" G="94" B="13" a="255" />
+            <EdgeColor R="36" G="94" B="13" a="255" />
+            <Primitives>
+                <Box Priority="0">
+                    <P1 X="-5.000000e-01" Y="-2.000000e-01" Z="0.000000e+00" />
+                    <P2 X="-3.000000e-01" Y="2.000000e-01" Z="2.000000e-01" />
+                </Box>
+            </Primitives>
+            <Weight X="1.000000e+00" Y="1.000000e+00" Z="1.000000e+00" />
+        </Excitation>
+        <ProbeBox ID="3" Name="port_ut_1" Visible="0" Number="0" Type="0" Weight="-1" NormDir="-1" StartTime="0" StopTime="0">
+            <FillColor R="28" G="6" B="183" a="255" />
+            <EdgeColor R="28" G="6" B="183" a="255" />
+            <Primitives>
+                <Box Priority="0">
+                    <P1 X="-4.000000e-01" Y="0.000000e+00" Z="0.000000e+00" />
+                    <P2 X="-4.000000e-01" Y="0.000000e+00" Z="2.000000e-01" />
+                </Box>
+            </Primitives>
+        </ProbeBox>
+        <ProbeBox ID="4" Name="port_it_1" Visible="0" Number="0" Type="1" Weight="1" NormDir="2" StartTime="0" StopTime="0">
+            <FillColor R="71" G="222" B="179" a="255" />
+            <EdgeColor R="71" G="222" B="179" a="255" />
+            <Primitives>
+                <Box Priority="0">
+                    <P1 X="-5.000000e-01" Y="-2.000000e-01" Z="1.000000e-01" />
+                    <P2 X="-3.000000e-01" Y="2.000000e-01" Z="1.000000e-01" />
+                </Box>
+            </Primitives>
+        </ProbeBox>
+        <LumpedElement ID="5" Name="load" Direction="2" Caps="1" R="1.000000e+02" C="1.000000e-12" L="2.000000e-09" LEtype="1.000000e+00">
+            <FillColor R="18" G="77" B="200" a="255" />
+            <EdgeColor R="18" G="77" B="200" a="255" />
+            <Primitives>
+                <Box Priority="5">
+                    <P1 X="3.000000e-01" Y="-2.000000e-01" Z="0.000000e+00" />
+                    <P2 X="5.000000e-01" Y="2.000000e-01" Z="2.000000e-01" />
+                </Box>
+            </Primitives>
+        </LumpedElement>
+    </Properties>
+</ContinuousStructure>

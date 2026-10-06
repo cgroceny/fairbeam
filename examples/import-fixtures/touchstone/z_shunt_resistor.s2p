@@ -1,0 +1,5 @@
+! Z-parameters of a shunt resistor across a 2-port, Touchstone v1 (z = Z / R, MA format).
+! 50 ohm: S11 = S22 = -1/3, S21 = S12 = 2/3. 25 ohm: S11 = -1/2, S21 = 1/2.
+# GHz Z MA R 50
+1.0  1 0  1 0  1 0  1 0
+2.0  0.5 0  0.5 0  0.5 0  0.5 0

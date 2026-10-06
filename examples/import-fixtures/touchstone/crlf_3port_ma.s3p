@@ -1,0 +1,10 @@
+! three-port, Hz, MA, 75 ohm, CRLF line ends, tabs and blank lines
+#	Hz  S  MA  R  75
+
+1e9	0.1 0	0.2 90	0.3 180
+	0.4 0	0.5 90	0.6 180
+	0.7 0	0.8 90	0.9 180
+
+2e9	0.1 0	0.2 90	0.3 180 ! trailing comment
+	0.4 0	0.5 90	0.6 180
+	0.7 0	0.8 90	0.9 180

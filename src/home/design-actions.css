@@ -1,0 +1,11 @@
+.home-menu-scrim { position: fixed; inset: 0; z-index: 900; }
+.home-design-menu { position: fixed; width: 250px; max-width: calc(100vw - 16px); padding: var(--al-space-1); border: 1px solid var(--al-border); border-radius: var(--al-radius); background: var(--al-surface); box-shadow: var(--al-shadow-pop); }
+.home-design-menu button { display: flex; align-items: center; gap: var(--al-space-2); width: 100%; padding: var(--al-space-2); border: 0; background: transparent; color: var(--al-text); text-align: left; cursor: pointer; }
+.home-design-menu button:hover, .home-design-menu button:focus-visible { background: var(--al-surface-2); }
+.home-design-menu button:disabled { opacity: .45; cursor: default; }
+.dialog.home-rename-dialog { width: min(480px, 100%); height: auto; max-height: 100%; }
+.home-rename-dialog .dialog-body { display: flex; flex-direction: column; gap: var(--al-space-2); padding: var(--al-pad-panel); overflow: auto; }
+.home-rename-dialog .dialog-head h2 { margin: 0; }
+.home-design-action-note { padding: var(--al-space-3); border: 1px solid var(--al-border); border-radius: var(--al-radius); }
+.home-rename { flex: none; opacity: 0.7; margin-inline-start: var(--al-space-1); }
+.home-row:hover .home-rename, .home-rename:focus-visible { opacity: 1; }

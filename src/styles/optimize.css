@@ -1,0 +1,25 @@
+/* Optimizer (src/runner/OptimizePanel.tsx, OptimizeProgress.tsx). Role tokens only; composes the
+   layout primitives (.stack, .cluster, .kv, .table, .status-block) and the run panel inputs. */
+.op-block {
+  padding: var(--al-space-3); border: 1px solid var(--al-border); border-radius: var(--al-radius);
+  background: var(--al-surface-2);
+}
+.op-block .rp-select, .op-block .rp-input { background: var(--al-surface); }
+.op-head { display: flex; align-items: baseline; gap: var(--al-space-2); flex-wrap: wrap; }
+.op-title { font-size: var(--al-text-sm); font-weight: 600; color: var(--al-text); }
+.op-hint { margin: 0; }
+.op-row { margin: 0; padding: 0; border: 0; min-width: 0; display: grid; gap: var(--al-space-1); }
+.op-row + .op-row { padding-top: var(--al-space-2); border-top: 1px solid var(--al-border); }
+.op-grow { width: 100%; }
+.op-range { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)) auto; gap: var(--al-space-2); align-items: end; }
+.op-goal { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(0, 0.7fr) auto; gap: var(--al-space-2); align-items: end; }
+.op-goal:not(:has(label:nth-of-type(3))) { grid-template-columns: minmax(0, 1fr) minmax(0, 0.7fr) auto; }
+.op-remove { margin-bottom: 3px; }
+.op-row .rp-hint, .op-row .rp-error { padding-left: 0; }
+.op-evals { width: 64px; flex: none; }
+.op-port { width: 52px; flex: none; }
+.op-pair .rp-inline-field .rp-input, .op-excite .seg { height: var(--al-control-h-sm); font-size: var(--al-text-sm); }
+.op-excite { padding-top: var(--al-space-2); border-top: 1px solid var(--al-border); }
+.op-form .rp-inline-field .rp-input { height: var(--al-control-h-sm); font-size: var(--al-text-sm); }
+.op-goals { display: grid; gap: 2px; text-align: right; }
+.op-table td, .op-table th { padding-right: var(--al-space-2); }

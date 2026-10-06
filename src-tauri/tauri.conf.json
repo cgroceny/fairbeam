@@ -1,0 +1,63 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "Fairbeam",
+  "version": "0.7.0",
+  "identifier": "org.fairbeam.desktop",
+  "build": {
+    "frontendDist": "splash",
+    "beforeDevCommand": "npm run desktop:vite",
+    "beforeBuildCommand": "npm run build"
+  },
+  "app": {
+    "withGlobalTauri": true,
+    "windows": [],
+    "security": {
+      "csp": null
+    }
+  },
+  "bundle": {
+    "active": true,
+    "publisher": "Fairbeam",
+    "shortDescription": "The open electromagnetic workbench.",
+    "targets": [
+      "app",
+      "dmg"
+    ],
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.icns",
+      "icons/icon.ico"
+    ],
+    "resources": {
+      "../dist/": "ui/",
+      "../python/fairbeam/*.py": "python/fairbeam/",
+      "../python/models/*.py": "models/",
+      "../python/templates/*.py": "templates/",
+      "../public/projects/": "projects/",
+      "../runtime/pins.json": "runtime/pins.json",
+      "../runtime/requirements.txt": "runtime/requirements.txt",
+      "../runtime/install.py": "runtime/install.py",
+      "../runtime/setup-runtime.sh": "runtime/setup-runtime.sh",
+      "../runtime/setup-runtime.ps1": "runtime/setup-runtime.ps1",
+      "../LICENSE": "LICENSE.txt",
+      "../NOTICE.md": "NOTICE.md"
+    },
+    "macOS": {
+      "minimumSystemVersion": "13.0",
+      "signingIdentity": "-"
+    }
+  },
+  "plugins": {
+    "updater": {
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDNCODZFNDBFNjZDMkJEMzkKUldRNXZjSm1EdVNHTzA3aE1MdWhycWs0M2tUa3YxTldtK0hIaFF5Q2h4MFk0MmZrdEc5OE5jTXIK",
+      "endpoints": [
+        "https://github.com/ismailakdag/fairbeam-releases/releases/latest/download/latest.json"
+      ],
+      "windows": {
+        "installMode": "passive"
+      }
+    }
+  }
+}

@@ -1,0 +1,29 @@
+/* The rendered view's toolbar (in the viewport) and the Render image dialog. */
+.vp-render-bar { display: flex; flex: 0 0 100%; align-items: center; flex-wrap: wrap; gap: var(--al-space-2); }
+.vp-rendered-toggle { height: var(--al-control-h); border: 1px solid var(--al-border); background: var(--al-surface); display: inline-flex; align-items: center; gap: var(--al-space-1); }
+.vp-rendered-toggle.active { border-color: var(--al-selected-ring); }
+.vp-render-bar .btn { background: var(--al-surface); border-color: var(--al-border); color: var(--al-text); }
+
+.render-dialog { width: min(1180px, 100%); }
+.render-body { grid-template-columns: 340px minmax(0, 1fr); }
+.render-options { gap: var(--al-space-3); }
+.render-angles { border: 1px solid var(--al-border); border-radius: var(--al-radius); padding: var(--al-space-2) var(--al-space-3) var(--al-space-3); display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--al-space-1) var(--al-space-3); }
+.render-angles legend { padding: 0 var(--al-space-1); font-size: var(--al-text-sm); color: var(--al-text-2); }
+.render-angle { display: flex; align-items: center; gap: var(--al-space-2); font-size: var(--al-text-sm); cursor: pointer; }
+.render-field .seg { align-self: start; flex-wrap: wrap; }
+.render-custom { display: grid; grid-template-columns: 1fr 1fr; gap: var(--al-space-2); }
+.render-check { display: flex; align-items: center; gap: var(--al-space-2); font-size: var(--al-text-sm); }
+.render-note { font-size: var(--al-text-xs); }
+.render-results { overflow: auto; padding: var(--al-space-4); min-height: 240px; }
+.render-empty { display: grid; place-items: center; height: 100%; text-align: center; }
+.render-grid { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: var(--al-space-3); }
+.render-card { display: grid; gap: var(--al-space-2); padding: var(--al-space-2); border: 1px solid var(--al-border); border-radius: var(--al-radius); background: var(--al-surface-2); }
+.render-thumb { aspect-ratio: 16 / 9; border-radius: var(--al-radius-sm); overflow: hidden; background: repeating-conic-gradient(var(--al-surface-3) 0% 25%, var(--al-surface-2) 0% 50%) 50% / 16px 16px; display: grid; place-items: center; }
+.render-thumb img { max-width: 100%; max-height: 100%; object-fit: contain; display: block; }
+.render-meta { display: grid; gap: 2px; min-width: 0; font-size: var(--al-text-xs); }
+.render-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-family: var(--al-font-mono); }
+.render-card-actions { display: flex; gap: var(--al-space-2); }
+@media (max-width: 760px) { .render-body { grid-template-columns: minmax(0, 1fr); } }
+/* the studio background is light: the scale bar and the readouts stay legible on it */
+.vp-rendered-light .scalebar { color: #23262b; border-bottom-color: #23262b; }
+.vp-rendered-light .scalebar::before, .vp-rendered-light .scalebar::after { background: #23262b; }

@@ -1,0 +1,20 @@
+/* Optional sign-in (docs/ACCOUNTS.md): the top-bar chip, the dialog and the settings section. */
+.account-chip { gap: 6px; }
+.account-avatar {
+  display: inline-grid; place-items: center; flex: none; overflow: hidden;
+  width: var(--account-avatar, 20px); height: var(--account-avatar, 20px); border-radius: 50%;
+  background: var(--al-accent-soft); color: var(--al-accent-text);
+  font: 600 calc(var(--account-avatar, 20px) * 0.45) / 1 var(--al-font-sans);
+}
+.account-avatar img { width: 100%; height: 100%; object-fit: cover; }
+.account-providers { display: grid; gap: 8px; }
+.account-providers .btn { justify-content: center; width: 100%; }
+.account-code {
+  margin: 0; padding: 10px; text-align: center; user-select: all;
+  font: 600 var(--al-text-xl) / 1.2 var(--al-font-mono); letter-spacing: 0.12em;
+  border: 1px dashed var(--al-border-strong); border-radius: var(--al-radius);
+}
+.account-identity { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.account-identity .muted { overflow-wrap: anywhere; }
+.account-section { display: grid; gap: 8px; justify-items: start; }
+.account-section > p { margin: 0; }

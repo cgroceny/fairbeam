@@ -1,0 +1,16 @@
+name: Request the source code
+description: Ask for the complete corresponding source code of a released version (GPL-3.0-or-later).
+labels: ["source request"]
+body:
+  - type: input
+    id: version
+    attributes:
+      label: Fairbeam version
+      placeholder: "0.3.0"
+    validations:
+      required: true
+  - type: textarea
+    id: notes
+    attributes:
+      label: Anything else
+      description: Optional, for example the platform you need it for.

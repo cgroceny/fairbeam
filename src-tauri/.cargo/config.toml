@@ -1,0 +1,3 @@
+# Keep a laptop cool while the Tauri crates compile (override with CARGO_BUILD_JOBS).
+[build]
+jobs = 4

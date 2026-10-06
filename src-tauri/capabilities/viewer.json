@@ -1,0 +1,38 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "viewer-capability",
+  "description": "The viewer served from the local run server: save generated exports and show its own downloads.",
+  "local": false,
+  "remote": {
+    "urls": [
+      "http://127.0.0.1:*/*"
+    ]
+  },
+  "windows": [
+    "main"
+  ],
+  "permissions": [
+    "allow-reveal-download",
+    "allow-reveal-design",
+    "allow-save-download",
+    "allow-get-general-settings",
+    "allow-set-update-check-on-start",
+    "allow-check-updates-now",
+    "allow-set-language",
+    "allow-set-gpu-build",
+    "allow-open-workspace",
+    "allow-pick-workspace-folder",
+    "allow-pick-blender-executable",
+    "allow-set-workspace-folder",
+    "allow-install-gpu-runtime",
+    "allow-set-gpu-runtime-enabled",
+    "allow-open-external-link",
+    "allow-remember-recent-design",
+    "allow-telemetry-status",
+    "allow-telemetry-set-consent",
+    "allow-telemetry-preview",
+    "allow-telemetry-reset-id",
+    "allow-telemetry-count",
+    "allow-take-imported-viewer-prefs"
+  ]
+}

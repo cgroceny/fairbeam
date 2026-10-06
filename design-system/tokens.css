@@ -1,0 +1,310 @@
+/* Fairbeam design tokens — single source of truth.
+   Components use role tokens (--al-*) only; never raw hex.
+   Identity: a measuring instrument. Warm paper neutrals, one accent (copper, the material the
+   antennas are made of), numbers in a monospace face. Light is the default; dark is selected per
+   step, not inverted. Chart colours follow the validated reference palette (dataviz). */
+
+:root {
+  --al-chart-line-weight: 2;
+  color-scheme: light;
+
+  /* ---------- Copper (the only accent) ---------- */
+  --al-copper-50:  #fbf4ee;
+  --al-copper-100: #f5e3d2;
+  --al-copper-200: #eac4a3;
+  --al-copper-300: #dda172;
+  --al-copper-400: #cf8147;
+  --al-copper-500: #b8672f;
+  --al-copper-600: #9c5426;   /* primary action on light: white text 5.7:1 */
+  --al-copper-700: #7e431f;   /* accent text on light: 7.6:1 */
+  --al-copper-800: #62351b;
+  --al-copper-900: #4a2915;
+
+  /* ---------- Neutrals (warm paper / graphite) ---------- */
+  --al-paper-0:   #ffffff;
+  --al-paper-50:  #f7f6f3;
+  --al-paper-100: #efeeea;
+  --al-paper-150: #e7e5e0;
+  --al-paper-200: #dedcd6;
+  --al-paper-300: #c7c4bc;
+  --al-paper-400: #a19d94;
+  --al-paper-500: #8a867d;
+  --al-paper-600: #5d5a53;
+  --al-paper-700: #45423d;
+  --al-paper-800: #2b2a27;
+  --al-paper-850: #22211f;
+  --al-paper-900: #1a1917;
+  --al-paper-950: #121110;
+
+  /* ---------- Surface roles ---------- */
+  --al-bg:            var(--al-paper-50);
+  --al-surface:       var(--al-paper-0);
+  --al-surface-2:     var(--al-paper-100);
+  --al-surface-3:     var(--al-paper-150);
+  --al-viewport:      #e8e6e1;
+  --al-viewport-grid: #d3d0c9;
+  --al-viewport-grid-major: #bdb9b1;
+  --al-sheet-surround: var(--al-paper-200); /* neutral around the white drawing sheet */
+  --al-border:        var(--al-paper-200);
+  --al-border-strong: var(--al-paper-500);
+  --al-text:          #181715;          /* 17:1 on paper */
+  --al-text-2:        var(--al-paper-600); /* 6.9:1 on surface */
+  --al-text-3:        #67635b;          /* 6.0:1 on surface, 5.2:1 on surface-2, 4.8:1 on surface-3 / viewport */
+  --al-text-disabled: var(--al-paper-400);
+  --al-text-inverse:  var(--al-paper-50);
+
+  /* ---------- Action ---------- */
+  --al-action:        var(--al-copper-600);
+  --al-action-hover:  var(--al-copper-700);
+  --al-action-text:   #ffffff;
+  --al-accent-text:   var(--al-copper-700);
+  --al-accent-soft:   var(--al-copper-50);
+  --al-accent-line:   var(--al-copper-400);
+  --al-focus:         var(--al-copper-600);
+  --al-focus-ring:    0 0 0 2px var(--al-surface), 0 0 0 4px var(--al-focus);
+  --al-selection:     var(--al-copper-100);
+  --al-brand-mark:    var(--al-copper-500);
+  --al-scrim:         rgba(18, 17, 16, 0.42);
+  /* roles that components already used without a definition */
+  --al-accent:        var(--al-action);        /* accent-color of native range inputs, outlines and strokes */
+  --al-link:          var(--al-accent-text);   /* text links: 7.6:1 on surface */
+  --al-control-border: var(--al-border-strong); /* inputs, selects and the tree filter: the boundary of a field is >= 3:1 */
+  --al-placeholder:   var(--al-text-3);        /* placeholder text: 6.0:1 on surface (the UA default was ~4.1:1) */
+  /* Segmented controls: the selected segment is a raised, ringed cell in a recessed track, so it
+     reads as chosen against both the track and a hovered neighbour (ring 3.1:1 on the track). */
+  --al-track-bg:      var(--al-surface-2);
+  --al-track-hover:   var(--al-surface-3);
+  --al-selected-bg:   var(--al-surface);
+  --al-selected-ring: var(--al-text-3);
+
+  /* ---------- Status (reserved: never a series colour; always with icon + label) ---------- */
+  --al-good:     #0b7a0b;  --al-good-bg:     #e3f2e1;
+  --al-warn:     #8c5800;  --al-warn-bg:     #fbf0d6;   /* 5.3:1 on warn-bg */
+  --al-critical: #b02e2e;  --al-critical-bg: #f9e2e0;
+
+  /* ---------- 3D materials ---------- */
+  --al-3d-metal:      #c27a45;
+  --al-3d-dielectric: #6f9a7e;
+  --al-3d-port:       #d4462f;
+  --al-3d-transform:  #2467b7; /* preview outlines must remain distinct on copper geometry */
+  --al-3d-lumped:     #2f2d2a;   /* lumped resistors: a dark body on the substrate, both themes */
+  --al-3d-lumped-accent: #e0a526; /* zig-zag/outline on lumped R/L/C bodies: amber, never the port red */
+  --al-3d-edge:       #2b2a27;
+  --al-3d-domain:     #8a867d;
+  --al-3d-nf2ff:      #2a78d6;
+  --al-3d-ground:     #b9b4aa;
+  /* Boolean set-up in the 3D view: A (kept), B (removed / added / not yet chosen), their common
+     volume and the ghost of the result */
+  --al-3d-bool-a:      #2563c9;
+  --al-3d-bool-sub:    #d0342c;
+  --al-3d-bool-add:    #1f9254;
+  --al-3d-bool-other:  #8250c4;
+  --al-3d-bool-both:   #e29a12;
+  --al-3d-bool-result: #1d1b18;
+  /* cut-outs (vacuum shapes of a Subtract): a blue that reads on copper, on the dielectric and on the dark canvas */
+  --al-3d-cutout:      #0a8fe0;
+
+  /* ---------- Charts (reference palette, light column) ---------- */
+  --al-chart-surface:   var(--al-surface);
+  --al-chart-grid:      #e1e0d9;
+  --al-chart-axis:      #c3c2b7;
+  --al-chart-muted:     #6f6c65;   /* tick labels: 5.2:1 on surface */
+  --al-chart-band:      rgba(42, 120, 214, 0.08);
+  --al-series-1:        #2a78d6;
+  --al-series-2:        #eb6834;
+  --al-series-3:        #1baf7a;
+  /* slots 4-8 (dataviz reference palette): compared runs past three; validated on the adjacent
+     pairlist for lines, below 3:1 on the light surface for 4 and 5, so the table view is the relief */
+  --al-series-4:        #eda100;
+  --al-series-5:        #e87ba4;
+  --al-series-6:        #008300;
+  --al-series-7:        #4a3aa7;
+  --al-series-8:        #e34948;
+  --al-code-number:     #1c5cab;   /* numbers in the code editor: 6.6:1 on surface (series-1 is 4.4:1) */
+  /* sequential (blue) ramp for the far-field surface: 250 -> 700 */
+  --al-seq-0: #86b6ef; --al-seq-1: #5598e7; --al-seq-2: #2a78d6;
+  --al-seq-3: #1c5cab; --al-seq-4: #104281; --al-seq-5: #0d366b;
+  /* field colour map for 3D field quantities (directivity surface, surface current): Turbo,
+     trimmed at both ends so the lowest values stay visible on the dark viewport. Same in both
+     themes, low -> high; reads like the rainbow maps in CST/HFSS but is perceptually ordered. */
+  --al-field-0: #493dab; --al-field-1: #3789f9; --al-field-2: #25cdd0;
+  --al-field-3: #48f789; --al-field-4: #96fa50; --al-field-5: #e5d730;
+  --al-field-6: #ff9520; --al-field-7: #e54813; --al-field-8: #a01101;
+
+  /* ---------- Type ---------- */
+  --al-font-sans: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --al-font-mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  --al-text-xs:   11px;
+  --al-text-sm:   12px;
+  --al-text-md:   13px;   /* shared with the landing page (scripts/build-site.mjs copies this file) */
+  --al-text-ui:   12.5px; /* app (designer) body text and headings only; the landing page keeps --al-text-md */
+  --al-text-lg:   15px;
+  --al-text-xl:   20px;
+  --al-leading:   1.45;
+  --al-leading-tight: 1.25;
+
+  /* ---------- Space, radius, motion ---------- */
+  /* 4 px base. Use only these steps for padding, gaps and margins. */
+  --al-space-0: 2px;   /* hairline nudges only: segmented-control inset, icon/label optical fixes */
+  --al-space-1: 4px;  --al-space-2: 8px;  --al-space-3: 12px;
+  --al-space-4: 16px; --al-space-5: 24px; --al-space-6: 32px;
+  --al-space-7: 48px;
+  /* rhythm roles: what the steps are used for */
+  --al-pad-panel:   var(--al-space-4);   /* side-panel / dialog inset */
+  --al-pad-hud:     var(--al-space-3);   /* 3D overlay inset from the viewport edge */
+  --al-gap-stack:   var(--al-space-2);   /* between rows inside a section */
+  --al-gap-cluster: var(--al-space-2);   /* between inline controls */
+  --al-gap-label:   var(--al-space-2);   /* section label to its content */
+
+  /* ---------- Controls ---------- */
+  --al-control-h:    30px;   /* buttons, inputs, icon buttons, segmented controls */
+  --al-control-h-sm: 24px;   /* dense controls; also the minimum hit target */
+  --al-icon:         16px;   /* icon in a standalone icon button */
+  --al-icon-sm:      14px;   /* icon next to a text label, or in a small icon button */
+  --al-icon-stroke:  1.75;
+  --al-radius-sm: 4px;
+  --al-radius:    6px;
+  --al-radius-md: var(--al-radius);
+  --al-radius-lg: 10px;
+  --al-shadow-pop: 0 1px 2px rgba(24, 23, 21, 0.08), 0 8px 24px rgba(24, 23, 21, 0.12);
+  --al-ease: cubic-bezier(0.2, 0, 0, 1);
+  --al-dur:  140ms;
+
+  /* ---------- Layout ---------- */
+  --al-header-h: 48px;
+  --al-left-w:   272px;
+  --al-right-w:  320px;
+  --al-dock-h:   clamp(300px, 34dvh, 440px);   /* grows on tall screens; the user's drag height still wins */
+  --al-dock-bar-h: 40px;
+}
+
+/* ---------- Dark: selected steps, not an inversion ---------- */
+@media (prefers-color-scheme: dark) {
+  :root:where(:not([data-theme="light"])) {
+    color-scheme: dark;
+    --al-bg:            var(--al-paper-950);
+    --al-surface:       var(--al-paper-900);
+    --al-surface-2:     var(--al-paper-850);
+    --al-surface-3:     var(--al-paper-800);
+    --al-viewport:      #141312;
+    --al-viewport-grid: #232220;
+    --al-viewport-grid-major: #302e2b;
+    --al-sheet-surround: var(--al-paper-800); /* mid graphite: the white sheet does not glare */
+    --al-border:        #3a3834;
+    --al-border-strong: var(--al-paper-500);
+    --al-text:          #f2f0eb;
+    --al-text-2:        #c6c2b8;
+    --al-text-3:        #a29e94;
+    --al-text-disabled: var(--al-paper-600);
+    --al-text-inverse:  var(--al-paper-900);
+    --al-action:        var(--al-copper-400);
+    --al-action-hover:  var(--al-copper-300);
+    --al-action-text:   #1a1917;
+    --al-accent-text:   var(--al-copper-300);
+    --al-accent-soft:   #2c2119;
+    --al-accent-line:   var(--al-copper-500);
+    --al-focus:         var(--al-copper-300);
+    --al-selection:     #3a2a1e;
+    --al-scrim:         rgba(0, 0, 0, 0.56);
+    --al-track-bg:      var(--al-paper-950);
+    --al-track-hover:   var(--al-surface-2);
+    --al-selected-bg:   var(--al-surface-3);
+    --al-good:     #3fbf3f;  --al-good-bg:     #16271a;
+    --al-warn:     #f0b429;  --al-warn-bg:     #2d2412;
+    --al-critical: #ef6b6b;  --al-critical-bg: #331a1a;
+    --al-3d-metal:      #c98552;
+    --al-3d-transform:  #2467b7;
+    --al-3d-dielectric: #4f7a5f;
+    --al-3d-edge:       #0c0b0a;
+    --al-3d-domain:     #6b675f;
+    --al-3d-nf2ff:      #3987e5;
+    --al-3d-ground:     #3a3834;
+    --al-3d-bool-a:      #5b9bff;
+    --al-3d-bool-sub:    #ff6b61;
+    --al-3d-bool-add:    #45d18a;
+    --al-3d-bool-other:  #b58cff;
+    --al-3d-bool-both:   #ffc043;
+    --al-3d-bool-result: #f6f3ec;
+    --al-3d-cutout:      #3cc4ff;
+    --al-chart-grid:    #2c2c2a;
+    --al-chart-axis:    #45433f;
+    --al-chart-muted:   #8f8b82;
+    --al-chart-band:    rgba(57, 135, 229, 0.12);
+    --al-series-1:      #3987e5;
+    --al-series-2:      #d95926;
+    --al-series-3:      #199e70;
+    --al-series-4:      #c98500;
+    --al-series-5:      #d55181;
+    --al-series-6:      #008300;
+    --al-series-7:      #9085e9;
+    --al-series-8:      #e66767;
+    --al-code-number:   #5598e7;
+    /* dark: low values recede toward the surface, high values lift toward light */
+    --al-seq-0: #184f95; --al-seq-1: #1c5cab; --al-seq-2: #2a78d6;
+    --al-seq-3: #5598e7; --al-seq-4: #86b6ef; --al-seq-5: #b7d3f6;
+    --al-shadow-pop: 0 1px 2px rgba(0, 0, 0, 0.4), 0 8px 24px rgba(0, 0, 0, 0.5);
+  }
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --al-bg:            var(--al-paper-950);
+  --al-surface:       var(--al-paper-900);
+  --al-surface-2:     var(--al-paper-850);
+  --al-surface-3:     var(--al-paper-800);
+  --al-viewport:      #141312;
+  --al-viewport-grid: #232220;
+  --al-viewport-grid-major: #302e2b;
+  --al-sheet-surround: var(--al-paper-800);
+  --al-border:        #3a3834;
+  --al-border-strong: var(--al-paper-500);
+  --al-text:          #f2f0eb;
+  --al-text-2:        #c6c2b8;
+  --al-text-3:        #a29e94;
+  --al-text-disabled: var(--al-paper-600);
+  --al-text-inverse:  var(--al-paper-900);
+  --al-action:        var(--al-copper-400);
+  --al-action-hover:  var(--al-copper-300);
+  --al-action-text:   #1a1917;
+  --al-accent-text:   var(--al-copper-300);
+  --al-accent-soft:   #2c2119;
+  --al-accent-line:   var(--al-copper-500);
+  --al-focus:         var(--al-copper-300);
+  --al-selection:     #3a2a1e;
+  --al-scrim:         rgba(0, 0, 0, 0.56);
+  --al-track-bg:      var(--al-paper-950);
+  --al-track-hover:   var(--al-surface-2);
+  --al-selected-bg:   var(--al-surface-3);
+  --al-good:     #3fbf3f;  --al-good-bg:     #16271a;
+  --al-warn:     #f0b429;  --al-warn-bg:     #2d2412;
+  --al-critical: #ef6b6b;  --al-critical-bg: #331a1a;
+  --al-3d-metal:      #c98552;
+  --al-3d-transform:  #2467b7;
+  --al-3d-dielectric: #4f7a5f;
+  --al-3d-edge:       #0c0b0a;
+  --al-3d-domain:     #6b675f;
+  --al-3d-nf2ff:      #3987e5;
+  --al-3d-ground:     #3a3834;
+  --al-3d-bool-a:      #5b9bff;
+  --al-3d-bool-sub:    #ff6b61;
+  --al-3d-bool-add:    #45d18a;
+  --al-3d-bool-other:  #b58cff;
+  --al-3d-bool-both:   #ffc043;
+  --al-3d-bool-result: #f6f3ec;
+  --al-3d-cutout:      #3cc4ff;
+  --al-chart-grid:    #2c2c2a;
+  --al-chart-axis:    #45433f;
+  --al-chart-muted:   #8f8b82;
+  --al-chart-band:    rgba(57, 135, 229, 0.12);
+  --al-series-1:      #3987e5;
+  --al-series-2:      #d95926;
+  --al-series-3:      #199e70;
+  --al-series-4:      #c98500;
+  --al-series-5:      #d55181;
+  --al-series-6:      #008300;
+  --al-series-7:      #9085e9;
+  --al-series-8:      #e66767;
+  --al-code-number:   #5598e7;
+  --al-seq-0: #184f95; --al-seq-1: #1c5cab; --al-seq-2: #2a78d6;
+  --al-seq-3: #5598e7; --al-seq-4: #86b6ef; --al-seq-5: #b7d3f6;
+  --al-shadow-pop: 0 1px 2px rgba(0, 0, 0, 0.4), 0 8px 24px rgba(0, 0, 0, 0.5);
+}

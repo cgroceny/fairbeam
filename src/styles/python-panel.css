@@ -1,0 +1,41 @@
+.python-panel {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  height: 100%;
+  color: var(--al-text);
+  background: var(--al-surface);
+}
+.python-panel-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: var(--al-space-2) var(--al-space-3);
+  border-bottom: 1px solid var(--al-border);
+}
+.python-panel-head h2 { margin: 0; font-size: var(--al-text-sm); font-weight: 600; }
+.python-panel-actions { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: var(--al-space-1); min-width: 0; }
+.python-panel-actions .btn { white-space: nowrap; }
+.python-panel-code {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  margin: 0;
+  padding: 0;
+  color: var(--al-text);
+  background: var(--al-surface);
+  font: var(--al-text-xs)/1.55 var(--al-font-mono);
+  tab-size: 4;
+  white-space: pre;
+  user-select: text;
+}
+.python-panel-error, .python-panel-loading, .python-panel-feedback { margin: var(--al-space-2) var(--al-space-3); font-size: var(--al-text-xs); }
+.python-panel-error { color: var(--al-critical); }
+.python-panel-loading, .python-panel-feedback { color: var(--al-text-2); }
+.python-panel-stale { display: flex; align-items: center; justify-content: space-between; gap: var(--al-space-2); padding: var(--al-space-2) var(--al-space-3); color: var(--al-warn); background: var(--al-warn-bg); border-bottom: 1px solid var(--al-border); font-size: var(--al-text-xs); }
+.python-panel-note { margin: var(--al-space-2) var(--al-space-3); font-size: var(--al-text-xs); color: var(--al-text-2); }
+.python-panel-note strong { color: var(--al-warn); font-weight: 600; }
+.python-panel-editor { overflow: hidden; }

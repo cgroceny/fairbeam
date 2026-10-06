@@ -1,0 +1,24 @@
+name: Suggest a feature
+description: Something you would like Fairbeam to do.
+labels: ["enhancement"]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: What you want to do
+    validations:
+      required: true
+  - type: textarea
+    id: why
+    attributes:
+      label: Why
+      description: The problem it solves, or what you do today instead.
+    validations:
+      required: true
+  - type: textarea
+    id: example
+    attributes:
+      label: Example (optional)
+      description: An antenna, a screenshot, or how another tool (CST, HFSS, ...) does it.
+    validations:
+      required: false

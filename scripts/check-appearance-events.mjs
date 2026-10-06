@@ -1,0 +1,25 @@
+import assert from 'node:assert/strict';
+import { applyAppearance, watchAppearanceTheme } from '../src/lib/appearance.ts';
+import { GENERAL_DEFAULTS } from '../src/lib/generalSettings.ts';
+const values=new Map();
+const root={dataset:{theme:'light'},style:{setProperty:(k,v)=>values.set(k,v),removeProperty:k=>values.delete(k)}};
+let frames=[], events=0, observer, schemeListener;
+const media={matches:false,addEventListener:(_,fn)=>schemeListener=fn};
+globalThis.document={documentElement:root};
+globalThis.CustomEvent=class{constructor(type){this.type=type;}};
+globalThis.MutationObserver=class{constructor(fn){observer=fn;}observe(){}};
+globalThis.window={matchMedia:()=>media,requestAnimationFrame:fn=>(frames.push(fn),frames.length),dispatchEvent:e=>{assert.equal(e.type,'fairbeam:appearance');events++;}};
+const flush=()=>{const pending=frames;frames=[];pending.forEach(fn=>fn());};
+let value={...GENERAL_DEFAULTS};
+applyAppearance(value);flush();assert.equal(events,0,'initial mount needs no refresh');
+for(const change of [{threads:6},{engine:'cpu'},{uiFont:'arial'},{chartPalette:'accessible'},{chartWeight:3},{traceColor:'#123456'}]){value={...value,...change};applyAppearance(value);flush();}
+assert.equal(events,0,'unrelated, font and chart choices never refresh 3D');
+value={...value,viewportColor:'#123456'};applyAppearance(value);flush();assert.equal(events,1);
+applyAppearance(value);flush();assert.equal(events,1,'unchanged save is silent');
+applyAppearance({...value,viewportColor:'#345678'});applyAppearance({...value,viewportColor:'#456789'});flush();assert.equal(events,2,'rapid color updates coalesce');
+value={...GENERAL_DEFAULTS};applyAppearance(value);flush();assert.equal(events,3,'reset refreshes viewport');
+watchAppearanceTheme();root.dataset.theme='dark';observer();flush();assert.equal(events,4,'header resolved theme refreshes');
+observer();flush();assert.equal(events,4,'unchanged theme is silent');
+root.dataset.theme='';media.matches=false;schemeListener();flush();assert.equal(events,5,'system resolved theme refreshes');
+media.matches=true;schemeListener();flush();assert.equal(events,6,'OS resolved theme refreshes');
+console.log('Appearance viewport event gating, reset, theme and frame coalescing passed');

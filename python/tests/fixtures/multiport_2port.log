@@ -1,0 +1,42 @@
+fairbeam: Wilkinson divider
+fairbeam: end criterion -60 dB, max timesteps 30000, engine cpu
+fairbeam: run 1/2: port 1 excited, 2 terminated
+openEMS - fixed number of threads: 2
+ ----------------------------------------------------------------------
+ | openEMS 64bit -- version v0.37.0-rc3-11-g12cd91d
+ ----------------------------------------------------------------------
+Create FDTD operator (compressed SSE + multi-threading)
+FDTD simulation size: 60x48x20 --> 57600 FDTD cells
+FDTD timestep is: 1.1e-12 s; Nyquist rate: 90 timesteps @5.1e+09 Hz
+Excitation signal length is: 30000 timesteps (3.3e-08s)
+Max. number of timesteps: 30000 ( --> 1 * Excitation signal length)
+Create FDTD engine (compressed SSE + multi-threading)
+Running FDTD engine... this may take a while... grab a cup of coffee?!?
+[@        4s] Timestep:         4000 || Speed:  120.0 MC/s (1.000e-03 s/TS) || Energy: ~1.0e-18 (-20.00dB)
+[@        8s] Timestep:         8000 || Speed:  120.0 MC/s (1.000e-03 s/TS) || Energy: ~1.0e-20 (-40.00dB)
+[@       12s] Timestep:        12000 || Speed:  120.0 MC/s (1.000e-03 s/TS) || Energy: ~1.0e-22 (-62.00dB)
+Time for 12000 iterations with 57600.00 cells : 12.00 sec
+Speed: 120.00 MCells/s
+fairbeam: run 2/2: port 2 excited, 2 terminated
+openEMS - fixed number of threads: 2
+ ----------------------------------------------------------------------
+ | openEMS 64bit -- version v0.37.0-rc3-11-g12cd91d
+ ----------------------------------------------------------------------
+Create FDTD operator (compressed SSE + multi-threading)
+FDTD simulation size: 60x48x20 --> 57600 FDTD cells
+FDTD timestep is: 1.1e-12 s; Nyquist rate: 90 timesteps @5.1e+09 Hz
+Excitation signal length is: 30000 timesteps (3.3e-08s)
+Max. number of timesteps: 30000 ( --> 1 * Excitation signal length)
+Create FDTD engine (compressed SSE + multi-threading)
+Running FDTD engine... this may take a while... grab a cup of coffee?!?
+[@        4s] Timestep:         4000 || Speed:  120.0 MC/s (1.000e-03 s/TS) || Energy: ~1.0e-18 (-18.00dB)
+[@        8s] Timestep:         8000 || Speed:  120.0 MC/s (1.000e-03 s/TS) || Energy: ~1.0e-20 (-38.00dB)
+[@       12s] Timestep:        12000 || Speed:  120.0 MC/s (1.000e-03 s/TS) || Energy: ~1.0e-22 (-61.00dB)
+Time for 12000 iterations with 57600.00 cells : 12.10 sec
+Speed: 119.00 MCells/s
+
+fairbeam: 12000 timesteps in 12.0 s, final energy -62.0 dB, converged=True
+  S-parameters at 2.000 GHz (dB): S11  -25.1, S21   -3.1, S31   -3.1, S12   -3.1, S22  -22.0, S32  -21.9
+  reciprocity max 0.002, column power max 0.991, passive=True
+  band 1.700-2.300 GHz, min S11 -31.2 dB @ 2.010 GHz
+fairbeam: wrote /tmp/fairbeam-fixture/out/wilkinson-divider.json

@@ -1,0 +1,82 @@
+/* Model code editor (src/editor/**). Role tokens only. The --al-code-* roles below map syntax
+   colours onto existing roles (no new palette): keywords in the accent text colour, numbers in
+   --al-code-number (tokens.css; series 1 is below 4.5:1 as text), strings in secondary text, comments in tertiary text. */
+:root {
+  --al-code-keyword: var(--al-accent-text);
+  --al-code-string: var(--al-text-2);
+  --al-code-comment: var(--al-text-3);
+  --al-code-property: var(--al-text);
+  --al-code-active-line: color-mix(in srgb, var(--al-surface-2) 70%, transparent);
+  --al-code-match: var(--al-accent-soft);
+}
+
+/* the drawer widens while the Code tab is open */
+.workspace.run-open.code-open { grid-template-columns: var(--al-left-w) minmax(0, 1fr) min(640px, 46vw); }
+@media (max-width: 1280px) {
+  .workspace.run-open.code-open { grid-template-columns: var(--al-left-w) minmax(0, 1fr) min(560px, 48vw); }
+}
+@media (max-width: 1040px) {
+  .workspace.run-open.code-open { grid-template-columns: minmax(0, 1fr); }
+  .workspace.run-open.code-open .panel-left { order: 2; }
+}
+
+.rp-tabs {
+  position: sticky; top: calc(var(--al-control-h) + 2 * var(--al-space-2)); z-index: 2;
+  display: flex; gap: var(--al-space-1); padding: 0 var(--al-space-2);
+  background: var(--al-surface); border-bottom: 1px solid var(--al-border);
+}
+.rp-tabs .tab { height: var(--al-dock-bar-h); display: inline-flex; align-items: center; gap: var(--al-space-2); }
+
+.rp-inline-link {
+  display: inline; padding: 0; border: 0; background: transparent; cursor: pointer;
+  color: var(--al-accent-text); font: inherit; text-decoration: underline; text-underline-offset: 2px;
+}
+.rp-inline-link.mono { font-family: var(--al-font-mono); font-size: var(--al-text-xs); text-align: left; }
+
+.code-frame {
+  display: flex; flex-direction: column; min-width: 0;
+  border: 1px solid var(--al-border-strong); border-radius: var(--al-radius); overflow: hidden; background: var(--al-surface);
+}
+.code-frame:focus-within { box-shadow: var(--al-focus-ring); }
+.code-frame.readonly { border-color: var(--al-border); }
+.code-bar {
+  display: flex; align-items: center; gap: var(--al-space-2);
+  min-height: var(--al-control-h-sm); padding: 0 var(--al-space-3);
+  background: var(--al-surface-2); border-bottom: 1px solid var(--al-border); font-size: var(--al-text-xs);
+}
+.code-bar .note { margin: 0; }
+.code-file { color: var(--al-text-2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.code-dirty { display: inline-flex; align-items: center; gap: var(--al-space-1); color: var(--al-accent-text); font-weight: 500; }
+.code-dot { display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: var(--al-accent-line); }
+.code-editor { height: clamp(320px, calc(100dvh - 420px), 900px); min-height: 0; }
+.code-loading { height: clamp(320px, calc(100dvh - 420px), 900px); display: flex; align-items: center; justify-content: center; font-size: var(--al-text-sm); }
+.code-error { padding: var(--al-space-2) var(--al-space-3); border-radius: var(--al-radius); background: var(--al-critical-bg); border-left: 2px solid var(--al-critical); }
+.code-error-msg { font-size: var(--al-text-sm); color: var(--al-text); overflow-wrap: anywhere; }
+.code-snippet { max-height: 180px; margin: 0; border-radius: var(--al-radius-sm); white-space: pre-wrap; overflow-wrap: anywhere; }
+.code-versions { list-style: none; margin: 0; padding: 0; display: grid; gap: 1px; }
+.code-versions li { display: flex; align-items: center; gap: var(--al-space-3); min-height: 32px; font-size: var(--al-text-sm); border-top: 1px solid var(--al-border); }
+.code-versions li:first-child { border-top: 0; }
+
+/* New model / Duplicate dialog */
+.dialog-sm { width: min(640px, 100%); height: auto; max-height: min(720px, 100%); }
+.nm-body { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--al-space-4); padding: var(--al-space-4) var(--al-pad-panel); overflow: auto; }
+.nm-hint { padding-left: 0; }
+.nm-templates { margin: 0; padding: 0; border: 0; min-width: 0; }
+.nm-templates > legend { padding: 0; }
+@media (max-width: 640px) {
+  .dialog-sm { height: 100%; max-height: none; } /* full screen like the other dialogs */
+}
+.nm-list { display: grid; gap: var(--al-space-1); }
+.nm-option {
+  display: flex; align-items: flex-start; gap: var(--al-space-3); cursor: pointer;
+  padding: var(--al-space-2) var(--al-space-3); border: 1px solid var(--al-border); border-radius: var(--al-radius);
+  transition: background var(--al-dur) var(--al-ease), border-color var(--al-dur) var(--al-ease);
+}
+.nm-option:hover { background: var(--al-surface-2); }
+.nm-option.selected { background: var(--al-accent-soft); border-color: var(--al-accent-line); }
+.nm-option input { margin-top: 3px; }
+.nm-option input:focus-visible { box-shadow: var(--al-focus-ring); }
+.nm-option-text { display: grid; gap: 2px; min-width: 0; line-height: var(--al-leading-tight); }
+.nm-option-name { font-weight: 500; }
+.nm-option-sub { font-size: var(--al-text-xs); color: var(--al-text-3); }
+.nm-doc { margin-top: var(--al-space-2); }

@@ -1,0 +1,58 @@
+.history-dialog {
+  display: flex;
+  flex-direction: column;
+  width: min(760px, 100%);
+  height: min(620px, 100%);
+  max-height: min(760px, 100%);
+}
+.history-body {
+  display: grid;
+  grid-template-columns: minmax(220px, 1fr) minmax(0, 1.1fr);
+  min-height: 0;
+  flex: 1;
+  border-top: 1px solid var(--al-border);
+  border-bottom: 1px solid var(--al-border);
+}
+.history-list {
+  min-height: 0;
+  overflow: auto;
+  padding: var(--al-space-2);
+  border-right: 1px solid var(--al-border);
+}
+.history-step {
+  display: grid;
+  gap: 3px;
+  width: 100%;
+  padding: var(--al-space-2);
+  border: 1px solid transparent;
+  border-radius: var(--al-radius-sm);
+  background: transparent;
+  color: var(--al-text);
+  text-align: left;
+  cursor: pointer;
+}
+.history-step:hover, .history-step:focus-visible { background: var(--al-surface-2); }
+.history-step.selected { border-color: var(--al-accent); background: var(--al-surface-2); }
+.history-step.future { opacity: .65; }
+.history-step-top { display: flex; align-items: center; gap: var(--al-space-1); min-width: 0; }
+.history-step-top strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.history-meta { color: var(--al-text-3); font-size: var(--al-text-xs); }
+.history-current, .history-future {
+  flex: none;
+  padding: 1px 5px;
+  border-radius: 99px;
+  background: var(--al-surface-3);
+  color: var(--al-text-2);
+  font-size: var(--al-text-xs);
+}
+.history-current { background: var(--al-good-bg); }
+.history-detail { min-width: 0; overflow: auto; padding: var(--al-space-4); }
+.history-detail-label { margin-bottom: var(--al-space-1); font-weight: 600; }
+.history-detail .muted, .history-empty { font-size: var(--al-text-sm); }
+.history-preview-note { margin-top: var(--al-space-4); color: var(--al-text-3); font-size: var(--al-text-sm); }
+@media (max-width: 620px) {
+  .history-dialog { height: 100%; max-height: none; }
+  .history-body { grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(140px, 1fr) auto; }
+  .history-list { border-right: 0; border-bottom: 1px solid var(--al-border); }
+  .history-detail { max-height: 150px; padding: var(--al-space-2); }
+}

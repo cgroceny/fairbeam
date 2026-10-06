@@ -1,0 +1,30 @@
+{
+  "name": "fairbeam-cpu-study-deps",
+  "version-string": "20261001",
+  "builtin-baseline": "37bb045f3c7a747d3e5d1c13b6fe6a0aec4b5d00",
+  "dependencies": [
+    "boost-thread",
+    "boost-date-time",
+    "boost-serialization",
+    "boost-chrono",
+    "boost-program-options",
+    "boost-algorithm",
+    "boost-fusion",
+    "boost-predef",
+    "tinyxml",
+    {
+      "name": "hdf5",
+      "default-features": false,
+      "features": [
+        "hl",
+        "zlib",
+        "szip"
+      ]
+    },
+    {
+      "name": "vtk",
+      "default-features": false
+    },
+    "cgal"
+  ]
+}

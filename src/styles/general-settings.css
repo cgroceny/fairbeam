@@ -1,0 +1,35 @@
+.gs-body { display: grid; gap: 14px; padding: 18px 22px 22px; max-height: min(70vh, 680px); overflow: auto; }
+.gs-body > p { margin: 0; line-height: 1.55; }
+.gs-body hr { width: 100%; border: 0; border-top: 1px solid var(--al-border); }
+.gs-check { display: flex; align-items: center; gap: 9px; min-height: 30px; }
+.gs-workspace { display: grid; gap: 7px; min-width: 0; }
+.gs-workspace .mono { overflow-wrap: anywhere; }
+.gs-workspace-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: var(--al-gap-cluster); min-width: 0; }
+.gs-workspace-row > div { display: grid; gap: var(--al-space-1); min-width: 0; }
+.gs-gpu-runtime { display: grid; gap: var(--al-gap-stack); min-width: 0; }
+.gs-gpu-runtime > div { display: grid; gap: var(--al-space-1); min-width: 0; }
+.gs-update-row { display: flex; align-items: center; justify-content: space-between; gap: var(--al-gap-cluster); }
+.gs-update-row .gs-check { min-width: 0; }
+.gs-update-status { margin: 0; }
+#gs-title { display: flex; align-items: center; gap: 8px; }
+:root[data-unit-display="compact"] .dz-unit,
+:root[data-unit-display="compact"] .th-unit,
+:root[data-unit-display="compact"] .rp-unit { display: none !important; }
+
+.gs-tabs { display: flex; gap: var(--al-gap-cluster); padding: var(--al-space-2) var(--al-pad-panel); border-bottom: 1px solid var(--al-border); }
+.gs-tabs [aria-selected="true"] { background: var(--al-selection); }
+.gs-panel { display: grid; gap: var(--al-space-4); min-width: 0; }
+.gs-font-preview { display: grid; gap: var(--al-gap-stack); padding: var(--al-pad-panel); background: var(--al-surface); border: 1px solid var(--al-border); border-radius: var(--al-radius); overflow-wrap: anywhere; }
+.gs-font-preview .mono { font-variant-numeric: tabular-nums; }
+.gs-appearance-choice { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: var(--al-gap-cluster); align-items: end; }
+.gs-appearance-choice .dz-field { min-width: 0; }
+.gs-custom-colors summary { cursor: pointer; padding-block: var(--al-gap-stack); }
+.gs-custom-colors input[type="color"] { width: 48px; height: var(--al-control-h); padding: 2px; border: 1px solid var(--al-control-border); border-radius: var(--al-radius-sm); background: var(--al-surface); }
+.gs-style-preview { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: var(--al-gap-stack); }
+.gs-style-preview svg { width: 100%; height: 64px; background: var(--al-chart-surface); border: 1px solid var(--al-border); border-radius: var(--al-radius-sm); }
+.gs-grid-preview { background-color: var(--al-viewport); background-image: linear-gradient(var(--al-viewport-grid-major) 1px, transparent 1px), linear-gradient(90deg, var(--al-viewport-grid-major) 1px, transparent 1px), linear-gradient(var(--al-viewport-grid) 1px, transparent 1px), linear-gradient(90deg, var(--al-viewport-grid) 1px, transparent 1px); background-size: 32px 32px, 32px 32px, 8px 8px, 8px 8px; border-radius: var(--al-radius-sm); }
+
+.gs-blender { display: grid; gap: var(--al-gap-stack); min-width: 0; }
+.gs-blender-row { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; gap: var(--al-gap-stack); align-items: center; }
+.gs-blender-row .dz-input { min-width: 0; }
+.gs-blender-bad { color: var(--al-warn); }

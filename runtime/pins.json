@@ -1,0 +1,41 @@
+{
+  "marker": "fairbeam runtime v1",
+  "python": "3.13",
+  "uv": {
+    "version": "0.12.19",
+    "macos-arm64": {
+      "url": "https://github.com/astral-sh/uv/releases/download/0.12.19/uv-aarch64-apple-darwin.tar.gz",
+      "sha256": "a9a8df1eedeb192f2e47e40e2faabfb387db4b850209118786d42f89dde3e0ba"
+    },
+    "windows-x64": {
+      "url": "https://github.com/astral-sh/uv/releases/download/0.12.19/uv-x86_64-pc-windows-msvc.zip",
+      "sha256": "6dbb02d79e419522f1c500f0adb1cddcff0cda7d59b0d66ea7f5e3b4a1b2f5f0"
+    }
+  },
+  "openems": {
+    "version": "v0.37.0-rc3",
+    "windows-x64": {
+      "kind": "msvc-zip",
+      "url": "https://github.com/thliebig/openEMS-Project/releases/download/v0.37.0-rc3/openEMS_x64_v0.37.0-rc3_msvc.zip",
+      "sha256": "948d04e67a0b7ee4b149176e746b23e609a8ac46c525ba75d6c11071f354339a",
+      "size": 65175361
+    },
+    "macos-arm64": {
+      "kind": "macos-pack",
+      "url": "https://github.com/ismailakdag/fairbeam-releases/releases/download/openems-macos-arm64-0.37.0rc3-g12cd91de2-ncpu1/openems-macos-arm64-0.37.0rc3-g12cd91de2-ncpu1.tar.gz",
+      "sha256": "cfef9e8789d077fcaa8c6427740f7be0bd9ad92f99b17850c2a6df46e613b062",
+      "size": 26812405,
+      "macos_min": 27,
+      "note": "built by scripts/build-openems-macos-pack.py from openEMS 12cd91de2 + native CPU patches (scripts/native-cpu/apply-macos.sh) / CSXCAD bd2c13339"
+    }
+  },
+  "openems_gpu": {
+    "version": "v0.37.0-beta1+gpu",
+    "windows-x64": {
+      "kind": "msvc-zip",
+      "url": "https://github.com/SeanMollet/openEMS/releases/download/v0.37.0-beta1%2Bgpu/openEMS_x64_v0.37.0-beta1+gpu_msvc_cuda.zip",
+      "sha256": "ca308c03de41054056b20b4d40c3fe51c07f2a7fb5702fe1042d6406f741764f",
+      "size": 66009500
+    }
+  }
+}

@@ -1,0 +1,184 @@
+/* Run workflow (src/runner/**, components/RunPanel.tsx). Role tokens only; composes the layout
+   primitives in app.css (.section, .stack, .cluster, .kv, .table, .status, .btn). Only what those
+   do not cover lives here. rp-* = run panel, rs-* = run status and overlays. */
+
+/* ------------------------------------------------------------------ layout */
+.workspace.run-open { grid-template-columns: var(--al-left-w) minmax(0, 1fr) calc(var(--al-right-w) + 56px); }
+.center { position: relative; } /* anchors the preview badge */
+@media (max-width: 1040px) {
+  .workspace.run-open { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  /* stacked: the page scrolls, so the panel's sticky head and tabs sit below the sticky app header */
+  .rp-head { top: var(--al-header-h); }
+  .rp-tabs { top: calc(var(--al-header-h) + var(--al-control-h) + 2 * var(--al-space-2)); }
+}
+@media (max-width: 720px) {
+  .workspace.run-open { grid-template-columns: minmax(0, 1fr); }
+}
+
+.run-panel { position: relative; } /* contains .visually-hidden labels */
+.rp-head {
+  position: sticky; top: 0; z-index: 2;
+  display: flex; align-items: center; justify-content: space-between; gap: var(--al-space-2);
+  min-height: calc(var(--al-control-h) + 2 * var(--al-space-2));
+  padding: var(--al-space-2) var(--al-space-3) var(--al-space-2) var(--al-pad-panel);
+  background: var(--al-surface); border-bottom: 1px solid var(--al-border);
+}
+.rp-title { font-size: var(--al-text-lg); font-weight: 600; line-height: var(--al-leading-tight); letter-spacing: -0.01em; }
+.rp-title:focus-visible { box-shadow: none; }
+.rp-small { font-size: var(--al-text-xs); line-height: var(--al-leading); }
+.rp-desc { margin-top: 0; font-size: var(--al-text-sm); }
+.rp-broken summary { cursor: pointer; font-size: var(--al-text-xs); }
+.rp-grow { flex: 1; min-width: 0; }
+/* a sentence inside a numeric (mono) value cell reads as prose */
+.rp-prose { font-family: var(--al-font-sans); font-size: var(--al-text-sm); }
+
+.rs-inline { display: inline-flex; align-items: center; gap: var(--al-space-2); }
+.rs-inline svg { width: var(--al-icon-sm); height: var(--al-icon-sm); }
+.rs-warn-text { color: var(--al-warn); }
+.rs-critical-text { color: var(--al-critical); }
+
+/* ------------------------------------------------------------------ inputs */
+.rp-select, .rp-input {
+  height: var(--al-control-h); padding: 0 var(--al-space-2);
+  border-radius: var(--al-radius); border: 1px solid var(--al-border-strong);
+  background: var(--al-surface); color: var(--al-text); font-size: var(--al-text-ui);
+}
+.rp-select { width: 100%; }
+.rp-select-sm { width: auto; height: var(--al-control-h-sm); font-size: var(--al-text-sm); }
+.rp-input { flex: 1; min-width: 0; width: 100%; font-family: var(--al-font-mono); font-variant-numeric: tabular-nums; }
+.rp-input-text { font-family: var(--al-font-sans); }
+/* NumberField text that is not a number (type=number used to blank it silently) */
+input[data-bad-input] { border-color: var(--al-critical); }
+.rp-input:disabled { background: var(--al-surface-2); color: var(--al-text-3); cursor: not-allowed; }
+.rp-select:focus-visible, .rp-input:focus-visible { border-radius: var(--al-radius); }
+.rp-mini { display: grid; gap: var(--al-space-1); min-width: 0; font-size: var(--al-text-xs); color: var(--al-text-2); }
+.rp-inline-field { display: inline-flex; align-items: center; gap: var(--al-space-2); font-size: var(--al-text-sm); color: var(--al-text-2); }
+
+/* ------------------------------------------------------------------ parameter form */
+.rp-field { display: grid; gap: var(--al-space-1); }
+.rp-label { position: relative; display: flex; align-items: center; gap: var(--al-space-2); font-size: var(--al-text-sm); color: var(--al-text-2); line-height: 16px; }
+/* the "modified" dot hangs in the panel gutter, so label, input and hint share one left edge */
+.rp-dot { position: absolute; left: -10px; top: 5px; width: 6px; height: 6px; border-radius: 50%; background: transparent; }
+.rp-field.modified .rp-dot { background: var(--al-accent-line); }
+.rp-field.modified .rp-label-text { color: var(--al-text); font-weight: 500; }
+.rp-field.swept .rp-label-text { color: var(--al-text-3); }
+.rp-control { display: flex; align-items: center; gap: var(--al-space-2); }
+.rp-field.invalid .rp-input { border-color: var(--al-critical); }
+.rp-unit { width: 32px; flex: none; font-family: var(--al-font-sans); font-size: var(--al-text-xs); font-variant-numeric: tabular-nums; color: var(--al-text-3); }
+.rp-reset.hidden { visibility: hidden; }
+.rp-hint { font-size: var(--al-text-xs); line-height: 16px; color: var(--al-text-3); overflow-wrap: anywhere; }
+.rp-error { display: flex; align-items: center; gap: var(--al-space-1); font-size: var(--al-text-xs); line-height: 16px; color: var(--al-critical); }
+.rp-error svg { width: 12px; height: 12px; }
+.rp-preview-status {
+  display: flex; align-items: center; gap: var(--al-space-2); min-height: 20px; margin-top: var(--al-space-3);
+  font-size: var(--al-text-xs); color: var(--al-text-2);
+}
+.rp-preview-status svg { width: var(--al-icon-sm); height: var(--al-icon-sm); }
+
+/* ------------------------------------------------------------------ sweep */
+.rp-axis {
+  margin: 0; min-width: 0; padding: var(--al-space-3);
+  border: 1px solid var(--al-border); border-radius: var(--al-radius); background: var(--al-surface-2);
+}
+.rp-axis .rp-select, .rp-axis .rp-input, .rp-axis .seg { background: var(--al-surface); }
+.rp-axis .rp-hint, .rp-axis .rp-error { padding-left: 0; }
+.rp-range { display: grid; grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr) minmax(0, 0.7fr); gap: var(--al-space-2); }
+.rp-start-btn { width: 100%; }
+
+/* ------------------------------------------------------------------ status */
+.rs-status-neutral { color: var(--al-text-2); background: var(--al-surface-2); }
+.rs-status-running { color: var(--al-accent-text); background: var(--al-accent-soft); }
+.rs-status-compact { min-width: 96px; flex: none; }
+.rs-spin { animation: rs-spin 0.9s linear infinite; }
+@keyframes rs-spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) {
+  .rs-spin { animation: none; }
+}
+.rs-error-text { margin-top: var(--al-space-1); font-size: var(--al-text-xs); overflow-wrap: anywhere; }
+
+/* ------------------------------------------------------------------ progress card */
+.rp-progress-head { flex-wrap: nowrap; min-width: 0; }
+.rp-job-title { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: var(--al-text-sm); }
+.rp-steps { list-style: none; padding: 0; margin: 0; display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: var(--al-space-1); }
+.rp-step { display: grid; gap: var(--al-space-1); justify-items: start; min-width: 0; }
+.rp-step-mark { width: 100%; height: 4px; border-radius: 2px; background: var(--al-surface-3); }
+.rp-step-mark svg { display: none; }
+.rp-step-label { max-width: 100%; overflow: hidden; text-overflow: ellipsis; font-size: var(--al-text-xs); line-height: 14px; color: var(--al-text-3); }
+.rp-step-done .rp-step-mark { background: var(--al-text-3); }
+.rp-step-current .rp-step-mark { background: var(--al-action); }
+.rp-step-current .rp-step-label { color: var(--al-text); font-weight: 600; }
+.rp-step-stopped .rp-step-mark { background: var(--al-critical); }
+.rp-step-stopped .rp-step-label { color: var(--al-text); }
+.rp-pulse-note { font-size: var(--al-text-xs); line-height: 16px; color: var(--al-text-2); }
+.rp-eta-note { display: block; font-size: var(--al-text-xs); line-height: 16px; color: var(--al-text-3); }
+.rp-chart { position: relative; height: 176px; margin: 0 calc(-1 * var(--al-space-2)); }
+.rp-chart .chart-note { top: var(--al-space-1); bottom: auto; right: var(--al-space-4); max-width: 70%; text-align: right; }
+.rp-chart-empty {
+  height: 100%; display: grid; place-items: center; margin: 0 var(--al-space-2); padding: var(--al-space-4);
+  text-align: center; font-size: var(--al-text-xs); color: var(--al-text-3);
+  border: 1px dashed var(--al-border); border-radius: var(--al-radius);
+}
+.rp-result { display: flex; flex-direction: column; align-items: flex-start; gap: var(--al-space-2); }
+.rp-stderr { max-height: 160px; border-radius: var(--al-radius); white-space: pre-wrap; }
+.rp-log summary { cursor: pointer; font-size: var(--al-text-sm); line-height: var(--al-control-h-sm); color: var(--al-text-2); }
+.rp-log-body { margin-top: var(--al-space-2); max-height: 220px; border-radius: var(--al-radius); white-space: pre-wrap; overflow-wrap: anywhere; }
+.rp-log-err { color: var(--al-critical); }
+.rp-log-link { display: inline-flex; align-items: center; gap: var(--al-space-1); min-height: 24px; margin-top: var(--al-space-1); font-size: var(--al-text-xs); color: var(--al-accent-text); }
+.rp-log-link svg { width: 12px; height: 12px; }
+
+/* ------------------------------------------------------------------ history */
+.rp-filters { margin-bottom: var(--al-space-2); }
+.rp-hlist { list-style: none; padding: 0; margin: 0 calc(-1 * var(--al-space-2)); display: grid; gap: 1px; }
+.rp-hrow { display: flex; align-items: center; gap: var(--al-space-1); padding-right: var(--al-space-1); }
+.rp-hrow-main {
+  flex: 1; min-width: 0; display: flex; align-items: center; gap: var(--al-space-3); text-align: left;
+  min-height: 40px; padding: var(--al-space-1) var(--al-space-2); border: 0; border-radius: var(--al-radius);
+  background: transparent; cursor: pointer; transition: background var(--al-dur) var(--al-ease);
+}
+.rp-hrow-main:hover { background: var(--al-surface-2); }
+.rp-hrow-main.active { background: var(--al-accent-soft); }
+.rp-hrow-text { display: grid; min-width: 0; gap: 2px; line-height: var(--al-leading-tight); }
+.rp-hrow-name { display: flex; align-items: center; gap: var(--al-space-1); min-width: 0; font-size: var(--al-text-sm); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.rp-hrow-sub { font-size: var(--al-text-xs); color: var(--al-text-3); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.rp-chevron { width: 12px; height: 12px; transition: transform var(--al-dur) var(--al-ease); }
+.rp-chevron.open { transform: rotate(90deg); }
+.rp-confirm { margin: var(--al-space-1) var(--al-space-2) var(--al-space-2); padding: var(--al-space-2) var(--al-space-3); border-radius: var(--al-radius); background: var(--al-surface-2); }
+.rp-sweep-body { padding: var(--al-space-2) var(--al-space-2) var(--al-space-3) var(--al-space-5); }
+.rp-sweep-body .rp-hlist { margin: 0; }
+.rp-summary { overflow-x: auto; }
+.rp-summary th { padding-right: var(--al-space-2); }
+.rp-summary td { padding-right: var(--al-space-2); }
+.rp-sweep-f { width: 96px; flex: none; height: var(--al-control-h-sm); font-size: var(--al-text-sm); }
+.rp-sort {
+  display: inline-flex; flex-direction: column; align-items: flex-end; justify-content: flex-end; gap: 0; padding: 0; border: 0;
+  min-width: 24px; min-height: 24px; /* hit target */
+  background: transparent; color: inherit; font: inherit; cursor: pointer; text-align: right;
+}
+.rp-sort svg { width: 10px; height: 10px; }
+.rp-sort:hover { color: var(--al-text); }
+/* why the design checks skipped an optimizer candidate, under its "Skipped" status */
+.rp-opt-skip { display: block; min-width: 16em; max-width: 28em; white-space: normal; text-align: left; font-size: var(--al-text-sm); }
+
+/* ------------------------------------------------------------------ overlays */
+.rs-preview-badge {
+  /* under the view toolbar row, centred, so it never covers the toolbar or the colour scale */
+  position: absolute; top: calc(var(--al-pad-hud) + var(--al-control-h) + var(--al-space-2)); left: 50%; transform: translateX(-50%); z-index: 4;
+  display: inline-flex; align-items: center; gap: var(--al-space-2);
+  height: var(--al-control-h); padding: 0 var(--al-space-1) 0 var(--al-space-3); border-radius: 999px;
+  background: var(--al-surface); border: 1px solid var(--al-accent-line); box-shadow: var(--al-shadow-pop);
+  font-size: var(--al-text-sm); font-weight: 500; color: var(--al-accent-text); white-space: nowrap;
+}
+.rs-preview-badge > svg { width: var(--al-icon-sm); height: var(--al-icon-sm); }
+.rs-preview-badge .btn { border-radius: 999px; }
+.rs-banner-good { background: var(--al-good-bg); color: var(--al-text); border-bottom: 1px solid var(--al-border); }
+.rs-banner-good > svg { color: var(--al-good); }
+.rs-toggle-on { background: var(--al-surface-3); border-color: var(--al-border-strong); }
+
+.example-copy-dialog { width: min(480px, calc(100% - 2rem)); padding: var(--al-space-4); color: var(--al-text); background: var(--al-surface); border: 1px solid var(--al-border); border-radius: var(--al-radius-lg); box-shadow: var(--al-shadow-pop); }
+.example-copy-dialog::backdrop { background: var(--al-scrim); }
+.example-copy-dialog h2 { font-size: var(--al-text-lg); }
+.example-copy-dialog p { margin-block: var(--al-space-2); }
+.example-copy-dialog .cluster-sm { justify-content: flex-end; }
+.example-copy-dialog .mesh-preview { padding: var(--al-space-3); border: 1px solid var(--al-border); border-radius: var(--al-radius-md); }
+.example-copy-dialog .mesh-preview-warning { color: var(--al-critical); background: var(--al-critical-bg); border-color: var(--al-critical); }
+.example-copy-dialog .mesh-preview p { margin: var(--al-space-1) 0 0; font-variant-numeric: tabular-nums; }

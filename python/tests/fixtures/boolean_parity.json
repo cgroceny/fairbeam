@@ -1,0 +1,7060 @@
+[
+ {
+  "name": "moved and quarter-turned brick minus a brick",
+  "history": {
+   "operation": "subtract",
+   "A": {
+    "name": "A",
+    "material": "copper",
+    "primitives": [
+     {
+      "kind": "box",
+      "start": [
+       0,
+       0,
+       0
+      ],
+      "stop": [
+       "W",
+       2,
+       "H"
+      ]
+     }
+    ],
+    "transforms": [
+     {
+      "type": "move",
+      "offset": [
+       1,
+       0,
+       0
+      ]
+     },
+     {
+      "type": "rotate",
+      "axis": "z",
+      "center": [
+       0,
+       0,
+       0
+      ],
+      "angle": 90
+     }
+    ]
+   },
+   "B": {
+    "name": "B",
+    "material": "copper",
+    "primitives": [
+     {
+      "kind": "box",
+      "start": [
+       -1,
+       0,
+       0
+      ],
+      "stop": [
+       0,
+       5,
+       1
+      ]
+     }
+    ]
+   }
+  },
+  "values": [
+   {
+    "W": 4,
+    "H": 3
+   },
+   {
+    "W": 6,
+    "H": 2
+   }
+  ],
+  "expected": [
+   [
+    {
+     "kind": "linpoly",
+     "normal": "y",
+     "elevation": 1,
+     "length": 4,
+     "points": [
+      [
+       1,
+       -1
+      ],
+      [
+       0,
+       -1
+      ],
+      [
+       0,
+       -2
+      ],
+      [
+       3,
+       -2
+      ],
+      [
+       3,
+       0
+      ],
+      [
+       1,
+       0
+      ]
+     ]
+    }
+   ],
+   [
+    {
+     "kind": "linpoly",
+     "normal": "z",
+     "elevation": 0,
+     "length": 1,
+     "points": [
+      [
+       -2,
+       7
+      ],
+      [
+       -2,
+       1
+      ],
+      [
+       -1,
+       1
+      ],
+      [
+       -1,
+       5
+      ],
+      [
+       0,
+       5
+      ],
+      [
+       0,
+       7
+      ]
+     ],
+     "label": "A (part 1 of 2)"
+    },
+    {
+     "kind": "box",
+     "start": [
+      -2,
+      1,
+      1
+     ],
+     "stop": [
+      0,
+      7,
+      2
+     ],
+     "label": "A (part 2 of 2)"
+    }
+   ]
+  ]
+ },
+ {
+  "name": "sheet copies united with a strip",
+  "history": {
+   "operation": "add",
+   "A": {
+    "name": "S",
+    "material": "copper",
+    "primitives": [
+     {
+      "kind": "box",
+      "start": [
+       0,
+       0,
+       1
+      ],
+      "stop": [
+       2,
+       1,
+       1
+      ]
+     }
+    ],
+    "transforms": [
+     {
+      "type": "translate",
+      "copies": 2,
+      "step": [
+       "s",
+       0,
+       0
+      ]
+     }
+    ]
+   },
+   "B": {
+    "name": "T",
+    "material": "copper",
+    "primitives": [
+     {
+      "kind": "box",
+      "start": [
+       0,
+       0,
+       1
+      ],
+      "stop": [
+       8,
+       0.5,
+       1
+      ]
+     }
+    ]
+   }
+  },
+  "values": [
+   {
+    "s": 3
+   },
+   {
+    "s": 2.5
+   }
+  ],
+  "expected": [
+   [
+    {
+     "kind": "box",
+     "start": [
+      0,
+      0,
+      1
+     ],
+     "stop": [
+      8,
+      0.5,
+      1
+     ]
+    },
+    {
+     "kind": "box",
+     "start": [
+      0,
+      0.5,
+      1
+     ],
+     "stop": [
+      2,
+      1,
+      1
+     ]
+    },
+    {
+     "kind": "box",
+     "start": [
+      3,
+      0.5,
+      1
+     ],
+     "stop": [
+      5,
+      1,
+      1
+     ]
+    },
+    {
+     "kind": "box",
+     "start": [
+      6,
+      0.5,
+      1
+     ],
+     "stop": [
+      8,
+      1,
+      1
+     ]
+    }
+   ],
+   [
+    {
+     "kind": "box",
+     "start": [
+      0,
+      0,
+      1
+     ],
+     "stop": [
+      8,
+      0.5,
+      1
+     ]
+    },
+    {
+     "kind": "box",
+     "start": [
+      0,
+      0.5,
+      1
+     ],
+     "stop": [
+      2,
+      1,
+      1
+     ]
+    },
+    {
+     "kind": "box",
+     "start": [
+      2.5,
+      0.5,
+      1
+     ],
+     "stop": [
+      4.5,
+      1,
+      1
+     ]
+    },
+    {
+     "kind": "box",
+     "start": [
+      5,
+      0.5,
+      1
+     ],
+     "stop": [
+      7,
+      1,
+      1
+     ]
+    }
+   ]
+  ]
+ },
+ {
+  "name": "cut and mirrored sheet intersected",
+  "history": {
+   "operation": "intersect",
+   "A": {
+    "name": "P",
+    "material": "copper",
+    "primitives": [
+     {
+      "kind": "box",
+      "start": [
+       -5,
+       -5,
+       0
+      ],
+      "stop": [
+       5,
+       5,
+       0
+      ]
+     }
+    ],
+    "cuts": [
+     {
+      "start": [
+       "-c",
+       "-c",
+       0
+      ],
+      "stop": [
+       "c",
+       "c",
+       0
+      ]
+     }
+    ],
+    "transforms": [
+     {
+      "type": "mirror",
+      "plane": "x",
+      "keep": false
+     }
+    ]
+   },
+   "B": {
+    "name": "Q",
+    "material": "copper",
+    "primitives": [
+     {
+      "kind": "box",
+      "start": [
+       0,
+       0,
+       0
+      ],
+      "stop": [
+       10,
+       10,
+       0
+      ]
+     }
+    ]
+   }
+  },
+  "values": [
+   {
+    "c": 1
+   },
+   {
+    "c": 2
+   }
+  ],
+  "expected": [
+   [
+    {
+     "kind": "box",
+     "start": [
+      0,
+      1,
+      0
+     ],
+     "stop": [
+      5,
+      5,
+      0
+     ]
+    },
+    {
+     "kind": "box",
+     "start": [
+      1,
+      0,
+      0
+     ],
+     "stop": [
+      5,
+      1,
+      0
+     ]
+    }
+   ],
+   [
+    {
+     "kind": "box",
+     "start": [
+      0,
+      2,
+      0
+     ],
+     "stop": [
+      5,
+      5,
+      0
+     ]
+    },
+    {
+     "kind": "box",
+     "start": [
+      2,
+      0,
+      0
+     ],
+     "stop": [
+      5,
+      2,
+      0
+     ]
+    }
+   ]
+  ]
+ },
+ {
+  "name": "nested live result with a priority, inserted",
+  "history": {
+   "operation": "insert",
+   "A": {
+    "name": "A",
+    "material": "copper",
+    "primitives": [
+     {
+      "kind": "linpoly",
+      "normal": "y",
+      "elevation": 1,
+      "length": 4,
+      "points": [
+       [
+        1,
+        -1
+       ],
+       [
+        0,
+        -1
+       ],
+       [
+        0,
+        -2
+       ],
+       [
+        3,
+        -2
+       ],
+       [
+        3,
+        0
+       ],
+       [
+        1,
+        0
+       ]
+      ],
+      "priority": 7
+     }
+    ],
+    "booleanHistory": {
+     "operation": "subtract",
+     "A": {
+      "name": "A",
+      "material": "copper",
+      "primitives": [
+       {
+        "kind": "box",
+        "start": [
+         0,
+         0,
+         0
+        ],
+        "stop": [
+         "W",
+         2,
+         "H"
+        ],
+        "priority": 7
+       }
+      ],
+      "transforms": [
+       {
+        "type": "move",
+        "offset": [
+         1,
+         0,
+         0
+        ]
+       },
+       {
+        "type": "rotate",
+        "axis": "z",
+        "center": [
+         0,
+         0,
+         0
+        ],
+        "angle": 90
+       }
+      ]
+     },
+     "B": {
+      "name": "B",
+      "material": "copper",
+      "primitives": [
+       {
+        "kind": "box",
+        "start": [
+         -1,
+         0,
+         0
+        ],
+        "stop": [
+         0,
+         5,
+         1
+        ],
+        "priority": 7
+       }
+      ]
+     },
+     "live": true
+    }
+   },
+   "B": {
+    "name": "C",
+    "material": "copper",
+    "primitives": [
+     {
+      "kind": "box",
+      "start": [
+       -3,
+       1,
+       1
+      ],
+      "stop": [
+       -1,
+       3,
+       2
+      ]
+     }
+    ]
+   }
+  },
+  "values": [
+   {
+    "W": 4,
+    "H": 3
+   },
+   {
+    "W": 5,
+    "H": 1.5
+   }
+  ],
+  "expected": [
+   [
+    {
+     "kind": "linpoly",
+     "normal": "y",
+     "elevation": 1,
+     "length": 2,
+     "points": [
+      [
+       0,
+       -2
+      ],
+      [
+       1,
+       -2
+      ],
+      [
+       1,
+       -1
+      ],
+      [
+       0,
+       -1
+      ]
+     ],
+     "priority": 7,
+     "label": "A (part 1 of 3)"
+    },
+    {
+     "kind": "linpoly",
+     "normal": "y",
+     "elevation": 1,
+     "length": 2,
+     "points": [
+      [
+       1,
+       0
+      ],
+      [
+       1,
+       -1
+      ],
+      [
+       2,
+       -1
+      ],
+      [
+       2,
+       -2
+      ],
+      [
+       3,
+       -2
+      ],
+      [
+       3,
+       0
+      ]
+     ],
+     "priority": 7,
+     "label": "A (part 2 of 3)"
+    },
+    {
+     "kind": "linpoly",
+     "normal": "y",
+     "elevation": 3,
+     "length": 2,
+     "points": [
+      [
+       1,
+       -1
+      ],
+      [
+       0,
+       -1
+      ],
+      [
+       0,
+       -2
+      ],
+      [
+       3,
+       -2
+      ],
+      [
+       3,
+       0
+      ],
+      [
+       1,
+       0
+      ]
+     ],
+     "priority": 7,
+     "label": "A (part 3 of 3)"
+    }
+   ],
+   [
+    {
+     "kind": "linpoly",
+     "normal": "z",
+     "elevation": 0,
+     "length": 1,
+     "points": [
+      [
+       -2,
+       6
+      ],
+      [
+       -2,
+       1
+      ],
+      [
+       -1,
+       1
+      ],
+      [
+       -1,
+       5
+      ],
+      [
+       0,
+       5
+      ],
+      [
+       0,
+       6
+      ]
+     ],
+     "priority": 7,
+     "label": "A (part 1 of 2)"
+    },
+    {
+     "kind": "linpoly",
+     "normal": "z",
+     "elevation": 1,
+     "length": 0.5,
+     "points": [
+      [
+       -2,
+       6
+      ],
+      [
+       -2,
+       3
+      ],
+      [
+       -1,
+       3
+      ],
+      [
+       -1,
+       1
+      ],
+      [
+       0,
+       1
+      ],
+      [
+       0,
+       6
+      ]
+     ],
+     "priority": 7,
+     "label": "A (part 2 of 2)"
+    }
+   ]
+  ]
+ },
+ {
+  "name": "brick minus brick: A less exactly the common volume",
+  "history": {
+   "operation": "subtract",
+   "A": {
+    "name": "A",
+    "material": "copper",
+    "primitives": [
+     {
+      "kind": "box",
+      "start": [
+       0,
+       0,
+       0
+      ],
+      "stop": [
+       "W",
+       10,
+       4
+      ]
+     }
+    ]
+   },
+   "B": {
+    "name": "B",
+    "material": "copper",
+    "primitives": [
+     {
+      "kind": "box",
+      "start": [
+       5,
+       5,
+       -2
+      ],
+      "stop": [
+       15,
+       15,
+       6
+      ]
+     }
+    ]
+   }
+  },
+  "values": [
+   {
+    "W": 10
+   },
+   {
+    "W": 7.5
+   }
+  ],
+  "expected": [
+   [
+    {
+     "kind": "linpoly",
+     "normal": "z",
+     "elevation": 0,
+     "length": 4,
+     "points": [
+      [
+       5,
+       5
+      ],
+      [
+       5,
+       10
+      ],
+      [
+       0,
+       10
+      ],
+      [
+       0,
+       0
+      ],
+      [
+       10,
+       0
+      ],
+      [
+       10,
+       5
+      ]
+     ]
+    }
+   ],
+   [
+    {
+     "kind": "linpoly",
+     "normal": "z",
+     "elevation": 0,
+     "length": 4,
+     "points": [
+      [
+       5,
+       5
+      ],
+      [
+       5,
+       10
+      ],
+      [
+       0,
+       10
+      ],
+      [
+       0,
+       0
+      ],
+      [
+       7.5,
+       0
+      ],
+      [
+       7.5,
+       5
+      ]
+     ]
+    }
+   ]
+  ]
+ },
+ {
+  "name": "extruded polygon minus a brick through part of its height",
+  "history": {
+   "operation": "subtract",
+   "A": {
+    "name": "P",
+    "material": "copper",
+    "primitives": [
+     {
+      "kind": "linpoly",
+      "normal": "z",
+      "elevation": 0,
+      "length": "h",
+      "points": [
+       [
+        0,
+        0
+       ],
+       [
+        "W",
+        0
+       ],
+       [
+        "W",
+        6
+       ],
+       [
+        4,
+        9
+       ],
+       [
+        0,
+        6
+       ]
+      ]
+     }
+    ]
+   },
+   "B": {
+    "name": "B",
+    "material": "copper",
+    "primitives": [
+     {
+      "kind": "box",
+      "start": [
+       3,
+       -1,
+       1
+      ],
+      "stop": [
+       5,
+       3,
+       2.5
+      ]
+     }
+    ]
+   }
+  },
+  "values": [
+   {
+    "W": 8,
+    "h": 4
+   },
+   {
+    "W": 6.5,
+    "h": 3
+   }
+  ],
+  "expected": [
+   [
+    {
+     "kind": "linpoly",
+     "normal": "z",
+     "elevation": 0,
+     "points": [
+      [
+       0,
+       0
+      ],
+      [
+       8,
+       0
+      ],
+      [
+       8,
+       6
+      ],
+      [
+       4,
+       9
+      ],
+      [
+       0,
+       6
+      ]
+     ],
+     "length": 4
+    },
+    {
+     "kind": "box",
+     "start": [
+      3,
+      0,
+      1
+     ],
+     "stop": [
+      5,
+      3,
+      2.5
+     ],
+     "label": "B (cut-out)",
+     "void": true
+    }
+   ],
+   [
+    {
+     "kind": "linpoly",
+     "normal": "z",
+     "elevation": 0,
+     "points": [
+      [
+       0,
+       0
+      ],
+      [
+       6.5,
+       0
+      ],
+      [
+       6.5,
+       6
+      ],
+      [
+       4,
+       9
+      ],
+      [
+       0,
+       6
+      ]
+     ],
+     "length": 3
+    },
+    {
+     "kind": "box",
+     "start": [
+      3,
+      0,
+      1
+     ],
+     "stop": [
+      5,
+      3,
+      2.5
+     ],
+     "label": "B (cut-out)",
+     "void": true
+    }
+   ]
+  ]
+ },
+ {
+  "name": "extruded polygon minus a polygon through it (a hole)",
+  "history": {
+   "operation": "subtract",
+   "A": {
+    "name": "P",
+    "material": "copper",
+    "primitives": [
+     {
+      "kind": "linpoly",
+      "normal": "z",
+      "elevation": 0,
+      "length": 2,
+      "points": [
+       [
+        0,
+        0
+       ],
+       [
+        10,
+        0
+       ],
+       [
+        10,
+        10
+       ],
+       [
+        0,
+        10
+       ]
+      ]
+     }
+    ]
+   },
+   "B": {
+    "name": "Q",
+    "material": "copper",
+    "primitives": [
+     {
+      "kind": "linpoly",
+      "normal": "z",
+      "elevation": -1,
+      "length": 4,
+      "points": [
+       [
+        "c",
+        "c"
+       ],
+       [
+        6,
+        3.5
+       ],
+       [
+        5,
+        7
+       ],
+       [
+        3.2,
+        "6-c/4"
+       ]
+      ]
+     }
+    ]
+   }
+  },
+  "values": [
+   {
+    "c": 3
+   },
+   {
+    "c": 4.1
+   }
+  ],
+  "expected": [
+   [
+    {
+     "kind": "linpoly",
+     "normal": "z",
+     "elevation": 0,
+     "length": 2,
+     "points": [
+      [
+       6,
+       3.5
+      ],
+      [
+       3,
+       3
+      ],
+      [
+       3.2,
+       5.25
+      ],
+      [
+       5,
+       7
+      ],
+      [
+       5,
+       10
+      ],
+      [
+       0,
+       10
+      ],
+      [
+       0,
+       0
+      ],
+      [
+       10,
+       0
+      ],
+      [
+       10,
+       10
+      ],
+      [
+       6,
+       10
+      ]
+     ],
+     "label": "P (part 1 of 2)"
+    },
+    {
+     "kind": "linpoly",
+     "normal": "z",
+     "elevation": 0,
+     "length": 2,
+     "points": [
+      [
+       5,
+       7
+      ],
+      [
+       6,
+       3.5
+      ],
+      [
+       6,
+       10
+      ],
+      [
+       5,
+       10
+      ]
+     ],
+     "label": "P (part 2 of 2)"
+    }
+   ],
+   [
+    {
+     "kind": "linpoly",
+     "normal": "z",
+     "elevation": 0,
+     "length": 2,
+     "points": [
+      [
+       6,
+       3.5
+      ],
+      [
+       4.1,
+       4.1
+      ],
+      [
+       3.2,
+       4.975
+      ],
+      [
+       5,
+       7
+      ],
+      [
+       5,
+       10
+      ],
+      [
+       0,
+       10
+      ],
+      [
+       0,
+       0
+      ],
+      [
+       10,
+       0
+      ],
+      [
+       10,
+       10
+      ],
+      [
+       6,
+       10
+      ]
+     ],
+     "label": "P (part 1 of 2)"
+    },
+    {
+     "kind": "linpoly",
+     "normal": "z",
+     "elevation": 0,
+     "length": 2,
+     "points": [
+      [
+       5,
+       7
+      ],
+      [
+       6,
+       3.5
+      ],
+      [
+       6,
+       10
+      ],
+      [
+       5,
+       10
+      ]
+     ],
+     "label": "P (part 2 of 2)"
+    }
+   ]
+  ]
+ },
+ {
+  "name": "polygon sheet minus a rectangular sheet, united and intersected",
+  "history": {
+   "operation": "intersect",
+   "A": {
+    "name": "S",
+    "material": "copper",
+    "primitives": [],
+    "booleanHistory": {
+     "operation": "subtract",
+     "live": true,
+     "A": {
+      "name": "S",
+      "material": "copper",
+      "primitives": [
+       {
+        "kind": "polygon",
+        "normal": "z",
+        "elevation": "t",
+        "points": [
+         [
+          0,
+          0
+         ],
+         [
+          8,
+          0
+         ],
+         [
+          4,
+          7
+         ]
+        ]
+       }
+      ]
+     },
+     "B": {
+      "name": "R",
+      "material": "copper",
+      "primitives": [
+       {
+        "kind": "box",
+        "start": [
+         3,
+         -1,
+         "t"
+        ],
+        "stop": [
+         5,
+         2,
+         "t"
+        ]
+       }
+      ]
+     }
+    }
+   },
+   "B": {
+    "name": "C",
+    "material": "copper",
+    "primitives": [
+     {
+      "kind": "box",
+      "start": [
+       1,
+       0.5,
+       "t"
+      ],
+      "stop": [
+       7,
+       5,
+       "t"
+      ]
+     }
+    ]
+   }
+  },
+  "values": [
+   {
+    "t": 1.6
+   },
+   {
+    "t": 0.8
+   }
+  ],
+  "expected": [
+   [
+    {
+     "kind": "polygon",
+     "normal": "z",
+     "elevation": 1.6,
+     "points": [
+      [
+       5.142857142857142,
+       5
+      ],
+      [
+       2.857142857142857,
+       5
+      ],
+      [
+       1,
+       1.75
+      ],
+      [
+       1,
+       0.5
+      ],
+      [
+       3,
+       0.5
+      ],
+      [
+       3,
+       2
+      ],
+      [
+       5,
+       2
+      ],
+      [
+       5,
+       0.5
+      ],
+      [
+       7,
+       0.5
+      ],
+      [
+       7,
+       1.75
+      ]
+     ]
+    }
+   ],
+   [
+    {
+     "kind": "polygon",
+     "normal": "z",
+     "elevation": 0.8,
+     "points": [
+      [
+       5.142857142857142,
+       5
+      ],
+      [
+       2.857142857142857,
+       5
+      ],
+      [
+       1,
+       1.75
+      ],
+      [
+       1,
+       0.5
+      ],
+      [
+       3,
+       0.5
+      ],
+      [
+       3,
+       2
+      ],
+      [
+       5,
+       2
+      ],
+      [
+       5,
+       0.5
+      ],
+      [
+       7,
+       0.5
+      ],
+      [
+       7,
+       1.75
+      ]
+     ]
+    }
+   ]
+  ]
+ },
+ {
+  "name": "quarter-turned extruded polygons along x united",
+  "history": {
+   "operation": "add",
+   "A": {
+    "name": "X",
+    "material": "copper",
+    "primitives": [
+     {
+      "kind": "linpoly",
+      "normal": "x",
+      "elevation": 0,
+      "length": "L",
+      "points": [
+       [
+        0,
+        0
+       ],
+       [
+        3,
+        0
+       ],
+       [
+        3,
+        2
+       ],
+       [
+        0,
+        2
+       ]
+      ]
+     }
+    ]
+   },
+   "B": {
+    "name": "Y",
+    "material": "copper",
+    "primitives": [
+     {
+      "kind": "linpoly",
+      "normal": "y",
+      "elevation": 0,
+      "length": 2,
+      "points": [
+       [
+        1,
+        1
+       ],
+       [
+        4,
+        1
+       ],
+       [
+        2.5,
+        3
+       ]
+      ]
+     }
+    ],
+    "transforms": [
+     {
+      "type": "rotate",
+      "axis": "z",
+      "center": [
+       0,
+       0,
+       0
+      ],
+      "angle": 90
+     }
+    ]
+   }
+  },
+  "values": [
+   {
+    "L": 5
+   },
+   {
+    "L": 1.5
+   }
+  ],
+  "expected": [
+   [
+    {
+     "kind": "linpoly",
+     "normal": "x",
+     "elevation": -2,
+     "length": 2,
+     "points": [
+      [
+       1,
+       1
+      ],
+      [
+       3,
+       2.5
+      ],
+      [
+       1,
+       4
+      ]
+     ]
+    },
+    {
+     "kind": "linpoly",
+     "normal": "x",
+     "elevation": 0,
+     "length": 5,
+     "points": [
+      [
+       0,
+       0
+      ],
+      [
+       3,
+       0
+      ],
+      [
+       3,
+       2
+      ],
+      [
+       0,
+       2
+      ]
+     ]
+    }
+   ],
+   [
+    {
+     "kind": "linpoly",
+     "normal": "x",
+     "elevation": -2,
+     "length": 2,
+     "points": [
+      [
+       1,
+       1
+      ],
+      [
+       3,
+       2.5
+      ],
+      [
+       1,
+       4
+      ]
+     ]
+    },
+    {
+     "kind": "linpoly",
+     "normal": "x",
+     "elevation": 0,
+     "length": 1.5,
+     "points": [
+      [
+       0,
+       0
+      ],
+      [
+       3,
+       0
+      ],
+      [
+       3,
+       2
+      ],
+      [
+       0,
+       2
+      ]
+     ]
+    }
+   ]
+  ]
+ },
+ {
+  "name": "brick plus cylinder and polygon: bricks and polygons united, the cylinder kept",
+  "history": {
+   "operation": "add",
+   "A": {
+    "name": "A",
+    "material": "copper",
+    "primitives": [
+     {
+      "kind": "box",
+      "start": [
+       0,
+       0,
+       0
+      ],
+      "stop": [
+       "W",
+       4,
+       2
+      ]
+     },
+     {
+      "kind": "cylinder",
+      "axis": "z",
+      "center": [
+       1,
+       1
+      ],
+      "radius": 0.5,
+      "range": [
+       2,
+       "H"
+      ]
+     }
+    ]
+   },
+   "B": {
+    "name": "B",
+    "material": "copper",
+    "primitives": [
+     {
+      "kind": "linpoly",
+      "normal": "z",
+      "elevation": 0,
+      "length": 2,
+      "points": [
+       [
+        3,
+        0
+       ],
+       [
+        6,
+        0
+       ],
+       [
+        6,
+        4
+       ],
+       [
+        3,
+        4
+       ]
+      ]
+     }
+    ]
+   }
+  },
+  "values": [
+   {
+    "W": 4,
+    "H": 5
+   },
+   {
+    "W": 5,
+    "H": 3
+   }
+  ],
+  "expected": [
+   [
+    {
+     "kind": "linpoly",
+     "normal": "z",
+     "elevation": 0,
+     "length": 2,
+     "points": [
+      [
+       0,
+       0
+      ],
+      [
+       6,
+       0
+      ],
+      [
+       6,
+       4
+      ],
+      [
+       0,
+       4
+      ]
+     ]
+    },
+    {
+     "kind": "cylinder",
+     "axis": "z",
+     "center": [
+      1,
+      1
+     ],
+     "radius": 0.5,
+     "range": [
+      2,
+      5
+     ]
+    }
+   ],
+   [
+    {
+     "kind": "linpoly",
+     "normal": "z",
+     "elevation": 0,
+     "length": 2,
+     "points": [
+      [
+       0,
+       0
+      ],
+      [
+       6,
+       0
+      ],
+      [
+       6,
+       4
+      ],
+      [
+       0,
+       4
+      ]
+     ]
+    },
+    {
+     "kind": "cylinder",
+     "axis": "z",
+     "center": [
+      1,
+      1
+     ],
+     "radius": 0.5,
+     "range": [
+      2,
+      3
+     ]
+    }
+   ]
+  ]
+ },
+ {
+  "name": "sphere, cone and torus added to a brick, transformed",
+  "history": {
+   "operation": "add",
+   "A": {
+    "name": "A",
+    "material": "copper",
+    "primitives": [
+     {
+      "kind": "box",
+      "start": [
+       0,
+       0,
+       0
+      ],
+      "stop": [
+       2,
+       2,
+       2
+      ]
+     },
+     {
+      "kind": "sphere",
+      "center": [
+       1,
+       1,
+       "H"
+      ],
+      "radius": 0.8
+     }
+    ],
+    "transforms": [
+     {
+      "type": "mirror",
+      "plane": "x",
+      "keep": true
+     }
+    ]
+   },
+   "B": {
+    "name": "B",
+    "material": "copper",
+    "primitives": [
+     {
+      "kind": "cone",
+      "axis": "y",
+      "center": [
+       1,
+       1
+      ],
+      "bottom_radius": 1,
+      "top_radius": 0.2,
+      "range": [
+       3,
+       6
+      ]
+     },
+     {
+      "kind": "torus",
+      "axis": "z",
+      "center": [
+       0,
+       0,
+       5
+      ],
+      "major_radius": 3,
+      "minor_radius": 0.5
+     }
+    ]
+   }
+  },
+  "values": [
+   {
+    "H": 3
+   },
+   {
+    "H": 3.5
+   }
+  ],
+  "expected": [
+   [
+    {
+     "kind": "box",
+     "start": [
+      0,
+      0,
+      0
+     ],
+     "stop": [
+      2,
+      2,
+      2
+     ]
+    },
+    {
+     "kind": "box",
+     "start": [
+      0,
+      0,
+      0
+     ],
+     "stop": [
+      -2,
+      2,
+      2
+     ]
+    },
+    {
+     "kind": "sphere",
+     "center": [
+      1,
+      1,
+      3
+     ],
+     "radius": 0.8
+    },
+    {
+     "kind": "sphere",
+     "center": [
+      -1,
+      1,
+      3
+     ],
+     "radius": 0.8
+    },
+    {
+     "kind": "cone",
+     "axis": "y",
+     "center": [
+      1,
+      1
+     ],
+     "bottom_radius": 1,
+     "top_radius": 0.2,
+     "range": [
+      3,
+      6
+     ]
+    },
+    {
+     "kind": "torus",
+     "axis": "z",
+     "center": [
+      0,
+      0,
+      5
+     ],
+     "major_radius": 3,
+     "minor_radius": 0.5
+    }
+   ],
+   [
+    {
+     "kind": "box",
+     "start": [
+      0,
+      0,
+      0
+     ],
+     "stop": [
+      2,
+      2,
+      2
+     ]
+    },
+    {
+     "kind": "box",
+     "start": [
+      0,
+      0,
+      0
+     ],
+     "stop": [
+      -2,
+      2,
+      2
+     ]
+    },
+    {
+     "kind": "sphere",
+     "center": [
+      1,
+      1,
+      3.5
+     ],
+     "radius": 0.8
+    },
+    {
+     "kind": "sphere",
+     "center": [
+      -1,
+      1,
+      3.5
+     ],
+     "radius": 0.8
+    },
+    {
+     "kind": "cone",
+     "axis": "y",
+     "center": [
+      1,
+      1
+     ],
+     "bottom_radius": 1,
+     "top_radius": 0.2,
+     "range": [
+      3,
+      6
+     ]
+    },
+    {
+     "kind": "torus",
+     "axis": "z",
+     "center": [
+      0,
+      0,
+      5
+     ],
+     "major_radius": 3,
+     "minor_radius": 0.5
+    }
+   ]
+  ]
+ },
+ {
+  "name": "wire and polyhedron inserted into a brick",
+  "history": {
+   "operation": "insert",
+   "A": {
+    "name": "A",
+    "material": "copper",
+    "primitives": [
+     {
+      "kind": "box",
+      "start": [
+       0,
+       0,
+       0
+      ],
+      "stop": [
+       4,
+       4,
+       4
+      ]
+     }
+    ]
+   },
+   "B": {
+    "name": "B",
+    "material": "copper",
+    "primitives": [
+     {
+      "kind": "wire",
+      "points": [
+       [
+        0,
+        0,
+        0
+       ],
+       [
+        2,
+        2,
+        "H"
+       ]
+      ],
+      "radius": 0.2
+     },
+     {
+      "kind": "polyhedron",
+      "vertices": [
+       [
+        0,
+        0,
+        0
+       ],
+       [
+        1,
+        0,
+        0
+       ],
+       [
+        0,
+        1,
+        0
+       ],
+       [
+        0,
+        0,
+        1
+       ]
+      ],
+      "faces": [
+       [
+        0,
+        2,
+        1
+       ],
+       [
+        0,
+        1,
+        3
+       ],
+       [
+        1,
+        2,
+        3
+       ],
+       [
+        0,
+        3,
+        2
+       ]
+      ]
+     }
+    ]
+   }
+  },
+  "values": [
+   {
+    "H": 4
+   },
+   {
+    "H": 6
+   }
+  ],
+  "expected": [
+   [
+    {
+     "kind": "box",
+     "start": [
+      0,
+      0,
+      0
+     ],
+     "stop": [
+      4,
+      4,
+      4
+     ]
+    }
+   ],
+   [
+    {
+     "kind": "box",
+     "start": [
+      0,
+      0,
+      0
+     ],
+     "stop": [
+      4,
+      4,
+      4
+     ]
+    }
+   ]
+  ]
+ },
+ {
+  "name": "brick minus cylinder: the cylinder becomes a cut-out",
+  "history": {
+   "operation": "subtract",
+   "A": {
+    "name": "A",
+    "material": "copper",
+    "primitives": [
+     {
+      "kind": "box",
+      "start": [
+       0,
+       0,
+       0
+      ],
+      "stop": [
+       "W",
+       10,
+       4
+      ]
+     }
+    ]
+   },
+   "B": {
+    "name": "B",
+    "material": "copper",
+    "primitives": [
+     {
+      "kind": "cylinder",
+      "axis": "z",
+      "center": [
+       5,
+       5
+      ],
+      "radius": "r",
+      "range": [
+       -1,
+       5
+      ]
+     }
+    ]
+   }
+  },
+  "values": [
+   {
+    "W": 10,
+    "r": 2
+   },
+   {
+    "W": 12,
+    "r": 1.5
+   }
+  ],
+  "expected": [
+   [
+    {
+     "kind": "box",
+     "start": [
+      0,
+      0,
+      0
+     ],
+     "stop": [
+      10,
+      10,
+      4
+     ]
+    },
+    {
+     "kind": "cylinder",
+     "axis": "z",
+     "center": [
+      5,
+      5
+     ],
+     "radius": 2,
+     "range": [
+      -1,
+      5
+     ],
+     "void": true
+    }
+   ],
+   [
+    {
+     "kind": "box",
+     "start": [
+      0,
+      0,
+      0
+     ],
+     "stop": [
+      12,
+      10,
+      4
+     ]
+    },
+    {
+     "kind": "cylinder",
+     "axis": "z",
+     "center": [
+      5,
+      5
+     ],
+     "radius": 1.5,
+     "range": [
+      -1,
+      5
+     ],
+     "void": true
+    }
+   ]
+  ]
+ },
+ {
+  "name": "sheet minus a cylinder standing on it (off by rounding, made exact), one crossing it and a cone",
+  "history": {
+   "operation": "subtract",
+   "A": {
+    "name": "G",
+    "material": "copper",
+    "primitives": [
+     {
+      "kind": "box",
+      "start": [
+       0,
+       0,
+       1.6
+      ],
+      "stop": [
+       20,
+       20,
+       1.6
+      ]
+     }
+    ]
+   },
+   "B": {
+    "name": "V",
+    "material": "copper",
+    "primitives": [
+     {
+      "kind": "cylinder",
+      "axis": "z",
+      "center": [
+       5,
+       5
+      ],
+      "radius": 1,
+      "range": [
+       "1.6+e",
+       5
+      ]
+     },
+     {
+      "kind": "cylinder",
+      "axis": "z",
+      "center": [
+       "x0",
+       12
+      ],
+      "radius": 1,
+      "range": [
+       0,
+       3
+      ]
+     },
+     {
+      "kind": "cone",
+      "axis": "z",
+      "center": [
+       15,
+       5
+      ],
+      "bottom_radius": 1,
+      "top_radius": 0.5,
+      "range": [
+       0,
+       1.6
+      ]
+     }
+    ]
+   }
+  },
+  "values": [
+   {
+    "x0": 10,
+    "e": 1e-12
+   },
+   {
+    "x0": 12,
+    "e": 0
+   }
+  ],
+  "expected": [
+   [
+    {
+     "kind": "box",
+     "start": [
+      0,
+      0,
+      1.6
+     ],
+     "stop": [
+      20,
+      20,
+      1.6
+     ]
+    },
+    {
+     "kind": "cylinder",
+     "axis": "z",
+     "center": [
+      5,
+      5
+     ],
+     "radius": 1,
+     "range": [
+      1.6,
+      5
+     ],
+     "void": true
+    },
+    {
+     "kind": "cylinder",
+     "axis": "z",
+     "center": [
+      10,
+      12
+     ],
+     "radius": 1,
+     "range": [
+      0,
+      3
+     ],
+     "void": true
+    },
+    {
+     "kind": "cone",
+     "axis": "z",
+     "center": [
+      15,
+      5
+     ],
+     "bottom_radius": 1,
+     "top_radius": 0.5,
+     "range": [
+      0,
+      1.6
+     ],
+     "void": true
+    }
+   ],
+   [
+    {
+     "kind": "box",
+     "start": [
+      0,
+      0,
+      1.6
+     ],
+     "stop": [
+      20,
+      20,
+      1.6
+     ]
+    },
+    {
+     "kind": "cylinder",
+     "axis": "z",
+     "center": [
+      5,
+      5
+     ],
+     "radius": 1,
+     "range": [
+      1.6,
+      5
+     ],
+     "void": true
+    },
+    {
+     "kind": "cylinder",
+     "axis": "z",
+     "center": [
+      12,
+      12
+     ],
+     "radius": 1,
+     "range": [
+      0,
+      3
+     ],
+     "void": true
+    },
+    {
+     "kind": "cone",
+     "axis": "z",
+     "center": [
+      15,
+      5
+     ],
+     "bottom_radius": 1,
+     "top_radius": 0.5,
+     "range": [
+      0,
+      1.6
+     ],
+     "void": true
+    }
+   ]
+  ]
+ },
+ {
+  "name": "polygon sheet minus a moved sphere",
+  "history": {
+   "operation": "subtract",
+   "A": {
+    "name": "S",
+    "material": "copper",
+    "primitives": [
+     {
+      "kind": "polygon",
+      "normal": "z",
+      "elevation": 1,
+      "points": [
+       [
+        0,
+        0
+       ],
+       [
+        8,
+        0
+       ],
+       [
+        4,
+        7
+       ]
+      ]
+     }
+    ]
+   },
+   "B": {
+    "name": "B",
+    "material": "copper",
+    "primitives": [
+     {
+      "kind": "sphere",
+      "center": [
+       4,
+       2,
+       1
+      ],
+      "radius": 1
+     }
+    ],
+    "transforms": [
+     {
+      "type": "move",
+      "offset": [
+       "m",
+       0,
+       0
+      ]
+     }
+    ]
+   }
+  },
+  "values": [
+   {
+    "m": 0
+   },
+   {
+    "m": 1
+   }
+  ],
+  "expected": [
+   [
+    {
+     "kind": "polygon",
+     "normal": "z",
+     "elevation": 1,
+     "points": [
+      [
+       0,
+       0
+      ],
+      [
+       8,
+       0
+      ],
+      [
+       4,
+       7
+      ]
+     ]
+    },
+    {
+     "kind": "sphere",
+     "center": [
+      4,
+      2,
+      1
+     ],
+     "radius": 1,
+     "void": true
+    }
+   ],
+   [
+    {
+     "kind": "polygon",
+     "normal": "z",
+     "elevation": 1,
+     "points": [
+      [
+       0,
+       0
+      ],
+      [
+       8,
+       0
+      ],
+      [
+       4,
+       7
+      ]
+     ]
+    },
+    {
+     "kind": "sphere",
+     "center": [
+      5,
+      2,
+      1
+     ],
+     "radius": 1,
+     "void": true
+    }
+   ]
+  ]
+ },
+ {
+  "name": "cylinder minus a coaxial through-cylinder is a tube",
+  "history": {
+   "operation": "subtract",
+   "A": {
+    "name": "A",
+    "material": "copper",
+    "primitives": [
+     {
+      "kind": "cylinder",
+      "axis": "z",
+      "center": [
+       1,
+       2
+      ],
+      "radius": 5,
+      "range": [
+       0,
+       "h"
+      ]
+     }
+    ]
+   },
+   "B": {
+    "name": "B",
+    "material": "copper",
+    "primitives": [
+     {
+      "kind": "cylinder",
+      "axis": "z",
+      "center": [
+       1,
+       2
+      ],
+      "radius": 2,
+      "range": [
+       -1,
+       20
+      ]
+     }
+    ]
+   }
+  },
+  "values": [
+   {
+    "h": 10
+   },
+   {
+    "h": 6
+   }
+  ],
+  "expected": [
+   [
+    {
+     "kind": "cylinder",
+     "axis": "z",
+     "center": [
+      1,
+      2
+     ],
+     "radius": 5,
+     "inner_radius": 2,
+     "range": [
+      0,
+      10
+     ]
+    }
+   ],
+   [
+    {
+     "kind": "cylinder",
+     "axis": "z",
+     "center": [
+      1,
+      2
+     ],
+     "radius": 5,
+     "inner_radius": 2,
+     "range": [
+      0,
+      6
+     ]
+    }
+   ]
+  ]
+ },
+ {
+  "name": "cylinder minus a coaxial blind cylinder and a tube: counterbore cells",
+  "history": {
+   "operation": "subtract",
+   "A": {
+    "name": "A",
+    "material": "copper",
+    "primitives": [
+     {
+      "kind": "cylinder",
+      "axis": "x",
+      "center": [
+       1,
+       2
+      ],
+      "radius": 5,
+      "range": [
+       0,
+       10
+      ]
+     }
+    ]
+   },
+   "B": {
+    "name": "B",
+    "material": "copper",
+    "primitives": [
+     {
+      "kind": "cylinder",
+      "axis": "x",
+      "center": [
+       1,
+       2
+      ],
+      "radius": 2,
+      "range": [
+       -1,
+       "d"
+      ]
+     },
+     {
+      "kind": "cylinder",
+      "axis": "x",
+      "center": [
+       1,
+       2
+      ],
+      "radius": 4,
+      "inner_radius": 3,
+      "range": [
+       4,
+       11
+      ]
+     }
+    ]
+   }
+  },
+  "values": [
+   {
+    "d": 6
+   },
+   {
+    "d": 3
+   }
+  ],
+  "expected": [
+   [
+    {
+     "kind": "cylinder",
+     "axis": "x",
+     "center": [
+      1,
+      2
+     ],
+     "radius": 3,
+     "range": [
+      6,
+      10
+     ]
+    },
+    {
+     "kind": "cylinder",
+     "axis": "x",
+     "center": [
+      1,
+      2
+     ],
+     "radius": 5,
+     "inner_radius": 4,
+     "range": [
+      4,
+      10
+     ]
+    },
+    {
+     "kind": "cylinder",
+     "axis": "x",
+     "center": [
+      1,
+      2
+     ],
+     "radius": 5,
+     "inner_radius": 2,
+     "range": [
+      0,
+      4
+     ]
+    },
+    {
+     "kind": "cylinder",
+     "axis": "x",
+     "center": [
+      1,
+      2
+     ],
+     "radius": 3,
+     "inner_radius": 2,
+     "range": [
+      4,
+      6
+     ]
+    }
+   ],
+   [
+    {
+     "kind": "cylinder",
+     "axis": "x",
+     "center": [
+      1,
+      2
+     ],
+     "radius": 5,
+     "range": [
+      3,
+      4
+     ]
+    },
+    {
+     "kind": "cylinder",
+     "axis": "x",
+     "center": [
+      1,
+      2
+     ],
+     "radius": 3,
+     "range": [
+      4,
+      10
+     ]
+    },
+    {
+     "kind": "cylinder",
+     "axis": "x",
+     "center": [
+      1,
+      2
+     ],
+     "radius": 5,
+     "inner_radius": 4,
+     "range": [
+      4,
+      10
+     ]
+    },
+    {
+     "kind": "cylinder",
+     "axis": "x",
+     "center": [
+      1,
+      2
+     ],
+     "radius": 5,
+     "inner_radius": 2,
+     "range": [
+      0,
+      3
+     ]
+    }
+   ]
+  ]
+ },
+ {
+  "name": "two subtractions in a row: the cut-outs add up",
+  "history": {
+   "operation": "subtract",
+   "A": {
+    "name": "A",
+    "material": "copper",
+    "primitives": [
+     {
+      "kind": "box",
+      "start": [
+       0,
+       0,
+       0
+      ],
+      "stop": [
+       10,
+       10,
+       4
+      ]
+     },
+     {
+      "kind": "cylinder",
+      "axis": "z",
+      "center": [
+       3,
+       3
+      ],
+      "radius": 1,
+      "range": [
+       -1,
+       5
+      ],
+      "void": true
+     }
+    ],
+    "booleanHistory": {
+     "operation": "subtract",
+     "live": true,
+     "A": {
+      "name": "A",
+      "material": "copper",
+      "primitives": [
+       {
+        "kind": "box",
+        "start": [
+         0,
+         0,
+         0
+        ],
+        "stop": [
+         10,
+         10,
+         4
+        ]
+       }
+      ]
+     },
+     "B": {
+      "name": "B1",
+      "material": "copper",
+      "primitives": [
+       {
+        "kind": "cylinder",
+        "axis": "z",
+        "center": [
+         3,
+         3
+        ],
+        "radius": 1,
+        "range": [
+         -1,
+         5
+        ]
+       }
+      ]
+     }
+    }
+   },
+   "B": {
+    "name": "B2",
+    "material": "copper",
+    "primitives": [
+     {
+      "kind": "cylinder",
+      "axis": "z",
+      "center": [
+       "c",
+       7
+      ],
+      "radius": 1.5,
+      "range": [
+       -1,
+       5
+      ]
+     }
+    ],
+    "transforms": [
+     {
+      "type": "mirror",
+      "plane": "x",
+      "point": [
+       5,
+       0,
+       0
+      ],
+      "keep": true
+     }
+    ]
+   }
+  },
+  "values": [
+   {
+    "c": 3
+   },
+   {
+    "c": 6
+   }
+  ],
+  "expected": [
+   [
+    {
+     "kind": "box",
+     "start": [
+      0,
+      0,
+      0
+     ],
+     "stop": [
+      10,
+      10,
+      4
+     ]
+    },
+    {
+     "kind": "cylinder",
+     "axis": "z",
+     "center": [
+      3,
+      3
+     ],
+     "radius": 1,
+     "range": [
+      -1,
+      5
+     ],
+     "void": true
+    },
+    {
+     "kind": "cylinder",
+     "axis": "z",
+     "center": [
+      3,
+      7
+     ],
+     "radius": 1.5,
+     "range": [
+      -1,
+      5
+     ],
+     "void": true
+    },
+    {
+     "kind": "cylinder",
+     "axis": "z",
+     "center": [
+      7,
+      7
+     ],
+     "radius": 1.5,
+     "range": [
+      -1,
+      5
+     ],
+     "void": true
+    }
+   ],
+   [
+    {
+     "kind": "box",
+     "start": [
+      0,
+      0,
+      0
+     ],
+     "stop": [
+      10,
+      10,
+      4
+     ]
+    },
+    {
+     "kind": "cylinder",
+     "axis": "z",
+     "center": [
+      3,
+      3
+     ],
+     "radius": 1,
+     "range": [
+      -1,
+      5
+     ],
+     "void": true
+    },
+    {
+     "kind": "cylinder",
+     "axis": "z",
+     "center": [
+      6,
+      7
+     ],
+     "radius": 1.5,
+     "range": [
+      -1,
+      5
+     ],
+     "void": true
+    },
+    {
+     "kind": "cylinder",
+     "axis": "z",
+     "center": [
+      4,
+      7
+     ],
+     "radius": 1.5,
+     "range": [
+      -1,
+      5
+     ],
+     "void": true
+    }
+   ]
+  ]
+ },
+ {
+  "name": "brick minus a tube, torus, wire and polyhedron",
+  "history": {
+   "operation": "subtract",
+   "A": {
+    "name": "A",
+    "material": "copper",
+    "primitives": [
+     {
+      "kind": "box",
+      "start": [
+       0,
+       0,
+       0
+      ],
+      "stop": [
+       10,
+       10,
+       4
+      ]
+     }
+    ]
+   },
+   "B": {
+    "name": "B",
+    "material": "copper",
+    "primitives": [
+     {
+      "kind": "cylinder",
+      "axis": "z",
+      "center": [
+       2,
+       2
+      ],
+      "radius": 1,
+      "inner_radius": "ri",
+      "range": [
+       -1,
+       5
+      ]
+     },
+     {
+      "kind": "torus",
+      "axis": "z",
+      "center": [
+       6,
+       6,
+       2
+      ],
+      "major_radius": 2,
+      "minor_radius": 0.5
+     },
+     {
+      "kind": "wire",
+      "points": [
+       [
+        1,
+        8,
+        -1
+       ],
+       [
+        3,
+        8,
+        "h"
+       ]
+      ],
+      "radius": 0.3
+     },
+     {
+      "kind": "polyhedron",
+      "vertices": [
+       [
+        7,
+        1,
+        0
+       ],
+       [
+        9,
+        1,
+        0
+       ],
+       [
+        7,
+        3,
+        0
+       ],
+       [
+        7,
+        1,
+        "h"
+       ]
+      ],
+      "faces": [
+       [
+        0,
+        2,
+        1
+       ],
+       [
+        0,
+        1,
+        3
+       ],
+       [
+        1,
+        2,
+        3
+       ],
+       [
+        0,
+        3,
+        2
+       ]
+      ]
+     }
+    ]
+   }
+  },
+  "values": [
+   {
+    "ri": 0.5,
+    "h": 5
+   },
+   {
+    "ri": 0.7,
+    "h": 6
+   }
+  ],
+  "expected": [
+   [
+    {
+     "kind": "box",
+     "start": [
+      0,
+      0,
+      0
+     ],
+     "stop": [
+      10,
+      10,
+      4
+     ]
+    },
+    {
+     "kind": "cylinder",
+     "axis": "z",
+     "center": [
+      2,
+      2
+     ],
+     "radius": 1,
+     "inner_radius": 0.5,
+     "range": [
+      -1,
+      5
+     ],
+     "void": true
+    },
+    {
+     "kind": "torus",
+     "axis": "z",
+     "center": [
+      6,
+      6,
+      2
+     ],
+     "major_radius": 2,
+     "minor_radius": 0.5,
+     "void": true
+    },
+    {
+     "kind": "wire",
+     "points": [
+      [
+       1,
+       8,
+       -1
+      ],
+      [
+       3,
+       8,
+       5
+      ]
+     ],
+     "radius": 0.3,
+     "void": true
+    },
+    {
+     "kind": "polyhedron",
+     "vertices": [
+      [
+       7,
+       1,
+       0
+      ],
+      [
+       9,
+       1,
+       0
+      ],
+      [
+       7,
+       3,
+       0
+      ],
+      [
+       7,
+       1,
+       5
+      ]
+     ],
+     "faces": [
+      [
+       0,
+       2,
+       1
+      ],
+      [
+       0,
+       1,
+       3
+      ],
+      [
+       1,
+       2,
+       3
+      ],
+      [
+       0,
+       3,
+       2
+      ]
+     ],
+     "void": true
+    }
+   ],
+   [
+    {
+     "kind": "box",
+     "start": [
+      0,
+      0,
+      0
+     ],
+     "stop": [
+      10,
+      10,
+      4
+     ]
+    },
+    {
+     "kind": "cylinder",
+     "axis": "z",
+     "center": [
+      2,
+      2
+     ],
+     "radius": 1,
+     "inner_radius": 0.7,
+     "range": [
+      -1,
+      5
+     ],
+     "void": true
+    },
+    {
+     "kind": "torus",
+     "axis": "z",
+     "center": [
+      6,
+      6,
+      2
+     ],
+     "major_radius": 2,
+     "minor_radius": 0.5,
+     "void": true
+    },
+    {
+     "kind": "wire",
+     "points": [
+      [
+       1,
+       8,
+       -1
+      ],
+      [
+       3,
+       8,
+       6
+      ]
+     ],
+     "radius": 0.3,
+     "void": true
+    },
+    {
+     "kind": "polyhedron",
+     "vertices": [
+      [
+       7,
+       1,
+       0
+      ],
+      [
+       9,
+       1,
+       0
+      ],
+      [
+       7,
+       3,
+       0
+      ],
+      [
+       7,
+       1,
+       6
+      ]
+     ],
+     "faces": [
+      [
+       0,
+       2,
+       1
+      ],
+      [
+       0,
+       1,
+       3
+      ],
+      [
+       1,
+       2,
+       3
+      ],
+      [
+       0,
+       3,
+       2
+      ]
+     ],
+     "void": true
+    }
+   ]
+  ]
+ },
+ {
+  "name": "cut-outs through a quarter-turned, mirrored and copied part (cone, torus, cylinder from two points)",
+  "history": {
+   "operation": "subtract",
+   "A": {
+    "name": "A",
+    "material": "copper",
+    "primitives": [
+     {
+      "kind": "box",
+      "start": [
+       0,
+       0,
+       0
+      ],
+      "stop": [
+       10,
+       6,
+       4
+      ]
+     }
+    ],
+    "transforms": [
+     {
+      "type": "rotate",
+      "axis": "x",
+      "center": [
+       0,
+       0,
+       0
+      ],
+      "angle": 90
+     },
+     {
+      "type": "move",
+      "offset": [
+       0,
+       0,
+       "dz"
+      ]
+     }
+    ]
+   },
+   "B": {
+    "name": "B",
+    "material": "copper",
+    "primitives": [
+     {
+      "kind": "cone",
+      "axis": "z",
+      "center": [
+       3,
+       3
+      ],
+      "bottom_radius": 1,
+      "top_radius": 0.3,
+      "range": [
+       -1,
+       3
+      ]
+     },
+     {
+      "kind": "torus",
+      "axis": "y",
+      "center": [
+       6,
+       2,
+       2
+      ],
+      "major_radius": 1.5,
+      "minor_radius": 0.4
+     },
+     {
+      "kind": "cylinder",
+      "start": [
+       8,
+       1,
+       0
+      ],
+      "stop": [
+       8,
+       4,
+       0
+      ],
+      "radius": 0.5
+     }
+    ],
+    "transforms": [
+     {
+      "type": "rotate",
+      "axis": "z",
+      "center": [
+       5,
+       3,
+       0
+      ],
+      "angle": 90
+     },
+     {
+      "type": "mirror",
+      "plane": "y",
+      "point": [
+       0,
+       2,
+       0
+      ],
+      "keep": true
+     }
+    ]
+   }
+  },
+  "values": [
+   {
+    "dz": 0
+   },
+   {
+    "dz": 1.5
+   }
+  ],
+  "expected": [
+   [
+    {
+     "kind": "box",
+     "start": [
+      0,
+      0,
+      0
+     ],
+     "stop": [
+      10,
+      -4,
+      6
+     ]
+    },
+    {
+     "kind": "cone",
+     "axis": "z",
+     "center": [
+      5,
+      1
+     ],
+     "bottom_radius": 1,
+     "top_radius": 0.3,
+     "range": [
+      -1,
+      3
+     ],
+     "void": true
+    },
+    {
+     "kind": "torus",
+     "axis": "x",
+     "center": [
+      6,
+      4,
+      2
+     ],
+     "major_radius": 1.5,
+     "minor_radius": 0.3999999999999999,
+     "void": true
+    },
+    {
+     "kind": "cylinder",
+     "axis": "x",
+     "center": [
+      6,
+      0
+     ],
+     "radius": 0.5,
+     "range": [
+      7,
+      4
+     ],
+     "void": true
+    },
+    {
+     "kind": "cone",
+     "axis": "z",
+     "center": [
+      5,
+      3
+     ],
+     "bottom_radius": 1,
+     "top_radius": 0.3,
+     "range": [
+      -1,
+      3
+     ],
+     "void": true
+    },
+    {
+     "kind": "torus",
+     "axis": "x",
+     "center": [
+      6,
+      0,
+      2
+     ],
+     "major_radius": 1.5,
+     "minor_radius": 0.3999999999999999,
+     "void": true
+    },
+    {
+     "kind": "cylinder",
+     "axis": "x",
+     "center": [
+      -2,
+      0
+     ],
+     "radius": 0.5,
+     "range": [
+      7,
+      4
+     ],
+     "void": true
+    }
+   ],
+   [
+    {
+     "kind": "box",
+     "start": [
+      0,
+      0,
+      1.5
+     ],
+     "stop": [
+      10,
+      -4,
+      7.5
+     ]
+    },
+    {
+     "kind": "cone",
+     "axis": "z",
+     "center": [
+      5,
+      1
+     ],
+     "bottom_radius": 1,
+     "top_radius": 0.3,
+     "range": [
+      -1,
+      3
+     ],
+     "void": true
+    },
+    {
+     "kind": "torus",
+     "axis": "x",
+     "center": [
+      6,
+      4,
+      2
+     ],
+     "major_radius": 1.5,
+     "minor_radius": 0.3999999999999999,
+     "void": true
+    },
+    {
+     "kind": "cylinder",
+     "axis": "x",
+     "center": [
+      6,
+      0
+     ],
+     "radius": 0.5,
+     "range": [
+      7,
+      4
+     ],
+     "void": true
+    },
+    {
+     "kind": "cone",
+     "axis": "z",
+     "center": [
+      5,
+      3
+     ],
+     "bottom_radius": 1,
+     "top_radius": 0.3,
+     "range": [
+      -1,
+      3
+     ],
+     "void": true
+    },
+    {
+     "kind": "torus",
+     "axis": "x",
+     "center": [
+      6,
+      0,
+      2
+     ],
+     "major_radius": 1.5,
+     "minor_radius": 0.3999999999999999,
+     "void": true
+    },
+    {
+     "kind": "cylinder",
+     "axis": "x",
+     "center": [
+      -2,
+      0
+     ],
+     "radius": 0.5,
+     "range": [
+      7,
+      4
+     ],
+     "void": true
+    }
+   ]
+  ]
+ },
+ {
+  "name": "tube, wire and polyhedron added to a brick and a polygon",
+  "history": {
+   "operation": "add",
+   "A": {
+    "name": "A",
+    "material": "copper",
+    "primitives": [
+     {
+      "kind": "box",
+      "start": [
+       0,
+       0,
+       0
+      ],
+      "stop": [
+       3,
+       3,
+       3
+      ]
+     },
+     {
+      "kind": "cylinder",
+      "axis": "x",
+      "center": [
+       1,
+       1
+      ],
+      "radius": 1,
+      "inner_radius": 0.4,
+      "range": [
+       3,
+       "L"
+      ]
+     }
+    ]
+   },
+   "B": {
+    "name": "B",
+    "material": "copper",
+    "primitives": [
+     {
+      "kind": "wire",
+      "points": [
+       [
+        0,
+        0,
+        3
+       ],
+       [
+        0,
+        0,
+        6
+       ]
+      ],
+      "radius": 0.2
+     },
+     {
+      "kind": "polyhedron",
+      "vertices": [
+       [
+        0,
+        0,
+        0
+       ],
+       [
+        1,
+        0,
+        0
+       ],
+       [
+        0,
+        1,
+        0
+       ],
+       [
+        0,
+        0,
+        1
+       ]
+      ],
+      "faces": [
+       [
+        0,
+        2,
+        1
+       ],
+       [
+        0,
+        1,
+        3
+       ],
+       [
+        1,
+        2,
+        3
+       ],
+       [
+        0,
+        3,
+        2
+       ]
+      ]
+     },
+     {
+      "kind": "linpoly",
+      "normal": "z",
+      "elevation": 0,
+      "length": 1,
+      "points": [
+       [
+        2,
+        2
+       ],
+       [
+        5,
+        2
+       ],
+       [
+        5,
+        4
+       ]
+      ]
+     }
+    ]
+   }
+  },
+  "values": [
+   {
+    "L": 6
+   },
+   {
+    "L": 8.5
+   }
+  ],
+  "expected": [
+   [
+    {
+     "kind": "linpoly",
+     "normal": "z",
+     "elevation": 0,
+     "length": 1,
+     "points": [
+      [
+       3,
+       2.6666666666666665
+      ],
+      [
+       3,
+       3
+      ],
+      [
+       0,
+       3
+      ],
+      [
+       0,
+       0
+      ],
+      [
+       3,
+       0
+      ],
+      [
+       3,
+       2
+      ],
+      [
+       5,
+       2
+      ],
+      [
+       5,
+       4
+      ]
+     ]
+    },
+    {
+     "kind": "linpoly",
+     "normal": "z",
+     "elevation": 1,
+     "length": 2,
+     "points": [
+      [
+       0,
+       0
+      ],
+      [
+       3,
+       0
+      ],
+      [
+       3,
+       3
+      ],
+      [
+       0,
+       3
+      ]
+     ]
+    },
+    {
+     "kind": "cylinder",
+     "axis": "x",
+     "center": [
+      1,
+      1
+     ],
+     "radius": 1,
+     "inner_radius": 0.4,
+     "range": [
+      3,
+      6
+     ]
+    },
+    {
+     "kind": "wire",
+     "points": [
+      [
+       0,
+       0,
+       3
+      ],
+      [
+       0,
+       0,
+       6
+      ]
+     ],
+     "radius": 0.2
+    },
+    {
+     "kind": "polyhedron",
+     "vertices": [
+      [
+       0,
+       0,
+       0
+      ],
+      [
+       1,
+       0,
+       0
+      ],
+      [
+       0,
+       1,
+       0
+      ],
+      [
+       0,
+       0,
+       1
+      ]
+     ],
+     "faces": [
+      [
+       0,
+       2,
+       1
+      ],
+      [
+       0,
+       1,
+       3
+      ],
+      [
+       1,
+       2,
+       3
+      ],
+      [
+       0,
+       3,
+       2
+      ]
+     ]
+    }
+   ],
+   [
+    {
+     "kind": "linpoly",
+     "normal": "z",
+     "elevation": 0,
+     "length": 1,
+     "points": [
+      [
+       3,
+       2.6666666666666665
+      ],
+      [
+       3,
+       3
+      ],
+      [
+       0,
+       3
+      ],
+      [
+       0,
+       0
+      ],
+      [
+       3,
+       0
+      ],
+      [
+       3,
+       2
+      ],
+      [
+       5,
+       2
+      ],
+      [
+       5,
+       4
+      ]
+     ]
+    },
+    {
+     "kind": "linpoly",
+     "normal": "z",
+     "elevation": 1,
+     "length": 2,
+     "points": [
+      [
+       0,
+       0
+      ],
+      [
+       3,
+       0
+      ],
+      [
+       3,
+       3
+      ],
+      [
+       0,
+       3
+      ]
+     ]
+    },
+    {
+     "kind": "cylinder",
+     "axis": "x",
+     "center": [
+      1,
+      1
+     ],
+     "radius": 1,
+     "inner_radius": 0.4,
+     "range": [
+      3,
+      8.5
+     ]
+    },
+    {
+     "kind": "wire",
+     "points": [
+      [
+       0,
+       0,
+       3
+      ],
+      [
+       0,
+       0,
+       6
+      ]
+     ],
+     "radius": 0.2
+    },
+    {
+     "kind": "polyhedron",
+     "vertices": [
+      [
+       0,
+       0,
+       0
+      ],
+      [
+       1,
+       0,
+       0
+      ],
+      [
+       0,
+       1,
+       0
+      ],
+      [
+       0,
+       0,
+       1
+      ]
+     ],
+     "faces": [
+      [
+       0,
+       2,
+       1
+      ],
+      [
+       0,
+       1,
+       3
+      ],
+      [
+       1,
+       2,
+       3
+      ],
+      [
+       0,
+       3,
+       2
+      ]
+     ]
+    }
+   ]
+  ]
+ },
+ {
+  "name": "L-notch cut in a sheet: one polygon",
+  "history": {
+   "operation": "subtract",
+   "A": {
+    "name": "A",
+    "material": "copper",
+    "primitives": [
+     {
+      "kind": "box",
+      "start": [
+       0,
+       0,
+       1
+      ],
+      "stop": [
+       "W",
+       6,
+       1
+      ]
+     }
+    ]
+   },
+   "B": {
+    "name": "B",
+    "material": "copper",
+    "primitives": [
+     {
+      "kind": "box",
+      "start": [
+       6,
+       3,
+       1
+      ],
+      "stop": [
+       12,
+       8,
+       1
+      ]
+     }
+    ]
+   }
+  },
+  "values": [
+   {
+    "W": 10
+   },
+   {
+    "W": 8
+   }
+  ],
+  "expected": [
+   [
+    {
+     "kind": "polygon",
+     "normal": "z",
+     "elevation": 1,
+     "points": [
+      [
+       6,
+       3
+      ],
+      [
+       6,
+       6
+      ],
+      [
+       0,
+       6
+      ],
+      [
+       0,
+       0
+      ],
+      [
+       10,
+       0
+      ],
+      [
+       10,
+       3
+      ]
+     ]
+    }
+   ],
+   [
+    {
+     "kind": "polygon",
+     "normal": "z",
+     "elevation": 1,
+     "points": [
+      [
+       6,
+       3
+      ],
+      [
+       6,
+       6
+      ],
+      [
+       0,
+       6
+      ],
+      [
+       0,
+       0
+      ],
+      [
+       8,
+       0
+      ],
+      [
+       8,
+       3
+      ]
+     ]
+    }
+   ]
+  ]
+ },
+ {
+  "name": "centred hole in a sheet plate: two polygons",
+  "history": {
+   "operation": "subtract",
+   "A": {
+    "name": "A",
+    "material": "copper",
+    "primitives": [
+     {
+      "kind": "box",
+      "start": [
+       0,
+       0,
+       1
+      ],
+      "stop": [
+       10,
+       10,
+       1
+      ]
+     }
+    ]
+   },
+   "B": {
+    "name": "B",
+    "material": "copper",
+    "primitives": [
+     {
+      "kind": "box",
+      "start": [
+       "h",
+       "h",
+       1
+      ],
+      "stop": [
+       6,
+       6,
+       1
+      ]
+     }
+    ]
+   }
+  },
+  "values": [
+   {
+    "h": 4
+   },
+   {
+    "h": 3
+   }
+  ],
+  "expected": [
+   [
+    {
+     "kind": "polygon",
+     "normal": "z",
+     "elevation": 1,
+     "points": [
+      [
+       0,
+       10
+      ],
+      [
+       0,
+       0
+      ],
+      [
+       6,
+       0
+      ],
+      [
+       6,
+       4
+      ],
+      [
+       4,
+       4
+      ],
+      [
+       4,
+       6
+      ],
+      [
+       6,
+       6
+      ],
+      [
+       6,
+       10
+      ]
+     ],
+     "label": "A (part 1 of 2)"
+    },
+    {
+     "kind": "box",
+     "start": [
+      6,
+      0,
+      1
+     ],
+     "stop": [
+      10,
+      10,
+      1
+     ],
+     "label": "A (part 2 of 2)"
+    }
+   ],
+   [
+    {
+     "kind": "polygon",
+     "normal": "z",
+     "elevation": 1,
+     "points": [
+      [
+       0,
+       10
+      ],
+      [
+       0,
+       0
+      ],
+      [
+       6,
+       0
+      ],
+      [
+       6,
+       3
+      ],
+      [
+       3,
+       3
+      ],
+      [
+       3,
+       6
+      ],
+      [
+       6,
+       6
+      ],
+      [
+       6,
+       10
+      ]
+     ],
+     "label": "A (part 1 of 2)"
+    },
+    {
+     "kind": "box",
+     "start": [
+      6,
+      0,
+      1
+     ],
+     "stop": [
+      10,
+      10,
+      1
+     ],
+     "label": "A (part 2 of 2)"
+    }
+   ]
+  ]
+ },
+ {
+  "name": "centred hole through a thick plate: two extruded polygons",
+  "history": {
+   "operation": "subtract",
+   "A": {
+    "name": "A",
+    "material": "copper",
+    "primitives": [
+     {
+      "kind": "box",
+      "start": [
+       0,
+       0,
+       0
+      ],
+      "stop": [
+       10,
+       10,
+       "t"
+      ]
+     }
+    ]
+   },
+   "B": {
+    "name": "B",
+    "material": "copper",
+    "primitives": [
+     {
+      "kind": "box",
+      "start": [
+       4,
+       4,
+       -1
+      ],
+      "stop": [
+       6,
+       6,
+       5
+      ]
+     }
+    ]
+   }
+  },
+  "values": [
+   {
+    "t": 2
+   },
+   {
+    "t": 3
+   }
+  ],
+  "expected": [
+   [
+    {
+     "kind": "linpoly",
+     "normal": "z",
+     "elevation": 0,
+     "length": 2,
+     "points": [
+      [
+       0,
+       10
+      ],
+      [
+       0,
+       0
+      ],
+      [
+       6,
+       0
+      ],
+      [
+       6,
+       4
+      ],
+      [
+       4,
+       4
+      ],
+      [
+       4,
+       6
+      ],
+      [
+       6,
+       6
+      ],
+      [
+       6,
+       10
+      ]
+     ],
+     "label": "A (part 1 of 2)"
+    },
+    {
+     "kind": "box",
+     "start": [
+      6,
+      0,
+      0
+     ],
+     "stop": [
+      10,
+      10,
+      2
+     ],
+     "label": "A (part 2 of 2)"
+    }
+   ],
+   [
+    {
+     "kind": "linpoly",
+     "normal": "z",
+     "elevation": 0,
+     "length": 3,
+     "points": [
+      [
+       0,
+       10
+      ],
+      [
+       0,
+       0
+      ],
+      [
+       6,
+       0
+      ],
+      [
+       6,
+       4
+      ],
+      [
+       4,
+       4
+      ],
+      [
+       4,
+       6
+      ],
+      [
+       6,
+       6
+      ],
+      [
+       6,
+       10
+      ]
+     ],
+     "label": "A (part 1 of 2)"
+    },
+    {
+     "kind": "box",
+     "start": [
+      6,
+      0,
+      0
+     ],
+     "stop": [
+      10,
+      10,
+      3
+     ],
+     "label": "A (part 2 of 2)"
+    }
+   ]
+  ]
+ },
+ {
+  "name": "pocket in a thick brick: the brick whole and a cut-out",
+  "history": {
+   "operation": "subtract",
+   "A": {
+    "name": "A",
+    "material": "copper",
+    "primitives": [
+     {
+      "kind": "box",
+      "start": [
+       0,
+       0,
+       0
+      ],
+      "stop": [
+       10,
+       10,
+       4
+      ]
+     }
+    ]
+   },
+   "B": {
+    "name": "B",
+    "material": "copper",
+    "primitives": [
+     {
+      "kind": "box",
+      "start": [
+       3,
+       3,
+       "d"
+      ],
+      "stop": [
+       7,
+       7,
+       5
+      ]
+     }
+    ]
+   }
+  },
+  "values": [
+   {
+    "d": 2
+   },
+   {
+    "d": 1
+   }
+  ],
+  "expected": [
+   [
+    {
+     "kind": "box",
+     "start": [
+      0,
+      0,
+      0
+     ],
+     "stop": [
+      10,
+      10,
+      4
+     ]
+    },
+    {
+     "kind": "box",
+     "start": [
+      3,
+      3,
+      2
+     ],
+     "stop": [
+      7,
+      7,
+      4
+     ],
+     "label": "B (cut-out)",
+     "void": true
+    }
+   ],
+   [
+    {
+     "kind": "box",
+     "start": [
+      0,
+      0,
+      0
+     ],
+     "stop": [
+      10,
+      10,
+      4
+     ]
+    },
+    {
+     "kind": "box",
+     "start": [
+      3,
+      3,
+      1
+     ],
+     "stop": [
+      7,
+      7,
+      4
+     ],
+     "label": "B (cut-out)",
+     "void": true
+    }
+   ]
+  ]
+ },
+ {
+  "name": "slit cutting a brick in two",
+  "history": {
+   "operation": "subtract",
+   "A": {
+    "name": "A",
+    "material": "copper",
+    "primitives": [
+     {
+      "kind": "box",
+      "start": [
+       0,
+       0,
+       0
+      ],
+      "stop": [
+       10,
+       6,
+       2
+      ]
+     }
+    ]
+   },
+   "B": {
+    "name": "B",
+    "material": "copper",
+    "primitives": [
+     {
+      "kind": "box",
+      "start": [
+       "x0",
+       -1,
+       -1
+      ],
+      "stop": [
+       5,
+       7,
+       3
+      ]
+     }
+    ]
+   }
+  },
+  "values": [
+   {
+    "x0": 4
+   },
+   {
+    "x0": 3
+   }
+  ],
+  "expected": [
+   [
+    {
+     "kind": "box",
+     "start": [
+      0,
+      0,
+      0
+     ],
+     "stop": [
+      4,
+      6,
+      2
+     ],
+     "label": "A (part 1 of 2)"
+    },
+    {
+     "kind": "box",
+     "start": [
+      5,
+      0,
+      0
+     ],
+     "stop": [
+      10,
+      6,
+      2
+     ],
+     "label": "A (part 2 of 2)"
+    }
+   ],
+   [
+    {
+     "kind": "box",
+     "start": [
+      0,
+      0,
+      0
+     ],
+     "stop": [
+      3,
+      6,
+      2
+     ],
+     "label": "A (part 1 of 2)"
+    },
+    {
+     "kind": "box",
+     "start": [
+      5,
+      0,
+      0
+     ],
+     "stop": [
+      10,
+      6,
+      2
+     ],
+     "label": "A (part 2 of 2)"
+    }
+   ]
+  ]
+ },
+ {
+  "name": "a brick that B does not touch stays whole",
+  "history": {
+   "operation": "subtract",
+   "A": {
+    "name": "A",
+    "material": "copper",
+    "primitives": [
+     {
+      "kind": "box",
+      "start": [
+       0,
+       0,
+       0
+      ],
+      "stop": [
+       4,
+       4,
+       2
+      ]
+     }
+    ]
+   },
+   "B": {
+    "name": "B",
+    "material": "copper",
+    "primitives": [
+     {
+      "kind": "box",
+      "start": [
+       "x0",
+       0,
+       0
+      ],
+      "stop": [
+       12,
+       4,
+       2
+      ]
+     }
+    ]
+   }
+  },
+  "values": [
+   {
+    "x0": 6
+   },
+   {
+    "x0": 3
+   }
+  ],
+  "expected": [
+   [
+    {
+     "kind": "box",
+     "start": [
+      0,
+      0,
+      0
+     ],
+     "stop": [
+      4,
+      4,
+      2
+     ]
+    }
+   ],
+   [
+    {
+     "kind": "box",
+     "start": [
+      0,
+      0,
+      0
+     ],
+     "stop": [
+      3,
+      4,
+      2
+     ]
+    }
+   ]
+  ]
+ },
+ {
+  "name": "add a filler back into a pocketed brick: one shape",
+  "history": {
+   "operation": "add",
+   "A": {
+    "name": "A",
+    "material": "copper",
+    "primitives": [
+     {
+      "kind": "box",
+      "start": [
+       0,
+       0,
+       0
+      ],
+      "stop": [
+       "W",
+       10,
+       4
+      ]
+     },
+     {
+      "kind": "box",
+      "start": [
+       3,
+       3,
+       2
+      ],
+      "stop": [
+       7,
+       7,
+       5
+      ],
+      "void": true
+     }
+    ]
+   },
+   "B": {
+    "name": "B",
+    "material": "copper",
+    "primitives": [
+     {
+      "kind": "box",
+      "start": [
+       3,
+       3,
+       2
+      ],
+      "stop": [
+       7,
+       7,
+       4
+      ]
+     }
+    ]
+   }
+  },
+  "values": [
+   {
+    "W": 10
+   },
+   {
+    "W": 12
+   }
+  ],
+  "expected": [
+   [
+    {
+     "kind": "linpoly",
+     "normal": "z",
+     "elevation": 0,
+     "length": 4,
+     "points": [
+      [
+       0,
+       0
+      ],
+      [
+       10,
+       0
+      ],
+      [
+       10,
+       10
+      ],
+      [
+       0,
+       10
+      ]
+     ]
+    }
+   ],
+   [
+    {
+     "kind": "linpoly",
+     "normal": "z",
+     "elevation": 0,
+     "length": 4,
+     "points": [
+      [
+       0,
+       0
+      ],
+      [
+       12,
+       0
+      ],
+      [
+       12,
+       10
+      ],
+      [
+       0,
+       10
+      ]
+     ]
+    }
+   ]
+  ]
+ },
+ {
+  "name": "a sheet minus a thick brick: cut with the brick's cross-section",
+  "history": {
+   "operation": "subtract",
+   "A": {
+    "name": "A",
+    "material": "copper",
+    "primitives": [
+     {
+      "kind": "box",
+      "start": [
+       0,
+       0,
+       "z0"
+      ],
+      "stop": [
+       10,
+       10,
+       "z0"
+      ]
+     }
+    ]
+   },
+   "B": {
+    "name": "B",
+    "material": "copper",
+    "primitives": [
+     {
+      "kind": "box",
+      "start": [
+       3,
+       3,
+       0
+      ],
+      "stop": [
+       6,
+       6,
+       2
+      ]
+     }
+    ]
+   }
+  },
+  "values": [
+   {
+    "z0": 1
+   },
+   {
+    "z0": 1.5
+   }
+  ],
+  "expected": [
+   [
+    {
+     "kind": "polygon",
+     "normal": "z",
+     "elevation": 1,
+     "points": [
+      [
+       0,
+       10
+      ],
+      [
+       0,
+       0
+      ],
+      [
+       6,
+       0
+      ],
+      [
+       6,
+       3
+      ],
+      [
+       3,
+       3
+      ],
+      [
+       3,
+       6
+      ],
+      [
+       6,
+       6
+      ],
+      [
+       6,
+       10
+      ]
+     ],
+     "label": "A (part 1 of 2)"
+    },
+    {
+     "kind": "box",
+     "start": [
+      6,
+      0,
+      1
+     ],
+     "stop": [
+      10,
+      10,
+      1
+     ],
+     "label": "A (part 2 of 2)"
+    }
+   ],
+   [
+    {
+     "kind": "polygon",
+     "normal": "z",
+     "elevation": 1.5,
+     "points": [
+      [
+       0,
+       10
+      ],
+      [
+       0,
+       0
+      ],
+      [
+       6,
+       0
+      ],
+      [
+       6,
+       3
+      ],
+      [
+       3,
+       3
+      ],
+      [
+       3,
+       6
+      ],
+      [
+       6,
+       6
+      ],
+      [
+       6,
+       10
+      ]
+     ],
+     "label": "A (part 1 of 2)"
+    },
+    {
+     "kind": "box",
+     "start": [
+      6,
+      0,
+      1.5
+     ],
+     "stop": [
+      10,
+      10,
+      1.5
+     ],
+     "label": "A (part 2 of 2)"
+    }
+   ]
+  ]
+ },
+ {
+  "name": "a sheet and a thick brick that does not reach it",
+  "history": {
+   "operation": "subtract",
+   "A": {
+    "name": "A",
+    "material": "copper",
+    "primitives": [
+     {
+      "kind": "box",
+      "start": [
+       0,
+       0,
+       1
+      ],
+      "stop": [
+       10,
+       10,
+       1
+      ]
+     }
+    ]
+   },
+   "B": {
+    "name": "B",
+    "material": "copper",
+    "primitives": [
+     {
+      "kind": "box",
+      "start": [
+       3,
+       3,
+       "z1"
+      ],
+      "stop": [
+       6,
+       6,
+       3
+      ]
+     }
+    ]
+   }
+  },
+  "values": [
+   {
+    "z1": 2
+   },
+   {
+    "z1": 1
+   }
+  ],
+  "expected": [
+   [
+    {
+     "kind": "box",
+     "start": [
+      0,
+      0,
+      1
+     ],
+     "stop": [
+      10,
+      10,
+      1
+     ]
+    }
+   ],
+   [
+    {
+     "kind": "polygon",
+     "normal": "z",
+     "elevation": 1,
+     "points": [
+      [
+       0,
+       10
+      ],
+      [
+       0,
+       0
+      ],
+      [
+       6,
+       0
+      ],
+      [
+       6,
+       3
+      ],
+      [
+       3,
+       3
+      ],
+      [
+       3,
+       6
+      ],
+      [
+       6,
+       6
+      ],
+      [
+       6,
+       10
+      ]
+     ],
+     "label": "A (part 1 of 2)"
+    },
+    {
+     "kind": "box",
+     "start": [
+      6,
+      0,
+      1
+     ],
+     "stop": [
+      10,
+      10,
+      1
+     ],
+     "label": "A (part 2 of 2)"
+    }
+   ]
+  ]
+ },
+ {
+  "name": "a polygon sheet minus an extruded polygon crossing it",
+  "history": {
+   "operation": "subtract",
+   "A": {
+    "name": "A",
+    "material": "copper",
+    "primitives": [
+     {
+      "kind": "polygon",
+      "normal": "z",
+      "elevation": 1,
+      "points": [
+       [
+        0,
+        0
+       ],
+       [
+        8,
+        0
+       ],
+       [
+        4,
+        7
+       ]
+      ]
+     }
+    ]
+   },
+   "B": {
+    "name": "B",
+    "material": "copper",
+    "primitives": [
+     {
+      "kind": "linpoly",
+      "normal": "z",
+      "elevation": 0,
+      "length": "h",
+      "points": [
+       [
+        3,
+        -1
+       ],
+       [
+        5,
+        -1
+       ],
+       [
+        5,
+        2
+       ],
+       [
+        3,
+        2
+       ]
+      ]
+     }
+    ]
+   }
+  },
+  "values": [
+   {
+    "h": 2
+   },
+   {
+    "h": 0.5
+   }
+  ],
+  "expected": [
+   [
+    {
+     "kind": "polygon",
+     "normal": "z",
+     "elevation": 1,
+     "points": [
+      [
+       4,
+       7
+      ],
+      [
+       0,
+       0
+      ],
+      [
+       3,
+       0
+      ],
+      [
+       3,
+       2
+      ],
+      [
+       5,
+       2
+      ],
+      [
+       5,
+       0
+      ],
+      [
+       8,
+       0
+      ]
+     ]
+    }
+   ],
+   [
+    {
+     "kind": "polygon",
+     "normal": "z",
+     "elevation": 1,
+     "points": [
+      [
+       4,
+       7
+      ],
+      [
+       0,
+       0
+      ],
+      [
+       8,
+       0
+      ]
+     ]
+    }
+   ]
+  ]
+ },
+ {
+  "name": "add a sheet with a round cut: the cut is folded in",
+  "history": {
+   "operation": "add",
+   "A": {
+    "name": "A",
+    "material": "copper",
+    "primitives": [
+     {
+      "kind": "box",
+      "start": [
+       0,
+       0,
+       0
+      ],
+      "stop": [
+       4,
+       4,
+       0
+      ]
+     }
+    ],
+    "cuts": [
+     {
+      "kind": "circle",
+      "normal": "z",
+      "elevation": 0,
+      "center": [
+       "c",
+       2
+      ],
+      "radius": 1
+     }
+    ]
+   },
+   "B": {
+    "name": "B",
+    "material": "copper",
+    "primitives": [
+     {
+      "kind": "box",
+      "start": [
+       3,
+       0,
+       0
+      ],
+      "stop": [
+       7,
+       4,
+       0
+      ]
+     }
+    ]
+   }
+  },
+  "values": [
+   {
+    "c": 2
+   },
+   {
+    "c": 1.5
+   }
+  ],
+  "expected": [
+   [
+    {
+     "kind": "polygon",
+     "normal": "z",
+     "elevation": 0,
+     "points": [
+      [
+       3,
+       2
+      ],
+      [
+       2.995184726672197,
+       1.9019828596704396
+      ],
+      [
+       2.9807852804032304,
+       1.8049096779838714
+      ],
+      [
+       2.9569403357322086,
+       1.7097153227455375
+      ],
+      [
+       2.9238795325112865,
+       1.6173165676349095
+      ],
+      [
+       2.881921264348355,
+       1.528603263174002
+      ],
+      [
+       2.8314696123025453,
+       1.4444297669803978
+      ],
+      [
+       2.7730104533627364,
+       1.365606715836354
+      ],
+      [
+       2.7071067811865475,
+       1.2928932188134523
+      ],
+      [
+       2.6343932841636457,
+       1.2269895466372631
+      ],
+      [
+       2.5555702330196017,
+       1.1685303876974547
+      ],
+      [
+       2.4713967368259975,
+       1.118078735651645
+      ],
+      [
+       2.3826834323650896,
+       1.0761204674887133
+      ],
+      [
+       2.290284677254462,
+       1.043059664267791
+      ],
+      [
+       2.1950903220161284,
+       1.0192147195967696
+      ],
+      [
+       2.09801714032956,
+       1.004815273327803
+      ],
+      [
+       1.9999999999999998,
+       1
+      ],
+      [
+       1.9019828596704393,
+       1.004815273327803
+      ],
+      [
+       1.8049096779838714,
+       1.0192147195967696
+      ],
+      [
+       1.7097153227455375,
+       1.0430596642677912
+      ],
+      [
+       1.6173165676349097,
+       1.0761204674887135
+      ],
+      [
+       1.528603263174002,
+       1.118078735651645
+      ],
+      [
+       1.4444297669803978,
+       1.1685303876974547
+      ],
+      [
+       1.365606715836354,
+       1.2269895466372633
+      ],
+      [
+       1.2928932188134523,
+       1.2928932188134525
+      ],
+      [
+       1.226989546637263,
+       1.3656067158363547
+      ],
+      [
+       1.1685303876974547,
+       1.444429766980398
+      ],
+      [
+       1.118078735651645,
+       1.5286032631740023
+      ],
+      [
+       1.076120467488713,
+       1.6173165676349104
+      ],
+      [
+       1.043059664267791,
+       1.709715322745538
+      ],
+      [
+       1.0192147195967696,
+       1.8049096779838716
+      ],
+      [
+       1.004815273327803,
+       1.9019828596704393
+      ],
+      [
+       1,
+       2
+      ],
+      [
+       1.004815273327803,
+       2.0980171403295564
+      ],
+      [
+       1.0192147195967696,
+       2.1950903220161284
+      ],
+      [
+       1.043059664267791,
+       2.2902846772544616
+      ],
+      [
+       1.076120467488713,
+       2.3826834323650896
+      ],
+      [
+       1.118078735651645,
+       2.471396736825998
+      ],
+      [
+       1.1685303876974547,
+       2.555570233019602
+      ],
+      [
+       1.226989546637263,
+       2.6343932841636453
+      ],
+      [
+       1.2928932188134523,
+       2.707106781186547
+      ],
+      [
+       1.365606715836354,
+       2.7730104533627364
+      ],
+      [
+       1.4444297669803978,
+       2.8314696123025453
+      ],
+      [
+       1.528603263174002,
+       2.881921264348355
+      ],
+      [
+       1.6173165676349097,
+       2.9238795325112865
+      ],
+      [
+       1.7097153227455375,
+       2.956940335732209
+      ],
+      [
+       1.8049096779838714,
+       2.9807852804032304
+      ],
+      [
+       1.9019828596704393,
+       2.995184726672197
+      ],
+      [
+       1.9999999999999998,
+       3
+      ],
+      [
+       2.09801714032956,
+       2.9951847266721967
+      ],
+      [
+       2.1950903220161284,
+       2.9807852804032304
+      ],
+      [
+       2.290284677254462,
+       2.956940335732209
+      ],
+      [
+       2.3826834323650896,
+       2.923879532511287
+      ],
+      [
+       2.4713967368259975,
+       2.881921264348355
+      ],
+      [
+       2.5555702330196017,
+       2.831469612302546
+      ],
+      [
+       2.6343932841636457,
+       2.773010453362737
+      ],
+      [
+       2.7071067811865475,
+       2.7071067811865475
+      ],
+      [
+       2.7730104533627364,
+       2.634393284163646
+      ],
+      [
+       2.8314696123025453,
+       2.555570233019602
+      ],
+      [
+       2.881921264348355,
+       2.4713967368259975
+      ],
+      [
+       2.9238795325112865,
+       2.3826834323650905
+      ],
+      [
+       2.9569403357322086,
+       2.2902846772544625
+      ],
+      [
+       2.9807852804032304,
+       2.1950903220161284
+      ],
+      [
+       2.995184726672197,
+       2.0980171403295604
+      ],
+      [
+       2.995184726672197,
+       4
+      ],
+      [
+       0,
+       4
+      ],
+      [
+       0,
+       0
+      ],
+      [
+       7,
+       0
+      ],
+      [
+       7,
+       4
+      ],
+      [
+       3,
+       4
+      ]
+     ]
+    },
+    {
+     "kind": "polygon",
+     "normal": "z",
+     "elevation": 0,
+     "points": [
+      [
+       2.995184726672197,
+       2.0980171403295604
+      ],
+      [
+       3,
+       2
+      ],
+      [
+       3,
+       4
+      ],
+      [
+       2.995184726672197,
+       4
+      ]
+     ]
+    }
+   ],
+   [
+    {
+     "kind": "polygon",
+     "normal": "z",
+     "elevation": 0,
+     "points": [
+      [
+       2.5,
+       2
+      ],
+      [
+       2.495184726672197,
+       1.9019828596704396
+      ],
+      [
+       2.4807852804032304,
+       1.8049096779838714
+      ],
+      [
+       2.4569403357322086,
+       1.7097153227455375
+      ],
+      [
+       2.4238795325112865,
+       1.6173165676349095
+      ],
+      [
+       2.381921264348355,
+       1.528603263174002
+      ],
+      [
+       2.3314696123025453,
+       1.4444297669803978
+      ],
+      [
+       2.2730104533627364,
+       1.365606715836354
+      ],
+      [
+       2.2071067811865475,
+       1.2928932188134523
+      ],
+      [
+       2.1343932841636457,
+       1.2269895466372631
+      ],
+      [
+       2.0555702330196017,
+       1.1685303876974547
+      ],
+      [
+       1.9713967368259975,
+       1.118078735651645
+      ],
+      [
+       1.8826834323650898,
+       1.0761204674887135
+      ],
+      [
+       1.790284677254462,
+       1.043059664267791
+      ],
+      [
+       1.6950903220161284,
+       1.0192147195967696
+      ],
+      [
+       1.59801714032956,
+       1.004815273327803
+      ],
+      [
+       1.4999999999999998,
+       1
+      ],
+      [
+       1.4019828596704393,
+       1.004815273327803
+      ],
+      [
+       1.3049096779838714,
+       1.0192147195967696
+      ],
+      [
+       1.2097153227455375,
+       1.0430596642677912
+      ],
+      [
+       1.1173165676349097,
+       1.0761204674887135
+      ],
+      [
+       1.028603263174002,
+       1.118078735651645
+      ],
+      [
+       0.9444297669803978,
+       1.1685303876974547
+      ],
+      [
+       0.8656067158363541,
+       1.2269895466372633
+      ],
+      [
+       0.7928932188134523,
+       1.2928932188134525
+      ],
+      [
+       0.7269895466372629,
+       1.3656067158363547
+      ],
+      [
+       0.6685303876974545,
+       1.444429766980398
+      ],
+      [
+       0.618078735651645,
+       1.5286032631740023
+      ],
+      [
+       0.5761204674887132,
+       1.6173165676349104
+      ],
+      [
+       0.5430596642677911,
+       1.709715322745538
+      ],
+      [
+       0.5192147195967696,
+       1.8049096779838716
+      ],
+      [
+       0.5048152733278031,
+       1.9019828596704393
+      ],
+      [
+       0.5,
+       2
+      ],
+      [
+       0.5048152733278031,
+       2.0980171403295587
+      ],
+      [
+       0.5192147195967696,
+       2.1950903220161284
+      ],
+      [
+       0.5430596642677911,
+       2.290284677254462
+      ],
+      [
+       0.5761204674887132,
+       2.3826834323650896
+      ],
+      [
+       0.618078735651645,
+       2.4713967368259975
+      ],
+      [
+       0.6685303876974545,
+       2.555570233019602
+      ],
+      [
+       0.7269895466372629,
+       2.6343932841636457
+      ],
+      [
+       0.7928932188134523,
+       2.707106781186547
+      ],
+      [
+       0.8656067158363541,
+       2.7730104533627364
+      ],
+      [
+       0.9444297669803978,
+       2.8314696123025453
+      ],
+      [
+       1.028603263174002,
+       2.881921264348355
+      ],
+      [
+       1.1173165676349097,
+       2.9238795325112865
+      ],
+      [
+       1.2097153227455375,
+       2.956940335732209
+      ],
+      [
+       1.3049096779838714,
+       2.9807852804032304
+      ],
+      [
+       1.4019828596704393,
+       2.995184726672197
+      ],
+      [
+       1.4999999999999998,
+       3
+      ],
+      [
+       1.59801714032956,
+       2.9951847266721967
+      ],
+      [
+       1.6950903220161284,
+       2.9807852804032304
+      ],
+      [
+       1.790284677254462,
+       2.956940335732209
+      ],
+      [
+       1.8826834323650898,
+       2.923879532511287
+      ],
+      [
+       1.9713967368259975,
+       2.881921264348355
+      ],
+      [
+       2.0555702330196017,
+       2.831469612302546
+      ],
+      [
+       2.1343932841636457,
+       2.773010453362737
+      ],
+      [
+       2.2071067811865475,
+       2.7071067811865475
+      ],
+      [
+       2.2730104533627364,
+       2.634393284163646
+      ],
+      [
+       2.3314696123025453,
+       2.555570233019602
+      ],
+      [
+       2.381921264348355,
+       2.4713967368259975
+      ],
+      [
+       2.4238795325112865,
+       2.3826834323650905
+      ],
+      [
+       2.4569403357322086,
+       2.2902846772544625
+      ],
+      [
+       2.4807852804032304,
+       2.1950903220161284
+      ],
+      [
+       2.495184726672197,
+       2.0980171403295604
+      ],
+      [
+       2.495184726672197,
+       4
+      ],
+      [
+       0,
+       4
+      ],
+      [
+       0,
+       0
+      ],
+      [
+       7,
+       0
+      ],
+      [
+       7,
+       4
+      ],
+      [
+       2.5,
+       4
+      ]
+     ]
+    },
+    {
+     "kind": "polygon",
+     "normal": "z",
+     "elevation": 0,
+     "points": [
+      [
+       2.495184726672197,
+       2.0980171403295604
+      ],
+      [
+       2.5,
+       2
+      ],
+      [
+       2.5,
+       4
+      ],
+      [
+       2.495184726672197,
+       4
+      ]
+     ]
+    }
+   ]
+  ]
+ },
+ {
+  "name": "subtract from a sheet with a polygon cut",
+  "history": {
+   "operation": "subtract",
+   "A": {
+    "name": "A",
+    "material": "copper",
+    "primitives": [
+     {
+      "kind": "box",
+      "start": [
+       0,
+       0,
+       0
+      ],
+      "stop": [
+       8,
+       4,
+       0
+      ]
+     }
+    ],
+    "cuts": [
+     {
+      "kind": "polygon",
+      "normal": "z",
+      "elevation": 0,
+      "points": [
+       [
+        1,
+        1
+       ],
+       [
+        3,
+        1
+       ],
+       [
+        2,
+        3
+       ]
+      ]
+     }
+    ]
+   },
+   "B": {
+    "name": "B",
+    "material": "copper",
+    "primitives": [
+     {
+      "kind": "box",
+      "start": [
+       5,
+       0,
+       0
+      ],
+      "stop": [
+       6,
+       4,
+       0
+      ]
+     }
+    ]
+   }
+  },
+  "values": [
+   {}
+  ],
+  "expected": [
+   [
+    {
+     "kind": "polygon",
+     "normal": "z",
+     "elevation": 0,
+     "points": [
+      [
+       3,
+       1
+      ],
+      [
+       1,
+       1
+      ],
+      [
+       2,
+       3
+      ],
+      [
+       2,
+       4
+      ],
+      [
+       0,
+       4
+      ],
+      [
+       0,
+       0
+      ],
+      [
+       5,
+       0
+      ],
+      [
+       5,
+       4
+      ],
+      [
+       3,
+       4
+      ]
+     ],
+     "label": "A (part 1 of 3)"
+    },
+    {
+     "kind": "polygon",
+     "normal": "z",
+     "elevation": 0,
+     "points": [
+      [
+       2,
+       3
+      ],
+      [
+       3,
+       1
+      ],
+      [
+       3,
+       4
+      ],
+      [
+       2,
+       4
+      ]
+     ],
+     "label": "A (part 2 of 3)"
+    },
+    {
+     "kind": "polygon",
+     "normal": "z",
+     "elevation": 0,
+     "points": [
+      [
+       6,
+       0
+      ],
+      [
+       8,
+       0
+      ],
+      [
+       8,
+       4
+      ],
+      [
+       6,
+       4
+      ]
+     ],
+     "label": "A (part 3 of 3)"
+    }
+   ]
+  ]
+ },
+ {
+  "name": "coaxial cylinders and tubes intersected",
+  "history": {
+   "operation": "intersect",
+   "A": {
+    "name": "A",
+    "material": "copper",
+    "primitives": [
+     {
+      "kind": "cylinder",
+      "axis": "y",
+      "center": [
+       0,
+       0
+      ],
+      "radius": 5,
+      "range": [
+       0,
+       10
+      ]
+     },
+     {
+      "kind": "cylinder",
+      "axis": "y",
+      "center": [
+       0,
+       0
+      ],
+      "radius": 8,
+      "inner_radius": 6,
+      "range": [
+       0,
+       10
+      ]
+     }
+    ]
+   },
+   "B": {
+    "name": "B",
+    "material": "copper",
+    "primitives": [
+     {
+      "kind": "cylinder",
+      "axis": "y",
+      "center": [
+       0,
+       0
+      ],
+      "radius": "R",
+      "inner_radius": 2,
+      "range": [
+       3,
+       20
+      ]
+     }
+    ]
+   }
+  },
+  "values": [
+   {
+    "R": 7
+   },
+   {
+    "R": 4
+   }
+  ],
+  "expected": [
+   [
+    {
+     "kind": "cylinder",
+     "axis": "y",
+     "center": [
+      0,
+      0
+     ],
+     "radius": 5,
+     "inner_radius": 2,
+     "range": [
+      3,
+      10
+     ]
+    },
+    {
+     "kind": "cylinder",
+     "axis": "y",
+     "center": [
+      0,
+      0
+     ],
+     "radius": 7,
+     "inner_radius": 6,
+     "range": [
+      3,
+      10
+     ]
+    }
+   ],
+   [
+    {
+     "kind": "cylinder",
+     "axis": "y",
+     "center": [
+      0,
+      0
+     ],
+     "radius": 4,
+     "inner_radius": 2,
+     "range": [
+      3,
+      10
+     ]
+    }
+   ]
+  ]
+ },
+ {
+  "name": "tube trimmed by a brick across its axis",
+  "history": {
+   "operation": "intersect",
+   "A": {
+    "name": "A",
+    "material": "copper",
+    "primitives": [
+     {
+      "kind": "cylinder",
+      "axis": "z",
+      "center": [
+       2,
+       3
+      ],
+      "radius": 4,
+      "inner_radius": 1,
+      "range": [
+       0,
+       10
+      ]
+     }
+    ]
+   },
+   "B": {
+    "name": "B",
+    "material": "copper",
+    "primitives": [
+     {
+      "kind": "box",
+      "start": [
+       -5,
+       -5,
+       "z0"
+      ],
+      "stop": [
+       10,
+       10,
+       7
+      ]
+     }
+    ]
+   }
+  },
+  "values": [
+   {
+    "z0": 2
+   },
+   {
+    "z0": 4.5
+   }
+  ],
+  "expected": [
+   [
+    {
+     "kind": "cylinder",
+     "axis": "z",
+     "center": [
+      2,
+      3
+     ],
+     "radius": 4,
+     "inner_radius": 1,
+     "range": [
+      2,
+      7
+     ]
+    }
+   ],
+   [
+    {
+     "kind": "cylinder",
+     "axis": "z",
+     "center": [
+      2,
+      3
+     ],
+     "radius": 4,
+     "inner_radius": 1,
+     "range": [
+      4.5,
+      7
+     ]
+    }
+   ]
+  ]
+ },
+ {
+  "name": "cone trimmed by a brick",
+  "history": {
+   "operation": "intersect",
+   "A": {
+    "name": "A",
+    "material": "copper",
+    "primitives": [
+     {
+      "kind": "cone",
+      "axis": "x",
+      "center": [
+       0,
+       0
+      ],
+      "bottom_radius": 4,
+      "top_radius": 1,
+      "range": [
+       0,
+       12
+      ]
+     }
+    ]
+   },
+   "B": {
+    "name": "B",
+    "material": "copper",
+    "primitives": [
+     {
+      "kind": "box",
+      "start": [
+       3,
+       -9,
+       -9
+      ],
+      "stop": [
+       "x1",
+       9,
+       9
+      ]
+     }
+    ]
+   }
+  },
+  "values": [
+   {
+    "x1": 8
+   },
+   {
+    "x1": 10
+   }
+  ],
+  "expected": [
+   [
+    {
+     "kind": "cone",
+     "axis": "x",
+     "center": [
+      0,
+      0
+     ],
+     "bottom_radius": 3.25,
+     "top_radius": 2,
+     "range": [
+      3,
+      8
+     ]
+    }
+   ],
+   [
+    {
+     "kind": "cone",
+     "axis": "x",
+     "center": [
+      0,
+      0
+     ],
+     "bottom_radius": 3.25,
+     "top_radius": 1.5,
+     "range": [
+      3,
+      10
+     ]
+    }
+   ]
+  ]
+ },
+ {
+  "name": "cylinder clipped by a brick over its ring stays a cylinder",
+  "history": {
+   "operation": "intersect",
+   "A": {
+    "name": "A",
+    "material": "copper",
+    "primitives": [
+     {
+      "kind": "cylinder",
+      "axis": "z",
+      "center": [
+       5,
+       5
+      ],
+      "radius": 3,
+      "range": [
+       0,
+       4
+      ]
+     }
+    ]
+   },
+   "B": {
+    "name": "B",
+    "material": "copper",
+    "primitives": [
+     {
+      "kind": "box",
+      "start": [
+       -9,
+       -9,
+       1
+      ],
+      "stop": [
+       19,
+       19,
+       "t"
+      ]
+     }
+    ]
+   }
+  },
+  "values": [
+   {
+    "t": 3
+   },
+   {
+    "t": 5
+   }
+  ],
+  "expected": [
+   [
+    {
+     "kind": "cylinder",
+     "axis": "z",
+     "center": [
+      5,
+      5
+     ],
+     "radius": 3,
+     "range": [
+      1,
+      3
+     ]
+    }
+   ],
+   [
+    {
+     "kind": "cylinder",
+     "axis": "z",
+     "center": [
+      5,
+      5
+     ],
+     "radius": 3,
+     "range": [
+      1,
+      4
+     ]
+    }
+   ]
+  ]
+ },
+ {
+  "name": "cylinder clipped by a polygon: a 64-gon prism",
+  "history": {
+   "operation": "intersect",
+   "A": {
+    "name": "A",
+    "material": "copper",
+    "primitives": [
+     {
+      "kind": "cylinder",
+      "axis": "z",
+      "center": [
+       5,
+       5
+      ],
+      "radius": 3,
+      "range": [
+       0,
+       4
+      ]
+     }
+    ]
+   },
+   "B": {
+    "name": "B",
+    "material": "copper",
+    "primitives": [
+     {
+      "kind": "linpoly",
+      "normal": "z",
+      "elevation": 1,
+      "length": 2,
+      "points": [
+       [
+        4,
+        0
+       ],
+       [
+        10,
+        0
+       ],
+       [
+        10,
+        "y1"
+       ],
+       [
+        4,
+        "y1"
+       ]
+      ]
+     }
+    ]
+   }
+  },
+  "values": [
+   {
+    "y1": 6
+   },
+   {
+    "y1": 4
+   }
+  ],
+  "tol": 1e-9,
+  "expected": [
+   [
+    {
+     "kind": "linpoly",
+     "normal": "z",
+     "elevation": 1,
+     "length": 2,
+     "points": [
+      [
+       7.985554180016591,
+       5.294051420988682
+      ],
+      [
+       7.942355841209691,
+       5.585270966048385
+      ],
+      [
+       7.870821007196627,
+       5.870854031763387
+      ],
+      [
+       7.824611840876862,
+       6
+      ],
+      [
+       4,
+       6
+      ],
+      [
+       4,
+       2.175388159123137
+      ],
+      [
+       4.129145968236613,
+       2.1291789928033733
+      ],
+      [
+       4.414729033951614,
+       2.057644158790309
+      ],
+      [
+       4.705948579011318,
+       2.0144458199834094
+      ],
+      [
+       4.999999999999999,
+       2
+      ],
+      [
+       5.29405142098868,
+       2.0144458199834094
+      ],
+      [
+       5.585270966048385,
+       2.0576441587903087
+      ],
+      [
+       5.870854031763386,
+       2.1291789928033733
+      ],
+      [
+       6.14805029709527,
+       2.22836140246614
+      ],
+      [
+       6.414190210477993,
+       2.3542362069549347
+      ],
+      [
+       6.666710699058806,
+       2.5055911630923635
+      ],
+      [
+       6.903179852490936,
+       2.6809686399117894
+      ],
+      [
+       7.121320343559642,
+       2.878679656440357
+      ],
+      [
+       7.31903136008821,
+       3.096820147509062
+      ],
+      [
+       7.494408836907636,
+       3.3332893009411935
+      ],
+      [
+       7.645763793045065,
+       3.5858097895220062
+      ],
+      [
+       7.77163859753386,
+       3.851949702904729
+      ],
+      [
+       7.870821007196627,
+       4.129145968236612
+      ],
+      [
+       7.942355841209691,
+       4.414729033951614
+      ],
+      [
+       7.985554180016591,
+       4.705948579011318
+      ],
+      [
+       8,
+       5
+      ]
+     ]
+    }
+   ],
+   [
+    {
+     "kind": "linpoly",
+     "normal": "z",
+     "elevation": 1,
+     "length": 2,
+     "points": [
+      [
+       4,
+       4
+      ],
+      [
+       4,
+       2.175388159123137
+      ],
+      [
+       4.129145968236613,
+       2.1291789928033733
+      ],
+      [
+       4.414729033951614,
+       2.057644158790309
+      ],
+      [
+       4.705948579011318,
+       2.0144458199834094
+      ],
+      [
+       4.999999999999999,
+       2
+      ],
+      [
+       5.29405142098868,
+       2.0144458199834094
+      ],
+      [
+       5.585270966048385,
+       2.0576441587903087
+      ],
+      [
+       5.870854031763386,
+       2.1291789928033733
+      ],
+      [
+       6.14805029709527,
+       2.22836140246614
+      ],
+      [
+       6.414190210477993,
+       2.3542362069549347
+      ],
+      [
+       6.666710699058806,
+       2.5055911630923635
+      ],
+      [
+       6.903179852490936,
+       2.6809686399117894
+      ],
+      [
+       7.121320343559642,
+       2.878679656440357
+      ],
+      [
+       7.31903136008821,
+       3.096820147509062
+      ],
+      [
+       7.494408836907636,
+       3.3332893009411935
+      ],
+      [
+       7.645763793045065,
+       3.5858097895220062
+      ],
+      [
+       7.77163859753386,
+       3.851949702904729
+      ],
+      [
+       7.824611840876863,
+       4
+      ]
+     ]
+    }
+   ]
+  ]
+ },
+ {
+  "name": "sphere inside a brick stays a sphere",
+  "history": {
+   "operation": "intersect",
+   "A": {
+    "name": "A",
+    "material": "copper",
+    "primitives": [
+     {
+      "kind": "sphere",
+      "center": [
+       5,
+       5,
+       5
+      ],
+      "radius": "r"
+     }
+    ]
+   },
+   "B": {
+    "name": "B",
+    "material": "copper",
+    "primitives": [
+     {
+      "kind": "box",
+      "start": [
+       0,
+       0,
+       0
+      ],
+      "stop": [
+       10,
+       10,
+       10
+      ]
+     }
+    ]
+   }
+  },
+  "values": [
+   {
+    "r": 2
+   },
+   {
+    "r": 4
+   }
+  ],
+  "expected": [
+   [
+    {
+     "kind": "sphere",
+     "center": [
+      5,
+      5,
+      5
+     ],
+     "radius": 2
+    }
+   ],
+   [
+    {
+     "kind": "sphere",
+     "center": [
+      5,
+      5,
+      5
+     ],
+     "radius": 4
+    }
+   ]
+  ]
+ }
+]

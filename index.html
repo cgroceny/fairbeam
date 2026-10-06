@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="color-scheme" content="light dark" />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <title>Fairbeam</title>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script>
+      // Startup watchdog (#241): if the app has not drawn anything after a while (its script or styles
+      // never arrived, e.g. a damaged WebView cache), show what is missing and a way to recover instead of a
+      // blank window. "Reload" refetches the app files from the local server, bypassing the cache, then
+      // reloads; it does not touch settings, designs or other profile data. Plain ES5 on purpose: it must
+      // run even if the bundle cannot.
+      (function () {
+        var tr = /^tr/i.test(navigator.language || "");
+        var text = tr
+          ? { title: "Fairbeam arayüzü yüklenemedi", body: "Uygulama dosyaları yüklenemedi. Tasarımlarınız ve ayarlarınız etkilenmedi.", files: "Eksik dosyalar", btn: "Yeniden yükle", busy: "Yükleniyor…" }
+          : { title: "Fairbeam could not load its interface", body: "The app files did not load. Your designs and settings are untouched.", files: "Files that did not load", btn: "Reload", busy: "Reloading…" };
+        var failed = [];
+        window.addEventListener("error", function (e) {
+          var t = e.target;
+          if (t && (t.src || t.href)) failed.push(t.src || t.href);
+        }, true);
+        function missing() {
+          var out = failed.slice();
+          try {
+            var list = performance.getEntriesByType("resource");
+            for (var i = 0; i < list.length; i++) {
+              var r = list[i];
+              if ((r.initiatorType === "script" || r.initiatorType === "link" || r.initiatorType === "css") && !(r.responseEnd > 0 && r.transferSize + r.decodedBodySize > 0)) out.push(r.name);
+            }
+          } catch (e) { /* no resource timing */ }
+          return out.filter(function (u, i) { return out.indexOf(u) === i; });
+        }
+        function show() {
+          var root = document.getElementById("root");
+          if (!root || root.childElementCount > 0) return;
+          var urls = missing();
+          var box = document.createElement("div");
+          box.id = "startup-watchdog";
+          box.setAttribute("role", "alert");
+          box.style.cssText = "font:14px/1.5 system-ui,sans-serif;max-width:34rem;margin:12vh auto;padding:0 1rem";
+          var h = document.createElement("h1"); h.style.cssText = "font-size:1.2rem"; h.textContent = text.title; box.appendChild(h);
+          var p = document.createElement("p"); p.textContent = text.body; box.appendChild(p);
+          if (urls.length) {
+            var d = document.createElement("p"); d.textContent = text.files + ":"; d.style.marginBottom = "0"; box.appendChild(d);
+            var ul = document.createElement("ul"); ul.style.cssText = "margin-top:.25rem;word-break:break-all;font:12px ui-monospace,monospace";
+            for (var i = 0; i < urls.length && i < 8; i++) { var li = document.createElement("li"); li.textContent = urls[i]; ul.appendChild(li); }
+            box.appendChild(ul);
+          }
+          var b = document.createElement("button"); b.type = "button"; b.textContent = text.btn; b.style.cssText = "font:inherit;padding:.4rem 1rem";
+          b.onclick = function () {
+            b.disabled = true; b.textContent = text.busy;
+            var all = document.querySelectorAll("script[src],link[href]"), jobs = [];
+            for (var i = 0; i < all.length; i++) jobs.push(fetch(all[i].src || all[i].href, { cache: "reload" }).catch(function () {}));
+            jobs.push(fetch(location.pathname, { cache: "reload" }).catch(function () {}));
+            Promise.all(jobs).then(function () { location.reload(); }, function () { location.reload(); });
+          };
+          box.appendChild(b);
+          root.appendChild(box);
+          var timer = setInterval(function () { // the app finally started: take the notice away
+            var n = root.childElementCount;
+            if (n > 1 || (n === 1 && root.firstChild !== box)) { clearInterval(timer); if (box.parentNode) box.parentNode.removeChild(box); }
+          }, 500);
+        }
+        setTimeout(show, window.__fairbeamWatchdogMs || 15000);
+      })();
+    </script>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

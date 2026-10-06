@@ -1,0 +1,31 @@
+0.270	fairbeam: Half-wave dipole
+0.271	openEMS - fixed number of threads: 2
+0.276	 ---------------------------------------------------------------------- 
+0.276	 | openEMS 64bit -- version v0.37.0-rc3-11-g12cd91d
+0.276	 | (C) 2010-2026 Thorsten Liebig <thorsten.liebig@gmx.de>  GPL license
+0.276	 ---------------------------------------------------------------------- 
+0.276		Used external libraries:
+0.276			CSXCAD -- Version: v0.7.0-rc3-1-gbd2c133
+0.276			hdf5   -- Version: 2.2.0
+0.276			          compiled against: HDF5 library version: 2.2.0
+0.276			tinyxml -- compiled against: 2.6.2
+0.276			fparser
+0.276			boost  -- compiled against: 1_92
+0.276			vtk -- Version: 9.7.0
+0.276			       compiled against: 9.7.0
+0.276	
+0.276	Create FDTD operator (compressed SSE + multi-threading)
+0.329	FDTD simulation size: 40x39x50 --> 78000 FDTD cells 
+0.329	FDTD timestep is: 2.91562e-12 s; Nyquist rate: 48 timesteps @3.57271e+09 Hz
+0.329	Excitation signal length is: 60000 timesteps (1.74937e-07s)
+0.329	Max. number of timesteps: 60000 ( --> 1 * Excitation signal length)
+0.329	Create FDTD engine (compressed SSE + multi-threading)
+0.330	Running FDTD engine... this may take a while... grab a cup of coffee?!?
+4.339	[@        4s] Timestep:         7272 || Speed:  141.8 MC/s (5.501e-04 s/TS) || Energy: ~4.46e-25 (-97.91dB)
+4.339	Time for 7272 iterations with 78000.00 cells : 4.00 sec
+4.339	Speed: 141.78 MCells/s 
+4.343	
+4.343	fairbeam: 7272 timesteps in 4.0 s, final energy -97.91 dB, converged=True
+5.969	  band 2.058-2.475 GHz, min S11 -38.4 dB @ 2.245 GHz
+5.969	  far field 2.245 GHz: Dmax 2.06 dBi, rad. efficiency 0.9984
+5.973	fairbeam: wrote /tmp/fairbeam-fixture/out/dipole.json

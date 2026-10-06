@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="140mm" height="47.898mm" viewBox="0 0 140 47.898" font-family="IBM Plex Sans, Helvetica, Arial, sans-serif">
+<rect width="140" height="47.898" fill="#ffffff"/>
+<text x="0" y="4.2" font-size="3.6" font-weight="600" fill="#000000">Wilkinson divider (2.4 GHz): fabrication preview</text>
+<text x="0" y="8.4" font-size="2.4" fill="#444444">Drawn from the parsed Gerber and drill files, viewed from the top. Grey: copper; circles: holes; line: profile.</text>
+<g transform="translate(14 29.949) scale(1 -1)">
+<mask id="m0" maskUnits="userSpaceOnUse" x="-14" y="-17.949" width="45.7858" height="35.898"><rect x="-14" y="-17.949" width="45.7858" height="35.898" fill="#000000"/>
+<path d="M-10 -0.949L-0.5175 -0.949L-0.5175 -5.5175L13.8368 -5.5175L13.8368 -2.847L16.8368 -2.847L16.8368 -7.949L27.7858 -7.949L27.7858 -6.051L18.7348 -6.051L18.7348 -0.949L12.8018 -0.949L12.8018 -4.4825L0.5175 -4.4825L0.5175 4.4825L12.8018 4.4825L12.8018 0.949L18.7348 0.949L18.7348 6.051L27.7858 6.051L27.7858 7.949L16.8368 7.949L16.8368 2.847L13.8368 2.847L13.8368 5.5175L-0.5175 5.5175L-0.5175 0.949L-10 0.949Z" fill="#ffffff"/>
+</mask>
+<rect x="-14" y="-17.949" width="45.7858" height="35.898" fill="#8a8a8a" mask="url(#m0)"/>
+<path d="M-10 -13.949L27.7858 -13.949L27.7858 13.949L-10 13.949Z" fill="none" stroke="#000000" stroke-width="0.2"/>
+</g>
+<text x="4" y="47.098" font-size="2.8" fill="#000000">F_Cu (Top)</text>
+<g transform="translate(67.7858 29.949) scale(1 -1)">
+<mask id="m1" maskUnits="userSpaceOnUse" x="-14" y="-17.949" width="45.7858" height="35.898"><rect x="-14" y="-17.949" width="45.7858" height="35.898" fill="#000000"/>
+<path d="M-10 -13.949L27.7858 -13.949L27.7858 13.949L-10 13.949Z" fill="#ffffff"/>
+</mask>
+<rect x="-14" y="-17.949" width="45.7858" height="35.898" fill="#8a8a8a" mask="url(#m1)"/>
+<path d="M-10 -13.949L27.7858 -13.949L27.7858 13.949L-10 13.949Z" fill="none" stroke="#000000" stroke-width="0.2"/>
+</g>
+<text x="57.7858" y="47.098" font-size="2.8" fill="#000000">B_Cu (Bot)</text>
+</svg>

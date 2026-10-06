@@ -1,0 +1,315 @@
+/* Designer (src/designer/**): the Design tab of the run panel. Role tokens only. The drawer
+   widens like the Code tab (editor.css: .code-open). */
+
+.dz { display: flex; flex-direction: column; min-height: 0; }
+.dz-toolbar {
+  position: sticky; top: calc(var(--al-control-h) + 2 * var(--al-space-2) + var(--al-dock-bar-h)); z-index: 2;
+  display: flex; align-items: center; gap: var(--al-space-1); padding: var(--al-space-2);
+  background: var(--al-surface); border-bottom: 1px solid var(--al-border);
+}
+.dz-spacer { flex: 1; }
+.dz-add { position: relative; }
+.dz-menu {
+  position: absolute; top: calc(100% + 4px); left: 0; z-index: 5; min-width: 200px;
+  display: grid; padding: var(--al-space-1); border: 1px solid var(--al-border-strong); border-radius: var(--al-radius);
+  background: var(--al-surface); box-shadow: var(--al-shadow-pop);
+}
+.dz-menu button {
+  display: flex; align-items: center; gap: var(--al-space-2); padding: var(--al-space-1) var(--al-space-2);
+  border: 0; border-radius: var(--al-radius-sm); background: transparent; color: var(--al-text); text-align: left; cursor: pointer;
+  font-size: var(--al-text-sm);
+}
+.dz-menu button:hover, .dz-menu button:focus-visible { background: var(--al-surface-2); }
+.dz-menu hr { border: 0; border-top: 1px solid var(--al-border); margin: var(--al-space-1) 0; }
+
+.dz-msg { margin: var(--al-space-2) var(--al-space-2) 0; padding: var(--al-space-1) var(--al-space-2); border-radius: var(--al-radius-sm); font-size: var(--al-text-sm); }
+.dz-msg-good { background: var(--al-good-bg); color: var(--al-text); }
+.dz-msg-warn { background: var(--al-warn-bg); color: var(--al-text); }
+.dz-msg-critical { background: var(--al-critical-bg); color: var(--al-critical); }
+
+.dz-body { display: grid; grid-template-columns: minmax(150px, 0.8fr) minmax(0, 1.4fr); min-height: 0; }
+
+/* tree */
+.dz-tree { display: flex; flex-direction: column; padding: var(--al-space-2) 0; border-right: 1px solid var(--al-border); min-width: 0; }
+.dz-group { margin-top: var(--al-space-2); }
+.dz-group-head {
+  display: flex; align-items: center; justify-content: space-between; padding: 0 var(--al-space-1) 0 var(--al-space-2);
+  font-size: var(--al-text-xs); font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: var(--al-text-3);
+}
+.dz-node {
+  display: flex; align-items: baseline; gap: var(--al-space-1); width: 100%; min-height: 26px; padding-right: var(--al-space-2);
+  border: 0; background: transparent; color: var(--al-text-2); text-align: left; cursor: pointer; font-size: var(--al-text-sm);
+}
+.dz-node svg { flex: none; align-self: center; color: var(--al-text-3); }
+.dz-node:hover { background: var(--al-surface-2); color: var(--al-text); }
+.dz-node.selected { background: var(--al-accent-soft); color: var(--al-text); box-shadow: inset 2px 0 0 var(--al-accent-line); }
+.dz-node:focus-visible { outline: 2px solid var(--al-focus); outline-offset: -2px; }
+.dz-node-label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.dz-node-sub { margin-left: auto; padding-left: var(--al-space-2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-family: var(--al-font-sans); font-size: var(--al-text-xs); font-variant-numeric: tabular-nums; color: var(--al-text-3); max-width: 55%; }
+.dz-bad-node .dz-node-label { color: var(--al-critical); text-decoration: underline wavy var(--al-critical) 1px; text-underline-offset: 3px; }
+.dz-warn-node .dz-node-label { text-decoration: underline wavy var(--al-warn) 1px; text-underline-offset: 3px; }
+
+/* inspector */
+.dz-inspector { padding: var(--al-space-3); min-width: 0; }
+.dz-form { display: grid; gap: var(--al-space-3); }
+.dz-h { font-size: var(--al-text-ui); font-weight: 600; }
+.dz-h4 { margin-top: var(--al-space-2); font-size: var(--al-text-xs); font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: var(--al-text-3); }
+.dz-field { display: grid; align-content: start; gap: 2px; min-width: 0; } /* start: a field beside a taller one keeps its own row heights */
+.dz-label { font-size: var(--al-text-xs); color: var(--al-text-2); }
+.dz-unit { color: var(--al-text-3); font-family: var(--al-font-sans); font-variant-numeric: tabular-nums; }
+.dz-input { width: 100%; min-width: 0; }
+textarea.dz-input { resize: vertical; font: inherit; padding: var(--al-space-1) var(--al-space-2); }
+textarea.dz-autogrow { resize: none; overflow-y: auto; min-height: 0; max-height: 280px; line-height: 1.45; }
+.dz-value { min-height: 1.2em; font-family: var(--al-font-sans); font-size: var(--al-text-xs); font-variant-numeric: tabular-nums; color: var(--al-text-3); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.dz-value.dz-wrap { overflow: visible; text-overflow: clip; white-space: normal; overflow-wrap: anywhere; } /* a hint that must not be cut off (the Run dialog) */
+.dz-bad { color: var(--al-critical); white-space: normal; }
+.dz-warn { color: var(--al-warn); white-space: normal; }
+.dz-input[aria-invalid="true"] { border-color: var(--al-critical); }
+.dz-input.dz-input-warn { border-color: var(--al-warn); }
+.dz-pair { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--al-space-2); }
+.dz-vec { display: grid; gap: var(--al-space-1); min-width: 0; margin: 0; padding: 0; border: 0; }
+.dz-vec-row { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--al-space-1); }
+.dz-compact .dz-label { font-family: var(--al-font-mono); }
+.dz-point { display: grid; grid-template-columns: 1.4em minmax(0, 1fr) minmax(0, 1fr) auto; align-items: start; gap: var(--al-space-1); }
+.dz-idx { padding-top: 20px; font-size: var(--al-text-xs); color: var(--al-text-3); text-align: right; }
+.dz-point .icon-btn { margin-top: 16px; }
+.dz-bounds { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--al-space-1); }
+.dz-check { display: flex; align-items: center; gap: var(--al-space-2); font-size: var(--al-text-sm); }
+.dz-compact-row { max-width: 120px; }
+.dz-sub { display: grid; gap: var(--al-space-2); }
+.dz-shapes { margin: 0; padding-left: var(--al-space-4); font-size: var(--al-text-sm); }
+.linklike { padding: 0; border: 0; background: none; color: var(--al-accent-text); cursor: pointer; font: inherit; text-decoration: underline; text-underline-offset: 2px; }
+
+/* brick / cylinder ranges: Xmin Xmax per row */
+.dz-ranges { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--al-space-1) var(--al-space-2); }
+/* one transform of a part */
+.dz-card { display: grid; gap: var(--al-space-2); padding: var(--al-space-2); border: 1px solid var(--al-border); border-radius: var(--al-radius-sm); background: var(--al-surface-2); }
+.dz-card-head { display: flex; align-items: center; justify-content: space-between; font-size: var(--al-text-sm); font-weight: 600; }
+.dz-check-low { align-self: end; min-height: var(--al-control-h); }
+
+/* the Checks list */
+.dz-checks { margin: var(--al-space-2) var(--al-space-2) 0; border: 1px solid var(--al-border); border-radius: var(--al-radius-sm); }
+.dz-checks-head {
+  display: flex; align-items: center; gap: var(--al-space-1); width: 100%; padding: var(--al-space-1) var(--al-space-2);
+  border: 0; background: transparent; color: var(--al-text); text-align: left; cursor: pointer; font-size: var(--al-text-sm);
+}
+.dz-checks-head:focus-visible, .dz-check-item:focus-visible { outline: 2px solid var(--al-focus); outline-offset: -2px; }
+.dz-ok-icon { color: var(--al-good); }
+.dz-bad-icon { color: var(--al-critical); }
+.dz-warn-icon { color: var(--al-warn); }
+.dz-check-list { margin: 0; padding: 0 0 var(--al-space-1); list-style: none; max-height: 30vh; overflow: auto; border-top: 1px solid var(--al-border); }
+.dz-check-item {
+  display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: start; gap: 2px var(--al-space-2); width: 100%;
+  padding: var(--al-space-1) var(--al-space-2); border: 0; background: transparent; color: var(--al-text); text-align: left; cursor: pointer;
+  font-size: var(--al-text-sm);
+}
+.dz-check-item:hover { background: var(--al-surface-2); }
+.dz-check-item svg { margin-top: 2px; }
+.dz-check-error svg { color: var(--al-critical); }
+.dz-check-warning svg { color: var(--al-warn); }
+.dz-check-info svg { color: var(--al-text-3); }
+.dz-check-where { grid-column: 2; font-size: var(--al-text-xs); color: var(--al-text-3); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+.rp-label-row { display: flex; align-items: center; justify-content: space-between; }
+
+@media (max-width: 1280px) {
+  .dz-body { grid-template-columns: minmax(0, 1fr); }
+  .dz-tree { border-right: 0; border-bottom: 1px solid var(--al-border); max-height: 40vh; overflow: auto; }
+}
+
+/* draw tools: the bar in the Design tab and the coordinate readout in the 3D view */
+.dz-draw { display: grid; gap: var(--al-space-2); padding: var(--al-space-2); border-bottom: 1px solid var(--al-border); }
+.dz-draw > .seg { justify-self: start; }
+.dz-draw-title { display: inline-flex; align-items: center; gap: var(--al-space-1); font-size: var(--al-text-xs); font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: var(--al-text-3); }
+.dz-draw-row { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1.6fr) minmax(0, 0.6fr) auto minmax(0, 1fr); gap: var(--al-space-2); align-items: start; }
+.dz-look { align-self: end; margin-bottom: 18px; }
+.dz-draw-hint { font-size: var(--al-text-xs); color: var(--al-text-2); }
+.vp-draw-readout {
+  position: absolute; z-index: 3; pointer-events: none; padding: 2px 6px; border-radius: var(--al-radius-sm);
+  background: color-mix(in srgb, var(--al-surface) 90%, transparent); border: 1px solid var(--al-border);
+  font-family: var(--al-font-mono); font-size: var(--al-text-xs); color: var(--al-text); white-space: nowrap;
+}
+@media (max-width: 1280px) {
+  .dz-draw-row { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+/* ------------------------------------------------------------------ app modes: start screen, designer workspace */
+.mode-switch { flex: none; }
+/* Start / Design / Examples are screen names, not data: sans (mono stays for unit and number chips) */
+.seg.mode-switch .seg-btn { font-family: var(--al-font-sans); }
+.design-title { display: flex; align-items: baseline; gap: var(--al-space-2); min-width: 0; overflow: hidden; white-space: nowrap; }
+.design-title-name { font-weight: 600; overflow: hidden; text-overflow: ellipsis; }
+.design-title .mono { font-size: var(--al-text-xs); overflow: hidden; text-overflow: ellipsis; }
+
+/* start screen */
+.home-wrap { flex: 1; min-height: 0; overflow: auto; background: var(--al-viewport); }
+.home { min-height: 100%; }
+.home-inner { max-width: 1100px; margin: 0 auto; padding: var(--al-space-6) var(--al-space-5); display: grid; gap: var(--al-space-5); }
+.home-head h1 { font-size: var(--al-text-xl); font-weight: 600; letter-spacing: -0.01em; }
+.home-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: var(--al-space-5); align-items: start; }
+.home-card { display: grid; gap: var(--al-space-3); padding: var(--al-space-4); border: 1px solid var(--al-border); border-radius: var(--al-radius-lg); background: var(--al-surface); }
+.home-card h2 { display: flex; align-items: center; gap: var(--al-space-2); font-size: var(--al-text-ui); font-weight: 600; }
+.home-h2b { margin-top: var(--al-space-2); }
+/* New project starting points: small group headings over two compact columns */
+.home-templates { display: grid; gap: var(--al-space-2); }
+.home-tpl-group { display: grid; gap: var(--al-space-1); }
+.home-tpl-label { font-size: var(--al-text-xs); font-weight: 600; color: var(--al-text-3); text-transform: uppercase; letter-spacing: 0.04em; }
+.home-tpl-list { grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); }
+.home-tpl-list .nm-option { padding: var(--al-space-1) var(--al-space-2); gap: var(--al-space-2); }
+.home-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; }
+.home-list-cols { grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); }
+/* examples: wide enough for the full name; the copy action is a small icon at the row's end */
+.home-examples .home-list-cols { grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); }
+.home-item {
+  display: grid; gap: 1px; width: 100%; padding: var(--al-space-2) var(--al-space-3); border: 1px solid transparent; border-radius: var(--al-radius);
+  background: transparent; color: var(--al-text); text-align: left; cursor: pointer;
+}
+.home-item:hover { background: var(--al-surface-2); border-color: var(--al-border); }
+.home-item:focus-visible { outline: 2px solid var(--al-focus); outline-offset: -2px; }
+.home-item-name { font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.home-item-sub { display: inline-flex; align-items: center; gap: 4px; font-size: var(--al-text-xs); color: var(--al-text-3); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* a design that does not load: listed, not openable, with the reason (it may wrap) */
+.home-item-bad { cursor: default; }
+.home-item-bad:hover { background: transparent; border-color: transparent; }
+.home-item-bad .home-item-name { color: var(--al-text-3); }
+.home-item-bad .home-item-sub { color: var(--al-warn); white-space: normal; }
+.home-offline p { color: var(--al-text-2); }
+.home-foot { display: flex; flex-wrap: wrap; align-items: center; gap: var(--al-space-2); font-size: var(--al-text-sm); color: var(--al-text-2); }
+.home-foot svg { color: var(--al-text-3); }
+.home-foot-link { color: var(--al-accent-text); text-decoration: underline; text-underline-offset: 2px; }
+
+/* designer workspace: ribbon over the 3D view, checks under it */
+.workspace.design-mode .center { grid-template-rows: auto minmax(0, 1fr) minmax(90px, 24vh); }
+/* Collapsible designer panels (src/designer/layoutState.ts). The tree and the properties panel
+   collapse to a thin strip at their window edge: the panel stays mounted but hidden, and the strip
+   (App.tsx) takes the same grid cell. The dock collapses to its own tab row. Side columns keep a
+   dragged width (--scaling-left/right, set inline by PanelResizeHandles) for when they reopen. */
+.dw-strip { display: none; }
+@media (min-width: 1041px) {
+  .app .workspace.workspace.design-mode {
+    --dw-strip-w: 26px;
+    grid-template-columns: var(--dw-left-col, var(--scaling-left, var(--al-left-w))) minmax(0, 1fr) var(--dw-right-col, var(--scaling-right, var(--al-right-w)));
+  }
+  .app .workspace.design-mode.tree-collapsed { --dw-left-col: var(--dw-strip-w); }
+  .app .workspace.design-mode.side-collapsed { --dw-right-col: var(--dw-strip-w); }
+  .workspace.design-mode.tree-collapsed > :is(.panel-left, .panel-resize-left),
+  .workspace.design-mode.side-collapsed > :is(.panel-right, .panel-resize-right) { display: none; }
+  .workspace.design-mode > .dw-strip {
+    grid-row: 1; display: flex; flex-direction: column; align-items: center; gap: var(--al-space-2);
+    min-width: 0; padding: var(--al-space-2) 0; border: 0; background: var(--al-surface); color: var(--al-text-2);
+    font: inherit; font-size: var(--al-text-xs); font-weight: 600; letter-spacing: 0.03em; cursor: pointer;
+  }
+  .workspace.design-mode > .dw-strip-left { grid-column: 1; border-right: 1px solid var(--al-border); }
+  .workspace.design-mode > .dw-strip-right { grid-column: 3; border-left: 1px solid var(--al-border); }
+  .workspace.design-mode > .dw-strip > span { writing-mode: vertical-rl; white-space: nowrap; }
+  .workspace.design-mode > .dw-strip-left > span { transform: rotate(180deg); }
+  .workspace.design-mode > .dw-strip:hover { color: var(--al-text); background: var(--al-surface-2); }
+  .workspace.design-mode > .dw-strip:focus-visible { outline: 2px solid var(--al-focus); outline-offset: -2px; }
+}
+@media (max-width: 1040px) {
+  /* stacked layout: the panels sit under the 3D view, nothing to collapse to an edge */
+  .nt-collapse, .dw-panel-head > .icon-btn { display: none; }
+}
+.dw-panel-head { display: flex; align-items: center; gap: var(--al-space-2); min-height: 32px; padding: 0 var(--al-space-1) 0 var(--al-space-3); border-bottom: 1px solid var(--al-border); }
+.dw-panel-title { flex: 1; min-width: 0; font-size: var(--al-text-xs); font-weight: 600; letter-spacing: 0.03em; color: var(--al-text-2); }
+.dw-panel-head > .icon-btn { color: var(--al-text-3); }
+/* collapsed dock: only its tab row (tabs reopen it; the chevron at its right end too) */
+.app .workspace.design-mode.dock-collapsed .center { grid-template-rows: auto minmax(0, 1fr) auto auto; }
+.workspace.design-mode.dock-collapsed .rdk > :is(.dock-resize, .rdk-body) { display: none; }
+.workspace.design-mode.dock-collapsed .rdk-bar-top { border-bottom: 0; }
+.rdk-collapse { flex: none; }
+.rb-wrap { min-width: 0; }
+.rb { min-width: 0; background: var(--al-surface); border-bottom: 1px solid var(--al-border); }
+.rb[hidden] { display: none; }
+.rb-toolbar { display: flex; flex-wrap: wrap; align-items: stretch; min-width: 0; }
+.rb-group { display: flex; flex-direction: column; flex: none; padding: var(--al-space-1) var(--al-space-2) 0; border-right: 1px solid var(--al-border); }
+.rb-items { display: flex; align-items: flex-start; gap: var(--al-space-1); }
+.rb-label { padding: 2px 0 3px; font-size: 11px; letter-spacing: 0.04em; text-transform: uppercase; color: var(--al-text-3); text-align: center; white-space: nowrap; }
+.rb-btn {
+  display: flex; flex-direction: column; align-items: center; gap: 2px; min-width: 50px; padding: var(--al-space-1) var(--al-space-1);
+  border: 1px solid transparent; border-radius: var(--al-radius); background: transparent; color: var(--al-text-2); cursor: pointer; font-size: 11px;
+}
+.rb-btn:hover:not(:disabled) { background: var(--al-surface-2); color: var(--al-text); }
+.rb-btn[aria-pressed="true"] { background: var(--al-accent-soft); border-color: var(--al-accent-line); color: var(--al-text); }
+.rb-btn:disabled { opacity: 0.4; cursor: default; }
+.rb-btn:focus-visible { outline: 2px solid var(--al-focus); outline-offset: -2px; }
+.rb-primary { color: var(--al-action-text, var(--al-text)); background: var(--al-action); }
+.rb-primary:hover:not(:disabled) { background: var(--al-action-hover, var(--al-action)); color: var(--al-action-text, var(--al-text)); }
+.rb-wcs { position: relative; }
+.rb-pop {
+  position: absolute; top: calc(100% + 4px); left: 0; z-index: 20; width: 320px; display: grid; gap: var(--al-space-3);
+  padding: var(--al-space-3); border: 1px solid var(--al-border-strong); border-radius: var(--al-radius-lg); background: var(--al-surface); box-shadow: var(--al-shadow-pop);
+}
+.rb-hint {
+  display: flex; flex-wrap: wrap; align-items: center; gap: var(--al-space-2); padding: var(--al-space-1) var(--al-space-3);
+  background: var(--al-accent-soft); border-bottom: 1px solid var(--al-accent-line); font-size: var(--al-text-xs); color: var(--al-text);
+}
+.rb-hint-x { margin-left: auto; }
+/* Boolean set-up: the operand colours of the 3D preview (tokens --al-3d-bool-*) as legend chips */
+.bool-chip { display: inline-flex; align-items: center; gap: var(--al-space-1); font-weight: 600; }
+.bool-chip::before { content: ""; width: 10px; height: 10px; border-radius: 2px; background: var(--bool-chip); border: 1px solid color-mix(in srgb, var(--bool-chip) 70%, var(--al-text)); }
+.bool-chip-a { --bool-chip: var(--al-3d-bool-a); }
+.bool-chip-sub { --bool-chip: var(--al-3d-bool-sub); }
+.bool-chip-add { --bool-chip: var(--al-3d-bool-add); }
+.bool-chip-other { --bool-chip: var(--al-3d-bool-other); }
+.bool-chip-both { --bool-chip: var(--al-3d-bool-both); font-weight: 400; }
+.bool-chip-result { font-weight: 400; }
+.bool-chip-result::before { background: transparent; border: 1px dashed var(--al-3d-bool-result); }
+.bool-ops { display: inline-flex; gap: 2px; }
+.bool-ops .btn[aria-pressed="true"] { background: var(--al-surface); border-color: var(--al-border-strong); font-weight: 600; }
+.bool-error { color: var(--al-critical); }
+.bool-menu-item { display: flex; justify-content: space-between; gap: var(--al-space-3); }
+.bool-menu-item kbd, .bool-ops kbd { font-family: var(--al-font-mono, monospace); font-size: var(--al-text-xs); color: var(--al-text-2); }
+.dw-left, .dw-right { overflow: auto; }
+.dw-title { display: flex; align-items: baseline; gap: var(--al-space-2); padding: var(--al-space-3) var(--al-space-3) var(--al-space-1); border-bottom: 1px solid var(--al-border); flex-wrap: wrap; }
+.dw-name { font-weight: 600; }
+.dw-file { font-size: var(--al-text-xs); }
+.dw-title > * { min-width: 0; max-width: 100%; overflow-wrap: anywhere; }
+.dw-left .dz-tree { border-right: 0; }
+.dw-right .dz-msg { margin: var(--al-space-2) var(--al-space-3) 0; }
+.dw-dock-wrap { overflow: auto; }
+.dw-dock .dz-checks { margin: 0; border: 0; border-radius: 0; }
+
+@media (max-width: 900px) {
+  .home-grid { grid-template-columns: minmax(0, 1fr); }
+}
+.rb-stack { display: flex; flex-direction: column; min-width: 0; }
+.app-header .btn[hidden] { display: none; }
+
+/* ribbon tabs (Modeling / Setup / Simulation); Project and Run stay on every tab */
+.rb-shell { display: flex; flex-direction: column; min-width: 0; }
+/* the ribbon is controls, not text: a drag or double-click must not highlight its labels */
+.rb-shell { -webkit-user-select: none; user-select: none; }
+.rb-shell :is(input, textarea, [contenteditable]) { -webkit-user-select: text; user-select: text; }
+.rb-tabs { display: flex; gap: 2px; padding: 2px var(--al-space-2) 0; background: var(--al-surface); }
+.rb-tab {
+  padding: 3px var(--al-space-3); border: 1px solid transparent; border-bottom: 0; border-radius: var(--al-radius-sm) var(--al-radius-sm) 0 0;
+  background: transparent; color: var(--al-text-3); font-size: var(--al-text-xs); font-weight: 600; letter-spacing: 0.03em; cursor: pointer;
+}
+.rb-tab:hover { color: var(--al-text); }
+.rb-tab[aria-selected="true"] { color: var(--al-text); background: var(--al-surface-2); border-color: var(--al-border); }
+.rb-tab:focus-visible { outline: 2px solid var(--al-focus); outline-offset: -2px; }
+.rb-toolbar > .rb-group:last-child { margin-left: auto; border-right: 0; border-left: 1px solid var(--al-border); }
+
+/* the properties panel never scrolls sideways: long buttons wrap, grids shrink */
+.dw-right { overflow-x: hidden; }
+.dw-right .btn { white-space: normal; height: auto; min-height: var(--al-control-h); text-align: left; }
+.dw-right select, .dw-right input { min-width: 0; max-width: 100%; }
+
+/* A short confirmation has no growing preview area, unlike the export dialogs. */
+.dialog.close-project-dialog {
+  width: min(520px, 100%); height: auto; max-height: 100%;
+  grid-template-rows: auto auto auto; overflow: auto;
+}
+.close-project-dialog .dialog-head > div { min-width: 0; overflow-wrap: anywhere; }
+.close-project-dialog .dialog-actions { flex-wrap: wrap; justify-content: flex-end; }
+
+.dz-context-menu .dz-menu-new { margin: 4px 6px 2px; width: calc(100% - 12px); }
+.dz-drop { outline: 2px dashed var(--al-action); outline-offset: -2px; background: var(--al-surface-2); }
+.dz-check-detail { padding: var(--al-space-2) var(--al-space-3); background: var(--al-surface-2); }
+.dz-check-detail p { margin: 0 0 var(--al-space-2); max-width: 72ch; color: var(--al-text-2); font-size: var(--al-text-sm); line-height: 1.5; }
+.dz-check-item[aria-expanded="true"] { background: var(--al-surface-2); }
+.dz-check-fix { margin: 2px 0 6px 26px; }
+.dz-port-summary { margin: 0; font-weight: 500; }
+.dz-port-choices { display: grid; gap: 4px; border: 0; padding: 0; margin: 0; }
+.dz-port-choices label { display: flex; gap: 6px; align-items: baseline; }

@@ -1,0 +1,124 @@
+// Run the pure guards everywhere. Set FAIRBEAM_BROWSER_TESTS=1 for the real-store race checks
+// against a freshly started Vite server for THIS checkout (no HMR edits during the check).
+// Browser dependencies: FAIRBEAM_PUPPETEER=/path/to/puppeteer-core.js and FAIRBEAM_CHROME.
+import assert from 'node:assert/strict';
+import { execFileSync } from 'node:child_process';
+import { mkdirSync, rmdirSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { DesignerAsyncState } from '../src/designer/asyncState.ts';
+import { PreviewIdentity } from '../src/runner/previewIdentity.ts';
+execFileSync(process.execPath, ['--experimental-strip-types', '--test', 'src/designer/asyncState.test.mjs'], {stdio:'inherit'});
+const identity = new PreviewIdentity();
+const old = identity.invalidate(1);
+identity.invalidate(1);
+assert.equal(identity.isCurrent(old, 1), false);
+const current = identity.invalidate(2);
+identity.didOpen(3);
+assert.equal(identity.isCurrent(current, 3), true);
+assert.equal(identity.isCurrent(current, 4), false);
+assert.equal(new DesignerAsyncState().isNavigationCurrent(0), true);
+console.log('Preview identity checks passed.');
+if (process.env.FAIRBEAM_BROWSER_TESTS !== '1') {
+  console.log('SKIP browser race checks: opt in with FAIRBEAM_BROWSER_TESTS=1 (shared dev server required).');
+  process.exit(0);
+}
+const { default: puppeteer } = await import(process.env.FAIRBEAM_PUPPETEER || 'puppeteer-core');
+const locks = join(tmpdir(), 'fairbeam-codex-locks'); // /tmp is the drive root on Windows
+const lock = join(locks, 'screens');
+mkdirSync(locks, {recursive:true});
+mkdirSync(lock);
+let browser;
+try {
+  browser = await puppeteer.launch({headless:true, executablePath:process.env.FAIRBEAM_CHROME || (process.platform === 'win32' ? 'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe' : '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome'), args:['--no-sandbox']});
+  const page = await browser.newPage();
+  await page.goto(process.env.FAIRBEAM_TEST_URL || 'http://127.0.0.1:5420/', {waitUntil:'networkidle0'});
+  await page.waitForSelector('.home');
+  const passed = await page.evaluate(async (id) => {
+    const s = await import('/src/designer/store.ts');
+    const r = await import('/src/runner/store.ts');
+    const state = await import('/src/state.ts');
+    const {api, ApiError} = await import('/src/runner/api.ts');
+    const {setAppMode} = await import('/src/workspace.ts');
+    const check = (ok, name) => { if (!ok) throw new Error(name); results.push(name); };
+    const results = [];
+    const deferred = () => { let resolve, reject; const promise = new Promise((yes,no)=>{resolve=yes;reject=no;});return {promise,resolve,reject}; };
+    const clone = (x) => JSON.parse(JSON.stringify(x));
+    await r.probeServer();
+    await s.enterDesign(id);
+    const deadline = Date.now() + 10000;
+    while (r.previewState() !== 'ready' && Date.now() < deadline) await new Promise(resolve=>setTimeout(resolve,25));
+    check(r.previewState()==='ready' && !!document.querySelector('.workspace.design-mode .rb'), 'initial real designer preview completes');
+    const fixture = clone(s.file());
+    const preview = clone(state.bundle());
+    const fileFor = (name) => ({...clone(fixture),id:name,hash:name,design:{...clone(fixture.design),model:{...fixture.design.model,id:name,name}}});
+    { // display colors: one undo step, reset removes the key, invalid values are refused
+      const n = s.draft.parts.length;
+      const all = s.draft.parts.map((_, i) => i);
+      s.setColors('parts', all, '#12ab34');
+      check(n > 0 && s.draft.parts.every(p => p.color === '#12ab34'), 'setColors colors every selected part');
+      s.setColors('parts', all, 'not-a-color');
+      check(s.draft.parts.every(p => p.color === '#12ab34'), 'setColors refuses an invalid color');
+      s.setColors('materials', [0], '#ab12cd');
+      check(s.draft.materials[0].color === '#ab12cd', 'setColors colors a material');
+      s.undo(); s.undo();
+      check(s.draft.parts.every(p => p.color === undefined) && s.draft.materials[0].color === undefined, 'a multi-part color is one undo step');
+      s.setColors('parts', [0], '#12ab34'); s.setColors('parts', [0], undefined);
+      check(!('color' in s.draft.parts[0]), 'reset removes the color key');
+      s.undo(); s.undo();
+    }
+    let previewCalls = 0;
+    api.previewDesign = async () => { previewCalls++; return {bundle:clone(preview),checks:[{severity:'warning',path:'model.name',code:'server-probe',message:'Server check applied'}]}; };
+    s.edit(d=>{d.model.description='Edited preview probe';});
+    await new Promise(resolve=>setTimeout(resolve,600));
+    check(previewCalls===1 && r.previewState()==='ready' && s.serverChecks().some(c=>c.code==='server-probe'),'quick preview is followed by server preview and server checks');
+    const callsBeforeExternal = previewCalls;
+    s.edit(d=>{d.model.description='Queued external-open probe';});
+    state.openBundle(clone(preview),'External queued preview');
+    await new Promise(resolve=>setTimeout(resolve,400));
+    check(previewCalls===callsBeforeExternal && state.source()==='External queued preview','external open cancels a queued designer preview');
+    api.previewDesign = async () => ({bundle:clone(preview),checks:[]});
+    api.models = async () => r.models();
+    const a=deferred(), b=deferred();
+    api.design = key => key==='a' ? a.promise : b.promise;
+    const pa=s.openDesign('a'), pb=s.openDesign('b');
+    b.resolve(fileFor('b')); await pb;
+    a.reject(new Error('stale failure')); await pa;
+    check(s.file().id==='b' && !s.loading() && s.message()===null,'stale load failure preserves newer document');
+    const saving=deferred(); api.saveDesign=()=>saving.promise;
+    s.edit(d=>{d.model.description='saved version';});
+    const save=s.save();
+    s.edit(d=>{d.model.description='newer unsaved version';});
+    saving.resolve({hash:'saved-hash',validation:{ok:true,fields:{},checks:[]}}); await save;
+    check(s.dirty() && s.file().hash==='saved-hash' && s.draft.model.description==='newer unsaved version','edits during save remain dirty');
+    const staleSave=deferred(); api.saveDesign=()=>staleSave.promise;
+    const ps=s.save(); api.design=async()=>fileFor('c'); await s.openDesign('c');
+    staleSave.resolve({hash:'wrong-document',validation:{ok:true,fields:{},checks:[]}});await ps;
+    check(s.file().id==='c' && s.file().hash==='c' && !s.saving(),'save cannot replace another document');
+    await new Promise(resolve=>setTimeout(resolve,20));
+    const late=deferred();api.previewDesign=()=>late.promise;
+    const pp=r.runDesignPreview(clone(s.draft));
+    s.edit(d=>{d.model.description='latest edit';});
+    const before=state.bundle();
+    late.resolve({bundle:clone(preview),checks:[{severity:'error',path:'model.name',code:'old',message:'obsolete'}]});
+    check(await pp===null && state.bundle()===before,'editing invalidates an in-flight preview before debounce');
+    r.invalidatePreview();
+    const fail=deferred();api.previewDesign=()=>fail.promise;
+    const pf=r.runDesignPreview(clone(s.draft));r.invalidatePreview();
+    fail.reject(new ApiError('old offline error',0,{}));
+    check(await pf===null && r.serverState()==='online' && r.previewError()===null,'stale preview error cannot mark server offline');
+    const external=deferred();api.previewDesign=()=>external.promise;
+    const pe=r.runDesignPreview(clone(s.draft));
+    state.openBundle(clone(preview),'External preview bundle');
+    external.resolve({bundle:clone(preview),checks:[]});
+    check(await pe===null && state.source()==='External preview bundle' && !r.previewActive(),'external preview bundle wins over pending preview');
+    const pending=deferred();api.design=()=>pending.promise;
+    const pl=s.openDesign('deleted');api.deleteDesign=async()=>({history:'deleted-backup'});
+    await s.deleteDesign('deleted');pending.resolve(fileFor('deleted'));await pl;
+    check(s.file().id==='c' && !s.loading(),'deleting a pending load prevents resurrection');
+    setAppMode('home');r.invalidatePreview();
+    return results;
+  },process.env.FAIRBEAM_TEST_DESIGN || 'qa_patch');
+  for(const result of passed)console.log(`PASS ${result}`);
+  console.log(`${passed.length} browser store regressions passed.`);
+} finally { await browser?.close(); rmdirSync(lock); }

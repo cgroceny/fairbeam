@@ -1,0 +1,491 @@
+{
+ "compared": "cuda",
+ "ref": ".sim/bench/t4",
+ "models": [
+  {
+   "bundle": "patch-antenna",
+   "name": "Rectangular patch antenna",
+   "cells": 276138,
+   "grid": [
+    69,
+    69,
+    58
+   ],
+   "s11_min": [
+    -36.009,
+    2.4525
+   ],
+   "farfield": [
+    {
+     "f_ghz": 2.4525,
+     "dmax_dbi": 6.788,
+     "eff": 0.949
+    }
+   ],
+   "runs": {
+    "cuda": {
+     "engine": "gpu",
+     "threads": 0,
+     "cpu": "AMD Ryzen 9 7900X 12-Core Processor",
+     "solver_s": 2.534,
+     "wall_s": 3.85,
+     "mcells_s": 1376.25,
+     "timesteps": [
+      12628
+     ],
+     "runs": 1
+    }
+   },
+   "ref": {
+    "cells": 276138,
+    "grid": [
+     69,
+     69,
+     58
+    ],
+    "s11_min": [
+     -36.009,
+     2.4525
+    ],
+    "farfield": [
+     {
+      "f_ghz": 2.4525,
+      "dmax_dbi": 6.788,
+      "eff": 0.949
+     }
+    ],
+    "engine": "cpu",
+    "threads": 4,
+    "cpu": "AMD Ryzen 9 7900X 12-Core Processor",
+    "solver_s": 46.55,
+    "wall_s": 48.7,
+    "mcells_s": 74.91,
+    "timesteps": [
+     12628
+    ],
+    "runs": 1
+   },
+   "diff": {
+    "ds11_min_db": 0.0,
+    "df_s11_mhz": 0.0,
+    "ddmax_db": [
+     0.0
+    ],
+    "deff": [
+     0.0
+    ],
+    "dsij": null,
+    "same_grid": true,
+    "same_timesteps": true
+   }
+  },
+  {
+   "bundle": "patch-array-4x1",
+   "name": "Patch array 4 x 1",
+   "cells": 452270,
+   "grid": [
+    65,
+    142,
+    49
+   ],
+   "s11_min": [
+    -23.659,
+    2.4525
+   ],
+   "farfield": [
+    {
+     "f_ghz": 2.4525,
+     "dmax_dbi": 6.663,
+     "eff": 0.9167
+    },
+    {
+     "f_ghz": 2.4525,
+     "dmax_dbi": 6.608,
+     "eff": 0.8725
+    },
+    {
+     "f_ghz": 2.4525,
+     "dmax_dbi": 6.608,
+     "eff": 0.8725
+    },
+    {
+     "f_ghz": 2.4525,
+     "dmax_dbi": 6.663,
+     "eff": 0.9167
+    }
+   ],
+   "runs": {
+    "cuda": {
+     "engine": "gpu",
+     "threads": 0,
+     "cpu": "AMD Ryzen 9 7900X 12-Core Processor",
+     "solver_s": 25.13,
+     "wall_s": 34.26,
+     "mcells_s": 1424.28,
+     "timesteps": [
+      18055,
+      21352,
+      21352,
+      18055
+     ],
+     "runs": 4
+    }
+   },
+   "ref": {
+    "cells": 452270,
+    "grid": [
+     65,
+     142,
+     49
+    ],
+    "s11_min": [
+     -23.659,
+     2.4525
+    ],
+    "farfield": [
+     {
+      "f_ghz": 2.4525,
+      "dmax_dbi": 6.663,
+      "eff": 0.9167
+     },
+     {
+      "f_ghz": 2.4525,
+      "dmax_dbi": 6.608,
+      "eff": 0.8725
+     },
+     {
+      "f_ghz": 2.4525,
+      "dmax_dbi": 6.608,
+      "eff": 0.8725
+     },
+     {
+      "f_ghz": 2.4525,
+      "dmax_dbi": 6.663,
+      "eff": 0.9167
+     }
+    ],
+    "engine": "cpu",
+    "threads": 4,
+    "cpu": "AMD Ryzen 9 7900X 12-Core Processor",
+    "solver_s": 873.8,
+    "wall_s": 893.12,
+    "mcells_s": 40.79,
+    "timesteps": [
+     18055,
+     21352,
+     21352,
+     18055
+    ],
+    "runs": 4
+   },
+   "diff": {
+    "ds11_min_db": 0.0,
+    "df_s11_mhz": 0.0,
+    "ddmax_db": [
+     0.0,
+     0.0,
+     0.0,
+     0.0
+    ],
+    "deff": [
+     0.0,
+     0.0,
+     0.0,
+     0.0
+    ],
+    "dsij": {
+     "all": {
+      "db": 0.0,
+      "sij": null,
+      "f_ghz": null
+     },
+     "above": {
+      "db": 0.0,
+      "sij": null,
+      "f_ghz": null
+     }
+    },
+    "same_grid": true,
+    "same_timesteps": true
+   }
+  },
+  {
+   "bundle": "pyramidal-horn",
+   "name": "Pyramidal horn (WR-90, 10 GHz)",
+   "cells": 1136520,
+   "grid": [
+    123,
+    105,
+    88
+   ],
+   "s11_min": [
+    -28.825,
+    11.17
+   ],
+   "farfield": [
+    {
+     "f_ghz": 8.0,
+     "dmax_dbi": 14.737,
+     "eff": 1.0385
+    },
+    {
+     "f_ghz": 10.0,
+     "dmax_dbi": 15.525,
+     "eff": 1.0373
+    },
+    {
+     "f_ghz": 12.0,
+     "dmax_dbi": 15.702,
+     "eff": 1.0371
+    }
+   ],
+   "runs": {
+    "cuda": {
+     "engine": "gpu",
+     "threads": 0,
+     "cpu": "AMD Ryzen 9 7900X 12-Core Processor",
+     "solver_s": 6.3,
+     "wall_s": 9.86,
+     "mcells_s": 1947.85,
+     "timesteps": [
+      10800
+     ],
+     "runs": 1
+    }
+   },
+   "ref": {
+    "cells": 1136520,
+    "grid": [
+     123,
+     105,
+     88
+    ],
+    "s11_min": [
+     -28.919,
+     11.165
+    ],
+    "farfield": [
+     {
+      "f_ghz": 8.0,
+      "dmax_dbi": 14.739,
+      "eff": 1.0407
+     },
+     {
+      "f_ghz": 10.0,
+      "dmax_dbi": 15.525,
+      "eff": 1.037
+     },
+     {
+      "f_ghz": 12.0,
+      "dmax_dbi": 15.698,
+      "eff": 1.0353
+     }
+    ],
+    "engine": "cpu",
+    "threads": 4,
+    "cpu": "AMD Ryzen 9 7900X 12-Core Processor",
+    "solver_s": 224.57,
+    "wall_s": 230.21,
+    "mcells_s": 52.23,
+    "timesteps": [
+     10320
+    ],
+    "runs": 1
+   },
+   "diff": {
+    "ds11_min_db": 0.094,
+    "df_s11_mhz": 5.0,
+    "ddmax_db": [
+     -0.002,
+     0.0,
+     0.004
+    ],
+    "deff": [
+     -0.0022,
+     0.0003,
+     0.0018
+    ],
+    "dsij": null,
+    "same_grid": true,
+    "same_timesteps": false
+   }
+  },
+  {
+   "bundle": "sierpinski-monopole--iterations-3",
+   "name": "Sierpinski gasket monopole \u00b7 iterations=3",
+   "cells": 2012304,
+   "grid": [
+    159,
+    113,
+    112
+   ],
+   "s11_min": [
+    -18.901,
+    3.3031
+   ],
+   "farfield": [
+    {
+     "f_ghz": 3.3031,
+     "dmax_dbi": 9.26,
+     "eff": 0.9943
+    },
+    {
+     "f_ghz": 6.2188,
+     "dmax_dbi": 11.125,
+     "eff": 0.9847
+    },
+    {
+     "f_ghz": 7.2969,
+     "dmax_dbi": 13.36,
+     "eff": 0.9873
+    }
+   ],
+   "runs": {
+    "cuda": {
+     "engine": "gpu",
+     "threads": 0,
+     "cpu": "AMD Ryzen 9 7900X 12-Core Processor",
+     "solver_s": 3.428,
+     "wall_s": 10.48,
+     "mcells_s": 3052.28,
+     "timesteps": [
+      5200
+     ],
+     "runs": 1
+    }
+   },
+   "ref": {
+    "cells": 2012304,
+    "grid": [
+     159,
+     113,
+     112
+    ],
+    "s11_min": [
+     -18.901,
+     3.3031
+    ],
+    "farfield": [
+     {
+      "f_ghz": 3.3031,
+      "dmax_dbi": 9.26,
+      "eff": 0.9943
+     },
+     {
+      "f_ghz": 6.2188,
+      "dmax_dbi": 11.133,
+      "eff": 0.9846
+     },
+     {
+      "f_ghz": 7.2969,
+      "dmax_dbi": 13.369,
+      "eff": 0.9875
+     }
+    ],
+    "engine": "cpu",
+    "threads": 4,
+    "cpu": "AMD Ryzen 9 7900X 12-Core Processor",
+    "solver_s": 61.08,
+    "wall_s": 70.14,
+    "mcells_s": 172.95,
+    "timesteps": [
+     5250
+    ],
+    "runs": 1
+   },
+   "diff": {
+    "ds11_min_db": 0.0,
+    "df_s11_mhz": 0.0,
+    "ddmax_db": [
+     0.0,
+     -0.008,
+     -0.009
+    ],
+    "deff": [
+     0.0,
+     0.0001,
+     -0.0002
+    ],
+    "dsij": null,
+    "same_grid": true,
+    "same_timesteps": false
+   }
+  },
+  {
+   "bundle": "wilkinson-divider",
+   "name": "Wilkinson divider (2.4 GHz)",
+   "cells": 113103,
+   "grid": [
+    59,
+    71,
+    27
+   ],
+   "s11_min": [
+    -29.807,
+    2.4512
+   ],
+   "farfield": [],
+   "runs": {
+    "cuda": {
+     "engine": "gpu",
+     "threads": 0,
+     "cpu": "AMD Ryzen 9 7900X 12-Core Processor",
+     "solver_s": 4.363,
+     "wall_s": 5.47,
+     "mcells_s": 824.747,
+     "timesteps": [
+      9519,
+      10020,
+      10521
+     ],
+     "runs": 3
+    }
+   },
+   "ref": {
+    "cells": 113103,
+    "grid": [
+     59,
+     71,
+     27
+    ],
+    "s11_min": [
+     -29.807,
+     2.4512
+    ],
+    "farfield": [],
+    "engine": "cpu",
+    "threads": 4,
+    "cpu": "AMD Ryzen 9 7900X 12-Core Processor",
+    "solver_s": 41.07,
+    "wall_s": 42.31,
+    "mcells_s": 90.43,
+    "timesteps": [
+     9519,
+     10020,
+     10521
+    ],
+    "runs": 3
+   },
+   "diff": {
+    "ds11_min_db": 0.0,
+    "df_s11_mhz": 0.0,
+    "ddmax_db": [],
+    "deff": [],
+    "dsij": {
+     "all": {
+      "db": 0.0,
+      "sij": null,
+      "f_ghz": null
+     },
+     "above": {
+      "db": 0.0,
+      "sij": null,
+      "f_ghz": null
+     }
+    },
+    "same_grid": true,
+    "same_timesteps": true
+   }
+  }
+ ]
+}

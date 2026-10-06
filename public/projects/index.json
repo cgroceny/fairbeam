@@ -1,0 +1,228 @@
+{
+  "projects": [
+    {
+      "file": "blade-867.json",
+      "name": "UAV blade antenna (867 MHz)",
+      "model": "blade-867",
+      "created": "2026-10-04T02:45:51+0300",
+      "simulated": true,
+      "bands": [
+        0.904
+      ],
+      "cells": 136500
+    },
+    {
+      "file": "branchline-coupler.json",
+      "name": "Branch-line coupler (2.4 GHz)",
+      "model": "branchline-coupler",
+      "created": "2026-09-25T21:20:31+0300",
+      "simulated": true,
+      "bands": [
+        2.414
+      ],
+      "cells": 75684
+    },
+    {
+      "file": "collinear-867.json",
+      "name": "UAV printed 2-element collinear (867 MHz)",
+      "model": "collinear-867",
+      "created": "2026-10-03T18:05:48+0300",
+      "simulated": true,
+      "bands": [
+        0.935
+      ],
+      "cells": 3461598
+    },
+    {
+      "file": "dipole.json",
+      "name": "Half-wave dipole",
+      "model": "dipole",
+      "created": "2026-09-24T23:18:48+0300",
+      "simulated": true,
+      "bands": [
+        2.415
+      ],
+      "cells": 185024
+    },
+    {
+      "file": "helix-axial.json",
+      "name": "Axial-mode helix (2.4 GHz, RHCP)",
+      "model": "helix-axial",
+      "created": "2026-09-25T03:08:51+0300",
+      "simulated": true,
+      "bands": [
+        2.67,
+        2.88
+      ],
+      "cells": 1352700
+    },
+    {
+      "file": "inset-patch.json",
+      "name": "Inset-fed patch (FR4, 2.4 GHz)",
+      "model": "inset-patch",
+      "created": "2026-09-24T23:27:48+0300",
+      "simulated": true,
+      "bands": [
+        2.401
+      ],
+      "cells": 164604
+    },
+    {
+      "file": "lowpass-stepped.json",
+      "name": "Stepped-impedance low-pass filter",
+      "model": "lowpass-stepped",
+      "created": "2026-09-25T21:20:36+0300",
+      "simulated": true,
+      "bands": [
+        2.027
+      ],
+      "cells": 126000
+    },
+    {
+      "file": "meander-dipole-867.json",
+      "name": "Printed meander dipole (867 MHz)",
+      "model": "meander-dipole-867",
+      "created": "2026-10-03T17:57:50+0300",
+      "simulated": true,
+      "bands": [
+        0.878
+      ],
+      "cells": 966084
+    },
+    {
+      "file": "microstrip-line.json",
+      "name": "Microstrip line (50 ohm, two-port)",
+      "model": "microstrip-line",
+      "created": "2026-09-25T00:15:02+0300",
+      "simulated": true,
+      "bands": [
+        2.666
+      ],
+      "cells": 49600
+    },
+    {
+      "file": "minkowski-patch.json",
+      "name": "Minkowski fractal patch",
+      "model": "minkowski-patch",
+      "created": "2026-09-24T23:33:20+0300",
+      "simulated": true,
+      "bands": [
+        2.324
+      ],
+      "cells": 115351
+    },
+    {
+      "file": "patch-antenna.json",
+      "name": "Rectangular patch antenna",
+      "model": "patch-antenna",
+      "created": "2026-09-24T23:38:20+0300",
+      "simulated": true,
+      "bands": [
+        2.453
+      ],
+      "cells": 263568
+    },
+    {
+      "file": "patch-array-2x1.json",
+      "name": "Patch array 2 x 1",
+      "model": "patch-array-2x1",
+      "created": "2026-09-25T00:15:09+0300",
+      "simulated": true,
+      "bands": [
+        2.434
+      ],
+      "cells": 48672
+    },
+    {
+      "file": "patch-array-4x1.json",
+      "name": "Patch array 4 x 1",
+      "model": "patch-array-4x1",
+      "created": "2026-09-25T02:10:57+0300",
+      "simulated": true,
+      "bands": [
+        2.453
+      ],
+      "cells": 433152
+    },
+    {
+      "file": "pyramidal-horn.json",
+      "name": "Pyramidal horn (WR-90, 10 GHz)",
+      "model": "pyramidal-horn",
+      "created": "2026-09-28T23:07:19+0300",
+      "simulated": true,
+      "bands": [
+        11.16
+      ],
+      "cells": 1103856
+    },
+    {
+      "file": "sierpinski-monopole--iterations-0.json",
+      "name": "Sierpinski gasket monopole \u00b7 iterations=0",
+      "model": "sierpinski-monopole",
+      "created": "2026-09-24T22:36:46+0300",
+      "simulated": true,
+      "bands": [
+        3.65
+      ],
+      "cells": 1833552
+    },
+    {
+      "file": "sierpinski-monopole--iterations-3.json",
+      "name": "Sierpinski gasket monopole \u00b7 iterations=3",
+      "model": "sierpinski-monopole",
+      "created": "2026-09-24T22:37:02+0300",
+      "simulated": true,
+      "bands": [
+        3.303,
+        6.219,
+        7.297
+      ],
+      "cells": 1964256
+    },
+    {
+      "file": "sleeve-dipole-867.json",
+      "name": "UAV printed sleeve dipole (867 MHz)",
+      "model": "sleeve-dipole-867",
+      "created": "2026-10-03T17:58:36+0300",
+      "simulated": true,
+      "bands": [
+        0.877
+      ],
+      "cells": 442800
+    },
+    {
+      "file": "wideband-dipole-867.json",
+      "name": "Slotted wideband planar dipole (867 MHz)",
+      "model": "wideband-dipole-867",
+      "created": "2026-10-03T17:57:34+0300",
+      "simulated": true,
+      "bands": [
+        0.889
+      ],
+      "cells": 830576
+    },
+    {
+      "file": "wilkinson-divider.json",
+      "name": "Wilkinson divider (2.4 GHz)",
+      "model": "wilkinson-divider",
+      "created": "2026-09-25T00:19:36+0300",
+      "simulated": true,
+      "bands": [
+        2.451
+      ],
+      "cells": 105560
+    },
+    {
+      "file": "yagi-867.json",
+      "name": "Ground-station 5-element Yagi (867 MHz)",
+      "model": "yagi-867",
+      "created": "2026-10-03T17:59:19+0300",
+      "simulated": true,
+      "bands": [
+        0.865
+      ],
+      "cells": 714840
+    }
+  ],
+  "updated": "2026-10-03T18:06:14+0300"
+}

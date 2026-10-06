@@ -1,0 +1,59 @@
+/* Designer modelling features: the material library dialog, component folders in the tree,
+   part cuts. Imported by src/designer/DesignPane.tsx. */
+.dm-lib .dialog-body { display: block; overflow: auto; padding: var(--al-space-2) var(--al-pad-panel) var(--al-space-3); }
+.dm-lib-table td { vertical-align: top; padding-top: var(--al-space-2); padding-bottom: var(--al-space-2); }
+.dm-lib-table td.mono { white-space: nowrap; }
+.dm-lib-group th { text-align: left; font-size: var(--al-text-xs); color: var(--al-text-3); text-transform: none; padding-top: var(--al-space-3); }
+.dm-lib-table .dz-input { min-width: 6rem; }
+.dm-lib-name { font-weight: 600; }
+.dm-lib-note { color: var(--al-text-3); font-size: var(--al-text-xs); line-height: 1.35; margin-top: 2px; }
+.dm-folder { font-weight: 600; }
+.dm-folder .dz-node-label { color: var(--al-text-2, inherit); }
+.dz-point.dm-point3 { grid-template-columns: 1.4em repeat(3, minmax(0, 1fr)) auto; }
+.dm-point-pages { display: flex; flex-wrap: wrap; align-items: center; gap: var(--al-space-2); margin-block: var(--al-space-2); }
+.dm-point-range { color: var(--al-text-2); font-size: var(--al-text-xs); white-space: nowrap; }
+.dm-point-jump { display: inline-flex; align-items: center; gap: var(--al-space-1); color: var(--al-text-2); font-size: var(--al-text-xs); }
+.dm-point-jump input { width: 5.5em; min-width: 5.5em; flex: none; }
+.dm-fit { justify-self: start; font-size: var(--al-text-xs); }
+.dz-context-menu .menu-item { gap: var(--al-gap-cluster); }
+.dz-context-menu .menu-item svg { width: var(--al-icon); height: var(--al-icon); flex-shrink: 0; }
+.dz-context-menu .dz-menu-separator { border-top: 1px solid var(--al-border); margin: var(--al-space-1) var(--al-space-2); }
+.dialog.dz-port-dialog { width: min(560px, 100%); height: auto; max-height: 100%; }
+.dz-port-dialog .dialog-body { display: flex; flex-direction: column; overflow: auto; padding: var(--al-pad-panel); }
+.dm-boolean-history { position: fixed; z-index: 1000; right: var(--al-space-3); top: 5rem; max-width: min(420px, calc(100vw - 2rem)); padding: var(--al-space-3); background: var(--al-surface-2); border: 1px solid var(--al-border); border-radius: var(--al-radius); box-shadow: var(--al-shadow-pop); }
+.point-tools { display: flex; flex-wrap: wrap; gap: 2px; align-items: flex-start; max-width: 330px; }
+.point-tools-readout { width: 100%; font-size: var(--al-text-xs); line-height: 1.4; color: var(--al-text-2); }
+@media (max-width: 640px) { .dialog.dz-port-dialog { width: 100%; height: 100%; } }
+
+/* Geometry-first inspector: scoped to avoid shared scaling rules. */
+.dz-inspector-title { font-weight: 600; font-size: var(--al-text-ui); }
+.dz-inspector-advanced > summary { cursor: pointer; color: var(--al-text-2); padding-block: var(--al-space-2); }
+.dz-inspector-advanced > .dz-form { padding-top: var(--al-space-2); }
+.vp-point-marker { color: var(--al-text); background: color-mix(in srgb, var(--al-surface) 92%, transparent); border: 1px solid var(--al-accent-line); border-radius: 10px; padding: 1px 5px; font: 600 var(--al-text-xs) var(--al-font-mono); white-space: nowrap; transform: translate(8px,-8px); pointer-events: none; }
+
+.point-tools-panel { padding: var(--al-space-2) var(--al-space-3); font-size: var(--al-text-xs); border-bottom: 1px solid var(--al-border); }
+.dm-face-extrude { position: fixed; z-index: 1200; top: 5.5rem; right: 1rem; width: min(340px, calc(100vw - 2rem)); display: grid; gap: var(--al-space-2); padding: var(--al-space-3); color: var(--al-text); background: var(--al-surface-2); border: 1px solid var(--al-border); border-radius: var(--al-radius); box-shadow: var(--al-shadow-pop); }
+.dm-face-extrude header, .dm-face-extrude footer { display: flex; justify-content: space-between; align-items: center; gap: var(--al-space-2); }
+.dm-face-extrude label { display: grid; gap: 3px; font-size: var(--al-text-xs); }
+.dm-face-extrude p { margin: 0; font-size: var(--al-text-xs); color: var(--al-text-2); }
+.dm-face-extrude footer { justify-content: flex-end; }
+.dm-face-error { color: var(--al-critical) !important; }
+.point-tools-summary { display: flex; flex-wrap: wrap; align-items: center; gap: var(--al-space-3); }
+.point-tools-list { display: flex; flex-wrap: wrap; gap: var(--al-space-2); max-height: 5rem; overflow: auto; }
+.point-tools-list .point-tools-readout { width: auto; }
+.dz-point-actions { display: flex; gap: 2px; margin-top: 16px; }
+.dz-point .dz-point-actions .icon-btn { margin-top: 0; }
+.dz-point.is-picked { box-shadow: inset 3px 0 0 var(--al-focus); border-radius: 2px; }
+.dz-vertex-edit { display: flex; flex-direction: column; align-items: flex-start; gap: var(--al-space-1); margin-bottom: var(--al-space-1); }
+
+.dz-color-field .cluster-sm { align-items: center; }
+.dz-color-input { width: 34px; height: 24px; padding: 0; border: 1px solid var(--al-border, #888); border-radius: 4px; background: none; cursor: pointer; }
+
+/* Deliberate RF setup is a compact form; the macro dialog grid does not apply. */
+.dialog.dz-feed-dialog { width: min(560px, 100%); height: auto; max-height: 100%; }
+.dz-feed-dialog .dialog-body { display: flex; flex-direction: column; gap: var(--al-space-3); overflow-y: auto; padding: var(--al-pad-panel); }
+.dz-feed-dialog fieldset { margin: 0; padding: 0; border: 0; min-width: 0; }
+.dz-feed-dialog legend { margin-bottom: var(--al-space-2); }
+.dz-feed-dialog .dz-pair { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.dz-feed-dialog .note { margin: 0; }
+.dz-feed-dialog .dialog-head h2 { margin: 0; }

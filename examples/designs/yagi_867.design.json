@@ -1,0 +1,102 @@
+{
+  "schema": "fairbeam.design/1",
+  "model": {
+    "id": "yagi-867",
+    "name": "Ground-station 5-element Yagi (867 MHz)",
+    "description": "Five-element Yagi-Uda for a ground station in the 863-870 MHz SRD / LoRa band: a reflector, a straight driven dipole with a hairpin (beta) match and three directors on a 283 mm non-metal boom (x, +x forward). The elements stand vertical (z) for vertical polarisation, to match a UAV's vertical dipole. Each 4 mm rod is modelled as a PEC strip twice its diameter wide (8 mm) in the xz plane, the equivalent of a round rod. The spacings and lengths start from the NBS 5-element design (0.8 wavelength boom), re-optimised for front-to-back ratio. A 50 ohm lumped port across the 6 mm feed gap stands for the balun output (the feed is balanced: use a 1:1 balun in practice); the hairpin, a shorted strip-pair stub behind the driven element, and the driven element length together set the 50 ohm match. About 10.4 dBi, front-to-back ratio 18.6 dB, |S11| below -20 dB over 863-870 MHz. See examples/designs/README.md in the fairbeam repository."
+  },
+  "params": [
+    {"key": "f0", "default": 0.867, "label": "Design frequency", "unit": "GHz", "min": 0.1, "max": 6},
+    {"key": "d", "default": 4, "label": "Element rod diameter (modelled as a strip 2 d wide)", "unit": "mm", "min": 1, "max": 8},
+    {"key": "L_r", "default": 162.4, "label": "Reflector length", "unit": "mm", "min": 120, "max": 220},
+    {"key": "L_de", "default": 156, "label": "Driven element length, tip to tip (with the feed gap)", "unit": "mm", "min": 110, "max": 200},
+    {"key": "L_d1", "default": 142.9, "label": "Director 1 length", "unit": "mm", "min": 100, "max": 200},
+    {"key": "L_d2", "default": 137.1, "label": "Director 2 length", "unit": "mm", "min": 100, "max": 200},
+    {"key": "L_d3", "default": 129.8, "label": "Director 3 length", "unit": "mm", "min": 100, "max": 200},
+    {"key": "s_r", "default": 78, "label": "Spacing reflector to driven element", "unit": "mm", "min": 50, "max": 150},
+    {"key": "s_1", "default": 47, "label": "Spacing driven element to director 1", "unit": "mm", "min": 20, "max": 150},
+    {"key": "s_2", "default": 60, "label": "Spacing director 1 to director 2", "unit": "mm", "min": 20, "max": 150},
+    {"key": "s_3", "default": 98, "label": "Spacing director 2 to director 3", "unit": "mm", "min": 20, "max": 150},
+    {"key": "g", "default": 6, "label": "Feed gap (between the driven element halves, and between the hairpin rails)", "unit": "mm", "min": 2, "max": 20},
+    {"key": "l_hp", "default": 23, "label": "Hairpin slot length, from the rear edge of the driven element to the short", "unit": "mm", "min": 2, "max": 50},
+    {"key": "lam", "expr": "wavelength(f0)", "label": "Free-space wavelength at f0", "unit": "mm"},
+    {"key": "w", "expr": "2 * d", "label": "Strip width (a flat strip 2 d wide has the equivalent radius d / 2 of the rod)", "unit": "mm"},
+    {"key": "x_hp", "expr": "w / 2 + l_hp + w", "label": "Hairpin length, driven element axis to the outer edge of the short", "unit": "mm"},
+    {"key": "x_d1", "expr": "s_1", "label": "Director 1 position", "unit": "mm"},
+    {"key": "x_d2", "expr": "s_1 + s_2", "label": "Director 2 position", "unit": "mm"},
+    {"key": "x_d3", "expr": "s_1 + s_2 + s_3", "label": "Director 3 position", "unit": "mm"},
+    {"key": "boom", "expr": "s_r + s_1 + s_2 + s_3", "label": "Boom length, reflector to the last director", "unit": "mm"},
+    {"key": "boom_lam", "expr": "boom / lam", "label": "Boom length in wavelengths", "unit": ""},
+    {"key": "L_de_lam", "expr": "L_de / lam", "label": "Driven element length in wavelengths", "unit": ""}
+  ],
+  "simulation": {
+    "f_min": "0.8",
+    "f_max": "0.95",
+    "boundaries": "PML_8",
+    "end_criteria_db": -60,
+    "max_timesteps": 200000
+  },
+  "materials": [
+    {"name": "aluminium", "kind": "metal"}
+  ],
+  "parts": [
+    {
+      "name": "reflector",
+      "material": "aluminium",
+      "component": "antenna/reflector",
+      "primitives": [
+        {"kind": "box", "start": ["-s_r - w/2", 0, "-L_r/2"], "stop": ["-s_r + w/2", 0, "L_r/2"]}
+      ]
+    },
+    {
+      "name": "driven_element",
+      "material": "aluminium",
+      "component": "antenna/driven",
+      "primitives": [
+        {"kind": "box", "start": ["-w/2", 0, "g/2"], "stop": ["w/2", 0, "L_de/2"]},
+        {"kind": "box", "start": ["-w/2", 0, "-L_de/2"], "stop": ["w/2", 0, "-g/2"]}
+      ]
+    },
+    {
+      "name": "hairpin",
+      "material": "aluminium",
+      "component": "antenna/driven",
+      "primitives": [
+        {"kind": "box", "start": ["-x_hp", 0, "g/2"], "stop": [0, 0, "g/2 + w"]},
+        {"kind": "box", "start": ["-x_hp", 0, "-g/2 - w"], "stop": [0, 0, "-g/2"]},
+        {"kind": "box", "start": ["-x_hp", 0, "-g/2 - w"], "stop": ["-x_hp + w", 0, "g/2 + w"]}
+      ]
+    },
+    {
+      "name": "director_1",
+      "material": "aluminium",
+      "component": "antenna/directors",
+      "primitives": [
+        {"kind": "box", "start": ["x_d1 - w/2", 0, "-L_d1/2"], "stop": ["x_d1 + w/2", 0, "L_d1/2"]}
+      ]
+    },
+    {
+      "name": "director_2",
+      "material": "aluminium",
+      "component": "antenna/directors",
+      "primitives": [
+        {"kind": "box", "start": ["x_d2 - w/2", 0, "-L_d2/2"], "stop": ["x_d2 + w/2", 0, "L_d2/2"]}
+      ]
+    },
+    {
+      "name": "director_3",
+      "material": "aluminium",
+      "component": "antenna/directors",
+      "primitives": [
+        {"kind": "box", "start": ["x_d3 - w/2", 0, "-L_d3/2"], "stop": ["x_d3 + w/2", 0, "L_d3/2"]}
+      ]
+    }
+  ],
+  "ports": [
+    {"type": "lumped", "number": 1, "R": 50, "start": ["-w/2", 0, "-g/2"], "stop": ["w/2", 0, "g/2"], "direction": "z"}
+  ],
+  "resistors": [],
+  "mesh": {"mode": "auto", "cells_per_wavelength": 30},
+  "far_field": {"enabled": true, "frequencies": ["f0"]},
+  "monitors": {"currents": ["f0"], "efficiency": {"points": 21}}
+}

@@ -1,0 +1,247 @@
+{
+ "schema": "fairbeam.study/1",
+ "kind": "convergence",
+ "name": "patch-mesh-convergence",
+ "created": "2026-09-24T23:20:25+0300",
+ "model": {
+  "id": "patch-antenna",
+  "name": "Rectangular patch antenna",
+  "file": "patch_antenna.py"
+ },
+ "axes": [
+  {
+   "key": "mesh_div",
+   "values": [
+    15,
+    20,
+    30,
+    40
+   ]
+  }
+ ],
+ "fixed": {},
+ "threads": 4,
+ "end_criteria_db": -60.0,
+ "exact_endcriteria": true,
+ "wall_time_s": 43.02,
+ "members": [
+  {
+   "file": "studies/patch-mesh-convergence/patch-antenna--mesh_div-15.json",
+   "params": {
+    "mesh_div": "15"
+   },
+   "summary": {
+    "bands": [
+     {
+      "f_lo": 2392500000.0,
+      "f_hi": 2427500000.0,
+      "f_center": 2410000000.0,
+      "s11_min_db": -37.218,
+      "edge_lo": false,
+      "edge_hi": false
+     }
+    ],
+    "first_resonance": {
+     "f": 2410000000.0,
+     "s11_db": -37.218,
+     "matched": true
+    },
+    "reactance_zeros": [
+     {
+      "f": 1041574074.074074,
+      "r": 0.013
+     },
+     {
+      "f": 2531869658.119658,
+      "r": 2.359
+     }
+    ],
+    "farfield": [
+     {
+      "f": 2410000000.0,
+      "dmax_dbi": 6.799,
+      "dmax_pattern_dbi": 6.812,
+      "rad_efficiency": 0.9482,
+      "gain_dbi": 6.568,
+      "realized_gain_dbi": 6.567
+     }
+    ],
+    "dmax_dbi": 6.799,
+    "rad_efficiency": 0.9482,
+    "cells": 50544,
+    "min_cell": 0.381,
+    "max_cell": 6.46632,
+    "timesteps": 12750,
+    "wall_time_s": 7.06,
+    "converged": true
+   }
+  },
+  {
+   "file": "studies/patch-mesh-convergence/patch-antenna--mesh_div-20.json",
+   "params": {
+    "mesh_div": "20"
+   },
+   "summary": {
+    "bands": [
+     {
+      "f_lo": 2415000000.0,
+      "f_hi": 2450000000.0,
+      "f_center": 2432500000.0,
+      "s11_min_db": -37.256,
+      "edge_lo": false,
+      "edge_hi": false
+     }
+    ],
+    "first_resonance": {
+     "f": 2432500000.0,
+     "s11_db": -37.256,
+     "matched": true
+    },
+    "reactance_zeros": [
+     {
+      "f": 1021071428.5714285,
+      "r": 0.015
+     },
+     {
+      "f": 2548555327.8688526,
+      "r": 2.752
+     }
+    ],
+    "farfield": [
+     {
+      "f": 2432500000.0,
+      "dmax_dbi": 6.809,
+      "dmax_pattern_dbi": 6.827,
+      "rad_efficiency": 0.9549,
+      "gain_dbi": 6.609,
+      "realized_gain_dbi": 6.608
+     }
+    ],
+    "dmax_dbi": 6.809,
+    "rad_efficiency": 0.9549,
+    "cells": 97152,
+    "min_cell": 0.381,
+    "max_cell": 4.86178,
+    "timesteps": 13860,
+    "wall_time_s": 7.67,
+    "converged": true
+   }
+  },
+  {
+   "file": "studies/patch-mesh-convergence/patch-antenna--mesh_div-30.json",
+   "params": {
+    "mesh_div": "30"
+   },
+   "summary": {
+    "bands": [
+     {
+      "f_lo": 2432500000.0,
+      "f_hi": 2470000000.0,
+      "f_center": 2452500000.0,
+      "s11_min_db": -36.009,
+      "edge_lo": false,
+      "edge_hi": false
+     }
+    ],
+    "first_resonance": {
+     "f": 2452500000.0,
+     "s11_db": -36.009,
+     "matched": true
+    },
+    "reactance_zeros": [
+     {
+      "f": 2550926966.292135,
+      "r": 4.145
+     }
+    ],
+    "farfield": [
+     {
+      "f": 2452500000.0,
+      "dmax_dbi": 6.788,
+      "dmax_pattern_dbi": 6.813,
+      "rad_efficiency": 0.949,
+      "gain_dbi": 6.561,
+      "realized_gain_dbi": 6.56
+     }
+    ],
+    "dmax_dbi": 6.788,
+    "rad_efficiency": 0.949,
+    "cells": 263568,
+    "min_cell": 0.381,
+    "max_cell": 3.26269,
+    "timesteps": 12628,
+    "wall_time_s": 11.79,
+    "converged": true
+   }
+  },
+  {
+   "file": "studies/patch-mesh-convergence/patch-antenna--mesh_div-40.json",
+   "params": {
+    "mesh_div": "40"
+   },
+   "summary": {
+    "bands": [
+     {
+      "f_lo": 2435000000.0,
+      "f_hi": 2472500000.0,
+      "f_center": 2455000000.0,
+      "s11_min_db": -34.52,
+      "edge_lo": false,
+      "edge_hi": false
+     }
+    ],
+    "first_resonance": {
+     "f": 2455000000.0,
+     "s11_db": -34.52,
+     "matched": true
+    },
+    "reactance_zeros": [
+     {
+      "f": 2546711409.395973,
+      "r": 4.618
+     }
+    ],
+    "farfield": [
+     {
+      "f": 2455000000.0,
+      "dmax_dbi": 6.786,
+      "dmax_pattern_dbi": 6.814,
+      "rad_efficiency": 0.9531,
+      "gain_dbi": 6.577,
+      "realized_gain_dbi": 6.575
+     }
+    ],
+    "dmax_dbi": 6.786,
+    "rad_efficiency": 0.9531,
+    "cells": 535920,
+    "min_cell": 0.381,
+    "max_cell": 2.48141,
+    "timesteps": 12384,
+    "wall_time_s": 13.22,
+    "converged": true
+   }
+  }
+ ],
+ "convergence": {
+  "tol_f_pct": 0.5,
+  "tol_d_db": 0.1,
+  "steps": [
+   {
+    "df_pct": 0.9336,
+    "d_dmax_db": 0.01,
+    "converged": false
+   },
+   {
+    "df_pct": 0.8222,
+    "d_dmax_db": -0.021,
+    "converged": false
+   },
+   {
+    "df_pct": 0.1019,
+    "d_dmax_db": -0.002,
+    "converged": true
+   }
+  ],
+  "converged": true
+ }
+}

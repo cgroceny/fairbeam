@@ -1,0 +1,7 @@
+/* General settings › Usage statistics (src/components/UsageStatsSettings.tsx) */
+.us-section { display: grid; gap: 10px; min-width: 0; }
+.us-section h3 { margin: 0; }
+.us-section .note { margin: 0; line-height: 1.5; }
+.us-choice { display: flex; flex-wrap: wrap; gap: 4px 18px; }
+.us-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.us-json { margin: 0; padding: 10px 12px; max-height: 240px; overflow: auto; border: 1px solid var(--al-border); border-radius: 6px; background: var(--al-surface-2); font-size: 12px; line-height: 1.45; white-space: pre; }

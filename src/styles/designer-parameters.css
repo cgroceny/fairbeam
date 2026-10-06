@@ -1,0 +1,41 @@
+.param-dock { min-width: 0; }
+.param-toolbar { padding: var(--al-space-1) var(--al-space-2); }
+.parameter-transfer-dialog { width: min(680px, calc(100vw - 32px)); height: auto; max-height: min(80vh, 720px); }
+.pt-body { padding: var(--al-space-2) var(--al-space-3); overflow: auto; }
+.pt-preview { max-height: 320px; overflow: auto; padding-left: 1.5rem; font-size: var(--al-text-sm); }
+.pt-preview li { padding-block: 2px; }
+/* inset like the toolbar above, so the header and the inputs do not touch the dock edge */
+.param-table { width: calc(100% - 2 * var(--al-space-2)); margin-inline: var(--al-space-2); table-layout: fixed; }
+.param-table th { position: sticky; top: 0; background: var(--al-surface); z-index: 2; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.param-table th:nth-child(1) { width: 14%; }
+.param-table th:nth-child(2) { width: 20%; }
+.param-table th:nth-child(3) { width: 18%; }
+.param-table th:nth-child(4) { width: 8%; }
+.param-table.param-ranges th:nth-child(5), .param-table.param-ranges th:nth-child(6) { width: 7%; }
+.param-table th:last-child { width: 88px; }
+.param-table td { position: relative; vertical-align: middle; padding: var(--al-space-0); }
+.param-table .dz-label { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+.param-table input { width: 100%; min-width: 0; height: var(--al-control-h-sm); padding: 0 var(--al-space-1); text-overflow: ellipsis; }
+.param-table .dz-field { min-width: 0; gap: 0; }
+.param-expression { display: flex; align-items: center; min-width: 0; }
+.param-expression .dz-field { flex: 1; }
+.param-derived { flex: 0 0 1ch; font-family: var(--al-font-mono); color: var(--al-text-2); }
+.param-table .num { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.param-table .dz-inline .dz-value, .param-errors { position: absolute; top: 100%; left: 0; z-index: 4; width: max-content; max-width: min(320px, 50vw); padding: var(--al-space-1); background: var(--al-surface); border: 1px solid var(--al-border); box-shadow: var(--al-shadow-pop); white-space: normal; overflow-wrap: anywhere; }
+.param-table .dz-inline:not(:focus-within):not(:hover) .dz-value, .param-table td:not(:focus-within):not(:hover) .param-errors { width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); padding: 0; }
+.param-table .dz-value:empty, .param-errors:empty { display: none; }
+.param-check { display: flex; align-items: start; gap: var(--al-space-1); color: var(--al-text-2); text-align: left; font-size: var(--al-text-xs); }
+.param-check-error { color: var(--al-critical); }
+.param-check svg { flex-shrink: 0; }
+.param-row-error { background: var(--al-critical-bg); }
+.param-actions { display: flex; align-items: center; gap: var(--al-space-0); }
+.param-label { font-size: var(--al-text-xs); }
+.param-label summary { cursor: pointer; list-style: none; }
+.param-label summary::-webkit-details-marker { display: none; }
+.param-label-set summary { color: var(--al-accent-text); } /* a label is set: the icon takes the accent */
+.param-label > div { position: absolute; right: 0; top: 100%; width: 200px; padding: var(--al-space-1); background: var(--al-surface); border: 1px solid var(--al-border); z-index: 4; }
+
+.param-create { display: flex; flex-wrap: wrap; align-items: center; gap: var(--al-space-1); padding-block: var(--al-space-1); font-size: var(--al-text-xs); }
+.param-create .rp-input { flex: 1 1 80px; width: 80px; min-width: 0; }
+.param-expression:has(.param-create) { align-items: start; }
+.param-limits-off { display: block; padding: 0 var(--al-space-1); font-size: var(--al-text-xs); color: var(--al-text-3); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

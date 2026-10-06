@@ -1,0 +1,12 @@
+Max. number of timesteps: 60000 ( --> 1 * Excitation signal length)
+Create FDTD engine (compressed SSE + multi-threading)
+Warning: Unused primitive (type: Polygon) detected in property: gasket!
+Warning: Unused primitive (type: Polygon) detected in property: gasket!
+Warning: Unused primitive (type: Polygon) detected in property: gasket!
+Warning: Unused primitive (type: Polygon) detected in property: gasket!
+Running FDTD engine... this may take a while... grab a cup of coffee?!?
+[@        4s] Timestep:         1615 || Speed:  811.2 MC/s (2.481e-03 s/TS) || Energy: ~3.16e-17 (-13.57dB)
+[@        8s] Timestep:         3264 || Speed:  829.1 MC/s (2.427e-03 s/TS) || Energy: ~2.28e-19 (-34.99dB)
+[@       12s] Timestep:         4930 || Speed:  834.3 MC/s (2.412e-03 s/TS) || Energy: ~3.69e-21 (-52.89dB)
+Time for 4930 iterations with 2012304.00 cells : 12.03 sec
+Speed: 824.79 MCells/s

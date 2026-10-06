@@ -1,0 +1,80 @@
+{
+  "schema": "fairbeam.design/1",
+  "model": {
+    "id": "sleeve-dipole-867",
+    "name": "UAV printed sleeve dipole (867 MHz)",
+    "description": "Printed sleeve dipole on a slim vertical FR-4 strip (1.6 mm, board in the xz plane, z up), with no ground plane, for a UAV with a non-metal (composite) fuselage. The upper arm is a copper strip; the lower arm is the sleeve, a pair of strips either side of the coax, joined to the coax braid by a bridge at their top. The coax is modelled as a strip (its outer conductor) from the bridge down to the bottom edge of the board, where the cable leaves. A 50 ohm lumped port across the feed gap g stands for the coax inner conductor jumping from the braid to the upper arm. Vertically polarised and omnidirectional in azimuth for the 863-870 MHz SRD / LoRa band, with the best match at about 877 MHz (1.1 % high) so that a glass-fibre radome pulls it into the band. See examples/designs/README.md in the fairbeam repository."
+  },
+  "params": [
+    {"key": "f0", "default": 0.867, "label": "Design frequency", "unit": "GHz", "min": 0.1, "max": 6},
+    {"key": "l_up", "default": 68.8, "label": "Upper arm length (above the feed gap)", "unit": "mm", "min": 20, "max": 300},
+    {"key": "l_sl", "default": 68.8, "label": "Sleeve length (below the feed gap)", "unit": "mm", "min": 20, "max": 300},
+    {"key": "w_up", "default": 10, "label": "Upper arm width", "unit": "mm", "min": 1, "max": 100},
+    {"key": "w_sl", "default": 16, "label": "Sleeve width (both strips and the coax slot)", "unit": "mm", "min": 6, "max": 100},
+    {"key": "g", "default": 2, "label": "Feed gap (sleeve top to upper arm)", "unit": "mm", "min": 0.5, "max": 10},
+    {"key": "wb", "default": 20, "label": "Board width", "unit": "mm", "min": 6, "max": 120},
+    {"key": "t", "default": 1.6, "label": "FR-4 thickness", "unit": "mm", "min": 0.2, "max": 5},
+    {"key": "w_f", "default": 2, "label": "Coax (feed line) width", "unit": "mm", "min": 0.5, "max": 10},
+    {"key": "s", "default": 1, "label": "Slot between the coax and each sleeve strip", "unit": "mm", "min": 0.3, "max": 10},
+    {"key": "hb", "default": 3, "label": "Height of the bridge at the sleeve top (braid solder pad)", "unit": "mm", "min": 0.5, "max": 20},
+    {"key": "m", "default": 4, "label": "Board margin above the arm and below the sleeve", "unit": "mm", "min": 0, "max": 50},
+    {"key": "lam", "expr": "wavelength(f0)", "label": "Free-space wavelength at f0", "unit": "mm"},
+    {"key": "L", "expr": "l_up + g + l_sl", "label": "Dipole length (arm tip to sleeve end)", "unit": "mm"},
+    {"key": "H", "expr": "L + 2 * m", "label": "Board height", "unit": "mm"},
+    {"key": "ws", "expr": "(w_sl - w_f) / 2 - s", "label": "Width of each sleeve strip", "unit": "mm"}
+  ],
+  "simulation": {
+    "f_min": "0.75",
+    "f_max": "1.0",
+    "boundaries": "PML_8",
+    "end_criteria_db": -60,
+    "max_timesteps": 150000
+  },
+  "materials": [
+    {"name": "copper", "kind": "metal"},
+    {"name": "fr4", "kind": "dielectric", "eps_r": 4.3, "tan_d": 0.02, "tan_d_freq": "f0"}
+  ],
+  "parts": [
+    {
+      "name": "board",
+      "material": "fr4",
+      "component": "antenna",
+      "primitives": [
+        {"kind": "box", "start": ["-wb/2", "-t", "-g/2 - l_sl - m"], "stop": ["wb/2", 0, "g/2 + l_up + m"]}
+      ]
+    },
+    {
+      "name": "upper_arm",
+      "material": "copper",
+      "component": "antenna",
+      "primitives": [
+        {"kind": "box", "start": ["-w_up/2", 0, "g/2"], "stop": ["w_up/2", 0, "g/2 + l_up"]}
+      ]
+    },
+    {
+      "name": "sleeve",
+      "material": "copper",
+      "component": "antenna",
+      "primitives": [
+        {"kind": "box", "start": ["-w_sl/2", 0, "-g/2 - hb"], "stop": ["w_sl/2", 0, "-g/2"]},
+        {"kind": "box", "start": ["-w_sl/2", 0, "-g/2 - l_sl"], "stop": ["-w_f/2 - s", 0, "-g/2 - hb"]},
+        {"kind": "box", "start": ["w_f/2 + s", 0, "-g/2 - l_sl"], "stop": ["w_sl/2", 0, "-g/2 - hb"]}
+      ]
+    },
+    {
+      "name": "coax",
+      "material": "copper",
+      "component": "feed",
+      "primitives": [
+        {"kind": "box", "start": ["-w_f/2", 0, "-g/2 - l_sl - m"], "stop": ["w_f/2", 0, "-g/2 - hb"]}
+      ]
+    }
+  ],
+  "ports": [
+    {"type": "lumped", "number": 1, "R": 50, "start": ["-w_f/2", 0, "-g/2"], "stop": ["w_f/2", 0, "g/2"], "direction": "z"}
+  ],
+  "resistors": [],
+  "mesh": {"mode": "auto", "cells_per_wavelength": 30},
+  "far_field": {"enabled": true, "frequencies": ["f0"]},
+  "monitors": {"currents": ["f0"], "efficiency": {"points": 21}}
+}

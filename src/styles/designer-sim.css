@@ -1,0 +1,285 @@
+/* Designer: run dialog, run/result dock, simulation settings dialog, mesh view and status bar
+   (src/designer/RunDialog.tsx, RunDock.tsx, SimSettingsDialog.tsx, StatusBar.tsx). */
+
+/* the center column of the designer: ribbon, 3D view, dock, status bar */
+.app .workspace.design-mode .center { grid-template-rows: auto minmax(0, 1fr) var(--al-dock-user-h, var(--al-designer-dock-h, clamp(120px, 30dvh, 260px))) auto; }
+.app .workspace.design-mode .dw-dock-wrap { overflow: hidden; display: flex; flex-direction: column; }
+
+/* ------------------------------------------------------------------ run dialog */
+.rd-dialog { width: min(600px, 100%); }
+.rd-body { display: grid; gap: var(--al-space-3); padding: var(--al-space-4) var(--al-pad-panel); overflow: auto; }
+.rd-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--al-space-3) var(--al-space-4); }
+/* one block per error, no list marker: a long title that wraps left the bullet beside its last line */
+.rd-errors { margin: var(--al-space-1) 0 0; padding: 0; list-style: none; display: grid; gap: var(--al-space-2); font-size: var(--al-text-sm); }
+.rd-errors li { display: grid; justify-items: start; gap: 2px; }
+.rd-errors .linklike { text-align: left; }
+.rd-where { display: flex; flex-wrap: wrap; align-items: center; gap: var(--al-space-2); }
+.rd-est { margin: 0; }
+.rd-est dd { text-align: left; }
+.rd-body .note { margin-top: 0; }
+@media (max-width: 560px) { .rd-grid { grid-template-columns: minmax(0, 1fr); } }
+
+/* ------------------------------------------------------------------ run / result dock */
+.rdk { display: flex; flex-direction: column; min-height: 0; height: 100%; }
+.rdk > .dz-checks { overflow: auto; }
+.rdk-bar-top { min-height: 34px; }
+.rdk-bar-top .tab { height: 34px; }
+.rdk-body { overflow: auto; }
+.rdk-body > .dz-checks { margin: 0; border: 0; border-radius: 0; }
+.rdk-body > .status-block { margin: var(--al-space-2) var(--al-space-3); }
+.rdk-checks-tab { display: inline-flex; align-items: center; gap: var(--al-space-1); }
+.rdk-count { min-width: 16px; padding: 0 4px; border-radius: 999px; font-size: var(--al-text-xs); line-height: 16px; text-align: center; font-family: var(--al-font-sans); font-variant-numeric: tabular-nums; }
+.rdk-count-bad { background: var(--al-critical-bg); color: var(--al-critical); }
+.rdk-count-warn { background: var(--al-warn-bg); color: var(--al-warn); }
+
+.rdk-run { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(220px, 1fr); gap: var(--al-space-3); height: 100%; min-height: 0; padding: var(--al-space-2) var(--al-space-3); }
+.rdk-run-main { display: flex; flex-direction: column; gap: var(--al-space-2); min-width: 0; overflow: auto; }
+.rdk-run-head { font-size: var(--al-text-sm); }
+.rdk-push { margin-left: auto; }
+.rdk-compare-control { position: relative; }
+.rdk-compare-popover { position: fixed; z-index: 30; display: grid; gap: var(--al-space-1); width: min(320px, calc(100vw - 16px)); max-height: min(280px, calc(100vh - 16px)); overflow: auto; padding: var(--al-space-2) var(--al-space-3); border: 1px solid var(--al-border); border-radius: var(--al-radius); background: var(--al-surface); box-shadow: var(--al-shadow-pop); font-size: var(--al-text-xs); }
+.rdk-compare-popover label { display: flex; gap: var(--al-space-2); align-items: center; padding: 2px 0; }
+.rdk-action-feedback { display: inline-flex; align-items: center; gap: var(--al-space-1); font-size: var(--al-text-xs); color: var(--al-text-2); }
+.rdk-action-feedback.is-problem { color: var(--al-warn); }
+.rdk-copy.copied { color: var(--al-good); }
+.rdk-run-chart { min-height: 0; min-width: 0; position: relative; }
+.rdk-phases { display: flex; flex-wrap: wrap; gap: 2px; margin: 0; padding: 0; list-style: none; font-size: var(--al-text-xs); }
+.rdk-phases li { padding: 1px 8px; border-radius: 999px; border: 1px solid var(--al-border); color: var(--al-text-3); }
+.rdk-phases li.rdk-ph-done { color: var(--al-text-2); background: var(--al-surface-2); }
+.rdk-phases li.rdk-ph-now { color: var(--al-accent-text); background: var(--al-accent-soft); border-color: var(--al-accent-line); }
+.rdk-progress { height: 4px; border-radius: 2px; background: var(--al-surface-3); overflow: hidden; }
+.rdk-progress > span { display: block; height: 100%; background: var(--al-accent-line); transition: width 0.4s ease; }
+.rdk-stats { display: flex; flex-wrap: wrap; gap: var(--al-space-1) var(--al-space-4); margin: 0; font-size: var(--al-text-xs); }
+.rdk-stats > div { display: grid; }
+.rdk-stats dt { color: var(--al-text-3); }
+.rdk-stats dd { margin: 0; font-size: var(--al-text-sm); }
+.rdk-stderr { max-height: 80px; margin-top: var(--al-space-1); white-space: pre-wrap; }
+.rdk-split { display: grid; grid-template-columns: minmax(0, 1fr) 220px; height: 100%; min-height: 0; }
+.rdk-side { align-content: start; padding: var(--al-space-2) var(--al-space-3); border-left: 1px solid var(--al-border); overflow: auto; }
+.rdk-side .freq-chips { margin-bottom: var(--al-space-2); }
+.rdk-key-note { margin: 0 0 var(--al-space-2); color: var(--al-text-3); font-size: var(--al-text-xs); }
+.rdk-key-note:empty { margin: 0; }
+/* the run table (RunDock.tsx CompareKey): one row per run with its short label and trace colour, the
+   differing parameters as columns; it scrolls in its own box, labels never wrap into tall cells */
+.rdk-runs-scroll { max-width: 100%; max-height: 220px; overflow: auto; border: 1px solid var(--al-border); border-radius: var(--al-radius-sm); scrollbar-width: thin; }
+/* one focus indicator: the outline here, not the global box-shadow ring on top of it */
+.rdk-runs-scroll:focus-visible { outline: 2px solid var(--al-focus); outline-offset: 1px; box-shadow: none; }
+.rdk-runs { border-collapse: collapse; font-size: var(--al-text-xs); font-variant-numeric: tabular-nums; }
+.rdk-runs th, .rdk-runs td { height: var(--al-control-h-sm); padding: 0 var(--al-space-2); border-bottom: 1px solid var(--al-border); text-align: right; white-space: nowrap; }
+.rdk-runs tbody tr:last-child > * { border-bottom: 0; }
+.rdk-runs thead th { position: sticky; top: 0; z-index: 1; background: var(--al-surface-2); color: var(--al-text-2); font-weight: 600; }
+.rdk-runs th:first-child { position: sticky; left: 0; z-index: 1; text-align: left; background: var(--al-surface); }
+.rdk-runs thead th:first-child { z-index: 2; background: var(--al-surface-2); }
+.rdk-runs tbody tr:hover > * { background: var(--al-surface-2); }
+.rdk-runs-on > th, .rdk-runs-on > td { color: var(--al-text); font-weight: 600; }
+.rdk-run-btn { display: inline-flex; align-items: center; gap: var(--al-space-1); min-width: 3ch; min-height: var(--al-control-h-sm); padding: 0 2px; border: 0; border-radius: var(--al-radius-sm); background: transparent; color: var(--al-accent-text); font: inherit; font-family: var(--al-font-mono); cursor: pointer; }
+.rdk-run-btn:hover { text-decoration: underline; }
+.rdk-run-btn:focus-visible { outline: 2px solid var(--al-focus); outline-offset: 1px; box-shadow: none; }
+.rdk-run-chip { flex: none; width: 10px; height: 10px; border-radius: 2px; }
+.rdk-run-chip-off { border: 1px solid var(--al-border-strong); background: transparent; }
+/* the dock's Runs tab (RunDock.tsx RunsTable): the table uses the dock's height; a row is the run to
+   show (its name), the label toggles it in the comparison */
+.rdk-runs-tab { position: absolute; inset: 0; display: flex; flex-direction: column; min-height: 0; padding: var(--al-space-2) var(--al-space-3) 0; }
+.rdk-runs-tab > .rdk-key-note { flex: none; margin-bottom: var(--al-space-1); }
+.rdk-runs-tab > .rdk-runs-scroll { flex: 0 1 auto; align-self: flex-start; min-height: 0; max-height: none; }
+.rdk-runs tbody tr { cursor: pointer; }
+.rdk-runs .rdk-runs-name, .rdk-runs thead th:nth-child(2) { text-align: left; }
+.rdk-run-name { max-width: 36ch; min-height: var(--al-control-h-sm); padding: 0 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; border: 0; border-radius: var(--al-radius-sm); background: transparent; color: var(--al-text); font: inherit; font-weight: inherit; text-align: left; cursor: pointer; }
+.rdk-runs .rdk-run-name { max-width: 24ch; vertical-align: middle; }
+.rdk-run-name:hover { text-decoration: underline; }
+.rdk-run-name:focus-visible { outline: 2px solid var(--al-focus); outline-offset: 1px; box-shadow: none; }
+/* the whole selected row is tinted, its sticky first cell too (a plain rule lost to `.rdk-runs th:first-child`) */
+.rdk-runs tbody tr.rdk-runs-current > * { background: var(--al-accent-soft); }
+.rdk-runs-current > th:first-child { box-shadow: inset 2px 0 0 var(--al-accent-line); }
+/* the dock's Queue tab (src/runner/RunQueue.tsx): the server's queued and running runs, whoever
+   started them, each with Follow and Stop / Remove from queue */
+.rq { position: absolute; inset: 0; display: flex; flex-direction: column; min-height: 0; padding: var(--al-space-2) var(--al-space-3); overflow: auto; }
+.rq-head { flex: none; justify-content: space-between; }
+.rq-note { margin: 0; }
+.rq-list { margin: var(--al-space-1) 0 0; }
+.rq .rp-hrow { padding-right: 0; }
+.rq-main { cursor: default; }
+.rq-main:hover { background: transparent; }
+.rq-followed .rq-main { background: var(--al-accent-soft); }
+.rdk-log { display: flex; flex-direction: column; height: 100%; min-height: 0; }
+.rdk-log-body { flex: 1; min-height: 0; }
+.rdk-log-link { padding: var(--al-space-1) var(--al-space-3); }
+
+/* PolarChart owns its compact layout; dock controls and neighbouring statistics keep their space. */
+.polar-chart { min-height: 144px; }
+.polar-chart .chart-legend { max-height: calc(100% - var(--al-space-4)); overflow: auto; pointer-events: auto; }
+.polar-chart .chart-legend:focus-visible { outline: 2px solid var(--al-focus); outline-offset: -2px; }
+.polar-chart .legend-item { min-width: 0; white-space: normal; overflow-wrap: anywhere; }
+.polar-chart .legend-key { flex: none; }
+.polar-chart .legend-note { white-space: normal; }
+.polar-chart-side .chart-legend { right: auto; width: clamp(144px, 32%, 240px); flex-direction: column; flex-wrap: nowrap; gap: var(--al-space-2); }
+.polar-chart-side .legend-note { order: -1; position: sticky; top: 0; z-index: 1; flex: none; margin-left: 0; padding-bottom: var(--al-space-1); background: var(--al-chart-surface); }
+
+/* ------------------------------------------------------------------ simulation settings dialog */
+.ss-dialog { width: min(820px, 100%); height: min(640px, 100%); }
+/* the hints under a field wrap instead of ending in an ellipsis: translated hints are longer */
+.ss-dialog .dz-value { white-space: normal; overflow-wrap: anywhere; }
+.ss-main { display: grid; grid-template-columns: 170px minmax(0, 1fr); min-height: 0; }
+.ss-nav { display: flex; flex-direction: column; gap: 2px; padding: var(--al-space-3) var(--al-space-2); border-right: 1px solid var(--al-border); background: var(--al-surface-2); }
+.ss-nav button {
+  display: flex; align-items: center; gap: var(--al-space-2); padding: 6px var(--al-space-2); border: 0; border-radius: var(--al-radius);
+  background: transparent; color: var(--al-text-2); text-align: left; cursor: pointer; font-size: var(--al-text-sm);
+}
+.ss-nav button:hover { background: var(--al-surface-3); color: var(--al-text); }
+.ss-nav button[aria-selected="true"] { background: var(--al-surface); color: var(--al-text); box-shadow: inset 2px 0 0 var(--al-accent-line); }
+.ss-nav button:focus-visible { outline: 2px solid var(--al-focus); outline-offset: -2px; }
+.ss-nav .ss-bad { margin-left: auto; color: var(--al-critical); }
+.ss-pane { display: grid; align-content: start; gap: var(--al-space-3); padding: var(--al-space-4) var(--al-pad-panel); overflow: auto; }
+.ss-auto-field { display: grid; gap: var(--al-space-1); padding: var(--al-space-2); border: 1px solid var(--al-border); border-radius: var(--al-radius); }
+.ss-auto-field input:disabled, .ss-auto-field select:disabled { opacity: 0.58; }
+.ss-pane h3 { font-size: var(--al-text-ui); font-weight: 600; }
+.ss-bounds { display: grid; grid-template-columns: 220px minmax(0, 1fr); gap: var(--al-space-4); align-items: start; }
+.ss-box { width: 100%; height: auto; }
+.ss-box .ss-face { cursor: pointer; stroke: var(--al-border-strong); stroke-width: 1; }
+.ss-box .ss-face:hover { stroke: var(--al-focus); stroke-width: 2; }
+.ss-box .ss-face.ss-on { stroke: var(--al-focus); stroke-width: 2.5; }
+.ss-box text { font-size: var(--al-text-xs); fill: var(--al-text); pointer-events: none; font-family: var(--al-font-mono); }
+.ss-box .ss-axis { stroke: var(--al-text-3); stroke-width: 1; }
+.ss-box .ss-axis-l { fill: var(--al-text-3); font-size: var(--al-text-xs); }
+.ss-legend { display: flex; flex-wrap: wrap; gap: var(--al-space-1) var(--al-space-3); font-size: var(--al-text-xs); color: var(--al-text-2); }
+.ss-swatch { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 4px; vertical-align: -1px; border: 1px solid var(--al-border-strong); }
+.ss-sides { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--al-space-2) var(--al-space-3); }
+.ss-list { display: flex; flex-wrap: wrap; gap: var(--al-space-1); }
+.ss-row { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--al-space-3); }
+@media (max-width: 700px) {
+  .ss-main { grid-template-columns: minmax(0, 1fr); }
+  .ss-nav { flex-direction: row; overflow-x: auto; border-right: 0; border-bottom: 1px solid var(--al-border); }
+  .ss-bounds { grid-template-columns: minmax(0, 1fr); }
+}
+
+/* ------------------------------------------------------------------ mesh view readout */
+.mv-panel {
+  position: absolute; right: var(--al-pad-hud); top: var(--al-pad-hud); z-index: 4; display: grid; gap: var(--al-space-2);
+  width: 270px; padding: var(--al-space-2) var(--al-space-3); border: 1px solid var(--al-border); border-radius: var(--al-radius-lg);
+  background: color-mix(in srgb, var(--al-surface) 92%, transparent); box-shadow: var(--al-shadow-pop); font-size: var(--al-text-xs);
+}
+.mv-head { display: flex; align-items: center; gap: var(--al-space-2); font-weight: 600; font-size: var(--al-text-sm); }
+.mv-head .icon-btn { margin-left: auto; }
+.mv-panel .kv { margin: 0; row-gap: 2px; }
+.mv-panel .kv dd.mono { font-size: var(--al-text-xs); }
+.mv-row { display: flex; align-items: center; gap: var(--al-space-2); }
+.mv-row input[type="range"] { flex: 1; min-width: 0; }
+.mv-panel .note { margin: 0; }
+
+/* ------------------------------------------------------------------ status bar */
+.sb {
+  display: flex; align-items: center; gap: 0; min-width: 0; height: 24px; overflow: hidden;
+  border-top: 1px solid var(--al-border); background: var(--al-surface-2); font-size: var(--al-text-xs); color: var(--al-text-2); white-space: nowrap;
+  container: sb / inline-size;
+}
+.sb-cursor { min-width: 210px; }
+.sb-item { flex: none; display: inline-flex; align-items: center; gap: 4px; height: 100%; padding: 0 var(--al-space-3); border-right: 1px solid var(--al-border); white-space: pre; }
+.sb-item:last-child { border-right: 0; }
+.sb-grow { flex: 1 1 0; min-width: 0; padding: 0; }
+.sb-btn { border: 0; border-right: 1px solid var(--al-border); border-radius: 0; background: transparent; color: inherit; font: inherit; cursor: pointer; }
+.sb-btn:hover { background: var(--al-surface-3); color: var(--al-text); }
+.sb-btn[aria-pressed="true"] { color: var(--al-accent-text); background: var(--al-accent-soft); }
+.sb-btn:focus-visible { outline: 2px solid var(--al-focus); outline-offset: -2px; }
+.sb-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--al-text-3); flex: none; }
+.sb-dot-online { background: var(--al-good); }
+.sb-dot-offline { background: var(--al-critical); }
+.sb-dot-checking { background: var(--al-warn); }
+.sb-bad { color: var(--al-critical); }
+.sb-warn { color: var(--al-warn); }
+.sb-good { color: var(--al-good); }
+.sb .mono { font-family: var(--al-font-sans); font-size: var(--al-text-xs); font-variant-numeric: tabular-nums; }
+/* mesh numbers that are not the current draft's: dimmed while the next preview is on its way,
+   flagged after a failed preview (they are then the last successful preview's, or unknown) */
+.sb-mesh[data-fresh="updating"] .mono, .rb-mesh-readout[data-fresh="updating"] { opacity: 0.6; }
+.sb-mesh[data-fresh="stale"], .sb-mesh[data-fresh="unknown"] { background: var(--al-warn-bg); color: var(--al-text); }
+.rb-mesh-readout[data-fresh="stale"], .rb-mesh-readout[data-fresh="unknown"] {
+  padding: 0 var(--al-space-1); border-radius: var(--al-radius-sm); background: var(--al-warn-bg); color: var(--al-text);
+}
+/* a failed preview stays in view at every width until a preview of the current draft succeeds */
+.sb-fail { background: var(--al-critical-bg); color: var(--al-text); }
+.sb-fail svg { color: var(--al-critical); }
+.sb-fail-retry { display: inline-flex; align-items: center; gap: 3px; margin-left: var(--al-space-1); text-decoration: underline; }
+.sb-fail-retry svg { color: inherit; }
+/* a local WCS is easy to forget: it stays in view at every width, one click returns to the global one */
+.sb-wcs-local { background: var(--al-warn-bg); color: var(--al-text); }
+.sb-wcs-local > svg { color: var(--al-warn); }
+.sb-wcs-reset { display: inline-flex; align-items: center; gap: 2px; margin-left: var(--al-space-1); text-decoration: underline; }
+/* narrow windows (125 % scaling on a 1080p screen, most laptops): the least important items go
+   first, so the checks and the server state stay visible instead of being clipped at the right */
+@container sb (max-width: 1080px) { .sb-t1 { display: none; } }
+@container sb (max-width: 880px) { .sb-t2 { display: none; } .sb-cursor { min-width: 0; } }
+@container sb (max-width: 700px) {
+  /* the server item keeps its dot; its text stays for screen readers and in the tooltip */
+  .sb-t3 { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+  .sb-fail-retry, .sb-wcs-reset { display: none; }
+}
+
+/* the designer's tree fills its side panel (the 40vh cap in designer.css is for the old drawer) */
+.dw-left .dz-tree { max-height: none; overflow: visible; }
+
+@media (min-width: 1041px) and (max-width: 1439px) {
+  .app .workspace.design-mode .center { --al-designer-dock-h: clamp(150px, 28dvh, 260px); }
+}
+
+/* the S-parameter picker (or Smith port) of the shown run, at the top of a result's side panel */
+.rdk-sp-tools { display: flex; flex-wrap: wrap; gap: var(--al-space-1); align-items: center; margin-bottom: var(--al-space-2); }
+.rdk-fill { height: 100%; min-height: 0; }
+
+/* ------------------------------------------------------------------ main area: document tabs */
+/* MainArea.tsx: a compact tab strip over the 3D stage; a result tab covers the stage (which stays
+   mounted) with a large plot and the run table under it */
+.dw-main { display: grid; grid-template-rows: auto minmax(0, 1fr); min-width: 0; min-height: 0; }
+.dw-main-bar { display: flex; align-items: stretch; gap: var(--al-space-3); min-width: 0; height: 32px; padding: 0 var(--al-space-2); border-bottom: 1px solid var(--al-border); background: var(--al-surface); }
+.dw-main-tabs { display: flex; align-items: flex-end; gap: 2px; min-width: 0; overflow-x: auto; scrollbar-width: none; }
+.dw-main-tabs::-webkit-scrollbar { display: none; }
+.dw-main-tab {
+  flex: none; display: inline-flex; align-items: center; gap: var(--al-space-1); height: 27px; padding: 0 var(--al-space-3);
+  border: 1px solid transparent; border-bottom: 0; border-radius: var(--al-radius-sm) var(--al-radius-sm) 0 0;
+  background: transparent; color: var(--al-text-3); font: inherit; font-size: var(--al-text-xs); font-weight: 600; letter-spacing: 0.03em; white-space: nowrap; cursor: pointer;
+}
+.dw-main-tab:hover { color: var(--al-text); background: var(--al-surface-2); }
+.dw-main-tab[aria-selected="true"] { color: var(--al-text); background: var(--al-surface-2); border-color: var(--al-border); box-shadow: inset 0 2px 0 var(--al-accent-line); }
+.dw-main-tab:focus-visible { outline: 2px solid var(--al-focus); outline-offset: -2px; }
+.dw-main-tab-x { display: inline-flex; align-items: center; justify-content: center; width: 16px; height: 16px; margin-right: calc(-1 * var(--al-space-1)); border-radius: var(--al-radius-sm); color: var(--al-text-3); }
+.dw-main-tab-x:hover { background: var(--al-surface-3); color: var(--al-text); }
+.dw-main-body { position: relative; display: grid; min-width: 0; min-height: 0; }
+.dw-main-body > .stage { grid-area: 1 / 1; }
+.dw-result { grid-area: 1 / 1; z-index: 5; display: flex; flex-direction: column; min-width: 0; min-height: 0; background: var(--al-surface); }
+.dw-result:focus { outline: none; }
+.dw-result:focus-visible { outline: 2px solid var(--al-focus); outline-offset: -2px; }
+.dw-result > .status-block { margin: var(--al-space-2) var(--al-space-3); }
+.dw-result .panel-empty { margin: auto; max-width: 52ch; text-align: center; }
+.dw-result-note { margin: 0; padding: var(--al-space-1) var(--al-space-3); font-size: var(--al-text-xs); color: var(--al-text-3); }
+.dw-result-plot { position: relative; flex: 1 1 auto; min-height: 200px; display: grid; grid-template: minmax(0, 1fr) / minmax(0, 1fr); }
+.dw-result-plot > .panel-empty { position: absolute; inset: 0; display: grid; place-items: center; }
+/* the side panel of a result (S-parameter picker, band readout) is wider here; a result without one
+   (or with an empty one) gives the plot the whole width */
+.dw-result .rdk-split { grid-template-columns: minmax(0, 1fr) 240px; }
+.dw-result .rdk-side:empty { display: none; }
+.dw-result .rdk-split:not(:has(> .rdk-side:not(:empty))) { grid-template-columns: minmax(0, 1fr); }
+/* the toolbar row over the plot (ResultViews.tsx ResultToolbar): the dock's result tools, compact */
+.dw-result-bar {
+  flex: none; display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: var(--al-space-1) var(--al-space-2);
+  min-height: 32px; padding: 2px var(--al-space-2) 2px var(--al-space-3); border-bottom: 1px solid var(--al-border); background: var(--al-surface);
+}
+.dw-result-bar > .rdk-shown { margin-right: auto; max-width: 40ch; flex: 0 1 auto; min-width: 8ch; }
+.dw-result-bar > .btn, .dw-result-bar > select { flex: none; }
+/* a narrow result panel (ResultViews.tsx sets .is-narrow below 1000 px): the labelled buttons fold to
+   their icon (the text stays in the button at font-size 0, so names and tooltips are unchanged) so the
+   bar fits one row */
+.dw-result-bar.is-narrow > button.btn { width: var(--al-control-h-sm); padding: 0; gap: 0; font-size: 0; }
+.dw-result-bar.is-narrow .btn-label { display: none; }
+.dw-result-bar.is-narrow .btn:has(> .btn-label) { width: auto; padding: 0 var(--al-space-2); }
+/* result side panels: a labelled control (the far-field quantity), a short note, a group heading */
+.rdk-field { display: grid; gap: 2px; margin: 0 0 var(--al-space-2); font-size: var(--al-text-xs); color: var(--al-text-3); }
+.rdk-field select { width: 100%; }
+.rdk-note { margin: var(--al-space-2) 0 0; font-size: var(--al-text-xs); line-height: 1.4; color: var(--al-text-3); }
+.rdk-note.cell-warn { font-weight: 500; }
+.rdk-side .seg + .kv { margin-top: var(--al-space-2); }
+.rdk-side .kv + .kv { margin-top: var(--al-space-2); }
+.kv dt.rdk-kv-head { color: var(--al-text); font-weight: 600; grid-column: 1 / -1; }
+.kv dt.rdk-kv-head + dd:empty { display: none; }
+
+/* Simulation settings › Monitors › Field planes (FieldPlanesEditor.tsx): one bordered row per plane */
+.ss-field-plane { display: grid; gap: var(--al-space-2); margin: 0; padding: var(--al-space-2) var(--al-space-3); border: 1px solid var(--al-border); border-radius: var(--al-radius); min-width: 0; }
+.ss-field-plane > .btn { justify-self: start; }

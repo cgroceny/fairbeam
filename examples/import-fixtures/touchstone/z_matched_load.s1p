@@ -1,0 +1,6 @@
+! Z-parameter one-port, Touchstone v1 (Z is normalised to R): a matched 50 ohm load (S11 = 0),
+! then 100 ohm (S11 = 1/3), then 25 - j25 ohm (S11 = -0.2 - j0.4)
+# GHz Z RI R 50
+1.0  1.0  0.0
+2.0  2.0  0.0
+3.0  0.5 -0.5

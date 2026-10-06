@@ -1,0 +1,17 @@
+import assert from 'node:assert/strict';
+import {pickProjectRuns} from '../src/designer/compareSelection.ts';
+const local=new Set(['a','b']);
+const pick=(current,file,additive=true)=>pickProjectRuns(current,file,additive,local);
+assert.deepEqual(pick([],'a').files,['a']);
+assert.equal(pick([],'foreign').accepted,false);
+assert.deepEqual(pick(['a'],'foreign').files,['a','foreign']);
+assert.deepEqual(pick(['a','foreign'],'a').files,['a','foreign'],'removing the only local primary cannot promote an overlay');
+assert.deepEqual(pick(['a','foreign','b'],'a').files,['b','foreign'],'another local run can become primary');
+assert.deepEqual(pick(['a','foreign'],'foreign').files,['a']);
+assert.equal(pick(['a'],'foreign',false).accepted,false,'foreign plain click cannot replace the primary');
+assert.deepEqual(pick(['a','foreign'],'b',false).files,['b','foreign'],'an intentional local primary switch keeps foreign overlays');
+assert.deepEqual(pick(['foreign','a'],'b').accepted,false,'refuse an invalid foreign primary');
+const full=['a',...Array.from({length:7},(_,i)=>`foreign${i}`)];
+assert.equal(pick(full,'extra').full,true);assert.deepEqual(pick(full,'extra').files,full);
+assert.deepEqual(pick(full,'foreign3').files,full.filter(file=>file!=='foreign3'));
+console.log('Cross-project overlay selection: local primary, promotion, removal and eight-result limit pass');

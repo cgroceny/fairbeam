@@ -1,0 +1,419 @@
+diff --git a/FDTD/extensions/engine_ext_upml.cpp b/FDTD/extensions/engine_ext_upml.cpp
+index b35cb2c..f242190 100644
+--- a/FDTD/extensions/engine_ext_upml.cpp
++++ b/FDTD/extensions/engine_ext_upml.cpp
+@@ -19,8 +19,81 @@
+ #include "operator_ext_upml.h"
+ #include "FDTD/engine.h"
+ #include "FDTD/engine_sse.h"
++#include "FDTD/engine_sse_compressed.h"
++#include "FDTD/engine_multithread.h"
++#include "engine_ext_upml_sse_cursor.h"
+ #include "tools/useful.h"
+ 
++#include <cstdlib>
++#include <cstdint>
++#include <cstring>
++#include <iostream>
++#include <mutex>
++#include <typeinfo>
++
++namespace
++{
++	const bool g_UpmlSSECursorRequested = []()
++	{
++		const char* setting = std::getenv("OPENEMS_EXPERIMENTAL_CPU_UPML_CURSOR");
++		return setting && std::strcmp(setting, "cursor") == 0;
++	}();
++	std::once_flag g_UpmlSSECursorLogFlag;
++
++	bool UpmlSSECursorOptIn()
++	{
++		if (g_UpmlSSECursorRequested)
++		{
++			std::call_once(g_UpmlSSECursorLogFlag, []()
++			{
++				std::clog << "Experimental UPML SSE cursor enabled for exact Engine_sse, Engine_SSE_Compressed, or Engine_Multithread; numerical parity remains unvalidated." << std::endl;
++			});
++		}
++		return g_UpmlSSECursorRequested;
++	}
++
++	template <typename EngType>
++	bool UseUpmlSSECursor(EngType*, unsigned int, unsigned int)
++	{
++		return false;
++	}
++
++	template <>
++	bool UseUpmlSSECursor<Engine_sse>(Engine_sse* eng, unsigned int startZ, unsigned int zCount)
++	{
++		if (!g_UpmlSSECursorRequested)
++			return false;
++		const std::type_info& dynamicType = typeid(*eng);
++		if (!IsExactUpmlSSECursorEngineType<Engine_sse, Engine_SSE_Compressed, Engine_Multithread>(dynamicType))
++			return false;
++		if (!eng->f4_volt_ptr || !eng->f4_curr_ptr)
++			return false;
++		if (eng->f4_volt_ptr->extent(0) != 3 || eng->f4_curr_ptr->extent(0) != 3 ||
++			eng->f4_volt_ptr->extent(3) == 0 ||
++			eng->f4_curr_ptr->extent(3) != eng->f4_volt_ptr->extent(3))
++			return false;
++		if (static_cast<std::uint64_t>(startZ) + zCount >
++			static_cast<std::uint64_t>(eng->f4_volt_ptr->extent(3)) * 4)
++			return false;
++		return UpmlSSECursorOptIn();
++	}
++
++	void BeginUpmlSSECursorRow(
++		Engine_Ext_UPML_SSE_Cursor<f4vector>& cursor,
++		ArrayLib::ArrayENG<f4vector>& field,
++		unsigned int x,
++		unsigned int y,
++		unsigned int startVector,
++		unsigned int startLane
++	)
++	{
++		const unsigned int offset = field.linearIndex({0, x, y, startVector});
++		cursor.BeginRow(
++			field.data(), offset, field.extent(3), field.stride(0), field.stride(3), startVector, startLane
++		);
++	}
++}
++
+ Engine_Ext_UPML::Engine_Ext_UPML(Operator_Ext_UPML* op_ext) : Engine_Extension(op_ext)
+ {
+ 	m_Op_UPML = op_ext;
+@@ -49,6 +122,180 @@ void Engine_Ext_UPML::SetNumberOfThreads(int nrThread)
+ 		m_start.at(n) = m_start.at(n-1) + m_numX.at(n-1);
+ }
+ 
++void Engine_Ext_UPML::DoPreVoltageUpdatesSSECursor(Engine_sse* eng, int threadID)
++{
++	if (m_Eng==NULL || threadID>=m_NrThreads)
++		return;
++
++	ArrayLib::ArrayENG<f4vector>& f4_volt = *eng->f4_volt_ptr;
++	const unsigned int startZ = m_Op_UPML->m_StartPos[2];
++	const unsigned int vectorCount = f4_volt.extent(3);
++	const unsigned int startVector = startZ % vectorCount;
++	const unsigned int startLane = startZ / vectorCount;
++	Engine_Ext_UPML_SSE_Cursor<f4vector> voltCursor;
++	unsigned int pos[2];
++	unsigned int loc_pos[3];
++	FDTD_FLOAT f_help;
++
++	for (unsigned int lineX=0; lineX<m_numX.at(threadID); ++lineX)
++	{
++		loc_pos[0]=lineX+m_start.at(threadID);
++		pos[0] = loc_pos[0] + m_Op_UPML->m_StartPos[0];
++		for (loc_pos[1]=0; loc_pos[1]<m_Op_UPML->m_numLines[1]; ++loc_pos[1])
++		{
++			pos[1] = loc_pos[1] + m_Op_UPML->m_StartPos[1];
++			BeginUpmlSSECursorRow(voltCursor, f4_volt, pos[0], pos[1], startVector, startLane);
++			for (loc_pos[2]=0; loc_pos[2]<m_Op_UPML->m_numLines[2]; ++loc_pos[2])
++			{
++				f_help = m_Op_UPML->vv(0, loc_pos[0], loc_pos[1], loc_pos[2])   * voltCursor.Component(0)
++						 - m_Op_UPML->vvfo(0, loc_pos[0], loc_pos[1], loc_pos[2]) * volt_flux(0, loc_pos[0], loc_pos[1], loc_pos[2]);
++				voltCursor.Component(0) = volt_flux(0, loc_pos[0], loc_pos[1], loc_pos[2]);
++				volt_flux(0, loc_pos[0], loc_pos[1], loc_pos[2]) = f_help;
++
++				f_help = m_Op_UPML->vv(1, loc_pos[0], loc_pos[1], loc_pos[2])   * voltCursor.Component(1)
++						 - m_Op_UPML->vvfo(1, loc_pos[0], loc_pos[1], loc_pos[2]) * volt_flux(1, loc_pos[0], loc_pos[1], loc_pos[2]);
++				voltCursor.Component(1) = volt_flux(1, loc_pos[0], loc_pos[1], loc_pos[2]);
++				volt_flux(1, loc_pos[0], loc_pos[1], loc_pos[2]) = f_help;
++
++				f_help = m_Op_UPML->vv(2, loc_pos[0], loc_pos[1], loc_pos[2])   * voltCursor.Component(2)
++						 - m_Op_UPML->vvfo(2, loc_pos[0], loc_pos[1], loc_pos[2]) * volt_flux(2, loc_pos[0], loc_pos[1], loc_pos[2]);
++				voltCursor.Component(2) = volt_flux(2, loc_pos[0], loc_pos[1], loc_pos[2]);
++				volt_flux(2, loc_pos[0], loc_pos[1], loc_pos[2]) = f_help;
++				voltCursor.Advance();
++			}
++		}
++	}
++}
++
++void Engine_Ext_UPML::DoPostVoltageUpdatesSSECursor(Engine_sse* eng, int threadID)
++{
++	if (m_Eng==NULL || threadID>=m_NrThreads)
++		return;
++
++	ArrayLib::ArrayENG<f4vector>& f4_volt = *eng->f4_volt_ptr;
++	const unsigned int startZ = m_Op_UPML->m_StartPos[2];
++	const unsigned int vectorCount = f4_volt.extent(3);
++	const unsigned int startVector = startZ % vectorCount;
++	const unsigned int startLane = startZ / vectorCount;
++	Engine_Ext_UPML_SSE_Cursor<f4vector> voltCursor;
++	unsigned int pos[2];
++	unsigned int loc_pos[3];
++	FDTD_FLOAT f_help;
++
++	for (unsigned int lineX=0; lineX<m_numX.at(threadID); ++lineX)
++	{
++		loc_pos[0]=lineX+m_start.at(threadID);
++		pos[0] = loc_pos[0] + m_Op_UPML->m_StartPos[0];
++		for (loc_pos[1]=0; loc_pos[1]<m_Op_UPML->m_numLines[1]; ++loc_pos[1])
++		{
++			pos[1] = loc_pos[1] + m_Op_UPML->m_StartPos[1];
++			BeginUpmlSSECursorRow(voltCursor, f4_volt, pos[0], pos[1], startVector, startLane);
++			for (loc_pos[2]=0; loc_pos[2]<m_Op_UPML->m_numLines[2]; ++loc_pos[2])
++			{
++				f_help = volt_flux(0, loc_pos[0], loc_pos[1], loc_pos[2]);
++				volt_flux(0, loc_pos[0], loc_pos[1], loc_pos[2]) = voltCursor.Component(0);
++				voltCursor.Component(0) = f_help + m_Op_UPML->vvfn(0, loc_pos[0], loc_pos[1], loc_pos[2]) * volt_flux(0, loc_pos[0], loc_pos[1], loc_pos[2]);
++
++				f_help = volt_flux(1, loc_pos[0], loc_pos[1], loc_pos[2]);
++				volt_flux(1, loc_pos[0], loc_pos[1], loc_pos[2]) = voltCursor.Component(1);
++				voltCursor.Component(1) = f_help + m_Op_UPML->vvfn(1, loc_pos[0], loc_pos[1], loc_pos[2]) * volt_flux(1, loc_pos[0], loc_pos[1], loc_pos[2]);
++
++				f_help = volt_flux(2, loc_pos[0], loc_pos[1], loc_pos[2]);
++				volt_flux(2, loc_pos[0], loc_pos[1], loc_pos[2]) = voltCursor.Component(2);
++				voltCursor.Component(2) = f_help + m_Op_UPML->vvfn(2, loc_pos[0], loc_pos[1], loc_pos[2]) * volt_flux(2, loc_pos[0], loc_pos[1], loc_pos[2]);
++				voltCursor.Advance();
++			}
++		}
++	}
++}
++
++void Engine_Ext_UPML::DoPreCurrentUpdatesSSECursor(Engine_sse* eng, int threadID)
++{
++	if (m_Eng==NULL || threadID>=m_NrThreads)
++		return;
++
++	ArrayLib::ArrayENG<f4vector>& f4_curr = *eng->f4_curr_ptr;
++	const unsigned int startZ = m_Op_UPML->m_StartPos[2];
++	const unsigned int vectorCount = f4_curr.extent(3);
++	const unsigned int startVector = startZ % vectorCount;
++	const unsigned int startLane = startZ / vectorCount;
++	Engine_Ext_UPML_SSE_Cursor<f4vector> currCursor;
++	unsigned int pos[2];
++	unsigned int loc_pos[3];
++	FDTD_FLOAT f_help;
++
++	for (unsigned int lineX=0; lineX<m_numX.at(threadID); ++lineX)
++	{
++		loc_pos[0]=lineX+m_start.at(threadID);
++		pos[0] = loc_pos[0] + m_Op_UPML->m_StartPos[0];
++		for (loc_pos[1]=0; loc_pos[1]<m_Op_UPML->m_numLines[1]; ++loc_pos[1])
++		{
++			pos[1] = loc_pos[1] + m_Op_UPML->m_StartPos[1];
++			BeginUpmlSSECursorRow(currCursor, f4_curr, pos[0], pos[1], startVector, startLane);
++			for (loc_pos[2]=0; loc_pos[2]<m_Op_UPML->m_numLines[2]; ++loc_pos[2])
++			{
++				f_help = m_Op_UPML->ii(0, loc_pos[0], loc_pos[1], loc_pos[2])   * currCursor.Component(0)
++						 - m_Op_UPML->iifo(0, loc_pos[0], loc_pos[1], loc_pos[2]) * curr_flux(0, loc_pos[0], loc_pos[1], loc_pos[2]);
++				currCursor.Component(0) = curr_flux(0, loc_pos[0], loc_pos[1], loc_pos[2]);
++				curr_flux(0, loc_pos[0], loc_pos[1], loc_pos[2]) = f_help;
++
++				f_help = m_Op_UPML->ii(1, loc_pos[0], loc_pos[1], loc_pos[2])   * currCursor.Component(1)
++						 - m_Op_UPML->iifo(1, loc_pos[0], loc_pos[1], loc_pos[2]) * curr_flux(1, loc_pos[0], loc_pos[1], loc_pos[2]);
++				currCursor.Component(1) = curr_flux(1, loc_pos[0], loc_pos[1], loc_pos[2]);
++				curr_flux(1, loc_pos[0], loc_pos[1], loc_pos[2]) = f_help;
++
++				f_help = m_Op_UPML->ii(2, loc_pos[0], loc_pos[1], loc_pos[2])   * currCursor.Component(2)
++						 - m_Op_UPML->iifo(2, loc_pos[0], loc_pos[1], loc_pos[2]) * curr_flux(2, loc_pos[0], loc_pos[1], loc_pos[2]);
++				currCursor.Component(2) = curr_flux(2, loc_pos[0], loc_pos[1], loc_pos[2]);
++				curr_flux(2, loc_pos[0], loc_pos[1], loc_pos[2]) = f_help;
++				currCursor.Advance();
++			}
++		}
++	}
++}
++
++void Engine_Ext_UPML::DoPostCurrentUpdatesSSECursor(Engine_sse* eng, int threadID)
++{
++	if (m_Eng==NULL || threadID>=m_NrThreads)
++		return;
++
++	ArrayLib::ArrayENG<f4vector>& f4_curr = *eng->f4_curr_ptr;
++	const unsigned int startZ = m_Op_UPML->m_StartPos[2];
++	const unsigned int vectorCount = f4_curr.extent(3);
++	const unsigned int startVector = startZ % vectorCount;
++	const unsigned int startLane = startZ / vectorCount;
++	Engine_Ext_UPML_SSE_Cursor<f4vector> currCursor;
++	unsigned int pos[2];
++	unsigned int loc_pos[3];
++	FDTD_FLOAT f_help;
++
++	for (unsigned int lineX=0; lineX<m_numX.at(threadID); ++lineX)
++	{
++		loc_pos[0]=lineX+m_start.at(threadID);
++		pos[0] = loc_pos[0] + m_Op_UPML->m_StartPos[0];
++		for (loc_pos[1]=0; loc_pos[1]<m_Op_UPML->m_numLines[1]; ++loc_pos[1])
++		{
++			pos[1] = loc_pos[1] + m_Op_UPML->m_StartPos[1];
++			BeginUpmlSSECursorRow(currCursor, f4_curr, pos[0], pos[1], startVector, startLane);
++			for (loc_pos[2]=0; loc_pos[2]<m_Op_UPML->m_numLines[2]; ++loc_pos[2])
++			{
++				f_help = curr_flux(0, loc_pos[0], loc_pos[1], loc_pos[2]);
++				curr_flux(0, loc_pos[0], loc_pos[1], loc_pos[2]) = currCursor.Component(0);
++				currCursor.Component(0) = f_help + m_Op_UPML->iifn(0, loc_pos[0], loc_pos[1], loc_pos[2]) * curr_flux(0, loc_pos[0], loc_pos[1], loc_pos[2]);
++
++				f_help = curr_flux(1, loc_pos[0], loc_pos[1], loc_pos[2]);
++				curr_flux(1, loc_pos[0], loc_pos[1], loc_pos[2]) = currCursor.Component(1);
++				currCursor.Component(1) = f_help + m_Op_UPML->iifn(1, loc_pos[0], loc_pos[1], loc_pos[2]) * curr_flux(1, loc_pos[0], loc_pos[1], loc_pos[2]);
++
++				f_help = curr_flux(2, loc_pos[0], loc_pos[1], loc_pos[2]);
++				curr_flux(2, loc_pos[0], loc_pos[1], loc_pos[2]) = currCursor.Component(2);
++				currCursor.Component(2) = f_help + m_Op_UPML->iifn(2, loc_pos[0], loc_pos[1], loc_pos[2]) * curr_flux(2, loc_pos[0], loc_pos[1], loc_pos[2]);
++				currCursor.Advance();
++			}
++		}
++	}
++}
++
+ template <typename EngType>
+ void Engine_Ext_UPML::DoPreVoltageUpdatesImpl(EngType* eng, int threadID)
+ {
+@@ -57,6 +304,11 @@ void Engine_Ext_UPML::DoPreVoltageUpdatesImpl(EngType* eng, int threadID)
+ 
+ 	if (threadID>=m_NrThreads)
+ 		return;
++	if (UseUpmlSSECursor(eng, m_Op_UPML->m_StartPos[2], m_Op_UPML->m_numLines[2]))
++	{
++		DoPreVoltageUpdatesSSECursor(static_cast<Engine_sse*>(eng), threadID);
++		return;
++	}
+ 
+ 	unsigned int pos[3];
+ 	unsigned int loc_pos[3];
+@@ -104,6 +356,11 @@ void Engine_Ext_UPML::DoPostVoltageUpdatesImpl(EngType* eng, int threadID)
+ 		return;
+ 	if (threadID>=m_NrThreads)
+ 		return;
++	if (UseUpmlSSECursor(eng, m_Op_UPML->m_StartPos[2], m_Op_UPML->m_numLines[2]))
++	{
++		DoPostVoltageUpdatesSSECursor(static_cast<Engine_sse*>(eng), threadID);
++		return;
++	}
+ 
+ 	unsigned int pos[3];
+ 	unsigned int loc_pos[3];
+@@ -148,6 +405,11 @@ void Engine_Ext_UPML::DoPreCurrentUpdatesImpl(EngType* eng, int threadID)
+ 		return;
+ 	if (threadID>=m_NrThreads)
+ 		return;
++	if (UseUpmlSSECursor(eng, m_Op_UPML->m_StartPos[2], m_Op_UPML->m_numLines[2]))
++	{
++		DoPreCurrentUpdatesSSECursor(static_cast<Engine_sse*>(eng), threadID);
++		return;
++	}
+ 
+ 	unsigned int pos[3];
+ 	unsigned int loc_pos[3];
+@@ -196,6 +458,11 @@ void Engine_Ext_UPML::DoPostCurrentUpdatesImpl(EngType* eng, int threadID)
+ 		return;
+ 	if (threadID>=m_NrThreads)
+ 		return;
++	if (UseUpmlSSECursor(eng, m_Op_UPML->m_StartPos[2], m_Op_UPML->m_numLines[2]))
++	{
++		DoPostCurrentUpdatesSSECursor(static_cast<Engine_sse*>(eng), threadID);
++		return;
++	}
+ 
+ 	unsigned int pos[3];
+ 	unsigned int loc_pos[3];
+diff --git a/FDTD/extensions/engine_ext_upml.h b/FDTD/extensions/engine_ext_upml.h
+index 1104a2d..6d63944 100644
+--- a/FDTD/extensions/engine_ext_upml.h
++++ b/FDTD/extensions/engine_ext_upml.h
+@@ -46,15 +46,19 @@ public:
+ protected:
+ 	template <typename EngType>
+ 	void DoPreVoltageUpdatesImpl(EngType* eng, int threadID);
++	void DoPreVoltageUpdatesSSECursor(Engine_sse* eng, int threadID);
+ 
+ 	template <typename EngType>
+ 	void DoPostVoltageUpdatesImpl(EngType* eng, int threadID);
++	void DoPostVoltageUpdatesSSECursor(Engine_sse* eng, int threadID);
+ 
+ 	template <typename EngType>
+ 	void DoPreCurrentUpdatesImpl(EngType* eng, int threadID);
++	void DoPreCurrentUpdatesSSECursor(Engine_sse* eng, int threadID);
+ 
+ 	template <typename EngType>
+ 	void DoPostCurrentUpdatesImpl(EngType* eng, int threadID);
++	void DoPostCurrentUpdatesSSECursor(Engine_sse* eng, int threadID);
+ 
+ 	Operator_Ext_UPML* m_Op_UPML;
+ 
+diff --git a/FDTD/extensions/engine_ext_upml_sse_cursor.h b/FDTD/extensions/engine_ext_upml_sse_cursor.h
+new file mode 100644
+index 0000000..c296894
+--- /dev/null
++++ b/FDTD/extensions/engine_ext_upml_sse_cursor.h
+@@ -0,0 +1,74 @@
++/*
++ * Exact dynamic-type gate and experimental scalar cursor for the SSE UPML access map.
++ * The type gate admits only exact SSE, compressed SSE, and multithread engine types.
++ * The cursor caller supplies the exact start vector offset and strides from ArrayENG;
++ * this helper only advances that vector/lane cursor along physical z cells.
++ */
++#ifndef ENGINE_EXT_UPML_SSE_CURSOR_H
++#define ENGINE_EXT_UPML_SSE_CURSOR_H
++
++#include <cstddef>
++#include <typeinfo>
++
++template <typename EngineSSE, typename EngineSSECompressed, typename EngineMultiThread>
++inline bool IsExactUpmlSSECursorEngineType(const std::type_info& dynamicType)
++{
++	return dynamicType == typeid(EngineSSE) ||
++		dynamicType == typeid(EngineSSECompressed) ||
++		dynamicType == typeid(EngineMultiThread);
++}
++
++template <typename Vector4>
++class Engine_Ext_UPML_SSE_Cursor
++{
++public:
++	void BeginRow(
++		Vector4* data,
++		std::size_t vectorOffset,
++		std::size_t vectorCount,
++		std::size_t componentStride,
++		std::size_t vectorStride,
++		std::size_t vectorIndex,
++		std::size_t lane
++	)
++	{
++		m_data = data;
++		m_vectorOffset = vectorOffset;
++		m_vectorCount = vectorCount;
++		m_componentStride = componentStride;
++		m_vectorStride = vectorStride;
++		m_vectorIndex = vectorIndex;
++		m_lane = lane;
++	}
++
++	float& Component(std::size_t component) const
++	{
++		return m_data[m_vectorOffset + component * m_componentStride].f[m_lane];
++	}
++
++	void Advance()
++	{
++		++m_vectorIndex;
++		if (m_vectorIndex == m_vectorCount)
++		{
++			m_vectorIndex = 0;
++			m_vectorOffset -= (m_vectorCount - 1) * m_vectorStride;
++			++m_lane;
++		}
++		else
++		{
++			m_vectorOffset += m_vectorStride;
++		}
++	}
++
++private:
++	Vector4* m_data = NULL;
++	std::size_t m_vectorOffset = 0;
++	std::size_t m_vectorCount = 0;
++	std::size_t m_componentStride = 0;
++	std::size_t m_vectorStride = 0;
++	std::size_t m_vectorIndex = 0;
++	std::size_t m_lane = 0;
++};
++
++#endif // ENGINE_EXT_UPML_SSE_CURSOR_H

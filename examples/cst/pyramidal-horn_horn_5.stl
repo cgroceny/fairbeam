@@ -1,0 +1,86 @@
+solid horn_5
+  facet normal 0 -0.8855618929 0.4645214029
+    outer loop
+      vertex -13.43 5.08 0
+      vertex 13.43 5.08 0
+      vertex 45.112404 32.268963 51.832939
+    endloop
+  endfacet
+  facet normal 0 -0.8855618929 0.4645214029
+    outer loop
+      vertex -13.43 5.08 0
+      vertex 45.112404 32.268963 51.832939
+      vertex -45.112404 32.268963 51.832939
+    endloop
+  endfacet
+  facet normal 0 0.8855618929 -0.4645214029
+    outer loop
+      vertex -13.43 7.08 0
+      vertex 45.112404 34.268963 51.832939
+      vertex 13.43 7.08 0
+    endloop
+  endfacet
+  facet normal 0 0.8855618929 -0.4645214029
+    outer loop
+      vertex -13.43 7.08 0
+      vertex -45.112404 34.268963 51.832939
+      vertex 45.112404 34.268963 51.832939
+    endloop
+  endfacet
+  facet normal 0 0 -1
+    outer loop
+      vertex -13.43 5.08 0
+      vertex 13.43 7.08 0
+      vertex 13.43 5.08 0
+    endloop
+  endfacet
+  facet normal 0 0 -1
+    outer loop
+      vertex -13.43 5.08 0
+      vertex -13.43 7.08 0
+      vertex 13.43 7.08 0
+    endloop
+  endfacet
+  facet normal 0.8532326174 0 -0.5215305366
+    outer loop
+      vertex 13.43 5.08 0
+      vertex 45.112404 34.268963 51.832939
+      vertex 45.112404 32.268963 51.832939
+    endloop
+  endfacet
+  facet normal 0.8532326174 0 -0.5215305366
+    outer loop
+      vertex 13.43 5.08 0
+      vertex 13.43 7.08 0
+      vertex 45.112404 34.268963 51.832939
+    endloop
+  endfacet
+  facet normal 0 0 1
+    outer loop
+      vertex 45.112404 32.268963 51.832939
+      vertex -45.112404 34.268963 51.832939
+      vertex -45.112404 32.268963 51.832939
+    endloop
+  endfacet
+  facet normal 0 0 1
+    outer loop
+      vertex 45.112404 32.268963 51.832939
+      vertex 45.112404 34.268963 51.832939
+      vertex -45.112404 34.268963 51.832939
+    endloop
+  endfacet
+  facet normal -0.8532326174 0 -0.5215305366
+    outer loop
+      vertex -45.112404 32.268963 51.832939
+      vertex -13.43 7.08 0
+      vertex -13.43 5.08 0
+    endloop
+  endfacet
+  facet normal -0.8532326174 0 -0.5215305366
+    outer loop
+      vertex -45.112404 32.268963 51.832939
+      vertex -45.112404 34.268963 51.832939
+      vertex -13.43 7.08 0
+    endloop
+  endfacet
+endsolid horn_5

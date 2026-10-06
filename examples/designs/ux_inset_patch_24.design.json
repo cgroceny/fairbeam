@@ -1,0 +1,166 @@
+{
+  "schema": "fairbeam.design/1",
+  "model": {
+    "id": "ux-inset-patch-2-4-ghz",
+    "name": "UX inset patch 2.4 GHz",
+    "description": "Drawn manually in the designer for a UX walkthrough. FR4 board 70 x 60 x 1.6 mm; copper patch 38 x 29 mm, two 1 x 8 mm inset notches and a 3 mm microstrip feed. 50 ohm discrete port at y=-29 mm. Illustrative 2.4 GHz target; no solver run, mesh convergence or impedance matching validation."
+  },
+  "params": [
+    {
+      "key": "f0",
+      "default": 2.4,
+      "label": "Design frequency",
+      "unit": "GHz",
+      "min": 0.1,
+      "max": 100
+    }
+  ],
+  "simulation": {
+    "f_min": 1.8,
+    "f_max": 3.2,
+    "boundaries": "MUR",
+    "end_criteria_db": -50
+  },
+  "materials": [
+    {
+      "name": "copper",
+      "kind": "metal",
+      "library": "pec"
+    },
+    {
+      "name": "FR4",
+      "kind": "dielectric",
+      "eps_r": 4.3,
+      "tan_d": 0.02,
+      "tan_d_freq": "f0",
+      "library": "fr4"
+    }
+  ],
+  "parts": [
+    {
+      "name": "substrate",
+      "material": "FR4",
+      "primitives": [
+        {
+          "kind": "box",
+          "start": [
+            -35,
+            -30,
+            0
+          ],
+          "stop": [
+            35,
+            30,
+            "1.6"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "ground",
+      "material": "copper",
+      "primitives": [
+        {
+          "kind": "box",
+          "start": [
+            -35,
+            -30,
+            0
+          ],
+          "stop": [
+            35,
+            30,
+            0
+          ]
+        }
+      ]
+    },
+    {
+      "name": "patch",
+      "material": "copper",
+      "primitives": [
+        {
+          "kind": "box",
+          "start": [
+            -19,
+            -14.5,
+            1.6
+          ],
+          "stop": [
+            19,
+            14.5,
+            1.6
+          ]
+        },
+        {
+          "kind": "box",
+          "start": [
+            -1.5,
+            -29,
+            1.6
+          ],
+          "stop": [
+            1.5,
+            -6.5,
+            1.6
+          ]
+        }
+      ],
+      "cuts": [
+        {
+          "start": [
+            -2.5,
+            -14.5,
+            1.6
+          ],
+          "stop": [
+            -1.5,
+            -6.5,
+            1.6
+          ]
+        },
+        {
+          "start": [
+            1.5,
+            -14.5,
+            1.6
+          ],
+          "stop": [
+            2.5,
+            -6.5,
+            1.6
+          ]
+        }
+      ]
+    }
+  ],
+  "ports": [
+    {
+      "type": "lumped",
+      "number": 1,
+      "R": 50,
+      "start": [
+        0,
+        -29,
+        0
+      ],
+      "stop": [
+        0,
+        -29,
+        1.6
+      ],
+      "direction": "z"
+    }
+  ],
+  "resistors": [],
+  "mesh": {
+    "mode": "auto",
+    "cells_per_wavelength": 20
+  },
+  "far_field": {
+    "enabled": true,
+    "frequencies": [
+      "f0"
+    ]
+  }
+}

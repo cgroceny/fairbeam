@@ -1,0 +1,15 @@
+# Only the sources needed for `npm run build:site` go to Vercel (landing + read-only demo).
+.sim/
+.claude/
+node_modules/
+dist/
+dist-demo/
+site-dist/
+src-tauri/
+python/
+scripts/install-openems*.sh
+*.log
+.env*
+# the demo build flags (VITE_FAIRBEAM_DEMO=1) are not secrets and must reach the build
+!.env.demo
+.vercel/

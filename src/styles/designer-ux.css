@@ -1,0 +1,108 @@
+/* Designer interaction: shape dialogs, the new-parameter dialog, typed coordinates while drawing,
+   the parameter limits section and the start screen's delete button. Role tokens only. Imported by
+   src/designer/dialogs/ShapeDialog.tsx. */
+
+/* shape and parameter dialogs (the shared .scrim / .dialog / .dialog-sm frame) */
+.sd { width: min(600px, 100%); pointer-events: auto; }
+/* the shape dialog keeps the 3D view visible (its outline follows the values): a light scrim, the
+   dialog over the properties side */
+.sd-scrim { pointer-events: none; background: transparent; place-items: center end; padding-right: var(--al-space-5); }
+@media (max-width: 1100px) { .sd-scrim { place-items: center; padding-right: var(--al-space-4); } }
+.sd-body { display: grid; gap: var(--al-space-3); align-content: start; padding: var(--al-space-4) var(--al-pad-panel); overflow: auto; min-height: 0; }
+.sd-row { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--al-space-2); align-items: start; }
+.sd-geom { display: grid; gap: var(--al-space-2); }
+.sd-three { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--al-space-2); }
+.sd-points { display: grid; gap: var(--al-space-1); max-height: 260px; overflow: auto; }
+.sd-add { justify-self: start; margin-top: var(--al-space-1); }
+.sd-note { margin-top: calc(-1 * var(--al-space-2)); }
+.dw-main { container-type: inline-size; }
+.dw-main-body.has-transform { grid-template-columns: minmax(0, 1fr) minmax(300px, 360px); }
+.tf-panel { grid-area: 1 / 2; min-width: 0; min-height: 0; overflow: hidden; }
+.tf-panel .tf-dialog { width: 100%; min-width: 0; height: 100%; max-height: none; grid-template-columns: minmax(0, 1fr); border: 0; border-left: 1px solid var(--al-border); border-radius: 0; box-shadow: none; }
+.tf-dialog .dialog-head { padding: var(--al-space-3); }
+.tf-dialog .dialog-head > div { min-width: 0; overflow-wrap: anywhere; }
+.tf-dialog .dialog-head .icon-btn { flex-shrink: 0; }
+.tf-dialog .sd-body { min-width: 0; grid-template-columns: minmax(0, 1fr); padding: var(--al-space-3); }
+.tf-dialog .dialog-foot { padding: var(--al-space-3); flex-wrap: wrap; gap: var(--al-space-2); }
+.tf-dialog .dialog-foot > .muted { max-width: 100%; white-space: normal; overflow: visible; text-overflow: clip; }
+.tf-dialog .dialog-actions { width: 100%; justify-content: flex-end; }
+.tf-angle-presets { display: flex; flex-wrap: wrap; gap: var(--al-space-1); }
+.tf-angle-presets [aria-pressed=true] { background: var(--al-accent-soft); border-color: var(--al-accent-line); }
+@media (min-width: 1041px) {
+  .app .workspace.design-mode:has(.tf-panel) { --dw-right-col: 0px; }
+  .workspace.design-mode:has(.tf-panel) > :is(.panel-right, .panel-resize-right, .dw-strip-right) { display: none; }
+}
+@media (max-width: 1040px) {
+  .workspace.design-mode { --dw-strip-w: 26px; }
+  /* On compact screens collapsed panels float over the canvas, so inset only for strips present. */
+  .workspace.design-mode:has(> .dw-strip-right) .tf-panel { margin-right: calc(var(--dw-strip-w) + var(--al-space-1)); }
+  @container (max-width: 900px) {
+    /* The stacked view can have a tree strip too; reserve its space only while it is shown. */
+    .workspace.design-mode:has(> .dw-strip-left) .tf-panel { margin-left: calc(var(--dw-strip-w) + var(--al-space-1)); }
+  }
+}
+@container (max-width: 900px) {
+  .dw-main-body.has-transform { grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(150px, 1fr) minmax(160px, 48%); }
+  .tf-panel { grid-area: 2 / 1; }
+  .tf-panel .tf-dialog { border-left: 0; border-top: 1px solid var(--al-border); }
+}
+.tf-operations { border: 0; padding: 0; margin: 0; }
+.tf-operation-list { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--al-space-1); }
+.tf-operation { display: flex; align-items: center; justify-content: center; gap: 6px; min-height: 36px; padding: 4px; border: 1px solid var(--al-border); border-radius: var(--al-radius-sm); font-size: var(--al-text-sm); cursor: pointer; }
+.tf-operation:has(input:checked) { border-color: var(--al-accent-line); background: var(--al-accent-soft); }
+.tf-picks, .tf-inline-actions { display: flex; flex-wrap: wrap; align-items: center; gap: var(--al-space-2); }
+.tf-disabled { color: var(--al-text-3); }
+.tf-disabled span { font-size: var(--al-text-xs); }
+@media (max-width: 440px) { .tf-operation-list { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.sd-problems { margin: 0; padding: var(--al-space-2) var(--al-space-3) var(--al-space-2) var(--al-space-5); border-radius: var(--al-radius-sm); background: var(--al-critical-bg); color: var(--al-critical); font-size: var(--al-text-sm); }
+.np { width: min(460px, 100%); }
+.np-key { font-family: var(--al-font-mono); }
+@media (max-width: 640px) {
+  .sd-row { grid-template-columns: minmax(0, 1fr); }
+}
+
+/* parameter inspector: limits are optional and folded away */
+.dz-limits > summary { cursor: pointer; font-size: var(--al-text-xs); color: var(--al-text-2); padding: 2px 0; }
+.dz-limits > summary:focus-visible { outline: 2px solid var(--al-focus); outline-offset: 2px; border-radius: var(--al-radius-sm); }
+.dz-limits[open] > summary { margin-bottom: var(--al-space-2); }
+.dz-limits-sum { color: var(--al-text-3); font-family: var(--al-font-mono); }
+
+/* typed coordinates next to the pointer readout while drawing */
+.vp-draw-typed {
+  position: absolute; z-index: 4; display: grid; gap: 2px; min-width: 190px; padding: var(--al-space-1);
+  border: 1px solid var(--al-accent-line); border-radius: var(--al-radius-sm); background: var(--al-surface); box-shadow: var(--al-shadow-pop);
+}
+.vp-draw-typed[hidden] { display: none; }
+.vp-draw-typed input { width: 100%; font-family: var(--al-font-mono); font-size: var(--al-text-sm); }
+.vp-draw-typed-out { font-family: var(--al-font-mono); font-size: var(--al-text-xs); color: var(--al-text-2); white-space: nowrap; }
+.vp-draw-typed-out.bad { color: var(--al-critical); }
+.vp-draw-typed-help { font-size: var(--al-text-xs); color: var(--al-text-3); white-space: nowrap; }
+
+/* WCS popover: snap toggles */
+/* Transform WCS dialog: one column per local axis */
+.wcs-axes { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--al-space-2); }
+.wcs-toggles { display: flex; flex-wrap: wrap; gap: var(--al-space-1) var(--al-space-3); }
+.wcs-toggles .dz-label { flex-basis: 100%; }
+
+/* start screen: a delete button beside each design */
+.home-row { display: flex; align-items: center; gap: 2px; }
+.home-row > .home-item { flex: 1; min-width: 0; }
+/* the favourite star sits at the far end of the row, apart from the name that opens the design and
+   from the delete button next to it (a divider and a gap), so a click aimed at either does not toggle it */
+.home-row > .home-favorite { margin-inline: var(--al-space-3) var(--al-space-2); }
+.home-row > .home-del { margin-inline-start: var(--al-space-2); padding-inline-start: var(--al-space-2); border-inline-start: 1px solid var(--al-border); }
+.home-del, .home-copy { flex: none; opacity: 0.55; }
+.home-row:hover .home-del, .home-del:focus-visible, .home-row:hover .home-copy, .home-copy:focus-visible { opacity: 1; }
+.home-copy:disabled { opacity: 0.3; }
+.home-confirm { display: grid; gap: var(--al-space-2); padding: var(--al-space-2) var(--al-space-3); border: 1px solid var(--al-critical); border-radius: var(--al-radius); background: var(--al-critical-bg); font-size: var(--al-text-sm); }
+.home-del-btn { background: var(--al-critical); color: var(--al-surface); border-color: var(--al-critical); }
+.home-del-btn:hover:not(:disabled) { filter: brightness(1.08); }
+.home-del-note { margin-top: 0; }
+.dz-color-popover { position: fixed; z-index: 60; min-width: 0; padding: var(--al-space-2); display: grid; gap: var(--al-space-1); }
+.home-python-hint { color: var(--al-text-1, inherit); border-left: 2px solid var(--al-accent, currentColor); padding-left: var(--al-space-2); }
+.home-python-hint:focus-visible { outline: 2px solid var(--al-accent, currentColor); outline-offset: 2px; }
+
+/* F6 pane cycling (src/designer/panes.ts): a visible ring on the pane the focus was moved to */
+[data-pane].pane-ring:focus-within { outline: 2px solid var(--accent, #2563eb); outline-offset: -2px; }
+[data-pane]:focus { outline: none; }
+[data-pane].pane-ring:focus { outline: 2px solid var(--accent, #2563eb); outline-offset: -2px; }

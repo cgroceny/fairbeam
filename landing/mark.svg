@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" width="120" height="120">
+  <title>fairbeam mark</title>
+  <!-- 120-unit grid. Plate: rounded square 120, r 27 (0.225, the macOS 185/824 ratio). Cavity: r 10 at (27, 60), centred on the corner-radius line x = r. Slot: 6 wide. Flare: Vivaldi taper w(x) = 3 + 30 (e^(R(x-27)) - 1)/(e^(93R) - 1), R = 3/93, from the cavity to the right edge; the horn tips land on the corner tangent points (y = 27 and 93), so the aperture spans the whole straight edge (66 = 0.55 of the plate). Cyan field = cavity + slot + flare as one shape; one-colour version (mark-mono.svg) = plate outline 8 wide + solid field. -->
+  <path fill="#B87333" d="M27 0H93A27 27 0 0 1 120 27V93A27 27 0 0 1 93 120H27A27 27 0 0 1 0 93V27A27 27 0 0 1 27 0Z"/>
+  <path fill="#3FD0E0" d="M120 27C116.97 30.09 113.93 32.73 110.9 35.03C104.73 39.71 98.57 43.03 92.4 45.61C84.01 49.12 75.61 51.26 67.21 52.82C56.92 54.73 46.63 55.74 36.35 56.45A10 10 0 1 0 36.35 63.55C46.63 64.26 56.92 65.27 67.21 67.18C75.61 68.74 84.01 70.88 92.4 74.39C98.57 76.97 104.73 80.29 110.9 84.97C113.93 87.27 116.97 89.91 120 93Z"/>
+</svg>

@@ -1,0 +1,169 @@
+{
+ "schema": "antenlab.study/1",
+ "kind": "sweep",
+ "name": "dipole-length-sweep",
+ "created": "2026-09-24T23:12:14+0300",
+ "model": {
+  "id": "dipole",
+  "name": "Half-wave dipole",
+  "file": "dipole.py"
+ },
+ "axes": [
+  {
+   "key": "length",
+   "values": [
+    50,
+    58,
+    66
+   ]
+  }
+ ],
+ "fixed": {
+  "f_min": "1.4",
+  "f_max": "3.8"
+ },
+ "threads": 4,
+ "end_criteria_db": -60.0,
+ "exact_endcriteria": true,
+ "wall_time_s": 42.49,
+ "members": [
+  {
+   "file": "studies/dipole-length-sweep/dipole--f_max-3.8--f_min-1.4--length-50.json",
+   "params": {
+    "length": "50"
+   },
+   "summary": {
+    "bands": [
+     {
+      "f_lo": 2624000000.0,
+      "f_hi": 2999000000.0,
+      "f_center": 2792000000.0,
+      "s11_min_db": -52.222,
+      "edge_lo": false,
+      "edge_hi": false
+     }
+    ],
+    "first_resonance": {
+     "f": 2792000000.0,
+     "s11_db": -52.222,
+     "matched": true
+    },
+    "reactance_zeros": [
+     {
+      "f": 2793444444.4444447,
+      "r": 73.074
+     }
+    ],
+    "farfield": [
+     {
+      "f": 2792000000.0,
+      "dmax_dbi": 2.131,
+      "rad_efficiency": 0.9985,
+      "gain_dbi": 2.124,
+      "realized_gain_dbi": 2.124
+     }
+    ],
+    "dmax_dbi": 2.131,
+    "rad_efficiency": 0.9985,
+    "cells": 212280,
+    "min_cell": 0.25,
+    "max_cell": 3.92574,
+    "timesteps": 7514,
+    "wall_time_s": 12.46,
+    "converged": true
+   }
+  },
+  {
+   "file": "studies/dipole-length-sweep/dipole--f_max-3.8--f_min-1.4--length-58.json",
+   "params": {
+    "length": "58"
+   },
+   "summary": {
+    "bands": [
+     {
+      "f_lo": 2276000000.0,
+      "f_hi": 2588000000.0,
+      "f_center": 2417000000.0,
+      "s11_min_db": -49.521,
+      "edge_lo": false,
+      "edge_hi": false
+     }
+    ],
+    "first_resonance": {
+     "f": 2417000000.0,
+     "s11_db": -49.521,
+     "matched": true
+    },
+    "reactance_zeros": [
+     {
+      "f": 2415336363.6363635,
+      "r": 72.81
+     }
+    ],
+    "farfield": [
+     {
+      "f": 2417000000.0,
+      "dmax_dbi": 2.145,
+      "rad_efficiency": 0.9989,
+      "gain_dbi": 2.141,
+      "realized_gain_dbi": 2.14
+     }
+    ],
+    "dmax_dbi": 2.145,
+    "rad_efficiency": 0.9989,
+    "cells": 219240,
+    "min_cell": 0.25,
+    "max_cell": 3.92574,
+    "timesteps": 8410,
+    "wall_time_s": 13.93,
+    "converged": true
+   }
+  },
+  {
+   "file": "studies/dipole-length-sweep/dipole--f_max-3.8--f_min-1.4--length-66.json",
+   "params": {
+    "length": "66"
+   },
+   "summary": {
+    "bands": [
+     {
+      "f_lo": 2009000000.0,
+      "f_hi": 2273000000.0,
+      "f_center": 2129000000.0,
+      "s11_min_db": -49.606,
+      "edge_lo": false,
+      "edge_hi": false
+     }
+    ],
+    "first_resonance": {
+     "f": 2129000000.0,
+     "s11_db": -49.606,
+     "matched": true
+    },
+    "reactance_zeros": [
+     {
+      "f": 2127761121.8568666,
+      "r": 72.624
+     }
+    ],
+    "farfield": [
+     {
+      "f": 2129000000.0,
+      "dmax_dbi": 2.153,
+      "rad_efficiency": 0.9991,
+      "gain_dbi": 2.15,
+      "realized_gain_dbi": 2.15
+     }
+    ],
+    "dmax_dbi": 2.153,
+    "rad_efficiency": 0.9991,
+    "cells": 226200,
+    "min_cell": 0.25,
+    "max_cell": 3.92574,
+    "timesteps": 9312,
+    "wall_time_s": 15.47,
+    "converged": true
+   }
+  }
+ ]
+}

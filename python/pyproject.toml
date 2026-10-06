@@ -1,0 +1,19 @@
+[build-system]
+requires = ["setuptools>=69"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "fairbeam"
+version = "0.7.0"
+description = "Fairbeam: run openEMS antenna models and export self-contained project bundles for the Fairbeam viewer."
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "GPL-3.0-or-later" }
+dependencies = ["numpy>=1.24", "h5py>=3.8"]
+# openEMS and CSXCAD Python bindings are built from source; see scripts/install-openems-macos.sh
+
+[project.scripts]
+fairbeam = "fairbeam.cli:main"
+
+[tool.setuptools]
+packages = ["fairbeam"]

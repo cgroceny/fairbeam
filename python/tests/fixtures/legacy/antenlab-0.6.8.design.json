@@ -1,0 +1,62 @@
+{
+  "schema": "antenlab.design/1",
+  "model": {
+    "id": "blade-867",
+    "name": "UAV blade antenna (867 MHz)",
+    "description": "Swept metal blade monopole on a 300 x 300 mm fuselage-skin ground plane, fed by a 50 ohm probe across a 2 mm gap at its base (x: flight axis, +x aft; z: up). A vertically polarised, azimuth-omnidirectional UAV telemetry antenna for the 863-870 MHz SRD / LoRa band; h = 80 mm gives |S11| about -23 dB at 867 MHz and a -10 dB band of about 0.75-1.8 GHz. See examples/designs/README.md in the antenlab repository."
+  },
+  "params": [
+    {"key": "f0", "default": 0.867, "label": "Design frequency", "unit": "GHz", "min": 0.1, "max": 6},
+    {"key": "gnd", "default": 300, "label": "Ground plane (fuselage skin) size", "unit": "mm", "min": 50, "max": 2000},
+    {"key": "h", "default": 80, "label": "Blade height above the feed gap", "unit": "mm", "min": 10, "max": 400},
+    {"key": "wb", "default": 60, "label": "Blade base width (x)", "unit": "mm", "min": 5, "max": 300},
+    {"key": "wt", "default": 30, "label": "Blade top width (x)", "unit": "mm", "min": 2, "max": 300},
+    {"key": "sweep", "default": 25, "label": "Aft offset of the top edge centre (sweep)", "unit": "mm", "min": 0, "max": 200},
+    {"key": "g", "default": 2, "label": "Feed gap (ground to blade)", "unit": "mm", "min": 0.5, "max": 10},
+    {"key": "wf", "default": 4, "label": "Feed tab width at the base", "unit": "mm", "min": 0.5, "max": 40},
+    {"key": "ht", "default": 12, "label": "Height of the base taper (feed tab to full width)", "unit": "mm", "min": 1, "max": 100},
+    {"key": "lam", "expr": "wavelength(f0)", "label": "Free-space wavelength at f0", "unit": "mm"},
+    {"key": "sweep_deg", "expr": "degrees(atan2(sweep + (wb - wt) / 2, h - ht))", "label": "Leading-edge sweep angle (from vertical)", "unit": "deg"}
+  ],
+  "simulation": {
+    "f_min": "0.7",
+    "f_max": "1.05",
+    "boundaries": "MUR",
+    "end_criteria_db": -50
+  },
+  "materials": [
+    {"name": "metal", "kind": "metal"}
+  ],
+  "parts": [
+    {
+      "name": "ground",
+      "material": "metal",
+      "component": "airframe",
+      "primitives": [
+        {"kind": "box", "start": ["-gnd/2", "-gnd/2", 0], "stop": ["gnd/2", "gnd/2", 0]}
+      ]
+    },
+    {
+      "name": "blade",
+      "material": "metal",
+      "component": "antenna",
+      "primitives": [
+        {"kind": "polygon", "normal": "y", "elevation": 0, "points": [
+          ["g", "-wf/2"],
+          ["g", "wf/2"],
+          ["g + ht", "wb/2"],
+          ["g + h", "sweep + wt/2"],
+          ["g + h", "sweep - wt/2"],
+          ["g + ht", "-wb/2"]
+        ]}
+      ]
+    }
+  ],
+  "ports": [
+    {"type": "lumped", "number": 1, "R": 50, "start": [0, 0, 0], "stop": [0, 0, "g"], "direction": "z"}
+  ],
+  "resistors": [],
+  "mesh": {"mode": "auto", "cells_per_wavelength": 20},
+  "far_field": {"enabled": true, "frequencies": ["f0"]},
+  "monitors": {"currents": ["f0"], "efficiency": {"points": 21}}
+}

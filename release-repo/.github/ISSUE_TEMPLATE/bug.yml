@@ -1,0 +1,61 @@
+name: Report a problem
+description: Something in Fairbeam does not work as expected.
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for the report. Please do not post personal data, passwords or private file paths.
+  - type: input
+    id: version
+    attributes:
+      label: Fairbeam version
+      description: Filled in when you use "Report a problem" in the app.
+      placeholder: "0.3.0"
+    validations:
+      required: true
+  - type: dropdown
+    id: os
+    attributes:
+      label: Operating system
+      options:
+        - macOS
+        - Windows
+    validations:
+      required: true
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Open ...
+        2. Click ...
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: What you expected
+    validations:
+      required: true
+  - type: textarea
+    id: files
+    attributes:
+      label: Project or design file (optional)
+      description: Drag the .design.json, model .py or project .json here if it helps to reproduce the problem.
+    validations:
+      required: false
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs (optional)
+      description: The run log, or server.log / shell.log from the app's logs folder. Remove anything private first.
+      render: text
+    validations:
+      required: false

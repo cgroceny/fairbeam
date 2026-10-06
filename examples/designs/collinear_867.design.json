@@ -1,0 +1,158 @@
+{
+  "schema": "fairbeam.design/1",
+  "model": {
+    "id": "collinear-867",
+    "name": "UAV printed 2-element collinear (867 MHz)",
+    "description": "Printed two-element collinear on a slim vertical FR-4 strip (1.6 mm, board in the xz plane, z up), with no ground plane, for a UAV with a non-metal (composite) fuselage. The lower element is the self-balancing sleeve dipole of sleeve_dipole_867 (an arm, a sleeve of two strips either side of the coax braid strip, joined to it by a bridge at the top). A meander phasing section of six turns at the top of the arm reverses the current, so a second, end-fed half-wave element above it radiates in phase with the dipole (0.61 wavelengths apart). The collinear's feed point is about 200 ohm, so a quarter-wave strip-pair line (a 1.2 mm trace on the back face behind the 1.2 mm braid strip, about 116 ohm) transforms it to 50 ohm: the 50 ohm lumped port sits at the lower end of that line, where the coax ends, and a via joins the trace to the arm at the feed gap. Vertically polarised and omnidirectional in azimuth for the 863-870 MHz SRD / LoRa band, with about 2 dB more gain on the horizon than a half-wave dipole and a 39 degree elevation beam. See examples/designs/README.md in the fairbeam repository."
+  },
+  "params": [
+    {"key": "f0", "default": 0.867, "label": "Design frequency", "unit": "GHz", "min": 0.1, "max": 6},
+    {"key": "l_up", "default": 68.8, "label": "Dipole upper arm length (feed gap to the meander)", "unit": "mm", "min": 20, "max": 300},
+    {"key": "l_sl", "default": 68.8, "label": "Sleeve length (below the feed gap)", "unit": "mm", "min": 20, "max": 300},
+    {"key": "w_up", "default": 10, "label": "Dipole upper arm width", "unit": "mm", "min": 1, "max": 100},
+    {"key": "w_sl", "default": 16, "label": "Sleeve width (both strips and the coax slot)", "unit": "mm", "min": 6, "max": 100},
+    {"key": "g", "default": 2, "label": "Feed gap (sleeve top to the arm)", "unit": "mm", "min": 0.5, "max": 10},
+    {"key": "w_f", "default": 1.2, "label": "Braid strip width (front conductor of the feed line)", "unit": "mm", "min": 0.5, "max": 10},
+    {"key": "w_t", "default": 1.2, "label": "Feed trace width (back face, behind the braid strip; quarter-wave transformer)", "unit": "mm", "min": 0.2, "max": 4},
+    {"key": "l_t", "default": 58, "label": "Feed trace length (coax end to the feed gap)", "unit": "mm", "min": 5, "max": 200},
+    {"key": "w_v", "default": 1, "label": "Via height (z) from the feed trace to the arm", "unit": "mm", "min": 0.3, "max": 5},
+    {"key": "s", "default": 1, "label": "Slot between the braid strip and each sleeve strip", "unit": "mm", "min": 0.3, "max": 10},
+    {"key": "hb", "default": 3, "label": "Height of the bridge at the sleeve top (braid solder pad)", "unit": "mm", "min": 0.5, "max": 20},
+    {"key": "n_m", "default": 6, "label": "Phasing meander turns (rounded to a whole number)", "unit": "", "min": 1, "max": 12},
+    {"key": "p_m", "default": 12, "label": "Phasing meander pitch (z, two rungs)", "unit": "mm", "min": 3, "max": 30},
+    {"key": "a_m", "default": 13, "label": "Phasing meander half-width (axis to the outer edge of the links)", "unit": "mm", "min": 3, "max": 50},
+    {"key": "w_m", "default": 2, "label": "Phasing meander trace width", "unit": "mm", "min": 0.3, "max": 5},
+    {"key": "l_top", "default": 142, "label": "Upper element length", "unit": "mm", "min": 40, "max": 400},
+    {"key": "w_top", "default": 10, "label": "Upper element width", "unit": "mm", "min": 1, "max": 100},
+    {"key": "wb", "default": 30, "label": "Board width", "unit": "mm", "min": 6, "max": 120},
+    {"key": "t", "default": 1.6, "label": "FR-4 thickness", "unit": "mm", "min": 0.2, "max": 5},
+    {"key": "m", "default": 4, "label": "Board margin above the top element and below the sleeve", "unit": "mm", "min": 0, "max": 50},
+    {"key": "lam", "expr": "wavelength(f0)", "label": "Free-space wavelength at f0", "unit": "mm"},
+    {"key": "nt", "expr": "max(1, round(n_m))", "label": "Phasing meander turns, a whole number", "unit": ""},
+    {"key": "z_a", "expr": "g / 2 + l_up", "label": "Top of the dipole arm", "unit": "mm"},
+    {"key": "z0", "expr": "z_a - w_m", "label": "Bottom of the meander (its lower bar overlaps the arm top)", "unit": "mm"},
+    {"key": "z_c", "expr": "z0 + nt * p_m", "label": "Bottom of the upper element (on the meander's upper bar)", "unit": "mm"},
+    {"key": "z_top", "expr": "z_c + l_top", "label": "Tip of the upper element", "unit": "mm"},
+    {"key": "H_m", "expr": "nt * p_m + w_m", "label": "Height of the phasing meander", "unit": "mm"},
+    {"key": "L_m", "expr": "4 * nt * a_m + nt * p_m", "label": "Trace length of the phasing meander (approx.)", "unit": "mm"},
+    {"key": "L", "expr": "z_top + g / 2 + l_sl", "label": "Antenna length (sleeve end to tip)", "unit": "mm"},
+    {"key": "H", "expr": "L + 2 * m", "label": "Board height", "unit": "mm"},
+    {"key": "ws", "expr": "(w_sl - w_f) / 2 - s", "label": "Width of each sleeve strip", "unit": "mm"},
+    {"key": "d_el", "expr": "z_c + l_top / 2", "label": "Element spacing (feed to the centre of the upper element)", "unit": "mm"},
+    {"key": "d_el_lam", "expr": "d_el / lam", "label": "Element spacing in wavelengths", "unit": ""}
+  ],
+  "simulation": {
+    "f_min": "0.75",
+    "f_max": "1.0",
+    "boundaries": "PML_8",
+    "end_criteria_db": -60,
+    "max_timesteps": 250000
+  },
+  "materials": [
+    {"name": "copper", "kind": "metal"},
+    {"name": "fr4", "kind": "dielectric", "eps_r": 4.3, "tan_d": 0.02, "tan_d_freq": "f0"}
+  ],
+  "parts": [
+    {
+      "name": "board",
+      "material": "fr4",
+      "component": "antenna",
+      "primitives": [
+        {"kind": "box", "start": ["-wb/2", "-t", "-g/2 - l_sl - m"], "stop": ["wb/2", 0, "z_top + m"]}
+      ]
+    },
+    {
+      "name": "dipole_arm",
+      "material": "copper",
+      "component": "antenna/lower_element",
+      "primitives": [
+        {"kind": "box", "start": ["-w_up/2", 0, "g/2"], "stop": ["w_up/2", 0, "z_a"]}
+      ]
+    },
+    {
+      "name": "sleeve",
+      "material": "copper",
+      "component": "antenna/lower_element",
+      "primitives": [
+        {"kind": "box", "start": ["-w_sl/2", 0, "-g/2 - hb"], "stop": ["w_sl/2", 0, "-g/2"]},
+        {"kind": "box", "start": ["-w_sl/2", 0, "-g/2 - l_sl"], "stop": ["-w_f/2 - s", 0, "-g/2 - hb"]},
+        {"kind": "box", "start": ["w_f/2 + s", 0, "-g/2 - l_sl"], "stop": ["w_sl/2", 0, "-g/2 - hb"]}
+      ]
+    },
+    {
+      "name": "meander_ends",
+      "material": "copper",
+      "component": "antenna/phasing_meander",
+      "primitives": [
+        {"kind": "box", "start": [0, 0, "z0"], "stop": ["a_m", 0, "z0 + w_m"]},
+        {"kind": "box", "start": ["-a_m", 0, "z_c"], "stop": [0, 0, "z_c + w_m"]}
+      ]
+    },
+    {
+      "name": "meander_rungs",
+      "material": "copper",
+      "component": "antenna/phasing_meander",
+      "primitives": [
+        {"kind": "box", "start": ["-a_m", 0, "z0 + p_m/2"], "stop": ["a_m", 0, "z0 + p_m/2 + w_m"]}
+      ],
+      "transforms": [{"type": "translate", "copies": "2 * nt - 2", "step": [0, 0, "p_m/2"]}]
+    },
+    {
+      "name": "meander_links_right",
+      "material": "copper",
+      "component": "antenna/phasing_meander",
+      "primitives": [
+        {"kind": "box", "start": ["a_m - w_m", 0, "z0"], "stop": ["a_m", 0, "z0 + p_m/2 + w_m"]}
+      ],
+      "transforms": [{"type": "translate", "copies": "nt - 1", "step": [0, 0, "p_m"]}]
+    },
+    {
+      "name": "meander_links_left",
+      "material": "copper",
+      "component": "antenna/phasing_meander",
+      "primitives": [
+        {"kind": "box", "start": ["-a_m", 0, "z0 + p_m/2"], "stop": ["-a_m + w_m", 0, "z0 + p_m + w_m"]}
+      ],
+      "transforms": [{"type": "translate", "copies": "nt - 1", "step": [0, 0, "p_m"]}]
+    },
+    {
+      "name": "top_element",
+      "material": "copper",
+      "component": "antenna/upper_element",
+      "primitives": [
+        {"kind": "box", "start": ["-w_top/2", 0, "z_c"], "stop": ["w_top/2", 0, "z_top"]}
+      ]
+    },
+    {
+      "name": "coax",
+      "material": "copper",
+      "component": "feed",
+      "primitives": [
+        {"kind": "box", "start": ["-w_f/2", 0, "-g/2 - l_sl - m"], "stop": ["w_f/2", 0, "-g/2 - hb"]}
+      ]
+    },
+    {
+      "name": "feed_trace",
+      "material": "copper",
+      "component": "feed",
+      "primitives": [
+        {"kind": "box", "start": ["-w_t/2", "-t", "-l_t"], "stop": ["w_t/2", "-t", "g/2 + w_v"]}
+      ]
+    },
+    {
+      "name": "feed_via",
+      "material": "copper",
+      "component": "feed",
+      "primitives": [
+        {"kind": "box", "start": ["-w_t/2", "-t", "g/2 + w_v/2"], "stop": ["w_t/2", 0, "g/2 + w_v/2"]}
+      ]
+    }
+  ],
+  "ports": [
+    {"type": "lumped", "number": 1, "R": 50, "start": ["-w_t/2", "-t", "-l_t"], "stop": ["w_t/2", 0, "-l_t"], "direction": "y"}
+  ],
+  "resistors": [],
+  "mesh": {"mode": "auto", "cells_per_wavelength": 30},
+  "far_field": {"enabled": true, "frequencies": ["f0"]},
+  "monitors": {"currents": ["f0"], "efficiency": {"points": 21}}
+}

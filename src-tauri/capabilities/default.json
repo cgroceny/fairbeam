@@ -1,0 +1,15 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "main-capability",
+  "description": "The bundled splash page only.",
+  "windows": ["main"],
+  "permissions": [
+    "core:default",
+    "allow-splash-state",
+    "allow-retry",
+    "allow-install-runtime",
+    "allow-use-managed",
+    "allow-set-prefer-gpu",
+    "allow-choose-python"
+  ]
+}

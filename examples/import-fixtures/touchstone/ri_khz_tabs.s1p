@@ -1,0 +1,4 @@
+!one-port, kHz, RI, tab separated, no space after #
+#KHZ S RI R 50
+1000000	0.25	-0.5
+2000000	-0.1	0.2	! comment after the data

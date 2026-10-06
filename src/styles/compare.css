@@ -1,0 +1,38 @@
+/* Compare popover in the dock bar (src/compare/**). Role tokens only. */
+.cmp { position: relative; flex: none; }
+.cmp-count {
+  display: inline-grid; place-items: center; min-width: 16px; height: 16px; padding: 0 var(--al-space-1);
+  border-radius: 999px; background: var(--al-accent-soft); color: var(--al-accent-text);
+  font-size: var(--al-text-xs); line-height: 1;
+}
+.cmp-pop {
+  position: absolute; z-index: 15; right: 0; bottom: calc(100% + var(--al-space-1));
+  width: min(340px, calc(100vw - 2 * var(--al-space-4)));
+  max-height: min(420px, 70vh); overflow: auto;
+  padding: var(--al-space-3) var(--al-pad-panel);
+  background: var(--al-surface); border: 1px solid var(--al-border); border-radius: var(--al-radius);
+  box-shadow: var(--al-shadow-pop);
+}
+.cmp-hint { font-size: var(--al-text-xs); color: var(--al-text-3); line-height: var(--al-leading); margin-bottom: var(--al-space-2); }
+.cmp-list { list-style: none; margin: 0; padding: 0; display: grid; }
+.cmp-list .toggle { align-items: flex-start; }
+.cmp-list .toggle-box { margin-top: 3px; }
+.cmp-name { display: grid; min-width: 0; line-height: var(--al-leading-tight); gap: 2px; }
+.cmp-title { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cmp-sub { font-size: var(--al-text-xs); color: var(--al-text-3); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cmp-missing { display: flex; align-items: center; gap: var(--al-space-2); margin-top: var(--al-space-2); font-size: var(--al-text-xs); }
+.cmp-missing .mono { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+.cmp-missing .icon-btn { margin-left: auto; }
+/* column groups (one per project) above the table header */
+.table-data .th-group th {
+  padding-top: var(--al-space-2); padding-bottom: 0; box-shadow: none; text-align: right;
+  color: var(--al-text-2); font-weight: 600; white-space: nowrap;
+}
+.table-data .th-group + tr th { top: 22px; }
+@media (max-width: 640px) {
+  /* the trigger may sit anywhere in a wrapped dock bar: span the popover across the bar instead of
+     anchoring it to the button (it ran off the left edge at 390 px) */
+  .dock-bar { position: relative; }
+  .cmp { position: static; }
+  .cmp-pop { left: var(--al-space-2); right: var(--al-space-2); width: auto; }
+}

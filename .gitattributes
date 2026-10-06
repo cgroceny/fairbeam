@@ -1,0 +1,26 @@
+# LF everywhere, also in Windows checkouts: the export / drawing / fixture checks compare files
+# byte for byte, and Touchstone, CSV, SVG and bundle fixtures must not gain CRLF.
+* text=auto eol=lf
+# CST macros are written with CRLF on purpose (VBA editor): keep them byte for byte
+*.bas -text
+# fixtures that test CRLF input
+*crlf* -text
+*.ps1 text eol=crlf
+*.bat text eol=crlf
+*.cmd text eol=crlf
+
+# binary
+*.png binary
+*.jpg binary
+*.ico binary
+*.icns binary
+*.woff binary
+*.woff2 binary
+*.pdf binary
+*.zip binary
+*.h5 binary
+
+# Unified patch context requires leading spaces before upstream tabs and empty lines.
+# Validate whitespace on the applied native source with git diff --check instead.
+scripts/native-cpu/*.patch -whitespace
+scripts/native-cpu/openems-cpu-upml-rows.patch -text -whitespace

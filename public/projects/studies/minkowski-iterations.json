@@ -1,0 +1,160 @@
+{
+ "schema": "fairbeam.study/1",
+ "kind": "sweep",
+ "name": "minkowski-iterations",
+ "created": "2026-09-24T23:30:59+0300",
+ "model": {
+  "id": "minkowski-patch",
+  "name": "Minkowski fractal patch",
+  "file": "minkowski_patch.py"
+ },
+ "axes": [
+  {
+   "key": "iterations",
+   "values": [
+    0,
+    1,
+    2
+   ]
+  }
+ ],
+ "fixed": {},
+ "threads": 4,
+ "end_criteria_db": null,
+ "exact_endcriteria": true,
+ "wall_time_s": 143.26,
+ "members": [
+  {
+   "file": "studies/minkowski-iterations/minkowski-patch--iterations-0.json",
+   "params": {
+    "iterations": "0"
+   },
+   "summary": {
+    "bands": [
+     {
+      "f_lo": 2540000000.0,
+      "f_hi": 2576000000.0,
+      "f_center": 2558000000.0,
+      "s11_min_db": -22.855,
+      "edge_lo": false,
+      "edge_hi": false
+     }
+    ],
+    "first_resonance": {
+     "f": 2558000000.0,
+     "s11_db": -22.855,
+     "matched": true
+    },
+    "reactance_zeros": [
+     {
+      "f": 2650000000.0,
+      "r": 4.528
+     }
+    ],
+    "farfield": [
+     {
+      "f": 2558000000.0,
+      "dmax_dbi": 6.849,
+      "dmax_pattern_dbi": 6.846,
+      "rad_efficiency": 0.8763,
+      "gain_dbi": 6.276,
+      "realized_gain_dbi": 6.253
+     }
+    ],
+    "dmax_dbi": 6.849,
+    "rad_efficiency": 0.8763,
+    "cells": 278663,
+    "min_cell": 0.508,
+    "max_cell": 4.61285,
+    "timesteps": 13167,
+    "wall_time_s": 26.67,
+    "converged": true
+   }
+  },
+  {
+   "file": "studies/minkowski-iterations/minkowski-patch--iterations-1.json",
+   "params": {
+    "iterations": "1"
+   },
+   "summary": {
+    "bands": [
+     {
+      "f_lo": 2322000000.0,
+      "f_hi": 2332000000.0,
+      "f_center": 2326000000.0,
+      "s11_min_db": -10.984,
+      "edge_lo": false,
+      "edge_hi": false
+     }
+    ],
+    "first_resonance": {
+     "f": 2326000000.0,
+     "s11_db": -10.984,
+     "matched": true
+    },
+    "reactance_zeros": [
+     {
+      "f": 2422638461.5384617,
+      "r": 2.136
+     }
+    ],
+    "farfield": [
+     {
+      "f": 2326000000.0,
+      "dmax_dbi": 6.64,
+      "dmax_pattern_dbi": 6.636,
+      "rad_efficiency": 0.7941,
+      "gain_dbi": 5.639,
+      "realized_gain_dbi": 5.278
+     }
+    ],
+    "dmax_dbi": 6.64,
+    "rad_efficiency": 0.7941,
+    "cells": 278663,
+    "min_cell": 0.508,
+    "max_cell": 4.61285,
+    "timesteps": 20615,
+    "wall_time_s": 46.33,
+    "converged": true
+   }
+  },
+  {
+   "file": "studies/minkowski-iterations/minkowski-patch--iterations-2.json",
+   "params": {
+    "iterations": "2"
+   },
+   "summary": {
+    "bands": [],
+    "first_resonance": {
+     "f": 2278000000.0,
+     "s11_db": -9.161,
+     "matched": false
+    },
+    "reactance_zeros": [
+     {
+      "f": 2379221789.8832684,
+      "r": 1.708
+     }
+    ],
+    "farfield": [
+     {
+      "f": 2278000000.0,
+      "dmax_dbi": 6.597,
+      "dmax_pattern_dbi": 6.593,
+      "rad_efficiency": 0.7715,
+      "gain_dbi": 5.47,
+      "realized_gain_dbi": 4.908
+     }
+    ],
+    "dmax_dbi": 6.597,
+    "rad_efficiency": 0.7715,
+    "cells": 285948,
+    "min_cell": 0.508,
+    "max_cell": 4.61285,
+    "timesteps": 30016,
+    "wall_time_s": 64.09,
+    "converged": true
+   }
+  }
+ ]
+}

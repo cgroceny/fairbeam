@@ -1,0 +1,350 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Fairbeam</title>
+<style>
+  /* Values mirror design-system/tokens.css (the splash is shown before the viewer loads). */
+  :root {
+    color-scheme: light dark;
+    --al-bg: #f7f6f3; --al-surface: #ffffff; --al-surface-2: #efeeea; --al-border: #dedcd6;
+    --al-text: #181715; --al-text-2: #5d5a53; --al-text-3: #6d6961;
+    --al-action: #9c5426; --al-action-text: #ffffff; --al-accent-text: #7e431f; --al-brand-mark: #b8672f;
+    --al-critical: #b02e2e; --al-focus: #9c5426;
+    --al-font-sans: -apple-system, "IBM Plex Sans", system-ui, sans-serif;
+    --al-font-mono: "SF Mono", "IBM Plex Mono", ui-monospace, Menlo, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --al-bg: #121110; --al-surface: #1a1917; --al-surface-2: #22211f; --al-border: #2e2d2a;
+      --al-text: #f2f0eb; --al-text-2: #c6c2b8; --al-text-3: #a29e94;
+      --al-action: #cf8147; --al-action-text: #1a1917; --al-accent-text: #dda172; --al-brand-mark: #cf8147;
+      --al-critical: #ef6b6b; --al-focus: #dda172;
+    }
+  }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; margin: 0; }
+  body {
+    display: grid; place-items: center; background: var(--al-bg); color: var(--al-text);
+    font: 13px/1.5 var(--al-font-sans); -webkit-font-smoothing: antialiased; -webkit-user-select: none; user-select: none;
+  }
+  main { width: min(560px, calc(100vw - 48px)); display: grid; gap: 16px; }
+  /* Long diagnostics must remain reachable in a scaled, short desktop window. */
+  @media (max-height: 900px) {
+    body { padding-block: 24px; align-items: safe center; }
+    main { min-height: 0; max-height: calc(100dvh - 48px); overflow: auto; }
+    main > * { min-width: 0; }
+    main button { max-width: 100%; height: auto; min-height: 30px; overflow-wrap: anywhere; }
+  }
+  /* the lockup of the brand kit (as src/components/Lockup.tsx): plate 32 px, wordmark in the text colour */
+  .brand svg { display: block; width: 206px; height: 32px; color: var(--al-text); }
+  #status { display: flex; align-items: center; gap: 10px; min-height: 24px; color: var(--al-text-2); font-size: 14px; }
+  .spin { width: 16px; height: 16px; border-radius: 50%; border: 2px solid var(--al-border); border-top-color: var(--al-action); animation: spin 0.9s linear infinite; flex: none; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  @media (prefers-reduced-motion: reduce) { .spin { animation: none; } }
+  .meta { color: var(--al-text-3); font: 12px var(--al-font-mono); overflow-wrap: anywhere; }
+  .card { display: grid; gap: 12px; padding: 16px; background: var(--al-surface); border: 1px solid var(--al-border); border-radius: 10px; -webkit-user-select: text; user-select: text; }
+  .card h2 { margin: 0; font-size: 15px; }
+  .card p { margin: 0; color: var(--al-text-2); }
+  pre { margin: 0; padding: 10px 12px; background: var(--al-surface-2); border-radius: 6px; font: 12px/1.6 var(--al-font-mono); white-space: pre-wrap; overflow-wrap: anywhere; }
+  ul { margin: 0; padding-left: 18px; color: var(--al-text-3); font: 11.5px/1.6 var(--al-font-mono); }
+  .actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+  button {
+    height: 30px; padding: 0 12px; border-radius: 6px; border: 1px solid var(--al-border); background: transparent;
+    color: var(--al-text); font: 500 13px var(--al-font-sans); cursor: pointer;
+  }
+  button:hover { background: var(--al-surface-2); }
+  button.primary { background: var(--al-action); color: var(--al-action-text); border-color: transparent; }
+  button:focus-visible, input:focus-visible { outline: 2px solid var(--al-focus); outline-offset: 2px; }
+  label { display: inline-flex; align-items: center; gap: 6px; color: var(--al-text-2); }
+  .error { color: var(--al-critical); }
+  .bar { height: 6px; border-radius: 3px; background: var(--al-surface-2); overflow: hidden; }
+  .bar > div { height: 100%; width: 0; background: var(--al-action); transition: width 0.2s ease; }
+  .bar.indeterminate > div { width: 30%; animation: slide 1.2s ease-in-out infinite; }
+  @keyframes slide { from { margin-left: -30%; } to { margin-left: 100%; } }
+  @media (prefers-reduced-motion: reduce) { .bar.indeterminate > div { animation: none; width: 100%; opacity: 0.4; } }
+  ol.steps { margin: 0; padding-left: 20px; color: var(--al-text-3); font-size: 12.5px; line-height: 1.8; }
+  ol.steps li.done { color: var(--al-text-2); }
+  ol.steps li.now { color: var(--al-text); font-weight: 600; }
+  .cands { display: grid; gap: 6px; }
+  .cands button { justify-self: start; font: 12px var(--al-font-mono); }
+  [hidden] { display: none !important; }
+</style>
+</head>
+<body>
+<main>
+  <div class="brand">
+    <svg viewBox="0 0 774 120" role="img" aria-label="Fairbeam"><path fill="#B87333" d="M27 0H93A27 27 0 0 1 120 27V93A27 27 0 0 1 93 120H27A27 27 0 0 1 0 93V27A27 27 0 0 1 27 0Z"/><path fill="#3FD0E0" d="M120 27C116.97 30.09 113.93 32.73 110.9 35.03C104.73 39.71 98.57 43.03 92.4 45.61C84.01 49.12 75.61 51.26 67.21 52.82C56.92 54.73 46.63 55.74 36.35 56.45A10 10 0 1 0 36.35 63.55C46.63 64.26 56.92 65.27 67.21 67.18C75.61 68.74 84.01 70.88 92.4 74.39C98.57 76.97 104.73 80.29 110.9 84.97C113.93 87.27 116.97 89.91 120 93Z"/><path fill="currentColor" transform="translate(168 116.245)" d="M11.8 0V-64.52H0V-80H11.8V-91.49Q11.8 -102.07 17.47 -107.74Q23.14 -113.41 33.87 -113.41H47.82V-97.78H31.42V-80H47.82V-64.52H31.42V0ZM128.12 0H117.24Q112.8 0 109.35 -2.07Q105.9 -4.14 104.06 -8.12Q102.68 -10.73 102.38 -13.79H101.46Q99.46 -6.13 93.26 -2.15Q87.05 1.84 78.16 1.84Q65.9 1.84 59.31 -4.67Q52.72 -11.19 52.72 -21.76Q52.72 -30.04 56.78 -35.4Q60.84 -40.77 68.51 -43.52Q76.17 -46.28 86.9 -46.28H100.54V-52.11Q100.54 -58.7 97.01 -62.45Q93.49 -66.21 85.67 -66.21Q78.77 -66.21 74.56 -63.22Q70.34 -60.23 67.43 -56.09L55.79 -66.51Q60.23 -73.41 67.59 -77.62Q74.94 -81.84 87.05 -81.84Q103.14 -81.84 111.65 -74.41Q120.15 -66.97 120.15 -53.33V-15.63H128.12ZM100.54 -34.48H87.97Q80.31 -34.48 76.48 -31.95Q72.64 -29.43 72.64 -24.67V-22.07Q72.64 -17.32 75.86 -14.87Q79.08 -12.41 84.75 -12.41Q89.2 -12.41 92.72 -13.72Q96.25 -15.02 98.39 -17.62Q100.54 -20.23 100.54 -23.91ZM150.8 -91.65Q144.83 -91.65 142.07 -94.48Q139.31 -97.32 139.31 -101.46V-104.52Q139.31 -108.81 142.07 -111.57Q144.83 -114.33 150.8 -114.33Q156.78 -114.33 159.54 -111.57Q162.3 -108.81 162.3 -104.52V-101.46Q162.3 -97.32 159.54 -94.48Q156.78 -91.65 150.8 -91.65ZM141 0V-80H160.61V0ZM199.69 0H180.08V-80H199.69V-63.45H200.46Q201.53 -67.74 204.06 -71.49Q206.59 -75.25 210.96 -77.62Q215.33 -80 221.61 -80H225.9V-61.46H219.77Q213.18 -61.46 208.66 -60.15Q204.14 -58.85 201.92 -56.17Q199.69 -53.49 199.69 -49.04ZM237.24 0V-113.41H256.86V-66.82H257.47Q259.62 -73.72 265.67 -77.78Q271.72 -81.84 279.54 -81.84Q289.81 -81.84 296.7 -76.93Q303.6 -72.03 307.28 -62.76Q310.96 -53.49 310.96 -40.15Q310.96 -26.82 307.28 -17.39Q303.6 -7.97 296.7 -3.07Q289.81 1.84 279.54 1.84Q271.72 1.84 265.75 -2.3Q259.77 -6.44 257.47 -13.33H256.86V0ZM273.26 -14.41Q280.92 -14.41 285.67 -19.54Q290.42 -24.67 290.42 -33.1V-46.9Q290.42 -55.48 285.67 -60.61Q280.92 -65.75 273.26 -65.75Q268.66 -65.75 264.9 -64.14Q261.15 -62.53 259 -59.62Q256.86 -56.7 256.86 -52.87V-27.43Q256.86 -23.3 259 -20.38Q261.15 -17.47 264.9 -15.94Q268.66 -14.41 273.26 -14.41ZM358.47 1.84Q346.67 1.84 338.24 -3.3Q329.81 -8.43 325.29 -17.85Q320.77 -27.28 320.77 -40.15Q320.77 -52.72 325.21 -62.15Q329.66 -71.57 337.93 -76.7Q346.21 -81.84 357.85 -81.84Q370.42 -81.84 378.47 -76.32Q386.51 -70.8 390.42 -61.69Q394.33 -52.57 394.33 -41.53V-35.1H341.15V-33.1Q341.15 -24.52 346.05 -19.16Q350.96 -13.79 360.61 -13.79Q367.82 -13.79 372.57 -16.93Q377.32 -20.08 381 -24.67L391.57 -12.87Q386.67 -6.28 378.16 -2.22Q369.66 1.84 358.47 1.84ZM358.16 -67.13Q352.95 -67.13 349.12 -64.75Q345.29 -62.38 343.22 -58.16Q341.15 -53.95 341.15 -48.43V-47.2H373.95V-48.58Q373.95 -54.25 372.11 -58.31Q370.27 -62.38 366.74 -64.75Q363.22 -67.13 358.16 -67.13ZM478.31 0H467.43Q462.99 0 459.54 -2.07Q456.09 -4.14 454.25 -8.12Q452.87 -10.73 452.57 -13.79H451.65Q449.66 -6.13 443.45 -2.15Q437.24 1.84 428.35 1.84Q416.09 1.84 409.5 -4.67Q402.91 -11.19 402.91 -21.76Q402.91 -30.04 406.97 -35.4Q411.03 -40.77 418.7 -43.52Q426.36 -46.28 437.09 -46.28H450.73V-52.11Q450.73 -58.7 447.2 -62.45Q443.68 -66.21 435.86 -66.21Q428.97 -66.21 424.75 -63.22Q420.54 -60.23 417.62 -56.09L405.98 -66.51Q410.42 -73.41 417.78 -77.62Q425.13 -81.84 437.24 -81.84Q453.33 -81.84 461.84 -74.41Q470.34 -66.97 470.34 -53.33V-15.63H478.31ZM450.73 -34.48H438.16Q430.5 -34.48 426.67 -31.95Q422.84 -29.43 422.84 -24.67V-22.07Q422.84 -17.32 426.05 -14.87Q429.27 -12.41 434.94 -12.41Q439.39 -12.41 442.91 -13.72Q446.44 -15.02 448.58 -17.62Q450.73 -20.23 450.73 -23.91ZM510.8 0H491.19V-80H510.8V-66.67H511.57Q513.87 -72.95 519 -77.39Q524.14 -81.84 533.03 -81.84Q541.3 -81.84 547.36 -77.85Q553.41 -73.87 556.17 -65.75H556.48Q558.62 -72.34 565.06 -77.09Q571.49 -81.84 581 -81.84Q592.64 -81.84 599.08 -73.64Q605.52 -65.44 605.52 -50.57V0H585.9V-48.58Q585.9 -57.16 582.76 -61.46Q579.62 -65.75 573.03 -65.75Q569.2 -65.75 565.75 -64.29Q562.3 -62.84 560.23 -60Q558.16 -57.16 558.16 -52.87V0H538.54V-48.58Q538.54 -57.16 535.33 -61.46Q532.11 -65.75 525.67 -65.75Q521.99 -65.75 518.54 -64.29Q515.1 -62.84 512.95 -60Q510.8 -57.16 510.8 -52.87Z"/></svg>
+  </div>
+  <div id="status" role="status" aria-live="polite"><span class="spin" id="spin"></span><span id="text" data-i18n="starting">Starting…</span></div>
+  <div id="meta" class="meta"></div>
+
+  <section id="setup" class="card" hidden>
+    <h2 id="setup-title" data-i18n="setup.title">Fairbeam needs to install its runtime</h2>
+    <p id="setup-detail"></p>
+    <div class="actions">
+      <button class="primary" id="use-managed" hidden data-i18n="useManaged">Use the installed runtime</button>
+      <button class="primary" id="install" data-i18n="install">Install the runtime</button>
+      <button id="choose" data-i18n="choose">Use an existing Python…</button>
+    </div>
+    <p class="meta" id="install-note"></p>
+    <details><summary class="meta" data-i18n="tried">What was checked</summary><ul id="tried"></ul></details>
+    <label id="gpu-row" hidden><input type="checkbox" id="gpu" /> <span><span data-i18n="preferGpu">Prefer the GPU build</span> (<span id="gpu-path">~/opt/openEMS-gpu</span>)</span></label>
+    <div class="meta" id="gpu-runtime-row" hidden>
+      <p id="gpu-runtime-status"></p>
+      <button id="install-gpu-runtime" hidden data-i18n="gpu.install">Install optional GPU support</button>
+    </div>
+    <p class="meta" id="settings"></p>
+  </section>
+
+  <section id="installing" class="card" hidden>
+    <h2 data-i18n="installing">Installing the Fairbeam runtime</h2>
+    <div class="bar indeterminate" id="bar"><div></div></div>
+    <p class="meta" id="inst-msg"></p>
+    <ol class="steps" id="steps"></ol>
+    <p class="meta" id="inst-log"></p>
+  </section>
+
+  <section id="failure" class="card" hidden>
+    <h2 class="error" id="fail-title" data-i18n="fail.title">The server could not start</h2>
+    <pre id="fail-detail"></pre>
+    <div class="actions">
+      <button class="primary" id="retry2" data-i18n="retry">Try again</button>
+      <button id="repair" hidden data-i18n="repair">Repair the runtime</button>
+      <button id="choose2" data-i18n="choose">Use an existing Python…</button>
+    </div>
+    <p class="meta" id="fail-log"></p>
+  </section>
+</main>
+<script>
+  // The splash is shown before the viewer loads, so it has its own small table of texts (checked
+  // with the viewer's by scripts/check-i18n.mjs). The language is the one the viewer last chose
+  // (the shell passes it as `lang`), else the system language. Status texts the shell sends in
+  // English are shown translated when they are known; technical details stay as they are.
+  const TEXT = {
+    en: {
+      "starting": "Starting…",
+      "setup.title": "Fairbeam needs to install its runtime",
+      "useManaged": "Use the installed runtime",
+      "install": "Install the runtime",
+      "installSize": "Install the runtime (about {mb} MB download)",
+      "choose": "Use an existing Python…",
+      "tried": "What was checked",
+      "preferGpu": "Prefer the GPU build",
+      "gpu.install": "Install optional GPU support",
+      "gpu.installing": "Preparing the GPU runtime…",
+      "gpu.ready": "The GPU runtime is installed. Choose it in Settings to use it next time.",
+      "gpu.readyEnabled": "The GPU runtime is installed and will be used next time Fairbeam starts.",
+      "gpu.nvidia_smi_missing": "No NVIDIA driver utility was found. Install an NVIDIA driver to use GPU simulation; CPU simulation remains available.",
+      "gpu.nvidia_gpu_missing": "No NVIDIA GPU was reported by the driver. CPU simulation remains available.",
+      "gpu.nvidia_driver_too_old": "The NVIDIA driver is too old; driver 528.33 or newer is required. CPU simulation remains available.",
+      "gpu.nvidia_compute_unsupported": "This NVIDIA GPU architecture is outside the supported range. CPU simulation remains available.",
+      "gpu.nvidia_compute_capability_unknown": "The NVIDIA driver did not report a supported GPU architecture. CPU simulation remains available.",
+      "gpu.nvidia_probe_failed": "The NVIDIA driver could not be queried. CPU simulation remains available.",
+      "gpu.gpu_runtime_unsupported": "The managed GPU runtime is available only on Windows x64.",
+      "gpu.notReady": "GPU simulation is unavailable. CPU simulation remains available.",
+      "installing": "Installing the Fairbeam runtime",
+      "fail.title": "The server could not start",
+      "retry": "Try again",
+      "repair": "Repair the runtime",
+      "gpuEngine": "GPU engine",
+      "runtimeFolder": "Runtime folder: {path}",
+      "settings": "Settings: {path}",
+      "log": "Log: {path}",
+      "step.download-uv": "Download uv (Python installer)",
+      "step.install-python": "Install Python",
+      "step.create-venv": "Create the environment",
+      "step.download-openems": "Download openEMS",
+      "step.unpack-openems": "Unpack openEMS",
+      "step.install-packages": "Install Python packages",
+      "step.install-openems-wheels": "Install the openEMS Python modules",
+      "step.install-app": "Install the Fairbeam package",
+      "step.verify": "Check the installation",
+      "st.chosenPython": "Checking the chosen Python…",
+      "st.chosenBroken": "The chosen Python cannot run Fairbeam.",
+      "st.runtime": "Checking the Fairbeam runtime…",
+      "st.updating": "Updating Fairbeam in the runtime…",
+      "st.updateFailed": "The runtime could not be updated.",
+      "st.damaged": "The Fairbeam runtime is damaged.",
+      "st.needsRuntime": "Fairbeam needs to install its runtime.",
+      "st.needsRuntimeDetail": "Python, the Python packages and openEMS are installed once for your user account, in the folder below. Nothing is installed system-wide.",
+      "st.workspace": "Preparing your workspace…",
+      "st.workspaceFailed": "The workspace could not be prepared.",
+      "st.server": "Starting the Fairbeam server…",
+      "st.serverFailed": "Could not start the server.",
+      "st.serverStopped": "The server stopped during start-up.",
+      "st.serverSilent": "The server did not answer within 90 s.",
+      "st.opening": "Opening Fairbeam…",
+      "st.installingRuntime": "Installing the Fairbeam runtime…",
+      "st.installFailed": "The runtime could not be installed.",
+    },
+    tr: {
+      "starting": "Başlatılıyor…",
+      "setup.title": "Fairbeam'in çalışma ortamını kurması gerekiyor",
+      "useManaged": "Kurulu çalışma ortamını kullan",
+      "install": "Çalışma ortamını kur",
+      "installSize": "Çalışma ortamını kur (yaklaşık {mb} MB indirme)",
+      "choose": "Mevcut bir Python kullan…",
+      "tried": "Neler denetlendi",
+      "preferGpu": "GPU derlemesini tercih et",
+      "gpu.install": "İsteğe bağlı GPU desteğini kur",
+      "gpu.installing": "GPU çalışma ortamı hazırlanıyor…",
+      "gpu.ready": "GPU çalışma ortamı kuruldu. Bir sonraki açılışta kullanmak için Ayarlar'dan seçin.",
+      "gpu.readyEnabled": "GPU çalışma ortamı kuruldu ve Fairbeam bir sonraki açılışta bunu kullanacak.",
+      "gpu.nvidia_smi_missing": "NVIDIA sürücü aracı bulunamadı. GPU benzetimi için NVIDIA sürücüsü kurun; CPU benzetimi kullanılabilir.",
+      "gpu.nvidia_gpu_missing": "Sürücü bir NVIDIA GPU bildirmedi. CPU benzetimi kullanılabilir.",
+      "gpu.nvidia_driver_too_old": "NVIDIA sürücüsü eski; 528.33 veya üzeri bir sürücü gerekiyor. CPU benzetimi kullanılabilir.",
+      "gpu.nvidia_compute_unsupported": "Bu NVIDIA GPU mimarisi desteklenen aralıkta değil. CPU benzetimi kullanılabilir.",
+      "gpu.nvidia_compute_capability_unknown": "NVIDIA sürücüsü desteklenen GPU mimarisini bildirmedi. CPU benzetimi kullanılabilir.",
+      "gpu.nvidia_probe_failed": "NVIDIA sürücüsü sorgulanamadı. CPU benzetimi kullanılabilir.",
+      "gpu.gpu_runtime_unsupported": "Yönetilen GPU çalışma ortamı yalnızca Windows x64'te kullanılabilir.",
+      "gpu.notReady": "GPU benzetimi kullanılamıyor. CPU benzetimi kullanılabilir.",
+      "installing": "Fairbeam çalışma ortamı kuruluyor",
+      "fail.title": "Sunucu başlatılamadı",
+      "retry": "Yeniden dene",
+      "repair": "Çalışma ortamını onar",
+      "gpuEngine": "GPU motoru",
+      "runtimeFolder": "Çalışma ortamı klasörü: {path}",
+      "settings": "Ayarlar: {path}",
+      "log": "Günlük: {path}",
+      "step.download-uv": "uv'yi indir (Python kurucusu)",
+      "step.install-python": "Python'u kur",
+      "step.create-venv": "Ortamı oluştur",
+      "step.download-openems": "openEMS'i indir",
+      "step.unpack-openems": "openEMS'i aç",
+      "step.install-packages": "Python paketlerini kur",
+      "step.install-openems-wheels": "openEMS Python modüllerini kur",
+      "step.install-app": "Fairbeam paketini kur",
+      "step.verify": "Kurulumu denetle",
+      "st.chosenPython": "Seçilen Python denetleniyor…",
+      "st.chosenBroken": "Seçilen Python Fairbeam'i çalıştıramıyor.",
+      "st.runtime": "Fairbeam çalışma ortamı denetleniyor…",
+      "st.updating": "Çalışma ortamındaki Fairbeam güncelleniyor…",
+      "st.updateFailed": "Çalışma ortamı güncellenemedi.",
+      "st.damaged": "Fairbeam çalışma ortamı bozuk.",
+      "st.needsRuntime": "Fairbeam'in çalışma ortamını kurması gerekiyor.",
+      "st.needsRuntimeDetail": "Python, Python paketleri ve openEMS kullanıcı hesabınız için bir kez, aşağıdaki klasöre kurulur. Sistem geneline hiçbir şey kurulmaz.",
+      "st.workspace": "Çalışma alanınız hazırlanıyor…",
+      "st.workspaceFailed": "Çalışma alanı hazırlanamadı.",
+      "st.server": "Fairbeam sunucusu başlatılıyor…",
+      "st.serverFailed": "Sunucu başlatılamadı.",
+      "st.serverStopped": "Sunucu açılış sırasında durdu.",
+      "st.serverSilent": "Sunucu 90 s içinde yanıt vermedi.",
+      "st.opening": "Fairbeam açılıyor…",
+      "st.installingRuntime": "Fairbeam çalışma ortamı kuruluyor…",
+      "st.installFailed": "Çalışma ortamı kurulamadı.",
+    },
+  };
+  const systemLang = () => ((navigator.languages && navigator.languages[0]) || navigator.language || "en").toLowerCase().startsWith("tr") ? "tr" : "en";
+  let lang = systemLang();
+  const L = (key, params) => String((TEXT[lang] && TEXT[lang][key]) || TEXT.en[key] || key)
+    .replace(/\{(\w+)\}/g, (all, name) => (params && params[name] !== undefined ? String(params[name]) : all));
+  // a status text the shell sends in English, translated when it is one of the known ones
+  const known = (text) => {
+    if (!text || lang === "en") return text || "";
+    const key = Object.keys(TEXT.en).find((k) => k.startsWith("st.") && TEXT.en[k] === text);
+    return key ? L(key) : text;
+  };
+  function applyLang(next) {
+    if (next === "en" || next === "tr") lang = next;
+    document.documentElement.lang = lang;
+    for (const el of document.querySelectorAll("[data-i18n]")) el.textContent = L(el.dataset.i18n);
+  }
+  applyLang();
+
+  const T = window.__TAURI__;
+  const invoke = (cmd, args) => (T && T.core ? T.core.invoke(cmd, args) : Promise.resolve(null));
+  const $ = (id) => document.getElementById(id);
+
+  const STEPS = ["download-uv", "install-python", "create-venv", "download-openems", "unpack-openems",
+    "install-packages", "install-openems-wheels", "install-app", "verify"];
+  let lastStep = -1;
+
+  function show(s) {
+    if (!s || !s.phase) return;
+    if (s.lang) applyLang(s.lang);
+    const busy = ["searching", "starting", "ready", "installing"].includes(s.phase);
+    $("spin").hidden = !busy;
+    $("text").textContent = known(s.text);
+    const meta = [];
+    if (s.python) meta.push(`python ${s.python}`);
+    if (s.openems) meta.push(`openEMS ${s.openems}${s.gpu ? ` · ${L("gpuEngine")}` : ""}`);
+    if (s.port) meta.push(`127.0.0.1:${s.port}`);
+    if (s.note) meta.push(s.note);
+    $("meta").textContent = meta.join("  ·  ");
+    // the setup and error cards carry their own heading: no second copy in the status line
+    $("status").hidden = s.phase === "setup" || s.phase === "error" || s.phase === "installing";
+    $("setup").hidden = s.phase !== "setup";
+    $("installing").hidden = s.phase !== "installing";
+    $("failure").hidden = s.phase !== "error";
+    if (s.phase === "setup") {
+      lastStep = -1;
+      $("setup-title").textContent = known(s.text);
+      $("setup-detail").textContent = known(s.detail);
+      $("install").hidden = !s.canInstall;
+      $("use-managed").hidden = !s.managedReady;
+      $("install").textContent = s.install ? L("installSize", { mb: s.install.downloadMB }) : L("install");
+      const notes = [];
+      if (s.installNote) notes.push(s.installNote);
+      if (s.runtime) notes.push(L("runtimeFolder", { path: s.runtime }));
+      $("install-note").textContent = notes.join("  ·  ");
+      $("tried").replaceChildren(...(s.tried || []).map((t) => {
+        const li = document.createElement("li");
+        li.textContent = `${t.python} (${t.why}): ${t.result}`;
+        return li;
+      }));
+      $("gpu-row").hidden = !s.gpuAvailable;
+      if (s.gpuPath) $("gpu-path").textContent = s.gpuPath;
+      $("gpu").checked = !!s.preferGpu;
+      const showGpuRuntime = !!s.managedReady;
+      $("gpu-runtime-row").hidden = !showGpuRuntime;
+      $("install-gpu-runtime").hidden = !showGpuRuntime || !s.gpuSupported || !!s.gpuRuntimeReady;
+      $("install-gpu-runtime").disabled = !!s.gpuRuntimeInstalling;
+      if (s.gpuRuntimeInstalling) {
+        $("gpu-runtime-status").textContent = L("gpu.installing");
+      } else if (s.gpuRuntimeReady) {
+        $("gpu-runtime-status").textContent = L(s.gpuRuntimeEnabled ? "gpu.readyEnabled" : "gpu.ready");
+      } else if (s.gpuSupported) {
+        const adapter = s.gpuAdapter ? ` · ${s.gpuAdapter}${s.gpuDriver ? ` · ${s.gpuDriver}` : ""}` : "";
+        $("gpu-runtime-status").textContent = `${L("gpu.install")}${adapter}`;
+      } else {
+        const reason = s.gpuSupportReason && TEXT.en[`gpu.${s.gpuSupportReason}`] ? `gpu.${s.gpuSupportReason}` : "gpu.notReady";
+        $("gpu-runtime-status").textContent = L(reason);
+      }
+      $("settings").textContent = s.settings ? L("settings", { path: s.settings }) : "";
+    }
+    if (s.phase === "installing") {
+      const k = STEPS.indexOf(s.step);
+      if (k >= 0) lastStep = k;
+      $("steps").replaceChildren(...STEPS.map((id, i) => {
+        const li = document.createElement("li");
+        li.textContent = L(`step.${id}`);
+        li.className = i < lastStep ? "done" : i === lastStep ? "now" : "";
+        return li;
+      }));
+      const f = typeof s.fraction === "number" ? s.fraction : null;
+      $("bar").classList.toggle("indeterminate", f === null);
+      $("bar").firstElementChild.style.width = f === null ? "" : `${Math.round(f * 100)}%`;
+      $("inst-msg").textContent = s.message || "";
+      $("inst-log").textContent = s.log ? L("log", { path: s.log }) : "";
+    }
+    if (s.phase === "error") {
+      $("fail-title").textContent = known(s.text);
+      $("fail-detail").textContent = s.detail || "";
+      $("fail-log").textContent = s.log ? L("log", { path: s.log }) : "";
+      $("repair").hidden = !s.installFailed;
+    }
+  }
+  window.fairbeamSplash = show;
+  $("retry2").addEventListener("click", () => invoke("retry"));
+  $("install").addEventListener("click", () => invoke("install_runtime", { repair: false }));
+  $("install-gpu-runtime").addEventListener("click", () => invoke("install_gpu_runtime"));
+  $("use-managed").addEventListener("click", () => invoke("use_managed"));
+  $("repair").addEventListener("click", () => invoke("install_runtime", { repair: true }));
+  for (const id of ["choose", "choose2"]) $(id).addEventListener("click", () => invoke("choose_python"));
+  $("gpu").addEventListener("change", (e) => invoke("set_prefer_gpu", { value: e.target.checked }));
+  invoke("splash_state").then(show);
+</script>
+</body>
+</html>

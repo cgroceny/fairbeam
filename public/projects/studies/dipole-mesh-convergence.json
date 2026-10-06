@@ -1,0 +1,289 @@
+{
+ "schema": "fairbeam.study/1",
+ "kind": "convergence",
+ "name": "dipole-mesh-convergence",
+ "created": "2026-09-24T23:11:24+0300",
+ "model": {
+  "id": "dipole",
+  "name": "Half-wave dipole",
+  "file": "dipole.py"
+ },
+ "axes": [
+  {
+   "key": "mesh_div",
+   "values": [
+    10,
+    15,
+    20,
+    30,
+    40
+   ]
+  }
+ ],
+ "fixed": {
+  "pad": "80"
+ },
+ "threads": 4,
+ "end_criteria_db": -60.0,
+ "exact_endcriteria": true,
+ "wall_time_s": 90.46,
+ "members": [
+  {
+   "file": "studies/dipole-mesh-convergence/dipole--mesh_div-10--pad-80.json",
+   "params": {
+    "mesh_div": "10"
+   },
+   "summary": {
+    "bands": [
+     {
+      "f_lo": 2255000000.0,
+      "f_hi": 2557500000.0,
+      "f_center": 2392500000.0,
+      "s11_min_db": -39.42,
+      "edge_lo": false,
+      "edge_hi": false
+     }
+    ],
+    "first_resonance": {
+     "f": 2392500000.0,
+     "s11_db": -39.42,
+     "matched": true
+    },
+    "reactance_zeros": [
+     {
+      "f": 2393444148.93617,
+      "r": 74.665
+     }
+    ],
+    "farfield": [
+     {
+      "f": 2392500000.0,
+      "dmax_dbi": 2.169,
+      "rad_efficiency": 0.9909,
+      "gain_dbi": 2.129,
+      "realized_gain_dbi": 2.129
+     }
+    ],
+    "dmax_dbi": 2.169,
+    "rad_efficiency": 0.9909,
+    "cells": 71632,
+    "min_cell": 0.25,
+    "max_cell": 8.20117,
+    "timesteps": 10400,
+    "wall_time_s": 10.68,
+    "converged": true
+   }
+  },
+  {
+   "file": "studies/dipole-mesh-convergence/dipole--mesh_div-15--pad-80.json",
+   "params": {
+    "mesh_div": "15"
+   },
+   "summary": {
+    "bands": [
+     {
+      "f_lo": 2270000000.0,
+      "f_hi": 2580000000.0,
+      "f_center": 2410000000.0,
+      "s11_min_db": -52.537,
+      "edge_lo": false,
+      "edge_hi": false
+     }
+    ],
+    "first_resonance": {
+     "f": 2410000000.0,
+     "s11_db": -52.537,
+     "matched": true
+    },
+    "reactance_zeros": [
+     {
+      "f": 2409592944.369064,
+      "r": 73.278
+     }
+    ],
+    "farfield": [
+     {
+      "f": 2410000000.0,
+      "dmax_dbi": 2.167,
+      "rad_efficiency": 0.9968,
+      "gain_dbi": 2.153,
+      "realized_gain_dbi": 2.153
+     }
+    ],
+    "dmax_dbi": 2.167,
+    "rad_efficiency": 0.9968,
+    "cells": 95220,
+    "min_cell": 0.25,
+    "max_cell": 5.49473,
+    "timesteps": 9288,
+    "wall_time_s": 9.66,
+    "converged": true
+   }
+  },
+  {
+   "file": "studies/dipole-mesh-convergence/dipole--mesh_div-20--pad-80.json",
+   "params": {
+    "mesh_div": "20"
+   },
+   "summary": {
+    "bands": [
+     {
+      "f_lo": 2275000000.0,
+      "f_hi": 2587500000.0,
+      "f_center": 2415000000.0,
+      "s11_min_db": -53.88,
+      "edge_lo": false,
+      "edge_hi": false
+     }
+    ],
+    "first_resonance": {
+     "f": 2415000000.0,
+     "s11_db": -53.88,
+     "matched": true
+    },
+    "reactance_zeros": [
+     {
+      "f": 2414703678.4741144,
+      "r": 72.686
+     }
+    ],
+    "farfield": [
+     {
+      "f": 2415000000.0,
+      "dmax_dbi": 2.163,
+      "rad_efficiency": 0.9989,
+      "gain_dbi": 2.158,
+      "realized_gain_dbi": 2.158
+     }
+    ],
+    "dmax_dbi": 2.163,
+    "rad_efficiency": 0.9989,
+    "cells": 166212,
+    "min_cell": 0.25,
+    "max_cell": 4.26476,
+    "timesteps": 8505,
+    "wall_time_s": 13.56,
+    "converged": true
+   }
+  },
+  {
+   "file": "studies/dipole-mesh-convergence/dipole--mesh_div-30--pad-80.json",
+   "params": {
+    "mesh_div": "30"
+   },
+   "summary": {
+    "bands": [
+     {
+      "f_lo": 2277500000.0,
+      "f_hi": 2592500000.0,
+      "f_center": 2420000000.0,
+      "s11_min_db": -47.768,
+      "edge_lo": false,
+      "edge_hi": false
+     }
+    ],
+    "first_resonance": {
+     "f": 2420000000.0,
+     "s11_db": -47.768,
+     "matched": true
+    },
+    "reactance_zeros": [
+     {
+      "f": 2418570451.4363885,
+      "r": 72.422
+     }
+    ],
+    "farfield": [
+     {
+      "f": 2420000000.0,
+      "dmax_dbi": 2.135,
+      "rad_efficiency": 0.9995,
+      "gain_dbi": 2.133,
+      "realized_gain_dbi": 2.132
+     }
+    ],
+    "dmax_dbi": 2.135,
+    "rad_efficiency": 0.9995,
+    "cells": 406700,
+    "min_cell": 0.25,
+    "max_cell": 2.80933,
+    "timesteps": 8410,
+    "wall_time_s": 20.29,
+    "converged": true
+   }
+  },
+  {
+   "file": "studies/dipole-mesh-convergence/dipole--mesh_div-40--pad-80.json",
+   "params": {
+    "mesh_div": "40"
+   },
+   "summary": {
+    "bands": [
+     {
+      "f_lo": 2280000000.0,
+      "f_hi": 2592500000.0,
+      "f_center": 2420000000.0,
+      "s11_min_db": -45.882,
+      "edge_lo": false,
+      "edge_hi": false
+     }
+    ],
+    "first_resonance": {
+     "f": 2420000000.0,
+     "s11_db": -45.882,
+     "matched": true
+    },
+    "reactance_zeros": [
+     {
+      "f": 2419787671.232877,
+      "r": 72.242
+     }
+    ],
+    "farfield": [
+     {
+      "f": 2420000000.0,
+      "dmax_dbi": 2.133,
+      "rad_efficiency": 0.9996,
+      "gain_dbi": 2.131,
+      "realized_gain_dbi": 2.131
+     }
+    ],
+    "dmax_dbi": 2.133,
+    "rad_efficiency": 0.9996,
+    "cells": 809776,
+    "min_cell": 0.25,
+    "max_cell": 2.12892,
+    "timesteps": 8494,
+    "wall_time_s": 35.14,
+    "converged": true
+   }
+  }
+ ],
+ "convergence": {
+  "tol_f_pct": 0.5,
+  "tol_d_db": 0.1,
+  "steps": [
+   {
+    "df_pct": 0.7315,
+    "d_dmax_db": -0.002,
+    "converged": false
+   },
+   {
+    "df_pct": 0.2075,
+    "d_dmax_db": -0.004,
+    "converged": true
+   },
+   {
+    "df_pct": 0.207,
+    "d_dmax_db": -0.028,
+    "converged": true
+   },
+   {
+    "df_pct": 0.0,
+    "d_dmax_db": -0.002,
+    "converged": true
+   }
+  ],
+  "converged": true
+ }
+}

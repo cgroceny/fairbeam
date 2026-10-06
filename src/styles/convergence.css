@@ -1,0 +1,27 @@
+/* Mesh convergence dialog (src/designer/ConvergenceDialog.tsx) */
+/* .dialog-sm (640 px) would win over a plain .cv-dialog: the report table needs the 760 px */
+.cv-dialog.dialog-sm { width: min(760px, calc(100vw - 32px)); }
+/* max-content rows: a taller report (a two-line verdict) scrolls the body; it must not squeeze the
+   table's scroll box, which would hide the last run's row */
+.cv-body { display: grid; grid-auto-rows: max-content; gap: var(--al-space-3); max-height: min(72vh, 720px); overflow: auto; padding: var(--al-space-3) var(--al-space-4); }
+.cv-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: var(--al-space-2) var(--al-space-3); }
+.cv-wide { grid-column: 1 / -1; }
+.cv-table-wrap { overflow-x: auto; }
+.cv-table { font-size: var(--al-text-xs); }
+.cv-table th, .cv-table td { white-space: nowrap; }
+.cv-table .cv-chosen td { background: var(--al-accent-soft); }
+.cv-good { color: var(--al-good); }
+.cv-bad { color: var(--al-warn); }
+.cv-plots { display: flex; flex-wrap: wrap; gap: var(--al-space-3); }
+.cv-plot { margin: 0; display: grid; gap: var(--al-space-1); font-size: var(--al-text-xs); color: var(--al-text-2); }
+.cv-plot svg { display: block; background: var(--al-surface-2); border: 1px solid var(--al-border); border-radius: var(--al-radius-sm); }
+.cv-line { fill: none; stroke: var(--al-series-1, var(--al-accent-line)); stroke-width: 1.5; }
+.cv-dot { fill: var(--al-surface); stroke: var(--al-series-1, var(--al-accent-line)); stroke-width: 1.5; }
+.cv-dot-chosen { fill: var(--al-series-1, var(--al-accent-line)); }
+.cv-axis { display: flex; justify-content: space-between; gap: var(--al-space-2); font-size: var(--al-text-xs); }
+.cv-empty { margin: 0; }
+.cv-actions { display: flex; justify-content: flex-end; gap: var(--al-space-2); }
+@media (max-width: 520px) {
+  .cv-body { padding: var(--al-space-2); }
+  .cv-plot, .cv-plot svg { width: 100%; }
+}

@@ -1,0 +1,17 @@
+{
+  "schema": "antenlab.parameter-sweep/1",
+  "sequences": [
+    {
+      "name": "Length",
+      "axes": [
+        { "key": "length", "kind": "range", "start": "50", "stop": "66", "steps": "3" }
+      ]
+    },
+    {
+      "name": "Fixed list",
+      "axes": [
+        { "key": "length", "kind": "list", "list": "52, 58" }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,100 @@
+{
+ "schema": "fairbeam-benchmarks/1",
+ "generator": "scripts/build-benchmarks.mjs",
+ "sources": ["docs/benchmarks/windows-7900x.json","docs/benchmarks/windows-7900x-rtx3060-cuda.json","public/projects/*.json","docs/BENCHMARKS.md","docs/GPU.md"],
+ "models": {
+  "blade-867": [
+   {"machine":"NVIDIA RTX 3060 (on the 7900X)","host_cpu":"AMD Ryzen 9 7900X 12-Core Processor","engine":"gpu","backend":"CUDA","threads":null,"timesteps":[2304],"solver_s":0.45,"mcells_s":741.1,"params":{},"grid":[66,43,51],"date":"2026-10-04","source":"public/projects/blade-867.json"}
+  ],
+  "branchline-coupler": [
+   {"machine":"Apple M5 Pro","host_cpu":"Apple M5 Pro","engine":"gpu","backend":"Metal","threads":null,"timesteps":[8883,8883,8883,8883],"solver_s":2.437,"mcells_s":1157.1,"params":{},"grid":[52,54,29],"date":"2026-09-25","source":"public/projects/branchline-coupler.json"},
+   {"machine":"AMD Ryzen 9 7900X","host_cpu":"AMD Ryzen 9 7900X 12-Core Processor","engine":"cpu","threads":4,"timesteps":[8883,8883,8883,8883],"solver_s":48.95,"mcells_s":64.2,"params":{},"grid":[52,54,29],"source":"docs/benchmarks/windows-7900x.json"},
+   {"machine":"AMD Ryzen 9 7900X","host_cpu":"AMD Ryzen 9 7900X 12-Core Processor","engine":"cpu","threads":24,"all_threads":true,"timesteps":[8883,8883,8883,8883],"solver_s":20.8,"mcells_s":151.5,"params":{},"grid":[52,54,29],"source":"docs/benchmarks/windows-7900x.json"}
+  ],
+  "collinear-867": [
+   {"machine":"NVIDIA RTX 3060 (on the 7900X)","host_cpu":"AMD Ryzen 9 7900X 12-Core Processor","engine":"gpu","backend":"CUDA","threads":null,"timesteps":[227360],"solver_s":375.84,"mcells_s":2142.6,"params":{},"grid":[127,84,332],"date":"2026-10-03","source":"public/projects/collinear-867.json"}
+  ],
+  "dipole": [
+   {"machine":"Apple M5 Pro","host_cpu":"Apple M5 Pro","engine":"cpu","threads":4,"timesteps":[10842],"solver_s":16.11,"mcells_s":131.2,"params":{},"grid":[57,57,60],"date":"2026-09-24","source":"public/projects/dipole.json"},
+   {"machine":"AMD Ryzen 9 7900X","host_cpu":"AMD Ryzen 9 7900X 12-Core Processor","engine":"cpu","threads":4,"timesteps":[8505],"solver_s":49.18,"mcells_s":33.7,"params":{},"grid":[57,57,60],"source":"docs/benchmarks/windows-7900x.json"},
+   {"machine":"AMD Ryzen 9 7900X","host_cpu":"AMD Ryzen 9 7900X 12-Core Processor","engine":"cpu","threads":24,"all_threads":true,"timesteps":[8505],"solver_s":46.67,"mcells_s":35.5,"params":{},"grid":[57,57,60],"source":"docs/benchmarks/windows-7900x.json"}
+  ],
+  "helix-axial": [
+   {"machine":"Apple M5 Pro","host_cpu":"Apple M5 Pro","engine":"gpu","backend":"Metal","threads":null,"timesteps":[17200],"solver_s":10.3,"mcells_s":2323.5,"params":{},"grid":[91,91,168],"date":"2026-09-25","source":"public/projects/helix-axial.json"},
+   {"machine":"AMD Ryzen 9 7900X","host_cpu":"AMD Ryzen 9 7900X 12-Core Processor","engine":"cpu","threads":4,"timesteps":[17270],"solver_s":489.39,"mcells_s":49.1,"params":{},"grid":[91,91,168],"source":"docs/benchmarks/windows-7900x.json"},
+   {"machine":"AMD Ryzen 9 7900X","host_cpu":"AMD Ryzen 9 7900X 12-Core Processor","engine":"cpu","threads":24,"all_threads":true,"timesteps":[17270],"solver_s":336.43,"mcells_s":71.4,"params":{},"grid":[91,91,168],"source":"docs/benchmarks/windows-7900x.json"}
+  ],
+  "inset-patch": [
+   {"machine":"Apple M5 Pro","host_cpu":"Apple M5 Pro","engine":"cpu","threads":4,"timesteps":[9440],"solver_s":12.07,"mcells_s":136,"params":{},"grid":[59,67,44],"date":"2026-09-24","source":"public/projects/inset-patch.json"},
+   {"machine":"AMD Ryzen 9 7900X","host_cpu":"AMD Ryzen 9 7900X 12-Core Processor","engine":"cpu","threads":4,"timesteps":[6966],"solver_s":45.73,"mcells_s":26.5,"params":{},"grid":[59,67,44],"source":"docs/benchmarks/windows-7900x.json"},
+   {"machine":"AMD Ryzen 9 7900X","host_cpu":"AMD Ryzen 9 7900X 12-Core Processor","engine":"cpu","threads":24,"all_threads":true,"timesteps":[6966],"solver_s":54.31,"mcells_s":22.3,"params":{},"grid":[59,67,44],"source":"docs/benchmarks/windows-7900x.json"}
+  ],
+  "lowpass-stepped": [
+   {"machine":"Apple M5 Pro","host_cpu":"Apple M5 Pro","engine":"gpu","backend":"Metal","threads":null,"timesteps":[23744,23744],"solver_s":4.146,"mcells_s":1531,"params":{},"grid":[71,51,37],"date":"2026-09-25","source":"public/projects/lowpass-stepped.json"},
+   {"machine":"AMD Ryzen 9 7900X","host_cpu":"AMD Ryzen 9 7900X 12-Core Processor","engine":"cpu","threads":4,"timesteps":[23744,23744],"solver_s":55.15,"mcells_s":95.3,"params":{},"grid":[71,51,37],"source":"docs/benchmarks/windows-7900x.json"},
+   {"machine":"AMD Ryzen 9 7900X","host_cpu":"AMD Ryzen 9 7900X 12-Core Processor","engine":"cpu","threads":24,"all_threads":true,"timesteps":[23744,23744],"solver_s":42.62,"mcells_s":152.7,"params":{},"grid":[71,51,37],"source":"docs/benchmarks/windows-7900x.json"}
+  ],
+  "meander-dipole-867": [
+   {"machine":"NVIDIA RTX 3060 (on the 7900X)","host_cpu":"AMD Ryzen 9 7900X 12-Core Processor","engine":"gpu","backend":"CUDA","threads":null,"timesteps":[18480],"solver_s":10.6,"mcells_s":1743.4,"params":{},"grid":[94,54,197],"date":"2026-10-03","source":"public/projects/meander-dipole-867.json"}
+  ],
+  "microstrip-line": [
+   {"machine":"Apple M5 Pro","host_cpu":"Apple M5 Pro","engine":"gpu","backend":"Metal","threads":null,"timesteps":[7040,7040],"solver_s":0.848,"mcells_s":879.6,"params":{},"grid":[41,41,32],"date":"2026-09-25","source":"public/projects/microstrip-line.json"},
+   {"machine":"AMD Ryzen 9 7900X","host_cpu":"AMD Ryzen 9 7900X 12-Core Processor","engine":"cpu","threads":4,"timesteps":[7040,7040],"solver_s":10.66,"mcells_s":71.9,"params":{},"grid":[41,41,32],"source":"docs/benchmarks/windows-7900x.json"},
+   {"machine":"AMD Ryzen 9 7900X","host_cpu":"AMD Ryzen 9 7900X 12-Core Processor","engine":"cpu","threads":24,"all_threads":true,"timesteps":[7040,7040],"solver_s":4.927,"mcells_s":163.6,"params":{},"grid":[41,41,32],"source":"docs/benchmarks/windows-7900x.json"}
+  ],
+  "minkowski-patch": [
+   {"machine":"Apple M5 Pro","host_cpu":"Apple M5 Pro","engine":"cpu","threads":4,"timesteps":[29073],"solver_s":16.05,"mcells_s":222.8,"params":{},"grid":[62,62,32],"date":"2026-09-24","source":"public/projects/minkowski-patch.json"},
+   {"machine":"AMD Ryzen 9 7900X","host_cpu":"AMD Ryzen 9 7900X 12-Core Processor","engine":"cpu","threads":4,"timesteps":[26334],"solver_s":111.87,"mcells_s":28.9,"params":{},"grid":[62,62,32],"source":"docs/benchmarks/windows-7900x.json"},
+   {"machine":"AMD Ryzen 9 7900X","host_cpu":"AMD Ryzen 9 7900X 12-Core Processor","engine":"cpu","threads":24,"all_threads":true,"timesteps":[26334],"solver_s":98.99,"mcells_s":32.7,"params":{},"grid":[62,62,32],"source":"docs/benchmarks/windows-7900x.json"}
+  ],
+  "patch-antenna": [
+   {"machine":"Apple M5 Pro","host_cpu":"Apple M5 Pro","engine":"cpu","threads":4,"timesteps":[12628],"solver_s":10.6,"mcells_s":329,"params":{},"grid":[69,69,58],"date":"2026-09-25","source":"docs/BENCHMARKS.md","note":"best of two runs, 10.59 and 10.75 s"},
+   {"machine":"Apple M5 Pro","host_cpu":"Apple M5 Pro","engine":"gpu","backend":"Metal","threads":null,"timesteps":null,"solver_s":1.6,"mcells_s":null,"params":{},"grid":null,"source":"docs/GPU.md","note":"timesteps not recorded"},
+   {"machine":"AMD Ryzen 9 7900X","host_cpu":"AMD Ryzen 9 7900X 12-Core Processor","engine":"cpu","threads":4,"timesteps":[12628],"solver_s":52.9,"mcells_s":65.9,"params":{},"grid":[69,69,58],"source":"docs/benchmarks/windows-7900x.json, docs/BENCHMARKS.md","note":"median of 3 runs: 46.6, 52.9, 58.0 s"},
+   {"machine":"AMD Ryzen 9 7900X","host_cpu":"AMD Ryzen 9 7900X 12-Core Processor","engine":"cpu","threads":24,"all_threads":true,"timesteps":[12628],"solver_s":49.91,"mcells_s":69.9,"params":{},"grid":[69,69,58],"source":"docs/benchmarks/windows-7900x.json"},
+   {"machine":"NVIDIA RTX 3060 (on the 7900X)","host_cpu":"AMD Ryzen 9 7900X 12-Core Processor","engine":"gpu","backend":"CUDA","threads":null,"timesteps":[12628],"solver_s":2.56,"mcells_s":1362.3,"params":{},"grid":[69,69,58],"source":"docs/benchmarks/windows-7900x-rtx3060-cuda.json, docs/BENCHMARKS.md","note":"median of 3 runs: 2.53, 2.56, 2.58 s"}
+  ],
+  "patch-array-2x1": [
+   {"machine":"Apple M5 Pro","host_cpu":"Apple M5 Pro","engine":"gpu","backend":"Metal","threads":null,"timesteps":[15225,15225],"solver_s":2.088,"mcells_s":775.4,"params":{},"grid":[37,53,27],"date":"2026-09-25","source":"public/projects/patch-array-2x1.json"},
+   {"machine":"AMD Ryzen 9 7900X","host_cpu":"AMD Ryzen 9 7900X 12-Core Processor","engine":"cpu","threads":4,"timesteps":[15225,15225],"solver_s":105.98,"mcells_s":15.2,"params":{},"grid":[37,53,27],"source":"docs/benchmarks/windows-7900x.json"},
+   {"machine":"AMD Ryzen 9 7900X","host_cpu":"AMD Ryzen 9 7900X 12-Core Processor","engine":"cpu","threads":24,"all_threads":true,"timesteps":[15225,15225],"solver_s":84.87,"mcells_s":19.2,"params":{},"grid":[37,53,27],"source":"docs/benchmarks/windows-7900x.json"}
+  ],
+  "patch-array-4x1": [
+   {"machine":"Apple M5 Pro","host_cpu":"Apple M5 Pro","engine":"gpu","backend":"Metal","threads":null,"timesteps":[18055,21352,21352,18055],"solver_s":14.18,"mcells_s":2587.3,"params":{},"grid":[65,142,49],"date":"2026-09-25","source":"public/projects/patch-array-4x1.json"},
+   {"machine":"AMD Ryzen 9 7900X","host_cpu":"AMD Ryzen 9 7900X 12-Core Processor","engine":"cpu","threads":4,"timesteps":[18055,21352,21352,18055],"solver_s":873.8,"mcells_s":40.8,"params":{},"grid":[65,142,49],"source":"docs/benchmarks/windows-7900x.json"},
+   {"machine":"AMD Ryzen 9 7900X","host_cpu":"AMD Ryzen 9 7900X 12-Core Processor","engine":"cpu","threads":24,"all_threads":true,"timesteps":[18055,21352,21352,18055],"solver_s":686.38,"mcells_s":45.5,"params":{},"grid":[65,142,49],"source":"docs/benchmarks/windows-7900x.json"},
+   {"machine":"NVIDIA RTX 3060 (on the 7900X)","host_cpu":"AMD Ryzen 9 7900X 12-Core Processor","engine":"gpu","backend":"CUDA","threads":null,"timesteps":[18055,21352,21352,18055],"solver_s":25.13,"mcells_s":1424.3,"params":{},"grid":[65,142,49],"source":"docs/benchmarks/windows-7900x-rtx3060-cuda.json"}
+  ],
+  "pyramidal-horn": [
+   {"machine":"Apple M5 Pro","host_cpu":"Apple M5 Pro","engine":"gpu","backend":"Metal","threads":null,"timesteps":[9700],"solver_s":5.37,"mcells_s":2052.1,"params":{},"grid":[123,105,88],"date":"2026-09-28","source":"public/projects/pyramidal-horn.json"},
+   {"machine":"AMD Ryzen 9 7900X","host_cpu":"AMD Ryzen 9 7900X 12-Core Processor","engine":"cpu","threads":4,"timesteps":[10320],"solver_s":224.57,"mcells_s":52.2,"params":{},"grid":[123,105,88],"source":"docs/benchmarks/windows-7900x.json"},
+   {"machine":"AMD Ryzen 9 7900X","host_cpu":"AMD Ryzen 9 7900X 12-Core Processor","engine":"cpu","threads":24,"all_threads":true,"timesteps":[10320],"solver_s":153.26,"mcells_s":76.5,"params":{},"grid":[123,105,88],"source":"docs/benchmarks/windows-7900x.json"},
+   {"machine":"NVIDIA RTX 3060 (on the 7900X)","host_cpu":"AMD Ryzen 9 7900X 12-Core Processor","engine":"gpu","backend":"CUDA","threads":null,"timesteps":[10800],"solver_s":6.3,"mcells_s":1947.8,"params":{},"grid":[123,105,88],"source":"docs/benchmarks/windows-7900x-rtx3060-cuda.json"}
+  ],
+  "sierpinski-monopole": [
+   {"machine":"Apple M5 Pro","host_cpu":"Apple M5 Pro","engine":"cpu","threads":4,"timesteps":[4930],"solver_s":12.03,"mcells_s":824.8,"params":{},"grid":[159,113,112],"date":"2026-09-24","source":"public/projects/sierpinski-monopole--iterations-3.json"},
+   {"machine":"Apple M5 Pro","host_cpu":"Apple M5 Pro","engine":"gpu","backend":"Metal","threads":null,"timesteps":null,"solver_s":2.7,"mcells_s":2650,"params":{},"grid":null,"source":"docs/GPU.md","note":"timesteps not recorded"},
+   {"machine":"AMD Ryzen 9 7900X","host_cpu":"AMD Ryzen 9 7900X 12-Core Processor","engine":"cpu","threads":4,"timesteps":[5250],"solver_s":61.08,"mcells_s":172.9,"params":{},"grid":[159,113,112],"source":"docs/benchmarks/windows-7900x.json"},
+   {"machine":"AMD Ryzen 9 7900X","host_cpu":"AMD Ryzen 9 7900X 12-Core Processor","engine":"cpu","threads":24,"all_threads":true,"timesteps":[5250],"solver_s":65.69,"mcells_s":160.8,"params":{},"grid":[159,113,112],"source":"docs/benchmarks/windows-7900x.json"},
+   {"machine":"NVIDIA RTX 3060 (on the 7900X)","host_cpu":"AMD Ryzen 9 7900X 12-Core Processor","engine":"gpu","backend":"CUDA","threads":null,"timesteps":[5200],"solver_s":3.428,"mcells_s":3052.3,"params":{},"grid":[159,113,112],"source":"docs/benchmarks/windows-7900x-rtx3060-cuda.json"},
+   {"machine":"Apple M5 Pro","host_cpu":"Apple M5 Pro","engine":"cpu","threads":4,"timesteps":[3380],"solver_s":8.03,"mcells_s":790.7,"params":{"iterations":0},"grid":[154,113,108],"date":"2026-09-24","source":"public/projects/sierpinski-monopole--iterations-0.json"},
+   {"machine":"AMD Ryzen 9 7900X","host_cpu":"AMD Ryzen 9 7900X 12-Core Processor","engine":"cpu","threads":4,"timesteps":[3960],"solver_s":48.39,"mcells_s":153.8,"params":{"iterations":0},"grid":[154,113,108],"source":"docs/benchmarks/windows-7900x.json"},
+   {"machine":"AMD Ryzen 9 7900X","host_cpu":"AMD Ryzen 9 7900X 12-Core Processor","engine":"cpu","threads":24,"all_threads":true,"timesteps":[3960],"solver_s":61.26,"mcells_s":121.5,"params":{"iterations":0},"grid":[154,113,108],"source":"docs/benchmarks/windows-7900x.json"}
+  ],
+  "sleeve-dipole-867": [
+   {"machine":"NVIDIA RTX 3060 (on the 7900X)","host_cpu":"AMD Ryzen 9 7900X 12-Core Processor","engine":"gpu","backend":"CUDA","threads":null,"timesteps":[137448],"solver_s":40.54,"mcells_s":1562.1,"params":{},"grid":[83,61,91],"date":"2026-10-03","source":"public/projects/sleeve-dipole-867.json"}
+  ],
+  "wideband-dipole-867": [
+   {"machine":"NVIDIA RTX 3060 (on the 7900X)","host_cpu":"AMD Ryzen 9 7900X 12-Core Processor","engine":"gpu","backend":"CUDA","threads":null,"timesteps":[14460],"solver_s":7.97,"mcells_s":1558.4,"params":{},"grid":[93,62,149],"date":"2026-10-03","source":"public/projects/wideband-dipole-867.json"}
+  ],
+  "wilkinson-divider": [
+   {"machine":"Apple M5 Pro","host_cpu":"Apple M5 Pro","engine":"gpu","backend":"Metal","threads":null,"timesteps":[9519,10020,10521],"solver_s":2.108,"mcells_s":1592.5,"params":{},"grid":[59,71,27],"date":"2026-09-25","source":"public/projects/wilkinson-divider.json"},
+   {"machine":"AMD Ryzen 9 7900X","host_cpu":"AMD Ryzen 9 7900X 12-Core Processor","engine":"cpu","threads":4,"timesteps":[9519,10020,10521],"solver_s":41.07,"mcells_s":90.4,"params":{},"grid":[59,71,27],"source":"docs/benchmarks/windows-7900x.json"},
+   {"machine":"AMD Ryzen 9 7900X","host_cpu":"AMD Ryzen 9 7900X 12-Core Processor","engine":"cpu","threads":24,"all_threads":true,"timesteps":[9519,10020,10521],"solver_s":25.67,"mcells_s":139.6,"params":{},"grid":[59,71,27],"source":"docs/benchmarks/windows-7900x.json"},
+   {"machine":"NVIDIA RTX 3060 (on the 7900X)","host_cpu":"AMD Ryzen 9 7900X 12-Core Processor","engine":"gpu","backend":"CUDA","threads":null,"timesteps":[9519,10020,10521],"solver_s":4.363,"mcells_s":824.7,"params":{},"grid":[59,71,27],"source":"docs/benchmarks/windows-7900x-rtx3060-cuda.json"}
+  ],
+  "yagi-867": [
+   {"machine":"NVIDIA RTX 3060 (on the 7900X)","host_cpu":"AMD Ryzen 9 7900X 12-Core Processor","engine":"gpu","backend":"CUDA","threads":null,"timesteps":[79206],"solver_s":37.89,"mcells_s":1551.9,"params":{},"grid":[149,47,106],"date":"2026-10-03","source":"public/projects/yagi-867.json"}
+  ]
+ }
+}

@@ -1,0 +1,82 @@
+{
+  "schema": "fairbeam.design/1",
+  "model": {
+    "id": "wideband-dipole-867",
+    "name": "Slotted wideband planar dipole (867 MHz)",
+    "description": "Printed fat dipole for a UAV with a composite (non-metal) fuselage: two wide arms on a vertical 1.6 mm FR-4 strip, fed by a balanced 50 ohm lumped port across a centre gap, no ground plane (x: flight axis, z: up). Transverse slots cut in from both outer edges of each arm lengthen the edge current path and shorten the antenna; the wide arms keep a wide band so that radome and FR-4 detuning do not matter. Vertically polarised, omnidirectional in azimuth, for the 863-870 MHz SRD / LoRa band: 110 x 40 mm of copper (19 % shorter than without the slots), |S11| about -19 dB at 867 MHz and a -10 dB band of about 0.81-0.97 GHz (18 %). See examples/designs/README.md in the fairbeam repository."
+  },
+  "params": [
+    {"key": "f0", "default": 0.867, "label": "Design frequency", "unit": "GHz", "min": 0.1, "max": 6},
+    {"key": "h_arm", "default": 54, "label": "Arm height (feed-gap edge to tip)", "unit": "mm", "min": 20, "max": 200},
+    {"key": "w_arm", "default": 40, "label": "Arm width (x)", "unit": "mm", "min": 10, "max": 120},
+    {"key": "ht", "default": 8, "label": "Flare height (feed tab to full width)", "unit": "mm", "min": 1, "max": 40},
+    {"key": "wf", "default": 18, "label": "Feed tab width at the gap", "unit": "mm", "min": 0.5, "max": 60},
+    {"key": "g", "default": 2, "label": "Feed gap between the arms", "unit": "mm", "min": 0.5, "max": 10},
+    {"key": "l_s", "default": 17, "label": "Slot length (in from each outer edge)", "unit": "mm", "min": 1, "max": 50},
+    {"key": "w_s", "default": 2, "label": "Slot width", "unit": "mm", "min": 0.5, "max": 10},
+    {"key": "p_s", "default": 10, "label": "Slot pitch (centre to centre)", "unit": "mm", "min": 2, "max": 50},
+    {"key": "z_s", "default": 16, "label": "First slot, distance from the feed-gap edge", "unit": "mm", "min": 1, "max": 100},
+    {"key": "t_sub", "default": 1.6, "label": "FR-4 thickness", "unit": "mm", "min": 0.2, "max": 5},
+    {"key": "m", "default": 3, "label": "FR-4 margin around the arms", "unit": "mm", "min": 0.5, "max": 20},
+    {"key": "lam", "expr": "wavelength(f0)", "label": "Free-space wavelength at f0", "unit": "mm"},
+    {"key": "H_tot", "expr": "2*h_arm + g", "label": "Total metal height (tip to tip)", "unit": "mm"},
+    {"key": "W_b", "expr": "w_arm + 2*m", "label": "Board width", "unit": "mm"},
+    {"key": "L_b", "expr": "H_tot + 2*m", "label": "Board height", "unit": "mm"},
+    {"key": "spine", "expr": "w_arm - 2*l_s", "label": "Solid spine width between facing slots", "unit": "mm"},
+    {"key": "slot_top", "expr": "z_s + 3*p_s + w_s", "label": "Top of the last slot above the feed-gap edge", "unit": "mm"}
+  ],
+  "simulation": {
+    "f_min": "0.7",
+    "f_max": "1.05",
+    "boundaries": "PML_8",
+    "end_criteria_db": -60
+  },
+  "materials": [
+    {"name": "copper", "kind": "metal"},
+    {"name": "FR4", "kind": "dielectric", "eps_r": 4.3, "tan_d": 0.02, "tan_d_freq": "f0"}
+  ],
+  "parts": [
+    {
+      "name": "board",
+      "material": "FR4",
+      "component": "antenna",
+      "primitives": [
+        {"kind": "box", "start": ["-W_b/2", 0, "-L_b/2"], "stop": ["W_b/2", "t_sub", "L_b/2"]}
+      ]
+    },
+    {
+      "name": "arms",
+      "material": "copper",
+      "component": "antenna",
+      "primitives": [
+        {"kind": "polygon", "normal": "y", "elevation": 0, "points": [
+          ["g/2", "-wf/2"],
+          ["g/2", "wf/2"],
+          ["g/2 + ht", "w_arm/2"],
+          ["g/2 + ht", "-w_arm/2"]
+        ]},
+        {"kind": "box", "start": ["-w_arm/2", 0, "g/2 + ht"], "stop": ["w_arm/2", 0, "g/2 + h_arm"]}
+      ],
+      "cuts": [
+        {"start": ["w_arm/2 - l_s", 0, "g/2 + z_s"], "stop": ["w_arm/2", 0, "g/2 + z_s + w_s"]},
+        {"start": ["-w_arm/2", 0, "g/2 + z_s"], "stop": ["-w_arm/2 + l_s", 0, "g/2 + z_s + w_s"]},
+        {"start": ["w_arm/2 - l_s", 0, "g/2 + z_s + 1*p_s"], "stop": ["w_arm/2", 0, "g/2 + z_s + 1*p_s + w_s"]},
+        {"start": ["-w_arm/2", 0, "g/2 + z_s + 1*p_s"], "stop": ["-w_arm/2 + l_s", 0, "g/2 + z_s + 1*p_s + w_s"]},
+        {"start": ["w_arm/2 - l_s", 0, "g/2 + z_s + 2*p_s"], "stop": ["w_arm/2", 0, "g/2 + z_s + 2*p_s + w_s"]},
+        {"start": ["-w_arm/2", 0, "g/2 + z_s + 2*p_s"], "stop": ["-w_arm/2 + l_s", 0, "g/2 + z_s + 2*p_s + w_s"]},
+        {"start": ["w_arm/2 - l_s", 0, "g/2 + z_s + 3*p_s"], "stop": ["w_arm/2", 0, "g/2 + z_s + 3*p_s + w_s"]},
+        {"start": ["-w_arm/2", 0, "g/2 + z_s + 3*p_s"], "stop": ["-w_arm/2 + l_s", 0, "g/2 + z_s + 3*p_s + w_s"]}
+      ],
+      "transforms": [
+        {"type": "mirror", "plane": "z", "keep": true}
+      ]
+    }
+  ],
+  "ports": [
+    {"type": "lumped", "number": 1, "R": 50, "start": [0, 0, "-g/2"], "stop": [0, 0, "g/2"], "direction": "z"}
+  ],
+  "resistors": [],
+  "mesh": {"mode": "auto", "cells_per_wavelength": 30},
+  "far_field": {"enabled": true, "frequencies": ["f0"]},
+  "monitors": {"currents": ["f0"], "efficiency": {"points": 21}}
+}

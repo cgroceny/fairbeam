@@ -1,0 +1,384 @@
+diff -ruN a/FDTD/engine_multithread.cpp b/FDTD/engine_multithread.cpp
+--- a/FDTD/engine_multithread.cpp
++++ b/FDTD/engine_multithread.cpp
+@@ -27,9 +27,16 @@
+ 
+ #include "engine_multithread.h"
+ #include "extensions/engine_extension.h"
++#include "extensions/engine_ext_excitation.h"
++#include "extensions/engine_ext_lumpedRLC.h"
++#include "extensions/engine_ext_mur_abc.h"
++#include "extensions/engine_ext_upml.h"
+ #include "tools/denormal.h"
+ #include "tools/useful.h"
+ 
++#include <cstdlib>
++#include <cstring>
++
+ #include "boost/date_time/posix_time/posix_time.hpp"
+ #include "boost/date_time/gregorian/gregorian.hpp"
+ #include <iomanip>
+@@ -63,6 +70,9 @@
+ 	m_last_speed = 0;
+ 	m_opt_speed = false;
+ 	m_stopThreads = true;
++	m_phaseDispatchReported = false;
++	const char* phaseDispatch = std::getenv("OPENEMS_EXPERIMENTAL_CPU_PHASE_DISPATCH");
++	m_usePhaseDispatch = phaseDispatch && std::strcmp(phaseDispatch, "phase-lists") == 0;
+ }
+ 
+ Engine_Multithread::~Engine_Multithread()
+@@ -98,6 +108,13 @@
+ 	m_stopThreads = true;
+ 	m_opt_speed = false;
+ 	Engine_SSE_Compressed::Init();
++	if (m_usePhaseDispatch)
++		BuildPhaseDispatch();
++	else
++	{
++		m_phaseDispatch.clear();
++		m_phaseDispatchExtensions.clear();
++	}
+ 
+ 	// initialize threads
+ 	m_stopThreads = false;
+@@ -194,6 +211,23 @@
+ 
+ bool Engine_Multithread::IterateTS(unsigned int iterTS)
+ {
++	// The cylindrical multi-grid engine mutates extension vectors after its
++	// base initialization. Refresh only when the sorted pointer sequence has
++	// changed, while all workers are still parked at the start barrier.
++	if (m_usePhaseDispatch && !PhaseDispatchMatchesExtensions())
++		BuildPhaseDispatch();
++	if (m_usePhaseDispatch && !m_phaseDispatchReported)
++	{
++		size_t scheduledBarriers = 0;
++		for (size_t phase = 0; phase < EngineExtensionPhaseDispatch::PHASE_COUNT; ++phase)
++			scheduledBarriers += m_phaseDispatch.phases[phase].size();
++		const size_t legacyBarriers = EngineExtensionPhaseDispatch::PHASE_COUNT * m_Eng_exts.size();
++		cout << "Experimental CPU phase dispatch enabled (opt-in); extension barriers per timestep: "
++			<< scheduledBarriers << " scheduled vs " << legacyBarriers
++			<< " legacy, plus 2 unchanged core barriers." << endl;
++		m_phaseDispatchReported = true;
++	}
++
+ 	m_iterTS = iterTS;
+ 
+ 	//cerr << "bool Engine_Multithread::IterateTS(): starting threads ...";
+@@ -206,6 +240,42 @@
+ 	return true;
+ }
+ 
++void Engine_Multithread::BuildPhaseDispatch()
++{
++	EngineExtensionPhaseDispatch::Build(
++		m_Eng_exts,
++		m_phaseDispatch,
++		[](const Engine_Extension* extension) {
++			return EngineExtensionPhaseDispatch::ActivePhases<
++				Engine_Extension,
++				Engine_Ext_UPML,
++				Engine_Ext_Excitation,
++				Engine_Ext_LumpedRLC,
++				Engine_Ext_Mur_ABC>(extension);
++		});
++	m_phaseDispatchExtensions = m_Eng_exts;
++	m_phaseDispatchReported = false;
++}
++
++bool Engine_Multithread::PhaseDispatchMatchesExtensions() const
++{
++	if (m_phaseDispatchExtensions.size() != m_Eng_exts.size())
++		return false;
++	for (size_t n = 0; n < m_Eng_exts.size(); ++n)
++		if (m_phaseDispatchExtensions[n] != m_Eng_exts[n])
++			return false;
++	return true;
++}
++
++void Engine_Multithread::ClearExtensions()
++{
++	// Invalidate cached raw pointers before Engine deletes extension objects.
++	m_phaseDispatch.clear();
++	m_phaseDispatchExtensions.clear();
++	m_phaseDispatchReported = false;
++	Engine_SSE_Compressed::ClearExtensions();
++}
++
+ void Engine_Multithread::NextInterval(float curr_speed)
+ {
+ 	Engine_SSE_Compressed::NextInterval(curr_speed);
+@@ -225,6 +295,15 @@
+ 
+ void Engine_Multithread::DoPreVoltageUpdates(int threadID)
+ {
++	if (m_usePhaseDispatch)
++	{
++		EngineExtensionPhaseDispatch::Dispatch(
++			m_phaseDispatch.phases[EngineExtensionPhaseDispatch::PRE_VOLTAGE],
++			[threadID](Engine_Extension* extension) { extension->DoPreVoltageUpdates(threadID); },
++			[this]() { m_IterateBarrier->wait(); });
++		return;
++	}
++
+ 	//execute extensions in reverse order -> highest priority gets access to the voltages last
+ 	for (int n=m_Eng_exts.size()-1; n>=0; --n)
+ 	{
+@@ -236,6 +315,15 @@
+ 
+ void Engine_Multithread::DoPostVoltageUpdates(int threadID)
+ {
++	if (m_usePhaseDispatch)
++	{
++		EngineExtensionPhaseDispatch::Dispatch(
++			m_phaseDispatch.phases[EngineExtensionPhaseDispatch::POST_VOLTAGE],
++			[threadID](Engine_Extension* extension) { extension->DoPostVoltageUpdates(threadID); },
++			[this]() { m_IterateBarrier->wait(); });
++		return;
++	}
++
+ 	//execute extensions in normal order -> highest priority gets access to the voltages first
+ 	for (size_t n=0; n<m_Eng_exts.size(); ++n)
+ 	{
+@@ -246,6 +334,15 @@
+ 
+ void Engine_Multithread::Apply2Voltages(int threadID)
+ {
++	if (m_usePhaseDispatch)
++	{
++		EngineExtensionPhaseDispatch::Dispatch(
++			m_phaseDispatch.phases[EngineExtensionPhaseDispatch::APPLY_VOLTAGE],
++			[threadID](Engine_Extension* extension) { extension->Apply2Voltages(threadID); },
++			[this]() { m_IterateBarrier->wait(); });
++		return;
++	}
++
+ 	//execute extensions in normal order -> highest priority gets access to the voltages first
+ 	for (size_t n=0; n<m_Eng_exts.size(); ++n)
+ 	{
+@@ -256,6 +353,15 @@
+ 
+ void Engine_Multithread::DoPreCurrentUpdates(int threadID)
+ {
++	if (m_usePhaseDispatch)
++	{
++		EngineExtensionPhaseDispatch::Dispatch(
++			m_phaseDispatch.phases[EngineExtensionPhaseDispatch::PRE_CURRENT],
++			[threadID](Engine_Extension* extension) { extension->DoPreCurrentUpdates(threadID); },
++			[this]() { m_IterateBarrier->wait(); });
++		return;
++	}
++
+ 	//execute extensions in reverse order -> highest priority gets access to the currents last
+ 	for (int n=m_Eng_exts.size()-1; n>=0; --n)
+ 	{
+@@ -266,6 +372,15 @@
+ 
+ void Engine_Multithread::DoPostCurrentUpdates(int threadID)
+ {
++	if (m_usePhaseDispatch)
++	{
++		EngineExtensionPhaseDispatch::Dispatch(
++			m_phaseDispatch.phases[EngineExtensionPhaseDispatch::POST_CURRENT],
++			[threadID](Engine_Extension* extension) { extension->DoPostCurrentUpdates(threadID); },
++			[this]() { m_IterateBarrier->wait(); });
++		return;
++	}
++
+ 	//execute extensions in normal order -> highest priority gets access to the currents first
+ 	for (size_t n=0; n<m_Eng_exts.size(); ++n)
+ 	{
+@@ -276,6 +391,15 @@
+ 
+ void Engine_Multithread::Apply2Current(int threadID)
+ {
++	if (m_usePhaseDispatch)
++	{
++		EngineExtensionPhaseDispatch::Dispatch(
++			m_phaseDispatch.phases[EngineExtensionPhaseDispatch::APPLY_CURRENT],
++			[threadID](Engine_Extension* extension) { extension->Apply2Current(threadID); },
++			[this]() { m_IterateBarrier->wait(); });
++		return;
++	}
++
+ 	//execute extensions in normal order -> highest priority gets access to the currents first
+ 	for (size_t n=0; n<m_Eng_exts.size(); ++n)
+ 	{
+@@ -374,4 +498,3 @@
+ }
+ 
+ } // namespace
+-
+diff -ruN a/FDTD/engine_multithread.h b/FDTD/engine_multithread.h
+--- a/FDTD/engine_multithread.h
++++ b/FDTD/engine_multithread.h
+@@ -20,6 +20,7 @@
+ 
+ #include "operator_multithread.h"
+ #include "engine_sse_compressed.h"
++#include "extensions/engine_extension_phase_dispatch.h"
+ 
+ #include <boost/thread.hpp>
+ #include <boost/fusion/include/list.hpp>
+@@ -104,6 +105,9 @@
+ protected:
+ 	Engine_Multithread(const Operator_Multithread* op);
+ 	void changeNumThreads(unsigned int numThreads);
++	void BuildPhaseDispatch();
++	bool PhaseDispatchMatchesExtensions() const;
++	virtual void ClearExtensions();
+ 	const Operator_Multithread* m_Op_MT;
+ 	boost::thread_group *m_thread_group;
+ 	boost::barrier *m_startBarrier, *m_stopBarrier;
+@@ -112,6 +116,10 @@
+ 	unsigned int m_numThreads; //!< number of worker threads
+ 	unsigned int m_max_numThreads; //!< max. number of worker threads
+ 	volatile bool m_stopThreads;
++	bool m_usePhaseDispatch;
++	bool m_phaseDispatchReported;
++	EngineExtensionPhaseDispatch::PhaseLists<Engine_Extension> m_phaseDispatch;
++	std::vector<Engine_Extension*> m_phaseDispatchExtensions;
+ 	bool m_opt_speed;
+ 	float m_last_speed;
+ 
+diff -ruN a/FDTD/extensions/engine_extension_phase_dispatch.h b/FDTD/extensions/engine_extension_phase_dispatch.h
+--- a/FDTD/extensions/engine_extension_phase_dispatch.h
++++ b/FDTD/extensions/engine_extension_phase_dispatch.h
+@@ -0,0 +1,136 @@
++/*
++ * This program is free software: you can redistribute it and/or modify
++ * it under the terms of the GNU General Public License as published by
++ * the Free Software Foundation, either version 3 of the License, or
++ * (at your option) any later version.
++ *
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
++ *
++ * Experimental phase dispatch support for the multithreaded CPU engine.
++ * Keep this header independent of the full openEMS dependency graph so the
++ * scheduling rules can be exercised by a small native harness.
++ */
++#ifndef ENGINE_EXTENSION_PHASE_DISPATCH_H
++#define ENGINE_EXTENSION_PHASE_DISPATCH_H
++
++#include <array>
++#include <cstddef>
++#include <typeinfo>
++#include <vector>
++
++namespace EngineExtensionPhaseDispatch
++{
++
++enum Phase
++{
++	PRE_VOLTAGE = 0,
++	POST_VOLTAGE,
++	APPLY_VOLTAGE,
++	PRE_CURRENT,
++	POST_CURRENT,
++	APPLY_CURRENT,
++	PHASE_COUNT
++};
++
++typedef unsigned char PhaseMask;
++static const PhaseMask ALL_PHASES = (1u << PHASE_COUNT) - 1u;
++
++inline PhaseMask Bit(Phase phase)
++{
++	return static_cast<PhaseMask>(1u << phase);
++}
++
++template <typename Base, typename Upml, typename Excitation, typename LumpedRLC, typename MurABC>
++PhaseMask ActivePhases(const Base* extension)
++{
++	// Match complete dynamic types only. A derived or unknown extension keeps
++	// every phase enabled so inherited hooks and thread-zero delegation survive.
++	if (typeid(*extension) == typeid(Upml))
++		return Bit(PRE_VOLTAGE) | Bit(POST_VOLTAGE) | Bit(PRE_CURRENT) | Bit(POST_CURRENT);
++	if (typeid(*extension) == typeid(Excitation))
++		return Bit(APPLY_VOLTAGE) | Bit(APPLY_CURRENT);
++	if (typeid(*extension) == typeid(LumpedRLC))
++		return Bit(PRE_VOLTAGE) | Bit(APPLY_VOLTAGE);
++	if (typeid(*extension) == typeid(MurABC))
++		return Bit(PRE_VOLTAGE) | Bit(POST_VOLTAGE) | Bit(APPLY_VOLTAGE);
++	return ALL_PHASES;
++}
++
++template <typename Extension>
++struct PhaseLists
++{
++	// A null entry is one retained barrier for a consecutive run of audited
++	// empty hooks. Non-null entries are dispatched hooks with their usual
++	// following barrier.
++	std::array<std::vector<Extension*>, PHASE_COUNT> phases;
++
++	void clear()
++	{
++		for (std::size_t n = 0; n < phases.size(); ++n)
++			phases[n].clear();
++	}
++};
++
++inline bool IsReversePriorityPhase(Phase phase)
++{
++	return phase == PRE_VOLTAGE || phase == PRE_CURRENT;
++}
++
++template <typename Extension, typename Classifier>
++void Build(const std::vector<Extension*>& sortedExtensions, PhaseLists<Extension>& lists, Classifier classify)
++{
++	lists.clear();
++	for (int phaseIndex = 0; phaseIndex < PHASE_COUNT; ++phaseIndex)
++	{
++		const Phase phase = static_cast<Phase>(phaseIndex);
++		const PhaseMask phaseBit = Bit(phase);
++		std::vector<Extension*>& schedule = lists.phases[phaseIndex];
++		bool pendingEmptyRun = false;
++		const auto appendInOrder = [&](Extension* extension) {
++			if (classify(extension) & phaseBit)
++			{
++				if (pendingEmptyRun)
++				{
++					schedule.push_back(static_cast<Extension*>(0));
++					pendingEmptyRun = false;
++				}
++				schedule.push_back(extension);
++			}
++			else
++				pendingEmptyRun = true;
++		};
++		if (IsReversePriorityPhase(phase))
++		{
++			for (std::size_t n = sortedExtensions.size(); n > 0; --n)
++				appendInOrder(sortedExtensions[n - 1]);
++		}
++		else
++		{
++			for (std::size_t n = 0; n < sortedExtensions.size(); ++n)
++				appendInOrder(sortedExtensions[n]);
++		}
++		if (pendingEmptyRun)
++			schedule.push_back(static_cast<Extension*>(0));
++	}
++}
++
++template <typename Extension, typename CallHook, typename WaitAtBarrier>
++void Dispatch(const std::vector<Extension*>& schedule, CallHook callHook, WaitAtBarrier waitAtBarrier)
++{
++	for (std::size_t n = 0; n < schedule.size(); ++n)
++	{
++		if (schedule[n])
++			callHook(schedule[n]);
++		waitAtBarrier();
++	}
++}
++
++} // namespace EngineExtensionPhaseDispatch
++
++#endif // ENGINE_EXTENSION_PHASE_DISPATCH_H

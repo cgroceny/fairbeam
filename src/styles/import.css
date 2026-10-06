@@ -1,0 +1,76 @@
+/* Imported reference data: the Compare popover's reference section and the Comparison card. */
+.cmp-ref-head { margin-top: var(--al-space-3); }
+.cmp-card-ref { margin: 0 0 var(--al-space-2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cmp-card-notes { margin-top: var(--al-space-2); font-size: var(--al-text-xs); color: var(--al-text-3); }
+.cmp-card-notes summary { cursor: pointer; color: var(--al-text-2); }
+.cmp-card-notes ul { margin: var(--al-space-1) 0 0; padding-left: var(--al-space-4); display: grid; gap: 2px; }
+.section .kv + .kv { margin-top: var(--al-space-2); }
+/* values like "−34.5 → −32.6 dB (+2.0)" stay on one line; the labels wrap instead */
+.cmp-card .kv { grid-template-columns: minmax(64px, 1fr) max-content; }
+.cmp-card .kv dd { white-space: nowrap; }
+
+/* Import CST macro (src/components/CstImportDialog.tsx) and its entry on the Start page */
+.home-import { display: flex; flex-wrap: wrap; align-items: center; gap: var(--al-space-2) var(--al-space-3); padding-top: var(--al-space-3); border-top: 1px solid var(--al-border); }
+.home-import .muted { font-size: var(--al-text-xs); }
+.ci-dialog { width: min(760px, 100%); }
+.ci-dialog .nm-body { align-content: start; gap: var(--al-space-3); }
+.ci-pick { display: flex; align-items: center; gap: var(--al-space-3); min-width: 0; }
+.ci-pick .btn { flex: none; cursor: pointer; }
+/* the input stays in the tab order and the accessibility tree; its label is the visible button */
+.ci-file { position: absolute; width: 1px; height: 1px; opacity: 0; overflow: hidden; }
+.ci-file:focus-visible + label { outline: 2px solid var(--al-accent); outline-offset: 2px; }
+.ci-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--al-text-2); font-size: var(--al-text-sm); }
+.ci-paste { display: grid; gap: var(--al-space-2); min-width: 0; }
+.ci-paste-text { width: 100%; min-height: 140px; max-height: 320px; resize: vertical; font-size: var(--al-text-xs); line-height: 1.45; white-space: pre; overflow: auto; }
+.ci-paste-actions { display: flex; align-items: center; justify-content: space-between; gap: var(--al-space-3); font-size: var(--al-text-xs); }
+.ci-report { display: grid; gap: var(--al-space-2); min-width: 0; }
+.ci-summary { font-size: var(--al-text-sm); }
+.ci-bad { color: var(--al-critical); font-weight: 500; }
+.ci-notes { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; max-height: 280px; overflow: auto; border: 1px solid var(--al-border); border-radius: var(--al-radius); }
+.ci-note { display: grid; grid-template-columns: 96px minmax(0, 1fr); gap: var(--al-space-2); padding: var(--al-space-1) var(--al-space-2); font-size: var(--al-text-xs); line-height: 1.45; }
+.ci-note + .ci-note { border-top: 1px solid var(--al-border); }
+.ci-sev { font-weight: 600; }
+.ci-refused .ci-sev { color: var(--al-critical); }
+.ci-refused { background: var(--al-critical-bg); }
+.ci-warning .ci-sev { color: var(--al-warn); }
+.ci-info .ci-sev { color: var(--al-text-3); }
+.ci-msg { overflow-wrap: anywhere; color: var(--al-text); }
+.ci-where { color: var(--al-text-3); }
+.ci-count { color: var(--al-text-3); font-weight: 600; white-space: nowrap; }
+.ci-missing .ci-sev { color: var(--al-critical); }
+.ci-created summary { cursor: pointer; font-size: var(--al-text-sm); color: var(--al-text-2); }
+.ci-created ul { margin: var(--al-space-1) 0 0; padding-left: var(--al-space-4); display: grid; gap: 2px; font-size: var(--al-text-xs); max-height: 200px; overflow: auto; }
+.ci-kind { display: inline-block; min-width: 64px; color: var(--al-text-3); text-transform: capitalize; }
+
+/* Import PCB artwork (src/components/PcbImportDialog.tsx) */
+.home-import-next { border-top: 0; padding-top: 0; }
+.pi-dialog { width: min(820px, 100%); }
+/* rows take the height of their content: the scrolling lists (files, layers, report) must not shrink to a line when the body is taller than the dialog */
+.pi-dialog .nm-body { grid-auto-rows: max-content; }
+.pi-pick { display: flex; flex-wrap: wrap; align-items: center; gap: var(--al-space-2) var(--al-space-3); min-width: 0; padding: var(--al-space-3); border: 1px dashed var(--al-border-strong); border-radius: var(--al-radius); }
+.pi-pick .btn { flex: none; cursor: pointer; }
+.pi-pick.pi-over, .pi-dragging .pi-pick { border-color: var(--al-accent); background: var(--al-surface-2); }
+.pi-drop-hint { font-size: var(--al-text-sm); }
+.pi-notes { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; font-size: var(--al-text-sm); }
+.pi-files { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; border: 1px solid var(--al-border); border-radius: var(--al-radius); max-height: 132px; overflow: auto; }
+.pi-files li { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; align-items: center; gap: var(--al-space-3); padding: 2px var(--al-space-2); font-size: var(--al-text-sm); }
+.pi-files li + li { border-top: 1px solid var(--al-border); }
+.pi-file-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pi-section { display: grid; gap: var(--al-space-2); min-width: 0; }
+.pi-section h3 { margin: 0; font-size: var(--al-text-sm); font-weight: 600; color: var(--al-text-2); }
+.pi-table-wrap { overflow: auto; border: 1px solid var(--al-border); border-radius: var(--al-radius); }
+.pi-layers { width: 100%; }
+.pi-layers td { vertical-align: top; }
+.pi-layers tr.pi-unclear { background: var(--al-warn-bg); }
+.pi-layer-name { overflow-wrap: anywhere; }
+.pi-layer-src { font-size: var(--al-text-xs); overflow-wrap: anywhere; }
+.pi-role { display: flex; align-items: center; gap: var(--al-space-1); min-width: 170px; }
+.pi-why { margin-top: 2px; font-size: var(--al-text-xs); color: var(--al-text-3); }
+.pi-why-chosen { color: var(--al-text-2); }
+.pi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: var(--al-space-3); align-items: start; }
+.pi-field .rp-select { height: var(--al-control-h); }
+.pi-wide { grid-column: 1 / -1; }
+.pi-advanced { display: grid; gap: var(--al-space-2); }
+.pi-advanced summary { cursor: pointer; font-size: var(--al-text-sm); color: var(--al-text-2); margin-bottom: var(--al-space-2); }
+.pi-done { gap: var(--al-space-2); }
+.pi-port-hint { font-size: var(--al-text-lg); font-weight: 600; margin: 0; }

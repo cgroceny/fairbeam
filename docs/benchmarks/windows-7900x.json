@@ -1,0 +1,1407 @@
+{
+ "compared": "t4",
+ "ref": "public/projects",
+ "models": [
+  {
+   "bundle": "branchline-coupler",
+   "name": "Branch-line coupler (2.4 GHz)",
+   "cells": 81432,
+   "grid": [
+    52,
+    54,
+    29
+   ],
+   "s11_min": [
+    -34.845,
+    2.4137
+   ],
+   "farfield": [],
+   "runs": {
+    "t4": {
+     "engine": "cpu",
+     "threads": 4,
+     "cpu": "AMD Ryzen 9 7900X 12-Core Processor",
+     "solver_s": 48.95,
+     "wall_s": 50.61,
+     "mcells_s": 64.18,
+     "timesteps": [
+      8883,
+      8883,
+      8883,
+      8883
+     ],
+     "runs": 4
+    },
+    "all": {
+     "engine": "cpu",
+     "threads": 0,
+     "cpu": "AMD Ryzen 9 7900X 12-Core Processor",
+     "solver_s": 20.8,
+     "wall_s": 22.08,
+     "mcells_s": 151.46,
+     "timesteps": [
+      8883,
+      8883,
+      8883,
+      8883
+     ],
+     "runs": 4
+    }
+   },
+   "ref": {
+    "cells": 74256,
+    "grid": [
+     52,
+     51,
+     28
+    ],
+    "s11_min": [
+     -29.283,
+     2.4062
+    ],
+    "farfield": [],
+    "engine": "gpu",
+    "threads": 0,
+    "cpu": "Apple M5 Pro",
+    "solver_s": 2.61,
+    "wall_s": 3.12,
+    "mcells_s": 1174.62,
+    "timesteps": [
+     10395,
+     10395,
+     10395,
+     10395
+    ],
+    "runs": 4
+   },
+   "diff": {
+    "ds11_min_db": -5.562,
+    "df_s11_mhz": 7.5,
+    "ddmax_db": [],
+    "deff": [],
+    "dsij": {
+     "all": {
+      "db": 8.412,
+      "sij": "1,4",
+      "f_ghz": 2.4175
+     },
+     "above": {
+      "db": 6.213,
+      "sij": "1,1",
+      "f_ghz": 2.4137
+     }
+    },
+    "same_grid": false,
+    "same_timesteps": false
+   }
+  },
+  {
+   "bundle": "dipole",
+   "name": "Half-wave dipole",
+   "cells": 194940,
+   "grid": [
+    57,
+    57,
+    60
+   ],
+   "s11_min": [
+    -54.939,
+    2.415
+   ],
+   "farfield": [
+    {
+     "f_ghz": 2.415,
+     "dmax_dbi": 2.155,
+     "eff": 0.999
+    }
+   ],
+   "runs": {
+    "t4": {
+     "engine": "cpu",
+     "threads": 4,
+     "cpu": "AMD Ryzen 9 7900X 12-Core Processor",
+     "solver_s": 49.18,
+     "wall_s": 50.36,
+     "mcells_s": 33.71,
+     "timesteps": [
+      8505
+     ],
+     "runs": 1
+    },
+    "all": {
+     "engine": "cpu",
+     "threads": 0,
+     "cpu": "AMD Ryzen 9 7900X 12-Core Processor",
+     "solver_s": 46.67,
+     "wall_s": 47.84,
+     "mcells_s": 35.53,
+     "timesteps": [
+      8505
+     ],
+     "runs": 1
+    }
+   },
+   "ref": {
+    "cells": 194940,
+    "grid": [
+     57,
+     57,
+     60
+    ],
+    "s11_min": [
+     -59.342,
+     2.415
+    ],
+    "farfield": [
+     {
+      "f_ghz": 2.415,
+      "dmax_dbi": 2.151,
+      "eff": 0.9982
+     }
+    ],
+    "engine": "cpu",
+    "threads": 4,
+    "cpu": "Apple M5 Pro",
+    "solver_s": 16.11,
+    "wall_s": 16.29,
+    "mcells_s": 131.19,
+    "timesteps": [
+     10842
+    ],
+    "runs": 1
+   },
+   "diff": {
+    "ds11_min_db": 4.403,
+    "df_s11_mhz": 0.0,
+    "ddmax_db": [
+     0.004
+    ],
+    "deff": [
+     0.0008
+    ],
+    "dsij": null,
+    "same_grid": true,
+    "same_timesteps": false
+   }
+  },
+  {
+   "bundle": "helix-axial",
+   "name": "Axial-mode helix (2.4 GHz, RHCP)",
+   "cells": 1391208,
+   "grid": [
+    91,
+    91,
+    168
+   ],
+   "s11_min": [
+    -54.879,
+    2.67
+   ],
+   "farfield": [
+    {
+     "f_ghz": 2.1,
+     "dmax_dbi": 10.138,
+     "eff": 0.9977
+    },
+    {
+     "f_ghz": 2.4,
+     "dmax_dbi": 11.583,
+     "eff": 0.9974
+    },
+    {
+     "f_ghz": 2.7,
+     "dmax_dbi": 11.706,
+     "eff": 0.9972
+    }
+   ],
+   "runs": {
+    "t4": {
+     "engine": "cpu",
+     "threads": 4,
+     "cpu": "AMD Ryzen 9 7900X 12-Core Processor",
+     "solver_s": 489.39,
+     "wall_s": 512.43,
+     "mcells_s": 49.09,
+     "timesteps": [
+      17270
+     ],
+     "runs": 1
+    },
+    "all": {
+     "engine": "cpu",
+     "threads": 0,
+     "cpu": "AMD Ryzen 9 7900X 12-Core Processor",
+     "solver_s": 336.43,
+     "wall_s": 356.83,
+     "mcells_s": 71.41,
+     "timesteps": [
+      17270
+     ],
+     "runs": 1
+    }
+   },
+   "ref": {
+    "cells": 1391208,
+    "grid": [
+     91,
+     91,
+     168
+    ],
+    "s11_min": [
+     -53.791,
+     2.67
+    ],
+    "farfield": [
+     {
+      "f_ghz": 2.1,
+      "dmax_dbi": 10.138,
+      "eff": 0.9976
+     },
+     {
+      "f_ghz": 2.4,
+      "dmax_dbi": 11.583,
+      "eff": 0.9973
+     },
+     {
+      "f_ghz": 2.7,
+      "dmax_dbi": 11.706,
+      "eff": 0.9971
+     }
+    ],
+    "engine": "gpu",
+    "threads": 0,
+    "cpu": "Apple M5 Pro",
+    "solver_s": 10.3,
+    "wall_s": 12.98,
+    "mcells_s": 2323.53,
+    "timesteps": [
+     17200
+    ],
+    "runs": 1
+   },
+   "diff": {
+    "ds11_min_db": -1.088,
+    "df_s11_mhz": 0.0,
+    "ddmax_db": [
+     0.0,
+     0.0,
+     0.0
+    ],
+    "deff": [
+     0.0001,
+     0.0001,
+     0.0001
+    ],
+    "dsij": null,
+    "same_grid": true,
+    "same_timesteps": false
+   }
+  },
+  {
+   "bundle": "inset-patch",
+   "name": "Inset-fed patch (FR4, 2.4 GHz)",
+   "cells": 173932,
+   "grid": [
+    59,
+    67,
+    44
+   ],
+   "s11_min": [
+    -15.557,
+    2.4013
+   ],
+   "farfield": [
+    {
+     "f_ghz": 2.4013,
+     "dmax_dbi": 6.631,
+     "eff": 0.4647
+    }
+   ],
+   "runs": {
+    "t4": {
+     "engine": "cpu",
+     "threads": 4,
+     "cpu": "AMD Ryzen 9 7900X 12-Core Processor",
+     "solver_s": 45.73,
+     "wall_s": 47.19,
+     "mcells_s": 26.5,
+     "timesteps": [
+      6966
+     ],
+     "runs": 1
+    },
+    "all": {
+     "engine": "cpu",
+     "threads": 0,
+     "cpu": "AMD Ryzen 9 7900X 12-Core Processor",
+     "solver_s": 54.31,
+     "wall_s": 56.23,
+     "mcells_s": 22.31,
+     "timesteps": [
+      6966
+     ],
+     "runs": 1
+    }
+   },
+   "ref": {
+    "cells": 173932,
+    "grid": [
+     59,
+     67,
+     44
+    ],
+    "s11_min": [
+     -15.222,
+     2.4013
+    ],
+    "farfield": [
+     {
+      "f_ghz": 2.4013,
+      "dmax_dbi": 6.63,
+      "eff": 0.4718
+     }
+    ],
+    "engine": "cpu",
+    "threads": 4,
+    "cpu": "Apple M5 Pro",
+    "solver_s": 12.07,
+    "wall_s": 12.3,
+    "mcells_s": 136.02,
+    "timesteps": [
+     9440
+    ],
+    "runs": 1
+   },
+   "diff": {
+    "ds11_min_db": -0.335,
+    "df_s11_mhz": 0.0,
+    "ddmax_db": [
+     0.001
+    ],
+    "deff": [
+     -0.0071
+    ],
+    "dsij": null,
+    "same_grid": true,
+    "same_timesteps": false
+   }
+  },
+  {
+   "bundle": "lowpass-stepped",
+   "name": "Stepped-impedance low-pass filter",
+   "cells": 133977,
+   "grid": [
+    71,
+    51,
+    37
+   ],
+   "s11_min": [
+    -48.0,
+    2.027
+   ],
+   "farfield": [],
+   "runs": {
+    "t4": {
+     "engine": "cpu",
+     "threads": 4,
+     "cpu": "AMD Ryzen 9 7900X 12-Core Processor",
+     "solver_s": 55.15,
+     "wall_s": 56.0,
+     "mcells_s": 95.32,
+     "timesteps": [
+      23744,
+      23744
+     ],
+     "runs": 2
+    },
+    "all": {
+     "engine": "cpu",
+     "threads": 0,
+     "cpu": "AMD Ryzen 9 7900X 12-Core Processor",
+     "solver_s": 42.62,
+     "wall_s": 43.37,
+     "mcells_s": 152.69,
+     "timesteps": [
+      23744,
+      23744
+     ],
+     "runs": 2
+    }
+   },
+   "ref": {
+    "cells": 106784,
+    "grid": [
+     71,
+     47,
+     32
+    ],
+    "s11_min": [
+     -47.316,
+     1.1643
+    ],
+    "farfield": [],
+    "engine": "gpu",
+    "threads": 0,
+    "cpu": "Apple M5 Pro",
+    "solver_s": 3.843,
+    "wall_s": 4.15,
+    "mcells_s": 1381.02,
+    "timesteps": [
+     24910,
+     24910
+    ],
+    "runs": 2
+   },
+   "diff": {
+    "ds11_min_db": -0.684,
+    "df_s11_mhz": 862.7,
+    "ddmax_db": [],
+    "deff": [],
+    "dsij": {
+     "all": {
+      "db": 12.67,
+      "sij": "1,1",
+      "f_ghz": 1.1787
+     },
+     "above": {
+      "db": 4.725,
+      "sij": "1,1",
+      "f_ghz": 1.2223
+     }
+    },
+    "same_grid": false,
+    "same_timesteps": false
+   }
+  },
+  {
+   "bundle": "microstrip-line",
+   "name": "Microstrip line (50 ohm, two-port)",
+   "cells": 53792,
+   "grid": [
+    41,
+    41,
+    32
+   ],
+   "s11_min": [
+    -36.815,
+    2.6656
+   ],
+   "farfield": [],
+   "runs": {
+    "t4": {
+     "engine": "cpu",
+     "threads": 4,
+     "cpu": "AMD Ryzen 9 7900X 12-Core Processor",
+     "solver_s": 10.66,
+     "wall_s": 11.18,
+     "mcells_s": 71.93,
+     "timesteps": [
+      7040,
+      7040
+     ],
+     "runs": 2
+    },
+    "all": {
+     "engine": "cpu",
+     "threads": 0,
+     "cpu": "AMD Ryzen 9 7900X 12-Core Processor",
+     "solver_s": 4.927,
+     "wall_s": 5.38,
+     "mcells_s": 163.587,
+     "timesteps": [
+      7040,
+      7040
+     ],
+     "runs": 2
+    }
+   },
+   "ref": {
+    "cells": 53792,
+    "grid": [
+     41,
+     41,
+     32
+    ],
+    "s11_min": [
+     -36.815,
+     2.6656
+    ],
+    "farfield": [],
+    "engine": "gpu",
+    "threads": 0,
+    "cpu": "Apple M5 Pro",
+    "solver_s": 0.848,
+    "wall_s": 1.07,
+    "mcells_s": 879.644,
+    "timesteps": [
+     7040,
+     7040
+    ],
+    "runs": 2
+   },
+   "diff": {
+    "ds11_min_db": 0.0,
+    "df_s11_mhz": 0.0,
+    "ddmax_db": [],
+    "deff": [],
+    "dsij": {
+     "all": {
+      "db": 0.005,
+      "sij": "2,2",
+      "f_ghz": 5.505
+     },
+     "above": {
+      "db": 0.003,
+      "sij": "2,2",
+      "f_ghz": 3.3806
+     }
+    },
+    "same_grid": true,
+    "same_timesteps": true
+   }
+  },
+  {
+   "bundle": "minkowski-patch",
+   "name": "Minkowski fractal patch",
+   "cells": 123008,
+   "grid": [
+    62,
+    62,
+    32
+   ],
+   "s11_min": [
+    -32.095,
+    2.324
+   ],
+   "farfield": [
+    {
+     "f_ghz": 2.324,
+     "dmax_dbi": 6.516,
+     "eff": 0.7908
+    }
+   ],
+   "runs": {
+    "t4": {
+     "engine": "cpu",
+     "threads": 4,
+     "cpu": "AMD Ryzen 9 7900X 12-Core Processor",
+     "solver_s": 111.87,
+     "wall_s": 117.7,
+     "mcells_s": 28.95,
+     "timesteps": [
+      26334
+     ],
+     "runs": 1
+    },
+    "all": {
+     "engine": "cpu",
+     "threads": 0,
+     "cpu": "AMD Ryzen 9 7900X 12-Core Processor",
+     "solver_s": 98.99,
+     "wall_s": 106.04,
+     "mcells_s": 32.72,
+     "timesteps": [
+      26334
+     ],
+     "runs": 1
+    }
+   },
+   "ref": {
+    "cells": 123008,
+    "grid": [
+     62,
+     62,
+     32
+    ],
+    "s11_min": [
+     -32.605,
+     2.324
+    ],
+    "farfield": [
+     {
+      "f_ghz": 2.324,
+      "dmax_dbi": 6.516,
+      "eff": 0.7938
+     }
+    ],
+    "engine": "cpu",
+    "threads": 4,
+    "cpu": "Apple M5 Pro",
+    "solver_s": 16.05,
+    "wall_s": 16.15,
+    "mcells_s": 222.85,
+    "timesteps": [
+     29073
+    ],
+    "runs": 1
+   },
+   "diff": {
+    "ds11_min_db": 0.51,
+    "df_s11_mhz": 0.0,
+    "ddmax_db": [
+     0.0
+    ],
+    "deff": [
+     -0.003
+    ],
+    "dsij": null,
+    "same_grid": true,
+    "same_timesteps": false
+   }
+  },
+  {
+   "bundle": "patch-antenna",
+   "name": "Rectangular patch antenna",
+   "cells": 276138,
+   "grid": [
+    69,
+    69,
+    58
+   ],
+   "s11_min": [
+    -36.009,
+    2.4525
+   ],
+   "farfield": [
+    {
+     "f_ghz": 2.4525,
+     "dmax_dbi": 6.788,
+     "eff": 0.949
+    }
+   ],
+   "runs": {
+    "t4": {
+     "engine": "cpu",
+     "threads": 4,
+     "cpu": "AMD Ryzen 9 7900X 12-Core Processor",
+     "solver_s": 46.55,
+     "wall_s": 48.7,
+     "mcells_s": 74.91,
+     "timesteps": [
+      12628
+     ],
+     "runs": 1
+    },
+    "all": {
+     "engine": "cpu",
+     "threads": 0,
+     "cpu": "AMD Ryzen 9 7900X 12-Core Processor",
+     "solver_s": 49.91,
+     "wall_s": 52.15,
+     "mcells_s": 69.86,
+     "timesteps": [
+      12628
+     ],
+     "runs": 1
+    }
+   },
+   "ref": {
+    "cells": 276138,
+    "grid": [
+     69,
+     69,
+     58
+    ],
+    "s11_min": [
+     -34.529,
+     2.4525
+    ],
+    "farfield": [
+     {
+      "f_ghz": 2.4525,
+      "dmax_dbi": 6.789,
+      "eff": 0.9651
+     }
+    ],
+    "engine": "cpu",
+    "threads": 4,
+    "cpu": "Apple M5 Pro",
+    "solver_s": 16.06,
+    "wall_s": 16.32,
+    "mcells_s": 317.51,
+    "timesteps": [
+     18468
+    ],
+    "runs": 1
+   },
+   "diff": {
+    "ds11_min_db": -1.48,
+    "df_s11_mhz": 0.0,
+    "ddmax_db": [
+     -0.001
+    ],
+    "deff": [
+     -0.0161
+    ],
+    "dsij": null,
+    "same_grid": true,
+    "same_timesteps": false
+   }
+  },
+  {
+   "bundle": "patch-array-2x1",
+   "name": "Patch array 2 x 1",
+   "cells": 52947,
+   "grid": [
+    37,
+    53,
+    27
+   ],
+   "s11_min": [
+    -25.377,
+    2.4345
+   ],
+   "farfield": [
+    {
+     "f_ghz": 2.4345,
+     "dmax_dbi": 6.366,
+     "eff": 0.926
+    },
+    {
+     "f_ghz": 2.4345,
+     "dmax_dbi": 6.366,
+     "eff": 0.926
+    }
+   ],
+   "runs": {
+    "t4": {
+     "engine": "cpu",
+     "threads": 4,
+     "cpu": "AMD Ryzen 9 7900X 12-Core Processor",
+     "solver_s": 105.98,
+     "wall_s": 111.99,
+     "mcells_s": 15.24,
+     "timesteps": [
+      15225,
+      15225
+     ],
+     "runs": 2
+    },
+    "all": {
+     "engine": "cpu",
+     "threads": 0,
+     "cpu": "AMD Ryzen 9 7900X 12-Core Processor",
+     "solver_s": 84.87,
+     "wall_s": 90.4,
+     "mcells_s": 19.17,
+     "timesteps": [
+      15225,
+      15225
+     ],
+     "runs": 2
+    }
+   },
+   "ref": {
+    "cells": 52947,
+    "grid": [
+     37,
+     53,
+     27
+    ],
+    "s11_min": [
+     -25.377,
+     2.4345
+    ],
+    "farfield": [
+     {
+      "f_ghz": 2.4345,
+      "dmax_dbi": 6.366,
+      "eff": 0.926
+     },
+     {
+      "f_ghz": 2.4345,
+      "dmax_dbi": 6.366,
+      "eff": 0.926
+     }
+    ],
+    "engine": "gpu",
+    "threads": 0,
+    "cpu": "Apple M5 Pro",
+    "solver_s": 2.088,
+    "wall_s": 2.83,
+    "mcells_s": 775.407,
+    "timesteps": [
+     15225,
+     15225
+    ],
+    "runs": 2
+   },
+   "diff": {
+    "ds11_min_db": 0.0,
+    "df_s11_mhz": 0.0,
+    "ddmax_db": [
+     0.0,
+     0.0
+    ],
+    "deff": [
+     0.0,
+     0.0
+    ],
+    "dsij": {
+     "all": {
+      "db": 0.037,
+      "sij": "2,1",
+      "f_ghz": 2.0235
+     },
+     "above": {
+      "db": 0.002,
+      "sij": "1,2",
+      "f_ghz": 2.3625
+     }
+    },
+    "same_grid": true,
+    "same_timesteps": true
+   }
+  },
+  {
+   "bundle": "patch-array-4x1",
+   "name": "Patch array 4 x 1",
+   "cells": 452270,
+   "grid": [
+    65,
+    142,
+    49
+   ],
+   "s11_min": [
+    -23.659,
+    2.4525
+   ],
+   "farfield": [
+    {
+     "f_ghz": 2.4525,
+     "dmax_dbi": 6.663,
+     "eff": 0.9167
+    },
+    {
+     "f_ghz": 2.4525,
+     "dmax_dbi": 6.608,
+     "eff": 0.8725
+    },
+    {
+     "f_ghz": 2.4525,
+     "dmax_dbi": 6.608,
+     "eff": 0.8725
+    },
+    {
+     "f_ghz": 2.4525,
+     "dmax_dbi": 6.663,
+     "eff": 0.9167
+    }
+   ],
+   "runs": {
+    "t4": {
+     "engine": "cpu",
+     "threads": 4,
+     "cpu": "AMD Ryzen 9 7900X 12-Core Processor",
+     "solver_s": 873.8,
+     "wall_s": 893.12,
+     "mcells_s": 40.79,
+     "timesteps": [
+      18055,
+      21352,
+      21352,
+      18055
+     ],
+     "runs": 4
+    },
+    "all": {
+     "engine": "cpu",
+     "threads": 0,
+     "cpu": "AMD Ryzen 9 7900X 12-Core Processor",
+     "solver_s": 686.38,
+     "wall_s": 705.75,
+     "mcells_s": 45.45,
+     "timesteps": [
+      18055,
+      21352,
+      21352,
+      18055
+     ],
+     "runs": 4
+    }
+   },
+   "ref": {
+    "cells": 452270,
+    "grid": [
+     65,
+     142,
+     49
+    ],
+    "s11_min": [
+     -23.571,
+     2.4525
+    ],
+    "farfield": [
+     {
+      "f_ghz": 2.4525,
+      "dmax_dbi": 6.661,
+      "eff": 0.9167
+     },
+     {
+      "f_ghz": 2.4525,
+      "dmax_dbi": 6.604,
+      "eff": 0.8726
+     },
+     {
+      "f_ghz": 2.4525,
+      "dmax_dbi": 6.604,
+      "eff": 0.8726
+     },
+     {
+      "f_ghz": 2.4525,
+      "dmax_dbi": 6.661,
+      "eff": 0.9167
+     }
+    ],
+    "engine": "gpu",
+    "threads": 0,
+    "cpu": "Apple M5 Pro",
+    "solver_s": 14.18,
+    "wall_s": 17.97,
+    "mcells_s": 2587.25,
+    "timesteps": [
+     18055,
+     21352,
+     21352,
+     18055
+    ],
+    "runs": 4
+   },
+   "diff": {
+    "ds11_min_db": -0.088,
+    "df_s11_mhz": 0.0,
+    "ddmax_db": [
+     0.002,
+     0.004,
+     0.004,
+     0.002
+    ],
+    "deff": [
+     0.0,
+     -0.0001,
+     -0.0001,
+     0.0
+    ],
+    "dsij": {
+     "all": {
+      "db": 1.427,
+      "sij": "1,4",
+      "f_ghz": 1.8255
+     },
+     "above": {
+      "db": 0.093,
+      "sij": "1,1",
+      "f_ghz": 2.454
+     }
+    },
+    "same_grid": true,
+    "same_timesteps": true
+   }
+  },
+  {
+   "bundle": "pyramidal-horn",
+   "name": "Pyramidal horn (WR-90, 10 GHz)",
+   "cells": 1136520,
+   "grid": [
+    123,
+    105,
+    88
+   ],
+   "s11_min": [
+    -28.919,
+    11.165
+   ],
+   "farfield": [
+    {
+     "f_ghz": 8.0,
+     "dmax_dbi": 14.739,
+     "eff": 1.0407
+    },
+    {
+     "f_ghz": 10.0,
+     "dmax_dbi": 15.525,
+     "eff": 1.037
+    },
+    {
+     "f_ghz": 12.0,
+     "dmax_dbi": 15.698,
+     "eff": 1.0353
+    }
+   ],
+   "runs": {
+    "t4": {
+     "engine": "cpu",
+     "threads": 4,
+     "cpu": "AMD Ryzen 9 7900X 12-Core Processor",
+     "solver_s": 224.57,
+     "wall_s": 230.21,
+     "mcells_s": 52.23,
+     "timesteps": [
+      10320
+     ],
+     "runs": 1
+    },
+    "all": {
+     "engine": "cpu",
+     "threads": 0,
+     "cpu": "AMD Ryzen 9 7900X 12-Core Processor",
+     "solver_s": 153.26,
+     "wall_s": 158.39,
+     "mcells_s": 76.53,
+     "timesteps": [
+      10320
+     ],
+     "runs": 1
+    }
+   },
+   "ref": {
+    "cells": 1136520,
+    "grid": [
+     123,
+     105,
+     88
+    ],
+    "s11_min": [
+     -28.661,
+     11.165
+    ],
+    "farfield": [
+     {
+      "f_ghz": 8.0,
+      "dmax_dbi": 14.735,
+      "eff": 1.0385
+     },
+     {
+      "f_ghz": 10.0,
+      "dmax_dbi": 15.52,
+      "eff": 1.0373
+     },
+     {
+      "f_ghz": 12.0,
+      "dmax_dbi": 15.699,
+      "eff": 1.0372
+     }
+    ],
+    "engine": "gpu",
+    "threads": 0,
+    "cpu": "Apple M5 Pro",
+    "solver_s": 5.61,
+    "wall_s": 7.11,
+    "mcells_s": 2186.7,
+    "timesteps": [
+     10800
+    ],
+    "runs": 1
+   },
+   "diff": {
+    "ds11_min_db": -0.258,
+    "df_s11_mhz": 0.0,
+    "ddmax_db": [
+     0.004,
+     0.005,
+     -0.001
+    ],
+    "deff": [
+     0.0022,
+     -0.0003,
+     -0.0019
+    ],
+    "dsij": null,
+    "same_grid": true,
+    "same_timesteps": false
+   }
+  },
+  {
+   "bundle": "sierpinski-monopole--iterations-0",
+   "name": "Sierpinski gasket monopole \u00b7 iterations=0",
+   "cells": 1879416,
+   "grid": [
+    154,
+    113,
+    108
+   ],
+   "s11_min": [
+    -11.999,
+    3.65
+   ],
+   "farfield": [
+    {
+     "f_ghz": 3.65,
+     "dmax_dbi": 7.806,
+     "eff": 0.9943
+    }
+   ],
+   "runs": {
+    "t4": {
+     "engine": "cpu",
+     "threads": 4,
+     "cpu": "AMD Ryzen 9 7900X 12-Core Processor",
+     "solver_s": 48.39,
+     "wall_s": 52.9,
+     "mcells_s": 153.79,
+     "timesteps": [
+      3960
+     ],
+     "runs": 1
+    },
+    "all": {
+     "engine": "cpu",
+     "threads": 0,
+     "cpu": "AMD Ryzen 9 7900X 12-Core Processor",
+     "solver_s": 61.26,
+     "wall_s": 65.39,
+     "mcells_s": 121.49,
+     "timesteps": [
+      3960
+     ],
+     "runs": 1
+    }
+   },
+   "ref": {
+    "cells": 1879416,
+    "grid": [
+     154,
+     113,
+     108
+    ],
+    "s11_min": [
+     -11.988,
+     3.65
+    ],
+    "farfield": [
+     {
+      "f_ghz": 3.65,
+      "dmax_dbi": 7.813,
+      "eff": 0.9948
+     }
+    ],
+    "engine": "cpu",
+    "threads": 4,
+    "cpu": "Apple M5 Pro",
+    "solver_s": 8.03,
+    "wall_s": 8.73,
+    "mcells_s": 790.72,
+    "timesteps": [
+     3380
+    ],
+    "runs": 1
+   },
+   "diff": {
+    "ds11_min_db": -0.011,
+    "df_s11_mhz": 0.0,
+    "ddmax_db": [
+     -0.007
+    ],
+    "deff": [
+     -0.0005
+    ],
+    "dsij": null,
+    "same_grid": true,
+    "same_timesteps": false
+   }
+  },
+  {
+   "bundle": "sierpinski-monopole--iterations-3",
+   "name": "Sierpinski gasket monopole \u00b7 iterations=3",
+   "cells": 2012304,
+   "grid": [
+    159,
+    113,
+    112
+   ],
+   "s11_min": [
+    -18.901,
+    3.3031
+   ],
+   "farfield": [
+    {
+     "f_ghz": 3.3031,
+     "dmax_dbi": 9.26,
+     "eff": 0.9943
+    },
+    {
+     "f_ghz": 6.2188,
+     "dmax_dbi": 11.133,
+     "eff": 0.9846
+    },
+    {
+     "f_ghz": 7.2969,
+     "dmax_dbi": 13.369,
+     "eff": 0.9875
+    }
+   ],
+   "runs": {
+    "t4": {
+     "engine": "cpu",
+     "threads": 4,
+     "cpu": "AMD Ryzen 9 7900X 12-Core Processor",
+     "solver_s": 61.08,
+     "wall_s": 70.14,
+     "mcells_s": 172.95,
+     "timesteps": [
+      5250
+     ],
+     "runs": 1
+    },
+    "all": {
+     "engine": "cpu",
+     "threads": 0,
+     "cpu": "AMD Ryzen 9 7900X 12-Core Processor",
+     "solver_s": 65.69,
+     "wall_s": 73.52,
+     "mcells_s": 160.83,
+     "timesteps": [
+      5250
+     ],
+     "runs": 1
+    }
+   },
+   "ref": {
+    "cells": 2012304,
+    "grid": [
+     159,
+     113,
+     112
+    ],
+    "s11_min": [
+     -18.903,
+     3.3031
+    ],
+    "farfield": [
+     {
+      "f_ghz": 3.3031,
+      "dmax_dbi": 9.259,
+      "eff": 0.9942
+     },
+     {
+      "f_ghz": 6.2188,
+      "dmax_dbi": 11.135,
+      "eff": 0.9847
+     },
+     {
+      "f_ghz": 7.2969,
+      "dmax_dbi": 13.376,
+      "eff": 0.9879
+     }
+    ],
+    "engine": "cpu",
+    "threads": 4,
+    "cpu": "Apple M5 Pro",
+    "solver_s": 12.03,
+    "wall_s": 13.13,
+    "mcells_s": 824.79,
+    "timesteps": [
+     4930
+    ],
+    "runs": 1
+   },
+   "diff": {
+    "ds11_min_db": 0.002,
+    "df_s11_mhz": 0.0,
+    "ddmax_db": [
+     0.001,
+     -0.002,
+     -0.007
+    ],
+    "deff": [
+     0.0001,
+     -0.0001,
+     -0.0004
+    ],
+    "dsij": null,
+    "same_grid": true,
+    "same_timesteps": false
+   }
+  },
+  {
+   "bundle": "wilkinson-divider",
+   "name": "Wilkinson divider (2.4 GHz)",
+   "cells": 113103,
+   "grid": [
+    59,
+    71,
+    27
+   ],
+   "s11_min": [
+    -29.807,
+    2.4512
+   ],
+   "farfield": [],
+   "runs": {
+    "t4": {
+     "engine": "cpu",
+     "threads": 4,
+     "cpu": "AMD Ryzen 9 7900X 12-Core Processor",
+     "solver_s": 41.07,
+     "wall_s": 42.31,
+     "mcells_s": 90.43,
+     "timesteps": [
+      9519,
+      10020,
+      10521
+     ],
+     "runs": 3
+    },
+    "all": {
+     "engine": "cpu",
+     "threads": 0,
+     "cpu": "AMD Ryzen 9 7900X 12-Core Processor",
+     "solver_s": 25.67,
+     "wall_s": 26.65,
+     "mcells_s": 139.6,
+     "timesteps": [
+      9519,
+      10020,
+      10521
+     ],
+     "runs": 3
+    }
+   },
+   "ref": {
+    "cells": 113103,
+    "grid": [
+     59,
+     71,
+     27
+    ],
+    "s11_min": [
+     -29.807,
+     2.4512
+    ],
+    "farfield": [],
+    "engine": "gpu",
+    "threads": 0,
+    "cpu": "Apple M5 Pro",
+    "solver_s": 2.108,
+    "wall_s": 2.58,
+    "mcells_s": 1592.47,
+    "timesteps": [
+     9519,
+     10020,
+     10521
+    ],
+    "runs": 3
+   },
+   "diff": {
+    "ds11_min_db": 0.0,
+    "df_s11_mhz": 0.0,
+    "ddmax_db": [],
+    "deff": [],
+    "dsij": {
+     "all": {
+      "db": 0.001,
+      "sij": "1,1",
+      "f_ghz": 2.365
+     },
+     "above": {
+      "db": 0.001,
+      "sij": "1,1",
+      "f_ghz": 2.365
+     }
+    },
+    "same_grid": true,
+    "same_timesteps": true
+   }
+  }
+ ]
+}

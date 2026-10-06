@@ -1,0 +1,89 @@
+/* The designer ribbon (DesignWorkspace.tsx). One row at every width, fitted to the actual centre
+   column by fitRibbon(): data-density on .rb-shell ("wide" shows the inline fields, "full" every
+   command with icon and label, "compact" smaller labels), then per group data-size="icons"
+   (icon-only, the label stays as tooltip and accessible name) and, as the last resort,
+   data-collapsed (the group becomes one drop-down button). */
+.rb-shell { container-type: inline-size; }
+.rb-shell .rb-tabs { align-items: flex-end; overflow-x: auto; overflow-y: hidden; flex-wrap: nowrap; scrollbar-width: thin; }
+.rb-shell .rb-tabs [role="tablist"] { display: flex; align-items: flex-end; flex: none; gap: 2px; }
+.rb-shell .rb-tab { flex: none; white-space: nowrap; min-height: var(--al-control-h-sm); }
+.rb-shell .rb-minimize { flex: none; align-self: center; margin-left: auto; display: inline-flex; align-items: center; justify-content: center; width: var(--al-control-h-sm); height: var(--al-control-h-sm); border: 0; border-radius: var(--al-radius-sm); background: transparent; color: var(--al-text-2); cursor: pointer; }
+.rb-shell .rb-minimize:hover { background: var(--al-surface-2); color: var(--al-text); }
+.rb-shell .rb-minimize:focus-visible { outline: 2px solid var(--al-focus); outline-offset: -2px; }
+.rb-shell .rb-toolbar { flex-wrap: nowrap; gap: 0; padding-block: 2px 0; }
+.rb-shell[data-fit="scroll"] .rb-toolbar { overflow-x: auto; scrollbar-width: thin; }
+.rb-shell .rb-group { position: relative; flex: none; max-width: none; }
+.rb-shell .rb-items { flex-wrap: nowrap; }
+.rb-shell .rb-label { margin-top: auto; line-height: 13px; }
+.rb-shell .rb-btn { white-space: nowrap; }
+.rb-shell .rb-btn > span { display: block; line-height: 14px; }
+.rb-shell .rb-btn.rb-issue-error { border-color: var(--al-critical); color: var(--al-critical); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--al-critical) 22%, transparent); }
+.rb-shell .rb-btn.rb-issue-warning { border-color: var(--al-warn); color: var(--al-warn); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--al-warn) 20%, transparent); }
+.rb-shell .rb-toolbar > .rb-group:last-child { margin-left: 0; border-left: 0; }
+.rb-shell .rb-pop { left: auto; right: 0; }
+.rb-shell .rb-wcs > .rb-pop { width: min(320px, calc(100vw - 32px)); max-height: 60dvh; overflow: auto; }
+.rb-shell .rb-group[data-pop-align="start"] .rb-wcs > .rb-pop { left: 0; right: auto; }
+.rb-shell .point-tools { display: flex; gap: 2px; }
+
+/* density: extras only with room to spare, then smaller labels */
+.rb-shell:not([data-density="wide"]) .rb-extra { display: none; }
+.rb-shell[data-density="compact"] .rb-group { padding-inline: var(--al-space-1); }
+.rb-shell[data-density="compact"] .rb-btn { min-width: 36px; padding-inline: 2px; font-size: max(11px, var(--al-text-xs)); }
+.rb-shell[data-density="compact"] .rb-btn > svg { width: 15px; height: 15px; }
+.rb-shell[data-density="compact"] .rb-label { font-size: 11px; letter-spacing: 0.02em; }
+
+/* icon-only groups: the label is visually hidden (still the accessible name; RButton titles) and
+   the group label no longer sets the group's width */
+.rb-shell .rb-group[data-size="icons"] { padding-inline: 3px; }
+.rb-shell .rb-group[data-size="icons"] > .rb-items { flex: 1; align-items: flex-start; }
+.rb-shell .rb-group[data-size="icons"] .rb-btn { min-width: 30px; padding: 5px; }
+.rb-shell .rb-group[data-size="icons"] .rb-btn:not(.rb-group-toggle) > span {
+  position: absolute; width: 1px; height: 1px; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap;
+}
+.rb-shell .rb-group[data-size="icons"] > .rb-label { width: 0; min-width: 100%; overflow: hidden; text-overflow: ellipsis; }
+
+/* folded group: one drop-down button; its commands open under it with their labels */
+.rb-shell .rb-group-toggle { display: none; }
+.rb-shell .rb-group-toggle > span { display: inline-flex; align-items: center; gap: 1px; }
+.rb-shell .rb-group[data-collapsed] > .rb-group-toggle { display: flex; margin-block: 0; }
+.rb-shell .rb-group[data-collapsed] > :is(.rb-items, .rb-label) { display: none; }
+.rb-shell .rb-group[data-collapsed][data-open] > .rb-group-toggle { background: var(--al-accent-soft); border-color: var(--al-accent-line); color: var(--al-text); }
+.rb-shell .rb-group[data-collapsed][data-open] > .rb-items {
+  display: flex; flex-wrap: wrap; position: absolute; z-index: 30; top: calc(100% + 2px); left: 0;
+  width: max-content; max-width: min(340px, calc(100vw - 32px)); padding: var(--al-space-1);
+  background: var(--al-surface); border: 1px solid var(--al-border-strong); border-radius: var(--al-radius-lg); box-shadow: var(--al-shadow-pop);
+}
+.rb-shell .rb-group[data-collapsed][data-align="end"][data-open] > .rb-items { left: auto; right: 0; }
+.rb-shell .rb-group[data-collapsed][data-open] > .rb-items .rb-btn { min-width: 50px; padding: var(--al-space-1); }
+.rb-shell .rb-group[data-collapsed][data-open] > .rb-items .rb-btn > span { position: static; width: auto; height: auto; margin: 0; overflow: visible; clip: auto; }
+
+/* the inline fields keep the ribbon's height: label, a short input, one info line; an invalid
+   value is marked on the field and explained in Checks */
+.rb-shell .rb-items { min-height: 45px; }
+.rb-frequency { width: 200px; display: grid; gap: 2px; }
+.rb-field-pair { display: grid; grid-template-columns: 1fr 1fr; gap: var(--al-space-2); }
+.rb-mesh-fields { width: 232px; display: grid; grid-template-columns: 84px 1fr; gap: 2px var(--al-space-2); align-content: start; }
+.rb-thin-metal { display: grid; gap: 0; font-size: 11px; color: var(--al-text-2); }
+.rb-thin-metal select { width: 100%; }
+.rb-info { font-size: 11px; line-height: 13px; color: var(--al-text-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.rb-info.mono { font-family: var(--al-font-sans); font-variant-numeric: tabular-nums; }
+.rb-shell .rb-extra .dz-field { display: grid; gap: 0; margin: 0; }
+.rb-shell .rb-extra .dz-label { font-size: 11px; line-height: 13px; }
+.rb-shell .rb-extra :is(.dz-input, select.rp-input) { height: 24px; min-height: 24px; padding-block: 0; font-size: var(--al-text-xs); }
+.rb-shell .rb-extra .dz-value { display: none; }
+.rb-result-note { margin: var(--al-space-2); align-self: center; font-size: var(--al-text-xs); color: var(--al-text-3); }
+.rb-shell .rb-result-note { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; }
+
+.shortcut-list { display: grid; gap: var(--al-space-1); margin: 0; }
+.shortcut-list > div { display: grid; grid-template-columns: 1fr auto; align-items: center; gap: var(--al-space-3); padding: var(--al-space-1) 0; border-bottom: 1px solid var(--al-border); }
+.shortcut-list dt { font-weight: 600; }
+.shortcut-list dt small { display: block; color: var(--al-text-3); font-weight: 400; }
+.shortcut-list dd { margin: 0; }
+.shortcut-list kbd { white-space: nowrap; }
+.shortcut-help-dialog { width: min(560px, calc(100vw - 32px)); }
+/* one column that scrolls between the head and the footer (the default .dialog-body is a
+   300 px + fluid two-column grid for options and preview) */
+.shortcut-help-dialog .dialog-body { display: block; min-height: 0; overflow: auto; padding: var(--al-space-4) var(--al-pad-panel); }
+/* Post-processing › Farfield: the quantity the shown pattern draws (FarfieldCard.PatternQuantitySelect) */
+.rb-ff-quantity { display: grid; gap: 0; align-content: center; width: 150px; font-size: 11px; color: var(--al-text-2); }
+.rb-ff-quantity select { width: 100%; height: 24px; min-height: 24px; padding-block: 0; font-size: var(--al-text-xs); }

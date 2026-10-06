@@ -1,0 +1,567 @@
+{
+  "$comment": [
+    "The roadmap board on the landing page (#roadmap). scripts/build-site.mjs renders it into the page.",
+    "Edit by hand: areas, their order, and each item's title, description and links (issue and PR numbers of the repo below).",
+    "npm run roadmap reads the links' states with gh and rewrites status, release and updated; it keeps everything else.",
+    "status: available (merged, and every linked issue closed as completed), development (an open PR, a linked issue with an open PR, part of the work merged, or started: true), planned (open issues only).",
+    "release: the first tag that contains the merge commit, e.g. 0.3.0, or next (merged, not released yet; shown as nextRelease).",
+    "started: true marks an item whose work has begun before its first PR. Items without links keep the status and release written here."
+  ],
+  "updated": "2026-10-06",
+  "repo": "ismailakdag/fairbeam",
+  "issueUrl": null,
+  "releaseUrl": "https://github.com/ismailakdag/fairbeam-releases/releases/tag/v{version}",
+  "nextRelease": "0.7.1",
+  "areas": [
+    {
+      "name": "Designer",
+      "items": [
+        {
+          "title": "Visual designer",
+          "description": "Draw a parametric model, set up the simulation, run it and read the results in one window.",
+          "links": [35],
+          "status": "available",
+          "release": "0.7.0"
+        },
+        {
+          "title": "One-row ribbon",
+          "description": "Home, Modeling, Transform, Simulation, Optimize and Post-processing on one row; the tree, dock and properties collapse, next to a Python side panel.",
+          "links": [55, 77, 147],
+          "status": "available",
+          "release": "0.7.0"
+        },
+        {
+          "title": "Draw in 3D and extrude faces",
+          "description": "Draw a brick's base and then its height in the 3D view, or extrude a picked face into a new part.",
+          "links": [144, 146],
+          "status": "available",
+          "release": "0.7.0"
+        },
+        {
+          "title": "One Transform dialog",
+          "description": "Translate, scale, rotate and mirror in one dialog (Ctrl+T), with a live preview.",
+          "links": [56, 61, 143],
+          "status": "available",
+          "release": "0.7.0"
+        },
+        {
+          "title": "Booleans, polygons included",
+          "description": "Add, subtract and intersect shapes, including polygons, with a colour-coded preview.",
+          "links": [80, 135, 156],
+          "status": "available",
+          "release": "0.7.0"
+        },
+        {
+          "title": "Pick points, align and measure",
+          "description": "Use vertices, edge midpoints and face centres for corners and origins; align parts and measure between points.",
+          "links": [66, 135],
+          "status": "available",
+          "release": "0.7.0"
+        },
+        {
+          "title": "Shortcuts and modeling history",
+          "description": "A sheet of the keyboard shortcuts, and the session's modeling history.",
+          "links": [81, 84, 133],
+          "status": "available",
+          "release": "0.7.0"
+        },
+        {
+          "title": "A tree with context menus",
+          "description": "Right-click menus on every node, show and hide, and drag and drop of parts into components.",
+          "links": [44, 49, 79, 128, 132, 160],
+          "status": "available",
+          "release": "0.7.0"
+        },
+        {
+          "title": "Parameters in the dock",
+          "description": "A table of every parameter next to Checks, with CSV and JSON import and export.",
+          "links": [53, 59, 148],
+          "status": "available",
+          "release": "0.7.0"
+        },
+        {
+          "title": "Checks that explain themselves",
+          "description": "Click a warning to see what was found, why it matters and how to fix it.",
+          "links": [64, 70],
+          "status": "available",
+          "release": "0.7.0"
+        },
+        {
+          "title": "Ports that find their ground",
+          "description": "Add port here says what the port connects to and offers the other metals it found.",
+          "links": [65, 67],
+          "status": "available",
+          "release": "0.7.0"
+        },
+        {
+          "title": "Import VBA macro",
+          "description": "A CST-compatible VBA macro or history list becomes a design, manual mesh lines included, with a report of what was skipped or changed.",
+          "links": [168, 170],
+          "status": "available",
+          "release": "0.7.0"
+        },
+        {
+          "title": "Save As",
+          "description": "Save a design under a new name, in the app and from the File menu; Undo and Redo work from the menus too.",
+          "links": [163, 167],
+          "status": "available",
+          "release": "0.7.0"
+        },
+        {
+          "title": "Checks for misplaced metal",
+          "description": "New warnings for metal that overhangs its substrate or floats off the structure.",
+          "links": [177],
+          "status": "available",
+          "release": "0.7.0"
+        },
+        {
+          "title": "Surface current in the ribbon",
+          "description": "Simulation › Monitors has its own Surface current button, next to Far field.",
+          "links": [176],
+          "status": "available",
+          "release": "0.7.0"
+        },
+        {
+          "title": "Start templates",
+          "description": "A half-wave dipole, a quarter-wave monopole, an open-ended waveguide, a printed sleeve dipole and a two-port microstrip line to start from.",
+          "links": [],
+          "status": "available",
+          "release": "0.7.0"
+        },
+        {
+          "title": "Import PCB artwork",
+          "description": "DXF, Gerber and Excellon files become a design: Home › Import PCB, or fairbeam import-pcb.",
+          "links": [],
+          "status": "available",
+          "release": "0.7.0"
+        },
+        {
+          "title": "One-click check fixes",
+          "description": "Common design checks offer a fix you can apply with one click.",
+          "links": [],
+          "status": "available",
+          "release": "0.7.0"
+        }
+      ]
+    },
+    {
+      "name": "Simulation",
+      "items": [
+        {
+          "title": "Automatic meshing",
+          "description": "The FDTD mesh is built from the geometry, within 0.1 % of converged hand-tuned meshes.",
+          "links": [],
+          "status": "available",
+          "release": "0.7.0"
+        },
+        {
+          "title": "Multi-port S-parameters",
+          "description": "Full S-matrices of filters, dividers, couplers and arrays, with Touchstone export.",
+          "links": [],
+          "status": "available",
+          "release": "0.7.0"
+        },
+        {
+          "title": "Sweeps and optimizer",
+          "description": "Sweep one or two parameters, or let the optimizer tune them towards your goals.",
+          "links": [],
+          "status": "available",
+          "release": "0.7.0"
+        },
+        {
+          "title": "Metal GPU engine",
+          "description": "An optional Metal build of openEMS on Apple silicon: several times faster, same results.",
+          "links": [],
+          "status": "available",
+          "release": "0.7.0"
+        },
+        {
+          "title": "CUDA GPU engine",
+          "description": "An optional NVIDIA engine on Windows, in the Run panel: the patch in 2.6 s instead of 53 s.",
+          "links": [10, 14, 17, 19],
+          "status": "available",
+          "release": "0.7.0"
+        },
+        {
+          "title": "Thin copper as sheets",
+          "description": "Realistic 35 µm PCB copper is simulated as sheets, so runs keep a practical time step.",
+          "links": [38, 46],
+          "status": "available",
+          "release": "0.7.0"
+        },
+        {
+          "title": "Convergence checks",
+          "description": "A run that cannot converge is stopped before it starts, with the reason and a fix.",
+          "links": [39, 46],
+          "status": "available",
+          "release": "0.7.0"
+        },
+        {
+          "title": "Thin copper in exported models",
+          "description": "A design exported to Python builds the same copper sheets as the designer's own run.",
+          "links": [63],
+          "status": "available",
+          "release": "0.7.0"
+        },
+        {
+          "title": "Auto mesh mode",
+          "description": "The mesh settings are picked for each design, and any field can be overridden.",
+          "links": [145],
+          "status": "available",
+          "release": "0.7.0"
+        },
+        {
+          "title": "Parameter sweeps",
+          "description": "Sequences over up to six parameters each, checked before they run, queued, and compared run by run.",
+          "links": [151, 155],
+          "status": "available",
+          "release": "0.7.0"
+        },
+        {
+          "title": "A stronger optimizer",
+          "description": "Live progress, the best result kept, any number of parameters, and Bayesian, CMA-ES, particle-swarm, genetic and trust-region searches.",
+          "links": [150],
+          "status": "available",
+          "release": "0.7.0"
+        },
+        {
+          "title": "No run without a port",
+          "description": "A design with no port, or no excited port, is refused with a check instead of failing.",
+          "links": [166],
+          "status": "available",
+          "release": "0.7.0"
+        },
+        {
+          "title": "Examples keep their mesh",
+          "description": "An example opened as a new project keeps its exact mesh lines, so it gives the same results.",
+          "links": [164, 165, 169],
+          "status": "available",
+          "release": "0.7.0"
+        },
+        {
+          "title": "Optimizer skips misplaced metal",
+          "description": "Candidates the design checks refuse are skipped without a simulation and shown as Skipped.",
+          "links": [177],
+          "status": "available",
+          "release": "0.7.0"
+        },
+        {
+          "title": "GPU build by default",
+          "description": "When the GPU build of openEMS is installed, the app starts with it and offers both engines; a general setting switches it.",
+          "links": [176],
+          "status": "available",
+          "release": "0.7.0"
+        },
+        {
+          "title": "Mesh convergence",
+          "description": "Simulation › Mesh convergence… refines the automatic mesh until the results stop changing; fairbeam converge does the same from the command line.",
+          "links": [],
+          "status": "available",
+          "release": "0.7.0"
+        },
+        {
+          "title": "Run-quality warnings",
+          "description": "A run that did not converge, or whose numbers look suspicious, is flagged in the tree and on its results.",
+          "links": [],
+          "status": "available",
+          "release": "0.7.0"
+        }
+      ]
+    },
+    {
+      "name": "Results",
+      "items": [
+        {
+          "title": "Far field, currents and beam steering",
+          "description": "3D patterns, gain and efficiency, surface currents, and array beams steered after the run.",
+          "links": [],
+          "status": "available",
+          "release": "0.7.0"
+        },
+        {
+          "title": "Drawings, reports and fabrication files",
+          "description": "Dimensioned drawings, publication figures, a PDF report, and Gerber and drill files.",
+          "links": [],
+          "status": "available",
+          "release": "0.7.0"
+        },
+        {
+          "title": "VBA macro export",
+          "description": "A CST-compatible VBA macro rebuilds the model in the target program.",
+          "links": [],
+          "status": "available",
+          "release": "0.7.0"
+        },
+        {
+          "title": "Solver times on reference machines",
+          "description": "See how long the same model takes on an Apple M5 Pro and a Ryzen 9 with CUDA.",
+          "links": [30, 31],
+          "status": "available",
+          "release": "0.7.0"
+        },
+        {
+          "title": "Every run kept",
+          "description": "Each run keeps its own result, and Results opens the newest run instead of the preview.",
+          "links": [40, 42],
+          "status": "available",
+          "release": "0.7.0"
+        },
+        {
+          "title": "Results in the design tree",
+          "description": "Each run appears under its design, with its S-parameters, far fields, currents and log.",
+          "links": [52, 58],
+          "status": "available",
+          "release": "0.7.0"
+        },
+        {
+          "title": "Post-processing tab",
+          "description": "Selecting a result opens its plot, compare and export tools in the ribbon.",
+          "links": [55],
+          "status": "available",
+          "release": "0.7.0"
+        },
+        {
+          "title": "Markers",
+          "description": "Resonances, a two-marker bandwidth, hover read-outs and your own markers, with a table.",
+          "links": [154, 158],
+          "status": "available",
+          "release": "0.7.0"
+        },
+        {
+          "title": "Compare runs",
+          "description": "Runs side by side, with the parameters that differ marked; copy or save several runs at once.",
+          "links": [127, 131, 136],
+          "status": "available",
+          "release": "0.7.0"
+        },
+        {
+          "title": "Complex formats and Touchstone",
+          "description": "Copy data and CSV in dB, phase, Re/Im or magnitude/phase, and Touchstone export.",
+          "links": [100, 113, 152],
+          "status": "available",
+          "release": "0.7.0"
+        },
+        {
+          "title": "Result tabs",
+          "description": "Results open as tabs in the main area, with an A/B/C table of the runs.",
+          "links": [172],
+          "status": "available",
+          "release": "0.7.0"
+        },
+        {
+          "title": "Animated surface currents",
+          "description": "Phase-resolved surface currents play as a smooth animation in the 3D view.",
+          "links": [174],
+          "status": "available",
+          "release": "0.7.0"
+        },
+        {
+          "title": "Gain and polarization in patterns",
+          "description": "3D patterns and cuts in directivity, gain, realized gain, or RHCP and LHCP for circular polarization.",
+          "links": [180],
+          "status": "available",
+          "release": "0.7.0"
+        },
+        {
+          "title": "Far-field card in the 3D view",
+          "description": "Dmax, gain, realized gain, radiation, mismatch and total efficiency and the main lobe, next to the pattern.",
+          "links": [180],
+          "status": "available",
+          "release": "0.7.0"
+        },
+        {
+          "title": "Efficiency result",
+          "description": "1D Results › Efficiency: mismatch efficiency over the band, with the radiation and total efficiency, per driven port.",
+          "links": [180],
+          "status": "available",
+          "release": "0.7.0"
+        },
+        {
+          "title": "Efficiency over the band",
+          "description": "Optional radiation and total efficiency across the band from Simulation › Monitors › Efficiency, computed after the run without changing the solver time.",
+          "links": [179],
+          "status": "available",
+          "release": "0.7.0"
+        },
+        {
+          "title": "Result summaries",
+          "description": "Headline numbers for each run in the tree and the Runs table, Tables › Summary, and a comparison table of the parameters that differ, to copy or save as CSV.",
+          "links": [],
+          "status": "available",
+          "release": "0.7.0"
+        },
+        {
+          "title": "2D field maps with phase and animation",
+          "description": "The Field map tab shows E and H planes as heat maps; Phase and Animate play a time-harmonic animation, in 2D and 3D.",
+          "links": [],
+          "status": "available",
+          "release": "0.7.0"
+        }
+      ]
+    },
+    {
+      "name": "Desktop app",
+      "items": [
+        {
+          "title": "Desktop app for macOS and Windows",
+          "description": "Installs its own Python and openEMS on first start, for your account, without admin rights.",
+          "links": [1, 2],
+          "status": "available",
+          "release": "0.7.0"
+        },
+        {
+          "title": "Updates in the app",
+          "description": "New versions are offered in the app, checked against their signature, and install themselves.",
+          "links": [],
+          "status": "available",
+          "release": "0.7.0"
+        },
+        {
+          "title": "Sturdier on Windows",
+          "description": "Proxies are honoured, interrupted downloads resume, and the server always stops with the app.",
+          "links": [4, 7, 8, 15, 18, 25, 27, 29],
+          "status": "available",
+          "release": "0.7.0"
+        },
+        {
+          "title": "Clean updates and uninstall",
+          "description": "On Windows, an update replaces the old files and uninstalling removes the whole folder.",
+          "links": [36],
+          "status": "available",
+          "release": "0.7.0"
+        },
+        {
+          "title": "GPU preference on Windows",
+          "description": "“Prefer the GPU build” on the setup screen now works on Windows too.",
+          "links": [20, 37],
+          "status": "available",
+          "release": "0.7.0"
+        },
+        {
+          "title": "Sharp on scaled displays",
+          "description": "Layouts fit 125 % and 150 % Windows scaling and follow each monitor's pixel density.",
+          "links": [48],
+          "status": "available",
+          "release": "0.7.0"
+        },
+        {
+          "title": "Start, Design and Examples",
+          "description": "Examples open read-only with their results; Open as new project turns one into a design.",
+          "links": [51, 76, 153, 157],
+          "status": "available",
+          "release": "0.7.0"
+        },
+        {
+          "title": "Native menus and settings",
+          "description": "File, Edit, View, Window and Help menus, an About dialog, general settings and native Save As for exports.",
+          "links": [139, 159],
+          "status": "available",
+          "release": "0.7.0"
+        },
+        {
+          "title": "No lost work",
+          "description": "Closing a project, the window or the app asks to save, discard or cancel when there are unsaved changes.",
+          "links": [41, 43, 99, 118],
+          "status": "available",
+          "release": "0.7.0"
+        },
+        {
+          "title": "A window that fits",
+          "description": "The window opens at a size that fits the screen, or maximized on smaller screens.",
+          "links": [176],
+          "status": "available",
+          "release": "0.7.0"
+        },
+        {
+          "title": "Turkish and English interface",
+          "description": "General settings › Language, native menus included, and a Decimal separator setting.",
+          "links": [],
+          "status": "available",
+          "release": "0.7.0"
+        },
+        {
+          "title": "Searchable example picker",
+          "description": "Find an example by name, with new 867 MHz collinear and Yagi examples.",
+          "links": [],
+          "status": "available",
+          "release": "0.7.0"
+        }
+      ]
+    },
+    {
+      "name": "Performance & quality",
+      "items": [
+        {
+          "title": "Validated results",
+          "description": "Checked against analytical results.",
+          "links": [],
+          "status": "available",
+          "release": "0.7.0"
+        },
+        {
+          "title": "Benchmarks on Mac and Windows",
+          "description": "All 14 examples timed on both platforms, with matching results.",
+          "links": [9, 13],
+          "status": "available",
+          "release": "0.7.0"
+        },
+        {
+          "title": "Honest efficiency figures",
+          "description": "Efficiencies above 100 % are flagged, and runs report the end criterion they reached.",
+          "links": [11],
+          "status": "available",
+          "release": "0.7.0"
+        },
+        {
+          "title": "A faster, steadier designer",
+          "description": "The 3D view reuses its geometry, and edits survive slow loads, saves and previews.",
+          "links": [24, 28],
+          "status": "available",
+          "release": "0.7.0"
+        },
+        {
+          "title": "Keyboard access",
+          "description": "Designer commands stay visible and every control can be reached from the keyboard.",
+          "links": [26],
+          "status": "available",
+          "release": "0.7.0"
+        },
+        {
+          "title": "Projects open reliably",
+          "description": "A preview arriving mid-load can no longer replace the project you asked for.",
+          "links": [62],
+          "status": "available",
+          "release": "0.7.0"
+        },
+        {
+          "title": "Faster meshing of detailed designs",
+          "description": "Automatic meshing of polygon designs and arrays runs 4 to 64 times faster.",
+          "links": [71],
+          "status": "available",
+          "release": "0.7.0"
+        },
+        {
+          "title": "A quicker designer",
+          "description": "The Start screen opens in half the time, and checks and saves answer sooner.",
+          "links": [72, 73, 74],
+          "status": "available",
+          "release": "0.7.0"
+        },
+        {
+          "title": "Large designs stay responsive",
+          "description": "Big polygon designs edit, preview and check faster, with identical results.",
+          "links": [104, 105, 137, 138],
+          "status": "available",
+          "release": "0.7.0"
+        },
+        {
+          "title": "Horn efficiency",
+          "description": "Waveguide-port power is calibrated, so the pyramidal horn's radiation efficiency reads about 99 %.",
+          "links": [12, 162],
+          "status": "available",
+          "release": "0.7.0"
+        }
+      ]
+    }
+  ]
+}

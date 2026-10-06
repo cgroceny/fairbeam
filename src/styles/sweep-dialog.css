@@ -1,0 +1,16 @@
+.sd-dialog { width: min(640px, calc(100vw - 32px)); }
+.sd-body { max-height: min(68vh, 680px); overflow: auto; padding: var(--al-space-3) var(--al-space-4); }
+.sd-axis-head { display: flex; align-items: center; gap: var(--al-space-2); }
+.sd-axis-head .rp-select { flex: 1; min-width: 0; }
+.sd-add { justify-self: start; }
+.sd-layout { display:grid; grid-template-columns: 150px minmax(0,1fr); gap: var(--al-space-3); }
+.sd-sequences,.sd-editor { display:grid; align-content:start; gap:var(--al-space-2); }
+.sd-sequences .active { background:var(--al-surface-2); }
+.sd-actions,.sd-summary { display:flex; flex-wrap:wrap; align-items:center; gap:var(--al-space-2); }
+.sd-summary { justify-content:space-between; margin:var(--al-space-3) 0; }
+@media (max-width:520px) { .sd-layout { grid-template-columns:1fr; } .sd-sequences { grid-template-columns:repeat(2,minmax(0,1fr)); } }
+@media (max-width: 520px) {
+  .sd-body { padding: var(--al-space-2); }
+  .sd-dialog .rp-range { grid-template-columns: 1fr 1fr; }
+  .sd-dialog .rp-range .rp-mini:last-child { grid-column: 1 / -1; }
+}

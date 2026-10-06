@@ -1,0 +1,16 @@
+{
+  "identifier": "account-capability",
+  "description": "Optional sign-in (docs/ACCOUNTS.md): the viewer served from the local run server may use the account plugin. Added at runtime by the plugin, only in builds with the accounts feature.",
+  "local": false,
+  "remote": {
+    "urls": [
+      "http://127.0.0.1:*/*"
+    ]
+  },
+  "windows": [
+    "main"
+  ],
+  "permissions": [
+    "account:default"
+  ]
+}

@@ -1,0 +1,59 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "framework": null,
+  "installCommand": "npm ci",
+  "buildCommand": "npm run build:site",
+  "outputDirectory": "site-dist",
+  "cleanUrls": false,
+  "git": {
+    "deploymentEnabled": {
+      "windows/*": false,
+      "codex-windows/*": false,
+      "mac/*": false,
+      "codex-mac/*": false,
+      "codex/*": false,
+      "claude/*": false
+    }
+  },
+  "functions": {
+    "api/ping.js": { "includeFiles": "api/_ping-schema.json", "maxDuration": 10 }
+  },
+  "redirects": [
+    { "source": "/app", "destination": "/app/", "permanent": true },
+    { "source": "/get-fairbeam", "destination": "/#download", "permanent": false },
+    {
+      "source": "/:path((?!api/|api$).*)",
+      "has": [{ "type": "host", "value": "antenlab.akdag.dev" }],
+      "destination": "https://fairbeam.org/:path",
+      "permanent": true
+    }
+  ],
+  "headers": [
+    {
+      "source": "/(.*)",
+      "headers": [
+        { "key": "X-Content-Type-Options", "value": "nosniff" },
+        { "key": "Referrer-Policy", "value": "strict-origin-when-cross-origin" },
+        { "key": "X-Frame-Options", "value": "SAMEORIGIN" },
+        { "key": "Content-Security-Policy", "value": "frame-ancestors 'self'" },
+        { "key": "Permissions-Policy", "value": "camera=(), microphone=(), geolocation=()" }
+      ]
+    },
+    {
+      "source": "/app/assets/(.*)",
+      "headers": [{ "key": "Cache-Control", "value": "public, max-age=31536000, immutable" }]
+    },
+    {
+      "source": "/fonts/(.*)",
+      "headers": [{ "key": "Cache-Control", "value": "public, max-age=31536000, immutable" }]
+    },
+    {
+      "source": "/media/(.*)",
+      "headers": [{ "key": "Cache-Control", "value": "public, max-age=86400" }]
+    },
+    {
+      "source": "/app/projects/(.*)",
+      "headers": [{ "key": "Cache-Control", "value": "public, max-age=3600" }]
+    }
+  ]
+}

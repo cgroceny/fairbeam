@@ -1,0 +1,153 @@
+/* Technical drawing view, export package dialog and figure menu. Role tokens only
+   (design-system/tokens.css), spacing on the 4 px scale. The drawing itself is a
+   theme-independent B&W SVG on a neutral surround. */
+
+/* ------------------------------------------------------------------ centre stage */
+/* The 3D | Drawing switch owns the top-left corner of the stage in both views; each view's own
+   top-left toolbar starts to its right (--al-stage-switch-w + one gap). */
+.stage {
+  --al-stage-switch-w: 116px;
+  --al-stage-tl: calc(var(--al-pad-hud) + var(--al-stage-switch-w) + var(--al-space-2));
+  position: relative; min-height: 0; min-width: 0; display: grid;
+}
+.stage > .viewport { min-height: 0; }
+.stage-switch {
+  position: absolute; top: var(--al-pad-hud); left: var(--al-pad-hud); z-index: 6;
+  width: var(--al-stage-switch-w);
+}
+.stage-switch .seg-btn { flex: 1; }
+.stage .vp-hud-tl { left: var(--al-stage-tl); }
+
+/* ------------------------------------------------------------------ drawing view */
+.drawing-view {
+  position: absolute; inset: 0; z-index: 5; overflow: hidden;
+  background: var(--al-sheet-surround); cursor: grab; touch-action: none; outline: none;
+  container: drawing / inline-size;
+}
+.drawing-view:focus-visible { box-shadow: inset 0 0 0 2px var(--al-focus); border-radius: 0; }
+.drawing-view.dragging { cursor: grabbing; }
+.dv-sheet { position: absolute; left: 0; top: 0; transform-origin: 0 0; will-change: transform; line-height: 0; }
+/* a hairline, not a drop shadow: the sheet is content, not a floating element */
+.dv-sheet svg { display: block; box-shadow: 0 0 0 1px var(--al-border-strong); }
+
+/* HUD rows: the containers are click-through (so empty toolbar space still pans), controls are not */
+.dv-hud {
+  position: absolute; z-index: 2; display: flex; align-items: center; gap: var(--al-space-2);
+  pointer-events: none; cursor: default;
+}
+.dv-hud > * { pointer-events: auto; }
+.dv-hud-tl {
+  top: var(--al-pad-hud); left: var(--al-stage-tl);
+  right: calc(var(--al-pad-hud) + var(--dv-export-w) + var(--al-space-2));
+  flex-wrap: wrap;
+}
+.dv-hud-tr { top: var(--al-pad-hud); right: var(--al-pad-hud); }
+.dv-hud-bl {
+  bottom: var(--al-pad-hud); left: var(--al-pad-hud);
+  right: calc(var(--al-pad-hud) + var(--dv-zoom-w) + var(--al-space-2));
+  flex-wrap: wrap-reverse;
+}
+.dv-hud-br { bottom: var(--al-pad-hud); right: var(--al-pad-hud); }
+.drawing-view { --dv-export-w: 164px; --dv-zoom-w: 152px; }
+
+/* option toggles sit in the toolbar as bordered 30 px controls, like the segmented groups */
+.dv-toggle {
+  min-height: var(--al-control-h); height: var(--al-control-h); padding: 0 var(--al-space-3) 0 var(--al-space-2);
+  border-radius: var(--al-radius); background: var(--al-surface); border: 1px solid var(--al-border);
+  font-size: var(--al-text-sm); white-space: nowrap;
+}
+.dv-toggle:hover { background: var(--al-surface-2); }
+/* toolbar buttons (e.g. "More") match the 30 px bordered controls around them */
+.dv-hud-tl .btn { height: var(--al-control-h); background: var(--al-surface); border-color: var(--al-border); }
+.dv-hud-tl .btn:hover:not(:disabled) { background: var(--al-surface-2); }
+
+/* export and zoom are joined groups built on .seg */
+.dv-export { display: grid; grid-template-columns: 26px repeat(3, minmax(0, 1fr)); width: var(--dv-export-w); }
+.dv-export-icon { display: grid; place-items: center; color: var(--al-text-3); }
+.dv-export-icon svg { width: var(--al-icon-sm); height: var(--al-icon-sm); }
+.dv-export .seg-btn { font-family: var(--al-font-mono); font-size: var(--al-text-xs); padding: 0 var(--al-space-1); }
+.dv-zoom-group { align-items: center; width: var(--dv-zoom-w); }
+.dv-zoom-group .dv-icon { width: calc(var(--al-control-h) - 6px); padding: 0; display: inline-grid; place-items: center; flex: none; }
+.dv-zoom-group .dv-icon svg { width: var(--al-icon-sm); height: var(--al-icon-sm); }
+.dv-zoom {
+  flex: 1; text-align: center; font-family: var(--al-font-mono); font-size: var(--al-text-xs);
+  color: var(--al-text-2); font-variant-numeric: tabular-nums;
+}
+.dv-readout { max-width: 100%; overflow: hidden; text-overflow: ellipsis; }
+.dv-hud-bl .status { height: var(--al-control-h-sm); max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* Narrow drawing view: the export group shares the switch row; the options get the full width
+   underneath; the readout stacks above the zoom group. */
+@container drawing (max-width: 620px) {
+  .dv-hud-tl { top: calc(var(--al-pad-hud) + var(--al-control-h) + var(--al-space-2)); left: var(--al-pad-hud); right: var(--al-pad-hud); }
+  .dv-hud-bl { right: var(--al-pad-hud); bottom: calc(var(--al-pad-hud) + var(--al-control-h) + var(--al-space-2)); }
+}
+
+/* ------------------------------------------------------------------ package dialog */
+/* Same skeleton as the CST dialog: head, options column | preview column, foot. */
+.dialog-package { width: min(880px, 100%); height: min(720px, 100%); }
+.package-body { grid-template-columns: 340px minmax(0, 1fr); }
+.package-options {
+  margin: 0; min-width: 0; border: 0; border-right: 1px solid var(--al-border);
+  padding: var(--al-space-4) var(--al-pad-panel); display: flex; flex-direction: column; gap: var(--al-space-3); overflow: auto;
+}
+.package-options > legend { float: left; width: 100%; padding: 0; margin-bottom: var(--al-space-1); }
+.package-options > legend + * { clear: both; }
+.package-toggle { flex: none; align-items: flex-start; padding: 0; min-height: 0; }
+.package-toggle .toggle-box { margin-top: 2px; }
+.package-text { display: grid; gap: 2px; line-height: var(--al-leading-tight); }
+.package-hint { font-size: var(--al-text-xs); color: var(--al-text-3); line-height: var(--al-leading); }
+.package-files {
+  display: grid; grid-template-rows: auto minmax(0, 1fr); min-height: 0;
+  padding: var(--al-space-4) var(--al-pad-panel) 0; background: var(--al-surface-2);
+}
+.package-list {
+  list-style: none; margin: 0; padding: 0 0 var(--al-space-4); overflow: auto; scrollbar-width: thin;
+  font-size: var(--al-text-xs); line-height: 20px; color: var(--al-text-2); font-variant-numeric: tabular-nums;
+  /* fade the last rows so a clipped list reads as scrollable */
+  -webkit-mask-image: linear-gradient(to bottom, #000 calc(100% - 32px), transparent);
+  mask-image: linear-gradient(to bottom, #000 calc(100% - 32px), transparent);
+}
+.package-list li { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; padding-left: var(--al-space-4); }
+.package-list li.package-root { padding-left: 0; color: var(--al-text-3); }
+.package-status { display: inline-flex; align-items: center; gap: var(--al-space-2); font-size: var(--al-text-sm); color: var(--al-text-2); min-width: 0; }
+.package-status svg { flex: none; width: var(--al-icon-sm); height: var(--al-icon-sm); color: var(--al-warn); }
+
+/* ------------------------------------------------------------------ figure menu (dock bar) */
+.figure-menu { position: relative; flex: none; }
+.figure-menu > .btn .lucide-chevron-down { width: 12px; height: 12px; margin-left: -2px; color: var(--al-text-3); }
+.menu {
+  position: fixed; z-index: 30; min-width: 248px; max-width: calc(100vw - 2 * var(--al-space-2));
+  max-height: calc(100vh - 2 * var(--al-space-2)); overflow: auto;
+  padding: var(--al-space-1); display: grid; gap: 1px;
+  background: var(--al-surface); border: 1px solid var(--al-border); border-radius: var(--al-radius);
+  box-shadow: var(--al-shadow-pop);
+}
+.menu-row {
+  display: flex; align-items: center; gap: var(--al-space-1);
+  padding: var(--al-space-1) var(--al-space-1) var(--al-space-2); margin-bottom: var(--al-space-1);
+  border-bottom: 1px solid var(--al-border);
+}
+.menu-label { font-size: var(--al-text-xs); color: var(--al-text-3); margin-right: var(--al-space-1); }
+.menu-sep { width: 1px; height: 16px; background: var(--al-border); margin: 0 var(--al-space-1); }
+.menu-item {
+  display: flex; align-items: center; min-height: 28px; text-align: left; border: 0; background: transparent; cursor: pointer;
+  padding: 0 var(--al-space-2); border-radius: var(--al-radius-sm); color: var(--al-text); font-size: var(--al-text-sm);
+}
+.menu-item:hover { background: var(--al-surface-2); }
+.menu-item:focus-visible { background: var(--al-surface-2); box-shadow: inset 0 0 0 2px var(--al-focus); }
+/* export scope while comparing (FigureMenu): figures hold the active run only */
+.menu-note {
+  margin: 0 0 var(--al-space-1); padding: var(--al-space-1) var(--al-space-2) var(--al-space-2);
+  border-bottom: 1px solid var(--al-border); font-size: var(--al-text-xs); color: var(--al-text-2);
+  width: 0; min-width: 100%; /* wraps inside the menu instead of widening it */
+}
+.menu-note strong { color: var(--al-text); font-weight: 600; }
+.menu-item-scope { margin-left: auto; padding-left: var(--al-space-3); font-size: var(--al-text-xs); color: var(--al-text-3); }
+
+@media (max-width: 640px) {
+  .figure-menu > .btn { width: auto; padding: 0 var(--al-space-2); }
+  .dialog-package { width: 100%; height: 100%; }
+  .package-body { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto minmax(200px, 1fr); overflow-y: auto; }
+  .package-options { border-right: 0; border-bottom: 1px solid var(--al-border); overflow: visible; }
+}

@@ -1,0 +1,24 @@
+import assert from 'node:assert/strict';
+import {writeFileSync} from 'node:fs';
+import {treatedBox} from '../src/designer/edgeTreatment.ts';
+import {componentTree} from '../src/designer/navModel.ts';
+import {maps,pt} from '../src/designer/geometry.ts';
+const part={name:'offset_patch',material:'copper',component:'antenna',primitives:[{kind:'box',start:[-11,-17,1],stop:[21,23,1]}],transforms:[{type:'move',offset:[2,3,0]}]};
+const before=JSON.stringify(part);
+const fillet=treatedBox(part,0,'z','fillet',2,{}),chamfer=treatedBox(part,0,'z','chamfer',2,{});
+assert.equal(fillet.kind,'polygon');assert.equal(fillet.points.length,68);assert.equal(chamfer.points.length,8);
+assert.equal(JSON.stringify(part),before,'treatment does not mutate transforms/material/source');
+const area=p=>Math.abs(p.reduce((sum,a,k)=>{const b=p[(k+1)%p.length];return sum+a[0]*b[1]-a[1]*b[0]},0))/2;
+assert.ok(Math.abs(area(fillet.points)-(32*40-(4-Math.PI)*4))<0.03,'fillet cuts actual native polygon area');
+assert.equal(area(chamfer.points),32*40-8,'chamfer area is exact');
+assert.throws(()=>treatedBox(part,0,'z','fillet',16,{}),/sizeLimit/);
+assert.throws(()=>treatedBox(part,0,'x','fillet',1,{}),/sizeLimit|sheetAxis/);
+assert.throws(()=>treatedBox({...part,cuts:[{}]},0,'z','fillet',1,{}),/history/);
+const brick={...part,primitives:[{kind:'box',start:[-11,-17,-2],stop:[21,23,1]}]};
+assert.equal(treatedBox(brick,0,'z','chamfer',2,{}).length,3);
+const tree=componentTree([{component:'antenna/feed'}],['empty','antenna/new']);
+assert.equal(tree.folders[0].path,'empty');assert.equal(tree.folders[0].parts.length,0);assert.equal(tree.folders[1].folders.length,2);
+for(const angle of [45,90]) {const m=maps([{type:'rotate',axis:'z',angle,center:[5,3,1]}],{})[0];const q=pt(m,[21,23,1]);assert.ok(Math.hypot(q[0]-21,q[1]-23)>10);assert.equal(q[2],1,'Z rotation is physically coplanar');}
+const mirror=maps([{type:'mirror',plane:'x',point:[4,7,1],keep:false}],{})[0];assert.deepEqual(pt(mirror,[21,23,1]),[-13,23,1]);
+if(process.argv[2])writeFileSync(process.argv[2],JSON.stringify({fillet,chamfer,brick:treatedBox(brick,0,'z','fillet',2,{})}));
+console.log('Modeling workflows: native corner area, metadata folders, coplanar Z rotations and offset mirror passed.');

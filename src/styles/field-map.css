@@ -1,0 +1,38 @@
+/* The Field map tab (designer/FieldMapView.tsx) and the controls shared with the 3D colour bar
+   (scene/FieldPlaneControls.tsx). */
+
+.fp-controls { display: grid; gap: var(--al-space-2); justify-items: start; max-width: 100%; }
+.fp-controls .colorbar-note { max-width: 190px; }
+.fp-part { display: grid; gap: 2px; width: 100%; font-size: var(--al-text-xs); color: var(--al-text-2); }
+.fp-part select { width: 100%; max-width: 190px; }
+.fp-controls .seg-btn:disabled { opacity: 0.45; cursor: default; }
+
+.fm { display: grid; grid-template-columns: minmax(0, 1fr) 248px; height: 100%; min-height: 0; }
+.fm-plot { position: relative; min-width: 0; min-height: 0; overflow: hidden; outline-offset: -2px; }
+.fm-plot:focus-visible { outline: 2px solid var(--al-focus); }
+.fm-canvas { position: absolute; image-rendering: auto; }
+.fm-svg { position: absolute; inset: 0; overflow: visible; }
+.fm-frame { fill: none; stroke: var(--al-border-strong); stroke-width: 1; }
+.fm-axis line { stroke: var(--al-border-strong); stroke-width: 1; }
+.fm-axis text { fill: var(--al-text-2); font-size: 11px; font-variant-numeric: tabular-nums; }
+.fm-axis .fm-title { fill: var(--al-text-3); font-size: 11px; }
+/* the outline sits over a colourful map: a light halo keeps the dark line readable in both themes */
+.fm-outline-halo { stroke: var(--al-surface); stroke-width: 3.2; opacity: 0.55; }
+.fm-outline-metal { stroke: var(--al-text); stroke-width: 1.2; }
+.fm-outline-die { stroke: var(--al-text); stroke-width: 1; stroke-dasharray: 5 3; opacity: 0.75; }
+.fm-cross line { stroke: var(--al-text); stroke-width: 1; stroke-dasharray: 3 3; opacity: 0.85; }
+
+.fm-side { display: grid; align-content: start; gap: var(--al-space-2); padding: var(--al-space-2) var(--al-space-3); border-left: 1px solid var(--al-border); overflow: auto; min-width: 0; }
+.fm-side .colorbar-title { line-height: 1.3; white-space: normal; }
+.fm-side .colorbar-body { padding: 4px 0; }
+.fm-field { display: grid; gap: 2px; font-size: var(--al-text-xs); color: var(--al-text-2); }
+.fm-field select { width: 100%; text-overflow: ellipsis; }
+.fm-unit { max-width: none; }
+.fm-outline-toggle { justify-self: start; }
+.fm-readout { margin: 0; min-height: 5.5em; }
+.fm-3d { justify-self: start; }
+
+@media (max-width: 900px) {
+  .fm { grid-template-columns: 1fr; grid-template-rows: minmax(220px, 1fr) auto; overflow: auto; }
+  .fm-side { border-left: 0; border-top: 1px solid var(--al-border); }
+}

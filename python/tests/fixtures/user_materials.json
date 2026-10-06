@@ -1,0 +1,24 @@
+{
+  "raw": {
+    "materials": [
+      {"id": "u-good-d", "name": "My FR4", "kind": "dielectric", "eps_r": 4.4, "tan_d": 0.018, "tan_d_freq": 2.4, "color": "#3A7D44"},
+      {"id": "u-good-m", "name": "Brass", "kind": "metal", "conductivity": 1.5e7, "thickness": 0.05},
+      {"id": "u-pec", "name": "Shield", "kind": "metal"},
+      {"id": "u-noname", "name": " ", "kind": "metal"},
+      {"id": "u-badkind", "name": "Mystery", "kind": "plasma"},
+      {"id": "u-eps", "name": "Low eps", "kind": "dielectric", "eps_r": 0.5, "tan_d": 0},
+      {"id": "u-eps-str", "name": "Param eps", "kind": "dielectric", "eps_r": "eps_sub", "tan_d": 0},
+      {"id": "u-color", "name": "Bad color", "kind": "dielectric", "eps_r": 2, "tan_d": 0, "color": "red"},
+      {"id": "u-good-d", "name": "Same id", "kind": "dielectric", "eps_r": 3, "tan_d": 0},
+      {"id": "u-same-name", "name": "Brass", "kind": "metal"},
+      {"id": "bad id!", "name": "Bad id", "kind": "metal"},
+      "not an object"
+    ]
+  },
+  "kept": [
+    {"id": "u-good-d", "name": "My FR4", "kind": "dielectric", "eps_r": 4.4, "tan_d": 0.018, "tan_d_freq": 2.4, "color": "#3a7d44"},
+    {"id": "u-good-m", "name": "Brass", "kind": "metal", "conductivity": 1.5e7, "thickness": 0.05},
+    {"id": "u-pec", "name": "Shield", "kind": "metal"}
+  ],
+  "skipped": 9
+}
