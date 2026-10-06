@@ -1182,7 +1182,7 @@ mod tests {
         fs::create_dir_all(ws_default.join("models")).unwrap();
         fs::copy(roots.seed.models.join("dipole.py"), ws_default.join("models/dipole.py")).unwrap();
         fs::create_dir_all(ws_default.join("jobs")).unwrap();
-        // and its run server left the jobs-folder lock (found on Windows, #359)
+        // and its run server left the jobs-folder lock
         fs::write(ws_default.join("jobs/.server-owner.lock"), [0u8]).unwrap();
         fs::create_dir_all(ws_default.join(".sim")).unwrap();
         assert_eq!(decide(false, false, false, true, settings.legacy_import.as_ref(), Some(&legacy)), Offer::Resume);

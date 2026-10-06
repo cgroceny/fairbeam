@@ -332,7 +332,7 @@ def _read_design(module, values: dict, source_path: Path):
         elif typ == "Material":
             m = entry.get("material", {})
             if m.get("dispersion"):
-                # the Design schema has no frequency-dependent dielectric yet (#271 PR 3b): writing the
+                # the Design schema has no frequency-dependent dielectric yet: writing the
                 # band-centre eps_r and tan d would drop the model without a word
                 raise ExampleConversionError(
                     f"material {entry['name']!r} is dispersive ({m['dispersion'].get('model')}); "

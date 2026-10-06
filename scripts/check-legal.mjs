@@ -7,12 +7,12 @@
 //              vendor: it is the one line that also says "trademark")
 //   cst-bare   on the user-visible surfaces every uppercase CST must sit inside
 //              "CST-compatible VBA macro" / "CST uyumlu VBA makro" (the trademark note is exempt)
-//   path       paths and lines about the binary CST project format or the CST cross-check
+//   path       paths and lines about the binary CST project format
 //
 // Code identifiers (cst.ts, cst_import.py) and plain "CST" in code comments about the VBA object
 // model are fine: rule cst-bare covers only the surfaces listed in SURFACES.
 //
-// Usage: node scripts/check-legal.mjs            fail on any hit (exit 1; enforced since WS1)
+// Usage: node scripts/check-legal.mjs            fail on any hit (exit 1)
 //        node scripts/check-legal.mjs --report   exit 0; counts per rule and area
 import { areaOf, globToRegExp, readText, trackedFiles } from "./lib/tracked-files.mjs";
 
@@ -37,7 +37,7 @@ const SURFACES = [
 const CLI = /^python\/[^/]+\/cli\.py$/;
 const CLI_TEXT = /\b(help|description|epilog)\s*=|^\s*["'].*["']\s*$/;
 
-/** Files the rules never read: this script, and the guard that names the old product. */
+/** Files the rules never read: this script and the old-name guard. */
 const SKIP = ["scripts/check-legal.mjs", "scripts/check-no-antenlab.mjs"];
 /** Generated or third-party text that the surfaces glob would otherwise catch. */
 const NOT_SURFACE = ["landing/vendor/**", "landing/**/*.svg", "landing/**/*.map"].map(globToRegExp);

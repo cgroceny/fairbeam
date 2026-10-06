@@ -21,19 +21,18 @@ the window and the draft; the app only goes after a clean save or Don't save. Th
 the close and asks the viewer (`window.fairbeamWindowClose`, see `src/designer/windowClose.ts`
 and `request_leave` in `src-tauri/src/main.rs`); a viewer that does not answer cannot keep the app
 open against a second close. Quitting from the macOS Dock or at logout goes past this question
-(Tauri cannot hold `terminate:`); the local draft backup (#83) covers those.
+(Tauri cannot hold `terminate:`); the local draft backup covers those.
 
-Status: 0.7.0 is the first release. Pieces are marked **[mac]**, **[win]** or **[both]** by who builds and
-verifies them. The Windows pieces are verified on a Windows PC and arrive as pull requests.
+Status: 0.7.0 is the first release.
 
-Verified on macOS arm64 (2026-09-25, 0.2 shell):
+Verified on macOS arm64:
 - The app builds: `Fairbeam.app` is 21 MB, the `.dmg` 7.5 MB.
 - An existing `~/opt/openEMS` install is picked up.
 - With a local pack, the managed runtime installs from the app in about 20 s (664 MB on disk).
 - A coarse dipole run through the app completes.
 - Quitting stops the server in about 1 s with no process left.
 
-Verified on Windows 11 x64 (2026-09-25, with the NSIS installer of the 0.2 shell):
+Verified on Windows 11 x64, with the NSIS installer:
 - The installer is 6.2 MB. It installs per user without a UAC
   prompt in about 1.5 s: 22 MB in `%LOCALAPPDATA%\Fairbeam`, with Start menu and desktop shortcuts.
 - On first start the setup screen appears. "Install the runtime" downloads and installs it with
@@ -48,13 +47,13 @@ Verified on Windows 11 x64 (2026-09-25, with the NSIS installer of the 0.2 shell
 - Uninstalling removes the install folder and the shortcuts. The app data (runtime, logs, WebView2
   data, about 560 MB), `settings.json` and the workspace stay.
 
-A new user was checked against the published 0.2.0 installer (issue #3), downloaded from the
+The published installer was checked as a first-time user would use it, downloaded from the
 website with Edge:
 - The file matches `SHA256SUMS.txt` and `docs/RELEASES.md`.
 - The unsigned file carries the Mark of the Web, and SmartScreen shows "Windows protected your PC".
   "More info → Run anyway", as the website says, starts the installer. Afterwards the file has no
   `Zone.Identifier` any more.
-- Installing to another folder (`E:\Fairbeam`) works.
+- Installing to another folder works.
 - The first start without `FAIRBEAM_AUTO_INSTALL` reaches the viewer 27 s after "Install", and a
   coarse run completes.
 - The update check stays quiet: no dialog and no error.
@@ -90,10 +89,10 @@ openEMS per platform. `runtime/requirements.txt` (made with `uv pip compile --un
 
 **Stage 1** is platform specific and needs no Python:
 
-- **[mac]** `runtime/setup-runtime.sh --runtime-root <abs>/runtime --resources <res> [--repair] [--openems-archive FILE]`
-- **[win]** `runtime/setup-runtime.ps1 -RuntimeRoot <abs>\runtime -Resources <res> [-Repair] [-OpenemsArchive FILE]`
+- macOS: `runtime/setup-runtime.sh --runtime-root <abs>/runtime --resources <res> [--repair] [--openems-archive FILE]`
+- Windows: `runtime/setup-runtime.ps1 -RuntimeRoot <abs>\runtime -Resources <res> [-Repair] [-OpenemsArchive FILE]`
   (run with `powershell -NoProfile -ExecutionPolicy Bypass -File ...`). Verified on Windows 11 with
-  Windows PowerShell 5.1, see [Windows notes](#windows-notes-win).
+  Windows PowerShell 5.1, see [Windows notes](#windows-notes).
 
 It downloads uv and checks its hash, runs `uv python install <pins.python>` into `runtime/python`
 and `uv venv runtime/venv --managed-python`, then execs stage 2 with the venv's Python.
@@ -127,7 +126,7 @@ The JSON is ASCII (non-ASCII characters of a path as `\uXXXX`), numbers use a de
 every locale, and every step ends with a line with `"fraction": 1`. On Windows the lines end with
 CRLF.
 
-### Windows notes **[win]**
+### Windows notes
 
 - Nothing outside the runtime root is changed: uv installs CPython with `--no-bin --no-registry`.
   Without those flags it adds `~\.local\bin\python3.13.exe` and a PEP 514 registry entry that
@@ -150,7 +149,7 @@ CRLF.
 - A group policy that forces the execution policy (`MachinePolicy`/`UserPolicy` set to AllSigned)
   overrides `-ExecutionPolicy Bypass`. Stage 1 then does not start until the script is signed.
 
-### macOS openEMS pack **[mac]**
+### macOS openEMS pack
 
 There is no official openEMS binary for macOS, and none on PyPI or conda-forge.
 `scripts/build-openems-macos-pack.py` turns a local source build (`scripts/install-openems-macos.sh`)
@@ -162,8 +161,7 @@ Releases go to the public repository `ismailakdag/fairbeam-releases`, which hold
 only; `pins.json` pins the URL and SHA-256. `setup-runtime.sh` refuses to install on a macOS older
 than the pack's `macos_min`, which is the major version it was built on (27 for the pinned pack).
 
-In practice the pack holds three wheels: CSXCAD, openEMS, and a libs wheel (`fairbeam_openems_libs`
-in packs the script builds now; the pinned pack was built before the rename and uses an older name)
+In practice the pack holds three wheels: CSXCAD, openEMS, and a libs wheel (`fairbeam_openems_libs`)
 with 66 dylibs (CSXCAD, openEMS, nf2ff, fparser, tinyxml, HDF5, Boost, GMP/MPFR and the VTK subset).
 Both packages load the dylibs from the libs wheel's folder in `site-packages` through
 `@loader_path`, so there is a single `libCSXCAD`. The binaries are thinned to arm64 and ad-hoc signed. Because
@@ -173,7 +171,7 @@ major version (`macosx_<N>_0_arm64`). Nothing is compiled.
 To test a pack before it is published, point the macOS entry in a copy of `pins.json` at a
 `file://` URL: `urllib` downloads it like any other URL.
 
-## Shell **[both]**
+## Shell
 
 On start, the shell opens its window at 1440 × 900 points, centered, or maximized when that
 does not fit the screen's work area (a laptop screen once the menu bar and Dock, or the taskbar,
@@ -186,11 +184,11 @@ it is shown. Then it:
    path, for an existing openEMS install such as `~/opt/openEMS/venv`), the workspace folder, and
    the preference for the GPU build (`prefer_gpu`, on by default; the setup screen's "Prefer the
    GPU build" and General settings › "Start with the GPU build of openEMS", which applies at the
-   next start). Settings written by 0.4.1 and older keep the value they have. General settings ›
+   next start). Settings written by earlier versions keep the value they have. General settings ›
    "Check for updates on start" is `check_updates_on_start` (on by default).
 2. Unless a Python was chosen (`external`), a preferred GPU build at its default prefix,
    `~/opt/openEMS-gpu/venv/bin/python` (Windows: `C:\opt\openEMS-gpu\venv\Scripts\python.exe`,
-   else the same path on the first other fixed drive that has it, such as `E:\opt\openEMS-gpu`), is
+   else the same path on the first other fixed drive that has it, such as `D:\opt\openEMS-gpu`), is
    used before the managed runtime when it lists the gpu engine and imports `fairbeam`. It has the
    CPU engine too, so the viewer offers both engines. A build without the gpu engine, or a broken
    one, falls through to the managed runtime. The drive lookup only checks that the file exists,
@@ -265,8 +263,8 @@ are accepted).
 
 The shell writes its own events to `<app data>/logs/shell.log`: one line per update check, with a
 UTC timestamp (`update check: skipped (FAIRBEAM_NO_UPDATE_CHECK=1)`, `update check: up to date
-(0.2.0)`, `update check: 0.2.1 offered (running 0.2.0)` followed by `update: Later` or `update:
-Install and restart (0.2.1)`, `update: 0.2.1 installed, restarting`, `update: install failed: …`,
+(0.7.0)`, `update check: 0.7.1 offered (running 0.7.0)` followed by `update: Later` or `update:
+Install and restart (0.7.1)`, `update: 0.7.1 installed, restarting`, `update: install failed: …`,
 `update check: failed: …`, `update check: skipped (disabled in settings)`). The file is
 append only; past 1 MB it moves to `shell.log.1`. `server.log` is the server's own output, and the
 shell never writes into it.
@@ -276,14 +274,14 @@ process.
 
 ## Packaging
 
-| | macOS **[mac]** | Windows **[win]** |
+| | macOS | Windows |
 |---|---|---|
 | Bundle | `Fairbeam.app` in a `.dmg` | NSIS installer `.exe`, per-user, no admin |
 | WebView | WKWebView (system) | WebView2 (bootstrapper included) |
 | Build | `npm run desktop:build` on a Mac | `npm run desktop:build` on Windows (Rust MSVC toolchain) |
 | Signing | Developer ID, notarized and stapled (a plain `npm run desktop:build` is only ad-hoc signed; [RELEASES.md](RELEASES.md)) | none: the installer is not code-signed (SmartScreen warns; More info › Run anyway) |
 
-**[win]** `src-tauri/tauri.windows.conf.json` is merged over `tauri.conf.json` on Windows (JSON
+On Windows, `src-tauri/tauri.windows.conf.json` is merged over `tauri.conf.json` (JSON
 merge patch: arrays are replaced). It sets the `nsis` target, the icons without `.icns`, WebView2
 through the embedded bootstrapper (`embedBootstrapper`, silent; skipped when WebView2 is present,
 as on every Windows 11), and an NSIS installer for the current user (`installMode: currentUser`,
@@ -306,7 +304,7 @@ An external Python runs with `PYTHONDONTWRITEBYTECODE=1`, so that nothing writes
 folder: it imports the bundled `python\fairbeam`. The bundle copies `python/fairbeam`,
 `models` and `templates` as they are, so build from a tree without `__pycache__` folders.
 
-GitHub Actions cannot run on this account (billing), so both platforms are built locally.
+Both platforms are built locally.
 Releases are published to the public repository
 [ismailakdag/fairbeam-releases](https://github.com/ismailakdag/fairbeam-releases), and the desktop
 app's updater checks it (`src-tauri/src/updater.rs`). How a release is built, signed and published:
@@ -331,8 +329,8 @@ Without the desktop shell, `npm run app` (or `fairbeam app` after `npm run build
 viewer and the API on a free port and opens the browser. `fairbeam serve --ui dist` does the same
 on a fixed port.
 
-## Coming from antenlab
+## Importing from an earlier app
 
 Fairbeam installs as a separate app with its own data. On its first start it offers to import what
-you had in the old app. See [Migrating from antenlab](MIGRATING-FROM-ANTENLAB.md) for what moves over
+you had in an earlier app. See the [migration guide](MIGRATING-FROM-ANTENLAB.md) for what moves over
 and how to remove the old app by hand.

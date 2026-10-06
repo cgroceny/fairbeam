@@ -1256,7 +1256,7 @@ Other files, bad numbers or too many files answer 422 (413 beyond the size limit
 
 ## Scenario checks
 
-Focused follow-up checks are `npm run check:eta-presentation` and `npm run check:run-profiles`
+Focused checks are `npm run check:eta-presentation` and `npm run check:run-profiles`
 (pure logic), plus `npm run check:modal-focus` and `npm run check:run-profile-dialog` (temporary
 Vite/run-server stacks, Chrome and the Python runtime with openEMS required; no solver runs).
 The opt-in `scripts/check-home-accessibility.mjs` uses intercepted API fixtures against a running
@@ -1305,7 +1305,7 @@ python. The checks that a browser cannot do are in [DESKTOP-CHECKLIST.md](DESKTO
 
 - **Horn efficiency above 100 %.** The pyramidal horn (a waveguide-port model) reports a radiation
   efficiency slightly above 100 %, and the excess grows with a finer mesh. The cause is under
-  investigation (issue #12); results with an efficiency above 100 % carry a QA warning.
+  investigation; results with an efficiency above 100 % carry a QA warning.
 - **Unsigned Windows installer.** The macOS app is signed and notarized (since 0.4.4) and opens with
   a double-click, but the Windows installer is not code-signed: SmartScreen warns on the first run
   (More info › Run anyway; [DESKTOP.md](DESKTOP.md)).

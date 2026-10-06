@@ -1,4 +1,4 @@
-// The work coordinate system (CST WCS): four actions (align with a face, transform, align with global,
+// The work coordinate system (WCS): four actions (align with a face, transform, align with global,
 // show), u/v/w naming while a local WCS is active, exit of the drawing mode after a finished shape, and
 // the WCS saved with the design. No DOM or solver:
 //   node scripts/check-wcs.mjs
@@ -63,11 +63,11 @@ for (const { normal, angle, flip, basis } of all) for (const about of ['u', 'v',
   const expected = fromMatrix(matmul(asMatrix(basis), localRotation(about, q)));
   eq(frame.frameBasis(next.normal, next), expected, `rotation about own ${about} by ${q * 90}: new axes = old axes composed with the turn`);
 }
-// the common CST moves from the global WCS
+// the common moves from the global WCS
 const from = (about, q) => { const r = frame.rotateOrientation('z', { angle: 0 }, about, q); return frame.frameBasis(r.normal, r); };
 eq(from('w', 1), [[0, 1, 0], [-1, 0, 0], [0, 0, 1]], 'rotate 90 about w: u = y, v = -x');
 eq(from('u', -1), [[1, 0, 0], [0, 0, -1], [0, 1, 0]], 'rotate -90 about u: w = +y (a front plane)');
-eq(from('u', 1)[2], [0, -1, 0], 'rotate +90 about u: w = -y (a flipped frame, as in CST)');
+eq(from('u', 1)[2], [0, -1, 0], 'rotate +90 about u: w = -y (a flipped frame)');
 eq(from('v', 1)[2], [1, 0, 0], 'rotate +90 about v: w = +x');
 eq(frame.rotateOrientation('z', { angle: 0 }, 'u', 4), { normal: 'z', angle: 0, flip: false }, 'a full turn is the identity');
 eq(frame.wcsAxisName('z', 'z'), 'w', 'z is w on the xy plane'); eq(frame.wcsAxisName('x', 'z'), 'u', 'x is u on the xy plane');

@@ -1,4 +1,4 @@
-// What the navigation tree and the Properties panel do with an optimization record (UX audit 2.4.7).
+// What the navigation tree and the Properties panel do with an optimization record.
 // The records are the run server's job records (stats carry the evaluations, the best point and the
 // manifest file), so nothing new is stored and the .design.json format does not change.
 import { api, isTerminal, type Job } from "../runner/api";

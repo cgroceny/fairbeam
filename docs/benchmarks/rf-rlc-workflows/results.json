@@ -8,7 +8,7 @@
   "attempts": [
     {
       "run_id": "rf-rlc-workflow-20261002",
-      "raw_root": "E:\\fairbeam-benchmarks\\rf-rlc-workflow-20261002",
+      "raw_root": "<benchmark-root>\\rf-rlc-workflow-20261002",
       "cases": [
         {
           "case": "R",
@@ -561,7 +561,7 @@
     },
     {
       "run_id": "rf-rlc-workflow-20261002-reduced",
-      "raw_root": "E:\\fairbeam-benchmarks\\rf-rlc-workflow-20261002-reduced",
+      "raw_root": "<benchmark-root>\\rf-rlc-workflow-20261002-reduced",
       "cases": [
         {
           "case": "R",
@@ -1120,7 +1120,7 @@
     },
     {
       "run_id": "rf-rlc-workflow-20261002-small-grid",
-      "raw_root": "E:\\fairbeam-benchmarks\\rf-rlc-workflow-20261002-small-grid",
+      "raw_root": "<benchmark-root>\\rf-rlc-workflow-20261002-small-grid",
       "cases": [
         {
           "case": "R",

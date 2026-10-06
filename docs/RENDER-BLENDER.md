@@ -75,7 +75,7 @@ pictures are added to the dialog's thumbnail list next to the in-app renderer's,
 `renders/<design>/` with the same names. `blenderEngine` in `src/render/blender.ts` is the same render as a one-call
 `BlenderEngine` (`src/render/engine.ts`).
 
-## Look table (shared with the in-app renderer, the RENDER lane)
+## Look table (shared with the in-app renderer)
 
 | Kind / name | Look |
 | --- | --- |

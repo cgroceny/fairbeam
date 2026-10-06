@@ -80,6 +80,6 @@ assert.match(shell, /"issues" => "https:\/\/github\.com\/ismailakdag\/fairbeam-r
 assert.match(shell, /"source" => "https:\/\/github\.com\/ismailakdag\/fairbeam",/);
 assert.match(about, /link\("source", t\("about\.sourceLink"\)\)/, "About links the public source repository");
 assert.match(about, /link\("docs", t\("about\.guide"\)\)/, "About links the getting-started guide");
-// About names neither the former product nor the trademark holder (NOTICE.md carries the notice)
+// About names no trademark holder (NOTICE.md carries the notice)
 assert.doesNotMatch(about, /about\.(formerly|trademark)/);
 console.log("menu action allowlist, dispatch, rejection, recent-file decoding and lifecycle: ok");

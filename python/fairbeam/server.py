@@ -1747,7 +1747,7 @@ class Handler(BaseHTTPRequestHandler):
 
     def _no_framing(self):
         """The workbench must not render inside another page's frame: a page on another localhost
-        port is same-site, and could overlay the app's buttons (clickjacking; review #108)."""
+        port is same-site, and could overlay the app's buttons (clickjacking)."""
         self.send_header("Content-Security-Policy", "frame-ancestors 'none'")
         self.send_header("X-Frame-Options", "DENY")
 

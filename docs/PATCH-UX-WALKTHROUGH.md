@@ -1,7 +1,6 @@
 # Patch drawing walkthrough
 
-This example was built from an empty design using the running designer's controls, rather than
-injected into its store. The editable file is
+This example was built from an empty design using the designer's controls. The editable file is
 [ux_inset_patch_24.design.json](../examples/designs/ux_inset_patch_24.design.json).
 
 The illustrative target is 2.4 GHz over a 1.8–3.2 GHz simulation band. The board is 70 x 60 x
@@ -44,13 +43,5 @@ camera focus, translated announcements and the sheet summary on a 1024 px window
 Further UX candidates from this walkthrough are optional camera-context preservation when
 adding a small feed, a more discoverable way to enlarge the canvas when Checks is empty, and
 a width/length/thickness entry mode for PCB layers alongside the existing min/max coordinates.
-These remain recommendations; the preview does not silently change existing camera or dock
+These remain recommendations; the designer does not silently change existing camera or dock
 preferences or the geometry-entry convention.
-
-## Local Windows preview
-
-The preview command `node scripts/build-windows-preview.mjs --python <python.exe> --seed-design
-examples/designs/ux_inset_patch_24.design.json` makes an uninstalled folder build with its own
-Tauri identity and package-local workspace. Follow the generated README and launcher: the
-preview disables public updater checks and does not replace the installed app. A public release
-still follows [RELEASES.md](RELEASES.md).

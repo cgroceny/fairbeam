@@ -100,7 +100,7 @@ assert.equal(runQuality(preview), null, "a geometry preview has no verdict");
   assert.ok(/quality\?: "converged" \| "not-converged" \| "suspicious"/.test(types), "ProjectIndexEntry.quality is optional");
 }
 
-// ---- the UI shows the verdict (UX audit 1): wiring, wording in both languages
+// ---- the UI shows the verdict: wiring, wording in both languages
 {
   const src = (p) => readFileSync(new URL(`../src/${p}`, import.meta.url), "utf8");
   assert.ok(/<RunQualityBanner file=\{r\(\)\.file\} b=\{r\(\)\.bundle\} \/>/.test(src("designer/MainArea.tsx")), "the banner is over every result tab");
@@ -119,7 +119,7 @@ assert.equal(runQuality(preview), null, "a geometry preview has no verdict");
   assert.match(en["quality.reason.efficiency"], /efficiency note/);
 }
 
-// ---- a run far slower than the estimate (UX tests A, B, C: "0 MC/s" for minutes, 23 min against a ~1 min estimate)
+// ---- a run far slower than the estimate ("0 MC/s" for minutes, 23 min against a ~1 min estimate)
 {
   const expected = 250;                  // MCells/s the estimate assumed
   const slow = 20;                       // 8 % of it
@@ -172,7 +172,7 @@ assert.equal(runQuality(preview), null, "a geometry preview has no verdict");
   assert.ok(/job\.status === "running" && \(job\.engine \?\? "cpu"\) === "cpu"/.test(run), "only a local CPU run throttles it (a GPU run does not compete for the cores)");
 }
 
-// ---- "Converged" is the field-energy end criterion, not a good match (UX test B: a green banner next to |S11| of -5 dB)
+// ---- "Converged" is the field-energy end criterion, not a good match (a green banner next to |S11| of -5 dB)
 {
   const en = JSON.parse(readFileSync(new URL("../src/i18n/en.json", import.meta.url), "utf8"));
   const tr = JSON.parse(readFileSync(new URL("../src/i18n/tr.json", import.meta.url), "utf8"));

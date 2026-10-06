@@ -393,7 +393,7 @@ mod tests {
             copy_dir(src, &ws.join(name));
         }
         fs::create_dir_all(ws.join("jobs")).unwrap();
-        // the run server leaves its ownership lock behind on every start (Windows test, #359)
+        // the run server leaves its ownership lock behind on every start
         fs::write(ws.join("jobs").join(SERVER_LOCK), [0u8]).unwrap();
         fs::create_dir_all(ws.join(".sim/empty")).unwrap();
         fs::write(ws.join(".sim/.DS_Store"), "x").unwrap();
@@ -533,23 +533,23 @@ mod tests {
         assert_eq!(r(""), None);
         // Windows-style strings, case-insensitive like the file system
         let w = |s: &str| {
-            rewrite_prefix(s, r"C:\Users\İsmail\Documents\antenlab", r"C:\Users\İsmail\Documents\Fairbeam", true)
+            rewrite_prefix(s, r"C:\Users\İrem\Documents\antenlab", r"C:\Users\İrem\Documents\Fairbeam", true)
         };
         assert_eq!(
-            w(r"C:\Users\İsmail\Documents\antenlab\models\patch.py").as_deref(),
-            Some(r"C:\Users\İsmail\Documents\Fairbeam\models\patch.py")
+            w(r"C:\Users\İrem\Documents\antenlab\models\patch.py").as_deref(),
+            Some(r"C:\Users\İrem\Documents\Fairbeam\models\patch.py")
         );
-        assert_eq!(w(r"c:\users\İsmail\documents\ANTENLAB\jobs").as_deref(), Some(r"C:\Users\İsmail\Documents\Fairbeam\jobs"));
-        assert_eq!(w(r"C:\Users\İsmail\Documents\antenlab_old\x"), None);
+        assert_eq!(w(r"c:\users\İrem\documents\ANTENLAB\jobs").as_deref(), Some(r"C:\Users\İrem\Documents\Fairbeam\jobs"));
+        assert_eq!(w(r"C:\Users\İrem\Documents\antenlab_old\x"), None);
         // the slash form of the same path (Python's as_posix, JSON written by hand): the new
         // prefix takes the slashes too; a mixed form keeps the new prefix as given
         assert_eq!(
-            w("C:/Users/İsmail/Documents/antenlab/models/patch.py").as_deref(),
-            Some("C:/Users/İsmail/Documents/Fairbeam/models/patch.py")
+            w("C:/Users/İrem/Documents/antenlab/models/patch.py").as_deref(),
+            Some("C:/Users/İrem/Documents/Fairbeam/models/patch.py")
         );
-        assert_eq!(w("c:/users/İsmail/documents/antenlab").as_deref(), Some("C:/Users/İsmail/Documents/Fairbeam"));
-        assert_eq!(w(r"C:\Users/İsmail\Documents/antenlab\jobs").as_deref(), Some(r"C:\Users\İsmail\Documents\Fairbeam\jobs"));
-        assert_eq!(w("C:/Users/İsmail/Documents/antenlab2/x"), None);
+        assert_eq!(w("c:/users/İrem/documents/antenlab").as_deref(), Some("C:/Users/İrem/Documents/Fairbeam"));
+        assert_eq!(w(r"C:\Users/İrem\Documents/antenlab\jobs").as_deref(), Some(r"C:\Users\İrem\Documents\Fairbeam\jobs"));
+        assert_eq!(w("C:/Users/İrem/Documents/antenlab2/x"), None);
         // not on macOS / Linux, where a backslash is an ordinary character
         assert_eq!(rewrite_prefix(r"\Users\a\Documents\antenlab", "/Users/a/Documents/antenlab", "/x", false), None);
         // a multi-byte character right at the cut does not panic

@@ -9,7 +9,7 @@ short overview. To contribute, read [CONTRIBUTING.md](../CONTRIBUTING.md) and th
 
 | Guide | What it covers |
 | --- | --- |
-| [Getting started](GETTING-STARTED.md) | For testers: installing the desktop app (macOS signed and notarized, Windows), a five-minute walkthrough from the patch starter to results, the other starters, mesh convergence, field planes, sweeps and the optimizer, importing a VBA macro, where files live, reporting a problem. The website has a copy: [landing/guide.html](../landing/guide.html) |
+| [Getting started](GETTING-STARTED.md) | Installing the desktop app (macOS signed and notarized, Windows), a five-minute walkthrough from the patch starter to results, the other starters, mesh convergence, field planes, sweeps and the optimizer, importing a VBA macro, where files live, reporting a problem. The website has a copy: [landing/guide.html](../landing/guide.html) |
 | [Running from source](FROM-SOURCE.md) | Requirements, building openEMS and installing Fairbeam from the repository, first run, the test suite, platform notes |
 | [The designer](DESIGNER.md) | The visual workspace: start screen and starters, the one-row ribbon (Home, Modeling, Transform, Simulation, Optimize, Post-processing), navigation tree and components, modeling, checks, simulation settings, mesh view and mesh convergence, running and results (efficiency, gain patterns, field planes), design files, VBA macro import, known limitations, feedback |
 | [Example designs](../examples/designs/README.md) | Six 867 MHz antennas as designer files (blade, wideband, meander and sleeve dipoles, collinear, Yagi), with parameters, results and how to scale them |
@@ -37,11 +37,9 @@ short overview. To contribute, read [CONTRIBUTING.md](../CONTRIBUTING.md) and th
 | [Bundle schema](BUNDLE.md) | `fairbeam.project/1`, field by field |
 | [Architecture](ARCHITECTURE.md) | Data flow, run server, project layout, roadmap |
 | [Design](DESIGN.md) | Visual design rules, tokens, layout primitives, keyboard map |
-| [Turkish UI glossary](i18n-glossary.md) | The Turkish/English terms of the interface and the choices open for review |
+| [Turkish UI glossary](i18n-glossary.md) | The Turkish/English terms of the interface and the alternatives considered for each term |
 | [Usage statistics](TELEMETRY.md) | The opt-in, anonymous usage counts: what would be collected, the consent flow, the serverless endpoint. Built but switched off |
 | [Optional sign-in](ACCOUNTS.md) | GitHub and Google sign-in for the desktop app: the build switches, the flow, what is stored. Built but switched off |
 | [Deploy](DEPLOY.md) | The public site (landing page and demo) on Vercel |
-| [UI audit](UI-AUDIT.md) | Measured UI findings and fixes, round by round |
-| [Benchmarks](BENCHMARKS.md) | The 14 examples on Windows and on the Mac: results and solver times |
-| [Display scaling](UI-SCALING.md) | Windows system scaling: responsive layout, WebGL pixel ratio and the verification status |
+| [Benchmarks](BENCHMARKS.md) | The 14 examples on reference machines (Windows and macOS): results and solver times |
 | [Designer state and viewport checks](DESIGNER-STATE-LIFECYCLE.md) | The designer async-state tests and the viewport lifecycle checks, and how to run them |

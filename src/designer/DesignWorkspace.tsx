@@ -226,7 +226,7 @@ const VIEW_LAYERS: { key: keyof LayerState; label: string; hint: string }[] = [
   { key: "dielectricXray", label: "model.layer.dielectricXray", hint: "model.layer.dielectricXray.hint" },
 ];
 
-/** A Shapes button: the shape dialog with defaults on the work plane and the selected part (CST);
+/** A Shapes button: the shape dialog with defaults on the work plane and the selected part;
  * every kind has one, the direct addition is only a fallback. */
 function shapeButton(kind: ShapeKind) {
   if (!openShapeDialog(kind)) addShape(kind);
@@ -432,7 +432,7 @@ export function Ribbon() {
     const observer = new ResizeObserver(() => { if (shell.clientWidth !== width) { width = shell.clientWidth; fitRibbon(shell); } });
     observer.observe(shell);
     // a group that appears or goes within a tab (Post-processing › Farfield while a pattern is
-    // shown) changes the needed width without resizing the shell: fit again (#175). fitRibbon
+    // shown) changes the needed width without resizing the shell: fit again. fitRibbon
     // only sets attributes, so this does not trigger itself.
     const content = new MutationObserver(refit);
     for (const toolbar of shell.querySelectorAll(".rb-toolbar")) content.observe(toolbar, { childList: true, subtree: true });

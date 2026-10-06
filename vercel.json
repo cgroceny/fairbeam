@@ -6,14 +6,7 @@
   "outputDirectory": "site-dist",
   "cleanUrls": false,
   "git": {
-    "deploymentEnabled": {
-      "windows/*": false,
-      "codex-windows/*": false,
-      "mac/*": false,
-      "codex-mac/*": false,
-      "codex/*": false,
-      "claude/*": false
-    }
+    "deploymentEnabled": { "**": false, "main": true }
   },
   "functions": {
     "api/ping.js": { "includeFiles": "api/_ping-schema.json", "maxDuration": 10 }

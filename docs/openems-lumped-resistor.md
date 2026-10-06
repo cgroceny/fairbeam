@@ -8,9 +8,9 @@ passive `LumpedPort`. A lossy material block of the same resistance behaves iden
 
 An apparent frequency-dependent error seen through a test fixture is a de-embedding artifact.
 It scales with fixture length and is independent of R, the element type and the mesh. An earlier
-Fairbeam note (round 3) reported "+10 % at 2.4 GHz"; that came from de-embedding a microstrip test
-line against a differently meshed reference line and was wrong. Nothing needs to be reported
-upstream as a bug. The script and data here are for anyone who wants to check.
+estimate of "+10 % at 2.4 GHz" came from de-embedding a microstrip test line against a differently
+meshed reference line and was wrong. Nothing needs to be reported upstream as a bug. The script
+and data here are for anyone who wants to check.
 
 ## Reproduction
 

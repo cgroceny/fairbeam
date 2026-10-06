@@ -47,7 +47,7 @@ const noErrors = (prim) => checks.designChecks({ ...structuredClone(design), par
 // ---- T14: every Shapes button opens the dialog, with WCS defaults and the selected part
 for (const kind of ['box', 'cylinder', 'sphere', 'polygon', 'linpoly', 'cone', 'torus', 'wire']) assert.ok(shapes.DIALOG_KINDS.includes(kind), `${kind} has a dialog`);
 const scale = store.designScale();
-// The WCS origin carries the elevation (CST): shapes are described in the WCS' own coordinates, the new part keeps the
+// The WCS origin carries the elevation: shapes are described in the WCS' own coordinates, the new part keeps the
 // transform that places it, so every default sits on the local plane at 0 and follows the normal.
 const wcsAt = (normal, k, elevation) => ({ normal, origin: [0, 1, 2].map((i) => (i === k ? elevation : 0)), angle: 0 });
 for (const [normal, k] of [['z', 2], ['x', 0], ['y', 1]]) {

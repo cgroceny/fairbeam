@@ -126,15 +126,11 @@ Content-Type: application/json
 User-Agent: fairbeam/<version>
 ```
 
-Installed old apps post to `https://antenlab.akdag.dev/api/ping`. That host stays up for
-them: the function does not look at the host, and `vercel.json` redirects only the pages of the
-old host, never `/api` (see [DEPLOY.md](DEPLOY.md)).
-
 ```json
 {
   "schema": "fairbeam.ping/1",
   "install_id": "1b4e28ba-2fa1-4d3b-a3f5-ef19b5a7633b",
-  "app_version": "0.4.4",
+  "app_version": "0.7.0",
   "os": "macos",
   "arch": "aarch64",
   "gpu_available": false,
@@ -172,8 +168,8 @@ The consent setting is unset until the user answers, and unset means no counting
 - **Turning it off** stops counting at once and deletes the counts not sent yet.
 
 The wording follows KVKK and GDPR. It says that the data is anonymous counts with a random id,
-lists what is sent and what is not, says where it goes (fairbeam.org, stored in a private
-GitHub repository) and how to turn it off. The legal basis is consent (KVKK art. 5(1), GDPR
+lists what is sent and what is not, says where it goes (fairbeam.org, stored where only the developer can read
+them) and how to turn it off. The legal basis is consent (KVKK art. 5(1), GDPR
 art. 6(1)(a)), which the user can withdraw at any time. The public list is
 [landing/privacy.html](../landing/privacy.html), marked "not active yet".
 
@@ -193,7 +189,7 @@ For each request, it:
    accepted. A browser request is accepted only from the app's own origins (`tauri://localhost`,
    `http(s)://tauri.localhost`) and refused from any other.
 3. **Validates strictly.** POST only, `Content-Type: application/json`, at most 8 KiB. Exactly the
-   eight fields of the schema, a v4 UUID, a version like `0.4.4`, a known `os` and `arch`, and a
+   eight fields of the schema, a v4 UUID, a version like `0.7.0`, a known `os` and `arch`, and a
    real `day` between 31 days ago and tomorrow. At most 120 counters, only known keys, whole
    numbers from 0 to 10000. Anything else is refused with 400, 405, 413 or 415.
 4. **Pseudonymises.** The install id is replaced by `HMAC-SHA256(STATS_SALT, install_id)`, cut to
@@ -203,13 +199,13 @@ For each request, it:
 5. **Rate-limits.** It accepts at most 2 pings per hashed id per receiving day. A second ping for
    the same `day` from the same id is answered 200 `duplicate` and not stored.
 6. **Stores.** It appends one line per ping to `data/<receiving day>.jsonl` in the private repo
-   (`STATS_REPO`, default `ismailakdag/fairbeam-stats`), through the GitHub Contents API with the
+   (`STATS_REPO`), through the GitHub Contents API with the
    token. When two pings race, the SHA check fails (409/422) and it re-reads and retries, up to 5
    times. A file over 700 KB continues in `data/<day>-2.jsonl`, `-3` and so on, so every read stays
    under the API's 1 MB limit. One stored line:
 
    ```json
-   {"day":"2026-09-27","id":"3f2a9c0d1e7b4a55","v":"0.4.4","os":"macos","arch":"aarch64","gpu":false,"c":{"app.start":2}}
+   {"day":"2026-09-27","id":"3f2a9c0d1e7b4a55","v":"0.7.0","os":"macos","arch":"aarch64","gpu":false,"c":{"app.start":2}}
    ```
 
    The IP address, the headers and the exact time are not stored. Vercel's own request logs keep
@@ -217,11 +213,11 @@ For each request, it:
 
 ### Setup (by hand, when turning it on)
 
-1. **Create the private repository** `ismailakdag/fairbeam-stats` (GitHub › New repository ›
-   Private, with a README so `main` exists).
+1. **Create a private repository** for the data, for example `<owner>/fairbeam-stats`
+   (GitHub › New repository › Private, with a README so `main` exists).
 2. **Create a fine-grained token** (GitHub › Settings › Developer settings › Fine-grained tokens):
-   - Resource owner: `ismailakdag`; Repository access: *Only select repositories* ›
-     `fairbeam-stats`.
+   - Resource owner: `<owner>`; Repository access: *Only select repositories* ›
+     that repository.
    - Permissions: *Contents: Read and write*, nothing else (Metadata: read is added
      automatically).
    - Expiration: the longest allowed. Put a reminder in the calendar to renew it.
@@ -231,7 +227,7 @@ For each request, it:
    Production only):
    - `STATS_GITHUB_TOKEN` (the token)
    - `STATS_SALT` (the salt)
-   - optional: `STATS_REPO` (default `ismailakdag/fairbeam-stats`) and `STATS_BRANCH` (default `main`)
+   - `STATS_REPO` (`<owner>/<repo>`) and optional `STATS_BRANCH` (default `main`)
 
    Redeploy. `curl -i -X POST https://fairbeam.org/api/ping -H 'content-type: application/json' -d '{}'`
    should now answer 400 (invalid ping) instead of 503.
@@ -246,7 +242,8 @@ For each request, it:
 - feature usage: monitors, sweeps, optimizer methods, import and export.
 
 It reads the ping lines from a local clone (`--dir ../fairbeam-stats/data`) or, with `--gh`, from
-the private repository through `gh api`. It removes duplicate lines for the same `(id, day)`.
+the private repository through `gh api`. `--gh` needs `--repo <owner>/<repo>` or the `STATS_REPO`
+environment variable. It removes duplicate lines for the same `(id, day)`.
 
 The numbers that already exist without any telemetry come first, and `--releases-only` prints only
 those. They are the download counts of every release asset of `ismailakdag/fairbeam-releases`,
@@ -256,7 +253,7 @@ count is a rough proxy for launches with update checks turned on.
 ```bash
 node scripts/stats-summary.mjs --releases-only          # works today
 node scripts/stats-summary.mjs --dir ../fairbeam-stats/data
-node scripts/stats-summary.mjs --gh --days 28
+node scripts/stats-summary.mjs --gh --repo <owner>/<repo> --days 28
 ```
 
 ## Turning it on
@@ -270,7 +267,7 @@ node scripts/stats-summary.mjs --gh --days 28
 4. Check a development build: the first-start dialog appears once, and Settings shows On/Off.
    "View what would be sent" shows the JSON. The day after you answer On, one POST reaches the
    repository.
-5. After a week, run `node scripts/stats-summary.mjs --gh`.
+5. After a week, run `node scripts/stats-summary.mjs --gh --repo <owner>/<repo>`.
 
 To turn it off again, leave the feature out of the next build. The shell then ignores the old
 files, and the endpoint can be disabled by removing `STATS_GITHUB_TOKEN`.

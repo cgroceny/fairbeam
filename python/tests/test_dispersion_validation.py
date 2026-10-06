@@ -1,4 +1,4 @@
-"""Analytic regressions from the Windows PR284 review; no FDTD runs."""
+"""Analytic regressions for the material extraction and dispersion fits; no FDTD runs."""
 import unittest
 import contextlib
 import io

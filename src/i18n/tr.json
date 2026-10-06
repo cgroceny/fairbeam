@@ -3673,7 +3673,7 @@
   "usage.summary.never": "Dosyalarınız, tasarımlarınız, adlar, parametre değerleri, klasör yolları, e-posta, kullanıcı adı veya IP adresi asla gönderilmez.",
   "usage.summary.off": "Bunu istediğiniz zaman Ayarlar › Genel › Kullanım istatistikleri'nden kapatabilirsiniz. Kapatmak, henüz gönderilmemiş sayımları siler.",
   "usage.summary.what": "Anonim sayımlar: uygulamanın ne sıklıkla açıldığı, kaç simülasyon çalıştırıldığı (CPU veya GPU; kendi tasarımınız, bir örnek veya bir Python modeli; yaklaşık süre ve boyut), türlerine göre hatalar ve hangi özelliklerin kullanıldığı (monitörler, taramalar, optimizasyon aracı, VBA makrosu içe ve dışa aktarma, Touchstone dışa aktarma, PDF raporu). Ayrıca uygulama sürümü, işletim sistemi, işlemci türü, GPU derlemesinin olup olmadığı ve bu bilgisayarda oluşturulan rastgele bir kimlik.",
-  "usage.summary.where": "Günde en fazla bir kez, önceki tam günlerin sayımları fairbeam.org'e gider ve yalnızca geliştiricinin okuyabildiği özel bir depoda saklanır.",
+  "usage.summary.where": "Günde en fazla bir kez, önceki tam günlerin sayımları fairbeam.org'e gider ve yalnızca geliştiricinin okuyabildiği bir yerde saklanır.",
   "usage.title": "Kullanım istatistikleri",
   "usage.today": "Bugün şimdiye kadar (en erken yarın gönderilir):",
   "usage.whatIsCollected": "Neler toplanıyor",

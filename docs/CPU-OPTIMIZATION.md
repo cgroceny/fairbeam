@@ -1,6 +1,6 @@
 # Experimental openEMS CPU optimizations
 
-Opt-in source patches target the pinned openEMS beta engine at commit `08e15ff532a7f4cfd1d4e7164ec262f5187bf30e`: extension-phase scheduling, scalar SSE index mapping in UPML boundary hooks, and a separate UPML coefficient/flux row-pointer experiment. The first two patches came first; the row-pointer patch is the subsequent Opus-reviewed experiment. Except on macOS (see [the last section](#macos-shipped-and-on-by-default)), these engines are not installed or distributed as a Fairbeam runtime and application defaults remain unchanged.
+Opt-in source patches target the pinned openEMS beta engine at commit `08e15ff532a7f4cfd1d4e7164ec262f5187bf30e`: extension-phase scheduling, scalar SSE index mapping in UPML boundary hooks, and a separate UPML coefficient/flux row-pointer experiment. The first two patches came first; the row-pointer patch is the subsequent experiment. Except on macOS (see [the last section](#macos-shipped-and-on-by-default)), these engines are not installed or distributed as a Fairbeam runtime and application defaults remain unchanged.
 
 The current engine calls six extension phases per timestep: pre-voltage, post-voltage, apply-voltage, pre-current, post-current, and apply-current. Each extension hook is followed by a worker barrier. The prototype caches per-phase schedules and classifies only exact dynamic types whose hook masks were audited:
 
@@ -86,9 +86,9 @@ Use PowerShell 7 and the matching x64 Visual Studio developer environment for th
 
 ## Windows validation checkpoint, 1 October 2026
 
-The dependency prefix, fparser, CSXCAD, baseline engine, phase-only candidate and combined phase/cursor candidate all built successfully with MSVC 14.42. All three engines use matching dependencies and Release `/MD /O2 /Ob2 /DNDEBUG /fp:precise`, CUDA off and flush-to-zero on. The initial TinyXML/configuration and build-wrapper failures remain in the study archive; successful builds have fresh provenance records. Python loads the staged openEMS, CSXCAD, fparser and nf2ff DLLs, and their actual paths and hashes are checked. With both opt-in flags absent, the combined candidate's retained solver outputs also match the baseline. No installed runtime or global environment setting is changed.
+The dependency prefix, fparser, CSXCAD, baseline engine, phase-only candidate and combined phase/cursor candidate all built successfully with MSVC 14.42. All three engines use matching dependencies and Release `/MD /O2 /Ob2 /DNDEBUG /fp:precise`, CUDA off and flush-to-zero on. Successful builds have fresh provenance records. Python loads the staged openEMS, CSXCAD, fparser and nf2ff DLLs, and their actual paths and hashes are checked. With both opt-in flags absent, the combined candidate's retained solver outputs also match the baseline. No installed runtime or global environment setting is changed.
 
-The subsequent row-pointer candidate built with the same compiler, flags and dependencies. Relative to the previous phase/cursor engine, five alternating pairs per worker count measured native solve medians of **27.49 → 10.37 s at one worker (62.3% less time)** and **11.48 → 6.85 s at four workers (40.3% less time)**. Every pair won and median gaps exceeded both observed ranges. All 26 full solves retained bitwise baseline equality and the 36-case E/H/UPML-state matrix passed. Independent post-run binary checks also verified finite, nonzero voltage/current flux for every captured UPML extension; the C++ harness itself asserts nonzero E/H and UPML presence/extents. Actual installed Claude Opus 5.5 reviewed the final code/evidence with no blocker; Astra independently rehashed numeric exports and snapshots. This is a single coarse PML-heavy dipole on the recorded Ryzen 9 7900X system, with no physical-convergence, universal, combined-GPU-runtime or commercial speed claim. Profiling runs are excluded from these measurements. See the row-pointer study for ranges, timing scope, failed attempts and exact archive hashes.
+The subsequent row-pointer candidate built with the same compiler, flags and dependencies. Relative to the previous phase/cursor engine, five alternating pairs per worker count measured native solve medians of **27.49 → 10.37 s at one worker (62.3% less time)** and **11.48 → 6.85 s at four workers (40.3% less time)**. Every pair won and median gaps exceeded both observed ranges. All 26 full solves retained bitwise baseline equality and the 36-case E/H/UPML-state matrix passed. Independent post-run binary checks also verified finite, nonzero voltage/current flux for every captured UPML extension; the C++ harness itself asserts nonzero E/H and UPML presence/extents. Numeric exports and snapshots were rehashed independently. This is a single coarse PML-heavy dipole on the recorded Ryzen 9 7900X system, with no physical-convergence, universal or combined-GPU-runtime speed claim. Profiling runs are excluded from these measurements.
 
 ## Paired native build
 
@@ -98,7 +98,7 @@ Run the VTK overlay preparation once against a clean vcpkg checkout at the pinne
 
 ```powershell
 $repo = 'C:\path\to\fairbeam'
-$study = 'E:\fairbeam-benchmarks\cpu-optimization-20261001'
+$study = 'C:\path\to\cpu-study'
 $vcpkg = 'C:\path\to\clean\vcpkg-cpu-study'
 & "$repo\scripts\native-cpu\prepare-vtk-overlay.ps1" `
   -VcpkgRoot $vcpkg `
@@ -107,14 +107,14 @@ $vcpkg = 'C:\path\to\clean\vcpkg-cpu-study'
 
 The build driver expects the prepared manifest at `deps\manifest-v002`, the custom triplet at `deps\triplets`, the generated port overlay at `deps\overlay-ports`, and installed packages at `deps\installed`. Run it from an x64 Visual Studio 2022 developer environment with the pinned CMake 3.29.5, Ninja and MSVC 14.42 paths. It builds fparser, CSXCAD, baseline openEMS and candidate openEMS sequentially, each with two Ninja jobs, Release `/MD /O2 /Ob2 /DNDEBUG /fp:precise`, CUDA off and flush-to-zero on. The two openEMS builds receive identical CMake arguments and separate clean build and stage directories. It copies the rebuilt native DLLs and prepared vcpkg DLLs into both stage directories and records source revisions, compiler and cache settings, command logs, completed stages, failures, and hashes for staged DLLs/executables/import libraries plus rebuilt fparser/CSXCAD binaries and import libraries under `results\<run>\provenance.json`.
 
-The driver performs no solver run. Its successful paired provenance reaches `paired-native-builds-and-stages-complete`; native harness and timed solver evidence are recorded separately. The additional combined candidate reuses the successful configure arguments, compiler and dependency prefix, changing only source/build/install paths. Its replay script and provenance are retained with the study. If a build fails, its provenance records the failing command and completed stages for diagnosis. Legacy behavior remains the default: neither CUDA support nor a production runtime release was validated by these CPU-only experimental builds.
+The driver performs no solver run. Its successful paired provenance reaches `paired-native-builds-and-stages-complete`; native harness and timed solver evidence are recorded separately. The additional combined candidate reuses the successful configure arguments, compiler and dependency prefix, changing only source/build/install paths. If a build fails, its provenance records the failing command and completed stages for diagnosis. Legacy behavior remains the default: neither CUDA support nor a production runtime release was validated by these CPU-only experimental builds.
 
 ## macOS: shipped and on by default
 
 The macOS openEMS pack ships the three patches, and Fairbeam turns them on by default on macOS, because
 five CPU cases were bitwise identical to the unpatched build on both bases
 (patch starter, pyramidal horn, blade 867, two-port microstrip, dipole; solver 1.3 to 1.7 times
-faster; issue #285). Windows and Linux are unchanged: the patches stay opt-in there, as described above.
+faster). Windows and Linux are unchanged: the patches stay opt-in there, as described above.
 
 - **Base.** The pack is built from openEMS `12cd91de2` (`runtime/pins.json`), not from the `08e15ff`
   beta that the sections above target. The cursor and rows patches apply to both unchanged; the

@@ -195,7 +195,7 @@ class Inputs(unittest.TestCase):
                 read_eps(p2, "nist")
 
     def test_unconverged_nist_points_are_left_out(self):
-        # #284 review: finite last iterates of a non-converged NIST solve must not be fitted
+        # finite last iterates of a non-converged NIST solve must not be fitted
         with tempfile.TemporaryDirectory() as tmp:
             conv = [k % 2 == 0 for k in range(30)]
             p, f, e = self.cell_json(tmp, converged=conv)

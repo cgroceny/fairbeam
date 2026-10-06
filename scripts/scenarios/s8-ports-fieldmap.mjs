@@ -1,4 +1,4 @@
-// S8: gaps in S4/S7 found during the Mac review of #296: component transforms leave ports and
+// S8: gaps in S4/S7: component transforms leave ports and
 // resistors at their world coordinates, and the field map switches between its 2D and 3D views.
 // No solver: the run is a bundled example bundle with a synthetic field plane.
 import assert from 'node:assert/strict';

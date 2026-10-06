@@ -77,7 +77,7 @@ export async function startStack({ log = () => {}, niceSolver = true } = {}) {
     await waitFor(`http://127.0.0.1:${apiPort}/api/health`, 'run server', 30000, () => !api.exited);
     // A config of its own: the checkout's, with the temp public folder and free ports
     const config = join(dir, 'vite.config.mjs');
-    // Managed checkouts may share their dependency directory through a symlink/junction.
+    // node_modules may be a symlink or junction.
     // Serve that exact dependency path too, so locally bundled font files remain accessible.
     const dependencies = await realpath(join(root, 'node_modules'));
     await writeFile(config, `import solid from ${JSON.stringify(join(root, 'node_modules/vite-plugin-solid/dist/esm/index.mjs'))};

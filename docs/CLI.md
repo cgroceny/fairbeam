@@ -230,7 +230,7 @@ agreement, and the existing exit-code contract remains unchanged.
 
 ## `fairbeam material-cell`
 
-Characterizes a material sample or a surface at normal incidence (issue #271). The model's
+Characterizes a material sample or a surface at normal incidence. The model's
 `build(p)` creates an `fairbeam.material_cell.PlaneWaveCell` around the sample: a TEM cell with
 PMC walls in x (normal to H), PEC walls in y (normal to E) and PML in z, a soft E_y sheet as the
 source and a voltage probe on a reference plane on each side. The sample must fill the cross-section
@@ -318,7 +318,7 @@ The extraction reproduces that curve, and the comparison uses the same model
 ### Waveguide fixture
 
 A model whose `build(p)` creates an `fairbeam.waveguide_fixture.WaveguideFixture` instead runs the
-rectangular-waveguide transmission/reflection setup (issue #275): the sample fills the a × b
+rectangular-waveguide transmission/reflection setup: the sample fills the a × b
 cross-section (default WR-90) between two TE10 waveguide ports, PEC walls in x and y, PML behind
 both ports. Use `Simulation(..., excitation="gauss")`: the default Gaussian-derivative pulse
 reaches down to DC, and the part of its energy between the filled and the empty guide's TE10
@@ -424,7 +424,7 @@ A model written as JSON (`to_dict()`, a `.dispersion.json`, a bundle's `material
 `source`) is read back with `fairbeam.dispersion.model_from_dict`. It returns a `DjordjevicSarkar`
 or a `Dispersion` by the dictionary's `model` and refuses any other model rather than drop its
 frequency dependence. `Simulation.dispersive` and `analytic.slab_s` layers take such a dictionary
-directly. A Design file has no dispersive dielectric yet (#271 PR 3b), so opening a Python model
+directly. A Design file has no dispersive dielectric yet, so opening a Python model
 that uses one as a Design stops with an error instead of writing its band-centre values.
 
 ## Raw simulation data (`.sim/`)

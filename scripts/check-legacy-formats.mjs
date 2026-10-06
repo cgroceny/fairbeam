@@ -1,7 +1,6 @@
 // Proof that what antenlab (0.6.x) wrote still opens in the viewer, and that the one-time storage
 // carry-over and the import step's preference handoff behave. The fixtures are the 0.6.8 files in
 // python/tests/fixtures/legacy/ (the Python side opens the same files: tests/test_legacy_formats.py).
-// This is one of the few files where the old names may appear (scripts/check-no-antenlab.mjs).
 //
 //   node --experimental-strip-types scripts/check-legacy-formats.mjs
 import assert from "node:assert/strict";

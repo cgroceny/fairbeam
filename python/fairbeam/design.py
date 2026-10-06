@@ -52,7 +52,7 @@ Primitive kinds (simple modelling shapes, each one maps to one CSXCAD primitive)
     ``start`` / ``stop``: the x, y, z minimum and maximum (the designer shows Xmin/Xmax, ...).
     Zero thickness along exactly one axis makes a sheet.
 ``cylinder``
-    CST form: ``axis`` (x/y/z), ``center`` (the two in-plane coordinates, in CSXCAD's order: axis
+    Axis form: ``axis`` (x/y/z), ``center`` (the two in-plane coordinates, in CSXCAD's order: axis
     z -> [x, y], x -> [y, z], y -> [z, x]), ``radius`` (outer), ``inner_radius`` (0 or absent:
     solid) and ``range`` ([min, max] along the axis). A solid one is CSXCAD ``AddCylinder``, one
     with an inner radius (a tube) ``AddCylindricalShell``. The older form ``start`` / ``stop`` /
@@ -69,7 +69,7 @@ Primitive kinds (simple modelling shapes, each one maps to one CSXCAD primitive)
 ``linpoly``
     a polygon extruded by ``length`` along its normal.
 ``cone``
-    CST form like a cylinder: ``axis``, ``center`` (two in-plane coordinates), ``bottom_radius`` at
+    Axis form like a cylinder: ``axis``, ``center`` (two in-plane coordinates), ``bottom_radius`` at
     ``range[0]``, ``top_radius`` at ``range[1]`` (0: a sharp cone). CSXCAD ``AddRotPoly``: the
     trapezoid (radial, axial) turned about the axis, moved to the centre by a translation.
 ``torus``
@@ -3061,7 +3061,7 @@ def add_wire(prop, points, radius, **kw):
     """A wire of ``radius`` as solid conductor: a cylinder along every segment of the polyline and a sphere at
     each bend, which the mesher treats like any thin cylinder (cells at the free ends, lines at the surface).
     CSXCAD's own ``AddWire`` snaps the polyline to the nearest mesh edges whatever the radius, and a half-wave
-    dipole of it resonated 15 % below the same dipole drawn as cylinders (and below CST). A wire thinner than
+    dipole of it resonated 15 % below the same dipole drawn as cylinders. A wire thinner than
     ``WIRE_SOLID_MIN`` stays a CSXCAD wire, a bare line of mesh edges, and so does a wire with a slanted segment (an oblique cylinder
     would not export to CST as one). Returns the primitive, or an object that forwards
     ``AddTransform`` to every one of them."""

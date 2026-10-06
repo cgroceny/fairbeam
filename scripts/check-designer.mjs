@@ -707,7 +707,7 @@ for (const prim of [tube, ball, side, cone, ring]) {
   // the CST importer reads .Colour back as #rrggbb (python/tests/test_cst_import.py)
 }
 
-// ---- ports do not follow transforms (UX test B: a 30°-rotated dipole ran with |S11| of 0 dB): the Transform
+// ---- ports do not follow transforms (a 30°-rotated dipole ran with |S11| of 0 dB): the Transform
 // panel names the ports that sit on the moved shapes and offers to select them (transformModel.ts)
 {
   const w = "Transform ports";
@@ -750,7 +750,7 @@ for (const prim of [tube, ball, side, cone, ring]) {
   check(/no longer span the feed gap/.test(en["transform.ports.body"].other) && /\{ports\}/.test(en["transform.ports.body"].other), w, "the warning names the ports");
 }
 
-// ---- the feed checks offer to add a port (UX test C: no one-click fix for "no port" and "floating feed")
+// ---- the feed checks offer to add a port (no one-click fix for "no port" and "floating feed")
 {
   const w = "Check actions";
   check(checkAction({ code: "no-port" }, 0) === "add-port", w, "no port: add one");

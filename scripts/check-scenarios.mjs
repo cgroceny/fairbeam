@@ -120,7 +120,7 @@ SCENARIOS.push({
   },
 });
 
-// The solver lock the other agents share: mkdir takes it, rmdir releases it
+// Cross-process solver lock so two checks never run the solver at once: mkdir takes it, rmdir releases it
 const LOCK = '/tmp/fairbeam-sim.lock';
 function takeSimLock() {
   try { mkdirSync(LOCK); } catch { return null; }

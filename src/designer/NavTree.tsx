@@ -306,7 +306,7 @@ export function NavTree() {
         id: `res-el:${i}`, label: r.name || `R${i + 1}`, sub: lumpedLabel(r), icon: "resistor", issue: worst(`resistors[${i}]`), action: select({ type: "resistor", i }),
       })), { issue: worst("resistors") }),
       sec("results", t("tree.results"), results, results.length ? { title: t("tree.results.title") } : { sub: t("tree.results.none") }),
-      // each optimization (running or finished) is a node here, like the mesh convergence studies in Results (UX audit 2.4.7)
+      // each optimization (running or finished) is a node here, like the mesh convergence studies in Results
       sec("optimizations", t("tree.optimizations"), optimizations, optimizations.length ? { title: t("tree.optimizations.title") } : { sub: t("optTree.none") }),
     ];
   });

@@ -3747,7 +3747,7 @@
   "usage.summary.never": "Never your files, designs, names, parameter values, folder paths, e-mail, user name or IP address.",
   "usage.summary.off": "You can turn this off at any time in Settings › General › Usage statistics. Turning it off deletes the counts not sent yet.",
   "usage.summary.what": "Anonymous counts: how often the app starts, how many simulations run (CPU or GPU; your design, an example or a Python model; a rough duration and size), failures by type, and which features are used (monitors, sweeps, the optimizer, VBA macro import and export, Touchstone export, PDF report). Also the app version, the operating system, the processor type, whether a GPU build is present, and a random id created on this computer.",
-  "usage.summary.where": "At most once a day, the counts of whole previous days go to fairbeam.org and are stored in a private repository that only the developer can read.",
+  "usage.summary.where": "At most once a day, the counts of whole previous days go to fairbeam.org and are stored where only the developer can read them.",
   "usage.title": "Usage statistics",
   "usage.today": "Today so far (sent tomorrow at the earliest):",
   "usage.whatIsCollected": "What is collected",

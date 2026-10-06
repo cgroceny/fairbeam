@@ -318,7 +318,7 @@ fn gpu_opt() -> Option<PathBuf> {
 
 /// Where the install scripts put openEMS by default: ~/opt on macOS and Linux
 /// (scripts/install-openems-*-macos.sh); on Windows C:\opt (scripts/install-openems-gpu-windows.ps1
-/// -Prefix), then \opt on the other fixed drives, for a PC whose C: is full (#175: E:\opt).
+/// -Prefix), then \opt on the other fixed drives (for an install placed on another drive).
 fn opt_dirs() -> Vec<PathBuf> {
     if cfg!(windows) { drive_opt_dirs(&fixed_drives()) } else { vec![home().join("opt")] }
 }
@@ -569,7 +569,7 @@ mod tests {
         assert_eq!(dirs(&['E', 'C', 'd', 'E']), [r"C:\opt", r"D:\opt", r"E:\opt"]);
         assert_eq!(dirs(&['Z', '1']), [r"C:\opt", r"Z:\opt"]);
 
-        // the first prefix holding the GPU build's Python wins (#175: nothing on C:, all on E:)
+        // the first prefix holding the GPU build's Python wins
         let root = std::env::temp_dir().join(format!("fairbeam-gpu-drives-{}", std::process::id()));
         let _ = fs::remove_dir_all(&root);
         let (c, d, e) = (root.join("c-opt"), root.join("d-opt"), root.join("e-opt"));

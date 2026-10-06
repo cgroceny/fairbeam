@@ -508,7 +508,7 @@
         <dl class="status-list">
           <div>
             <dt>Development preview</dt>
-            <dd>The designer, the solver pipeline and the results work end to end. The file formats are versioned (<code>fairbeam.design/1</code> for designs, <code>fairbeam.project/1</code> for results); breaking changes bump the version. The source repository is not public yet.</dd>
+            <dd>The designer, the solver pipeline and the results work end to end. The file formats are versioned (<code>fairbeam.design/1</code> for designs, <code>fairbeam.project/1</code> for results); breaking changes bump the version.</dd>
           </div>
           <div>
             <dt>VBA macro export not yet validated</dt>
@@ -553,11 +553,11 @@
             </a>
           </div>
           <p class="note">macOS 0.7.0: macOS 27 or newer; the app is signed and notarized. Windows 0.7.0: Windows 10/11, per-user install; SmartScreen warns because the installer has no Authenticode certificate (More info → Run anyway). Checksums are in <a href="https://github.com/ismailakdag/fairbeam-releases/releases/download/v0.7.0/SHA256SUMS.txt">SHA256SUMS.txt</a>. Every version is on the <a href="https://github.com/ismailakdag/fairbeam-releases/releases">releases page</a>. Later versions are offered in the app.</p>
-          <p class="note"><strong>Linux (preview):</strong> no installer yet. With repository access, <code>scripts/install-openems-linux.sh</code> builds openEMS (CPU) in your user folder and <code>scripts/run-linux.sh</code> opens Fairbeam in your browser. Tested on Debian 13 x86_64; see docs/LINUX.md.</p>
+          <p class="note"><strong>Linux (preview):</strong> no installer yet. With a clone of the repository, <code>scripts/install-openems-linux.sh</code> builds openEMS (CPU) in your user folder and <code>scripts/run-linux.sh</code> opens Fairbeam in your browser. Tested on Debian 13 x86_64; see docs/LINUX.md.</p>
           <p class="dl-guide">New here? <a href="guide.html">Read the getting-started guide</a>: install, a first design, the run and its results in about five minutes.</p>
         </div>
         <div class="code-block">
-          <pre><code><span class="c"># From source (repository access): macOS, Homebrew, Xcode CLT, Python 3.10+, Node.js 20+</span>
+          <pre><code><span class="c"># From source: macOS, Homebrew, Xcode CLT, Python 3.10+, Node.js 20+</span>
 <span class="c"># 1. Build openEMS + CSXCAD into ~/opt/openEMS and install Fairbeam into its venv (5–10 min)</span>
 scripts/install-openems-macos.sh
 

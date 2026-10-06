@@ -390,7 +390,7 @@ def layer_constants(f, layer: dict):
     DjordjevicSarkar, or its ``to_dict()``), or ``eps`` / ``mu`` as functions of f."""
     f = np.asarray(f, float)
     disp = layer.get("dispersion")
-    if isinstance(disp, dict):          # a serialized model: dispatched by its "model" (#284 review)
+    if isinstance(disp, dict):          # a serialized model: dispatched by its "model"
         from .dispersion import model_from_dict
         disp = model_from_dict(disp)
     eps_fn = disp.eps if disp is not None else layer.get("eps")

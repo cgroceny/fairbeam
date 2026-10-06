@@ -1,4 +1,4 @@
-// UX-test wording and polish (lane 3): Turkish terms (one name per concept), numbers shown with one
+// Wording and polish: Turkish terms (one name per concept), numbers shown with one
 // notation, parameter default labels, the Start screen, the Parameters dock, the work-plane label, the
 // Translate copies label, the camera refit and the ribbon tab of a new design. The behaviour that needs a
 // browser is asserted as source contracts, as the other check scripts do.

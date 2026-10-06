@@ -1,4 +1,4 @@
-// CST: WCS > Transform WCS. One dialog moves the work coordinate system along its own u, v, w and
+// Transform WCS: one dialog moves the work coordinate system along its own u, v, w and
 // turns it about them (quarter turns: the geometry stays axis aligned). Values take expressions; the
 // resulting origin and axes are shown before OK. Cancel changes nothing.
 import { createMemo, createSignal, For, onCleanup, onMount, Show } from "solid-js";

@@ -1,4 +1,4 @@
-// The maintainer's designer feedback with the real Solid stores,
+// Designer feedback regressions with the real Solid stores,
 // without a DOM or solver: component folders (rename, ungroup, delete, one undo step each), the
 // tree's "Add a lumped port" start (boundsPortTarget), framing a new port or resistor, and a
 // ribbon geometry tab taking a result drawn in the 3D view off it. Plus source contracts for the

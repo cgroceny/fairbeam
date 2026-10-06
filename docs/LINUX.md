@@ -17,12 +17,12 @@ current gaps are:
 | Updates | The Tauri updater plugin is installed. Upstream documents Linux AppImage updater artifacts. | `scripts/publish-release.mjs` accepts only `windows-x86_64` and `darwin-aarch64`; no Linux package/signature is published in the feed. |
 | Optional sign-in | Guest mode is the default. | The opt-in accounts build uses Apple/Windows keyring backends; the Linux fallback is in-memory and does not persist sign-in ([ACCOUNTS.md](ACCOUNTS.md)). |
 
-Start with **Ubuntu 24.04 LTS x86_64** as the first Linux desktop support lane. Ubuntu lists standard
+Start with **Ubuntu 24.04 LTS x86_64** as the first supported Linux desktop target. Ubuntu lists standard
 support through 2029 ([release cycle](https://ubuntu.com/about/release-cycle)). Tauri's current
 Linux build prerequisites include WebKitGTK 4.1 and system development libraries
 ([Tauri prerequisites](https://v2.tauri.app/start/prerequisites/)); openEMS has a separate native
 dependency set ([openEMS requirements](https://docs.openems.de/en/latest/install/requirements.html)).
-Confirm both sets on the Ubuntu CI runner. If publishing an AppImage for systems older than 24.04,
+Both sets still have to be confirmed on an Ubuntu CI runner. If publishing an AppImage for systems older than 24.04,
 build it on the oldest claimed baseline: Tauri warns that newer build hosts can raise the glibc
 minimum ([AppImage guidance](https://v2.tauri.app/distribute/appimage/)).
 
@@ -35,15 +35,10 @@ bytes per cell; its memory preflight warns above 60% and refuses above 90% of ho
 sandbox, make CPU/core detection honor the allowed CPU set and account for cgroup v2 CPU and memory
 limits. Keep default runs unpinned; affinity should be observed, not changed by the app.
 
-A proposed change would add cgroup-aware
-resource detection and removal of unused NF2FF recording for S11-only optimization. Its reported
-Linux CPU measurements are separate from this Windows preview's validation. Reassess these
-resource gaps after review and integration; native Linux desktop packaging remains separate.
-
 Recommended implementation order:
 
 1. Add an Ubuntu 24.04 x86_64 Tauri build/smoke runner and a Linux bundle configuration. Keep a
-   second Ubuntu LTS lane for compatibility checks after the first target works.
+   second Ubuntu LTS release for compatibility checks after the first target works.
 2. Add hash-pinned Linux uv and CPU openEMS artifacts, plus a Linux first-run/repair script. Build
    or assemble a relocatable openEMS/CSXCAD package with matching Python wheels and required shared
    libraries; the installed app should not compile native code or invoke `sudo`.
@@ -56,9 +51,10 @@ Recommended implementation order:
    confirming that the user's workspace survives. Keep the smoke run in a fresh temporary folder,
    use `--engine cpu --threads 1` or `2`, and leave the default mesh guard enabled.
 
-The generic shell, runtime verifier, release-feed UI and resource preflight can be shared with Mac
-work. Linux still needs a Linux-native build runner, distribution-specific dependency checks,
-Linux runtime artifacts, bundle config and a Linux update target before it can be called supported.
+The generic shell, runtime verifier, release-feed UI and resource preflight can be shared with the
+macOS and Windows builds. Linux still needs a Linux-native build runner, distribution-specific
+dependency checks, Linux runtime artifacts, bundle config and a Linux update target before it can be
+called supported.
 
 ## Requirements
 
@@ -194,9 +190,9 @@ Tested on September 30, 2026 using Fairbeam source commit
 | Python dependencies | NumPy 2.5.3, h5py 3.16.0, Cython 3.3.0, setuptools 84.0.0 |
 | Frontend tools | Node 24.19.0, npm 11.9.0 |
 
-The test environment did not permit system-package installation. Debian development/runtime
-packages were extracted into a workspace-local directory, with their paths supplied through
-`CMAKE_PREFIX_PATH`, a test-only `CMAKE_TOOLCHAIN_FILE`, compiler flags and `LD_LIBRARY_PATH`.
+The test did not use system packages: the Debian development/runtime packages were extracted into
+a local directory, with their paths supplied through `CMAKE_PREFIX_PATH`, a test-only
+`CMAKE_TOOLCHAIN_FILE`, compiler flags and `LD_LIBRARY_PATH`.
 The final installer completed an end-to-end build in initially empty source and runtime
 directories, both containing spaces, in 177.4 seconds. This included cloning the pinned
 upstream sources, compiling all three native libraries and both Python bindings, creating a
@@ -223,17 +219,13 @@ HTTP checks and shut down cleanly.
 `npm run check:exports` passed. The build reported an oversized main-chunk warning and
 mixed static/dynamic import warnings.
 
-Direct imports and geometry export also passed. A full Python suite rerun with the default
-mesh limit completed 799 tests in 146.3 seconds: 778 passed, 20 skipped and one failed. The
-analytic dipole `DipoleTest.test_moment_method_reference` predicts a resonance near 2.53 GHz,
-outside the expected 2.42–2.47 GHz interval. Its MoM matrix is numerically rank-deficient
-(99 of 100 at 2.44 GHz); this separate analytic reference remains unresolved. The openEMS
-solver and the test's expected range were not changed. An earlier mesh-limit
-failure was caused by the test environment's `FAIRBEAM_MAX_CELLS` override and disappeared
-when the override was removed.
+Direct imports and geometry export also passed. A full Python suite run with the default mesh
+limit completed 799 tests in 146.3 seconds: 778 passed, 20 skipped and one failed. The analytic
+dipole `DipoleTest.test_moment_method_reference` predicts a resonance near 2.53 GHz, outside the
+expected 2.42–2.47 GHz interval; its MoM matrix is numerically rank-deficient (99 of 100 at
+2.44 GHz). This analytic reference is a known open issue.
 
-The manual browser fixture and `npm run check:scenarios -- --skip-run` both stopped during
-browser setup: the sandbox blocked Chromium's process-singleton socket. The separate cloud
-browser denied access to the localhost preview. No app browser assertions were reached, and no graphical
-interaction or WebGL rendering pass is claimed. Native Tauri packaging, GPU acceleration,
-other Linux distributions/architectures and distributable Linux installers are also unverified.
+The manual browser fixture and `npm run check:scenarios -- --skip-run` could not start a browser in
+this configuration, so no app browser assertions, graphical interaction or WebGL rendering pass is
+claimed. Native Tauri packaging, GPU acceleration, other Linux distributions/architectures and
+distributable Linux installers are also unverified.

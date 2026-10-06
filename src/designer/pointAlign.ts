@@ -1,4 +1,4 @@
-// Point-to-point alignment (CST "Transform > Translate", from point to point): the solid that owns the
+// Point-to-point alignment (a translation from point to point): the solid that owns the
 // first pick A moves by B - A in x, y and z. It gains one "move" transform, so the part stays
 // editable (its primitives, cuts, parameters and Boolean history are untouched) and Booleans that
 // name it keep working.

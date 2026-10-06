@@ -204,7 +204,7 @@ class OpenEms(unittest.TestCase):
 
 
 class JsonRoundTrips(unittest.TestCase):
-    """A model written to JSON and read back keeps its frequency dependence on every path (#284 review)."""
+    """A model written to JSON and read back keeps its frequency dependence on every path."""
 
     FR4 = DjordjevicSarkar.from_datasheet([(1e9, 4.4, 0.02)])
     MODELS = {
@@ -233,7 +233,7 @@ class JsonRoundTrips(unittest.TestCase):
             Dispersion.from_dict(self.FR4.to_dict())                    # no silent loss of delta, m1, m2
 
     def test_layer_constants_and_slab_s_object_vs_dictionary(self):
-        # the reviewer's case: DjordjevicSarkar.to_dict() gave the same real 4.114830 at 1 and 10 GHz
+        # a regression case: DjordjevicSarkar.to_dict() gave the same real 4.114830 at 1 and 10 GHz
         f = np.array([1e9, 10e9])
         eps, _ = layer_constants(f, {"thickness": 5.0, "dispersion": self.FR4.to_dict()})
         np.testing.assert_allclose(eps, [4.4 - 0.088j, self.FR4.eps(10e9)], rtol=1e-12)
@@ -289,7 +289,7 @@ class JsonRoundTrips(unittest.TestCase):
                 np.testing.assert_allclose(back.eps(F), model.eps(F), rtol=1e-14)
 
     def test_design_conversion_refuses_a_dispersive_material(self):
-        # a Design has no dispersive dielectric yet (PR 3b): converting must not make it constant
+        # a Design has no dispersive dielectric yet: converting must not make it constant
         from fairbeam.example_design import ExampleConversionError, convert_example
 
         src = '''

@@ -24,7 +24,7 @@ if (process.env.FAIRBEAM_BROWSER_TESTS !== '1') {
   process.exit(0);
 }
 const { default: puppeteer } = await import(process.env.FAIRBEAM_PUPPETEER || 'puppeteer-core');
-const locks = join(tmpdir(), 'fairbeam-codex-locks'); // /tmp is the drive root on Windows
+const locks = join(tmpdir(), 'fairbeam-test-locks'); // /tmp is the drive root on Windows
 const lock = join(locks, 'screens');
 mkdirSync(locks, {recursive:true});
 mkdirSync(lock);

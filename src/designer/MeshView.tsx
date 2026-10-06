@@ -1,4 +1,4 @@
-// Mesh view in the designer (CST "Mesh view"): the FDTD mesh lines of the current server preview on
+// Mesh view in the designer: the FDTD mesh lines of the current server preview on
 // one plane (the viewer's mesh-plane layer), the solids faded, and the mesh numbers with a rough
 // solver-time estimate. The numbers come from the server preview, the same mesher the run uses.
 import { createSignal, For, onCleanup, Show } from "solid-js";

@@ -5,9 +5,9 @@ Vercel builds the site from the public source repository, and only the build out
 
 `npm run build:site` builds the static site for fairbeam.org into `site-dist/`. It holds the landing page from `landing/` at `/` and the viewer in read-only demo mode (`npm run build:demo`, base `/app/`, the example projects in `public/projects/`, no run server) at `/app/`. The Vercel settings are in `vercel.json`.
 
-## What is public and what is not
+## What the site serves
 
-| Public (in `site-dist/`) | Not public |
+| On the site (in `site-dist/`) | Not on the site |
 | --- | --- |
 | `landing/` (landing page, `guide.html`, `privacy.html`, CSS, a small script; the roadmap board is rendered into the page at build time), the scroll story under `/story/`, `tokens.css` copied from `design-system/` | Python package, models, install scripts, tests |
 | The viewer built with `--mode demo` under `/app/` (minified JS/CSS) | `src/` as source code (only the minified bundle ships) |
@@ -41,8 +41,8 @@ framing stays allowed so the landing page can embed the demo on request. The cac
 - `/media/*`: one day.
 - `/app/projects/*`: one hour.
 
-`/app` redirects to `/app/`. Pushes to branches named `windows/*`, `codex-windows/*`, `mac/*`,
-`codex-mac/*`, `codex/*` or `claude/*` do not deploy (`git.deploymentEnabled` in `vercel.json`).
+`/app` redirects to `/app/`. Pushes to branches other than `main` do not deploy (`git.deploymentEnabled`
+in `vercel.json`).
 
 The site also has one serverless function, `api/ping.js`, which receives the desktop app's usage
 statistics (see [TELEMETRY.md](TELEMETRY.md)). Vercel deploys every file in `api/` whose name does
@@ -90,14 +90,9 @@ project or another domain.
 | --- | --- |
 | `fairbeam.org` | Primary. Everything is served here: the site, the demo at `/app/`, and the usage endpoint `/api/ping`. The app's links and its telemetry endpoint point here. |
 | `www.fairbeam.org` | Redirects to the apex (set it in *Settings → Domains*, "Redirect to fairbeam.org"). |
-| `antenlab.akdag.dev` | Kept for installed old apps, which call `https://antenlab.akdag.dev/api/ping` and open its guide and privacy pages. Pages redirect permanently to the same path on `fairbeam.org` (a host-based rule in `vercel.json`); `/api/*` is not redirected and keeps working. |
 
-All three domains are attached to the same Vercel project, `fairbeam` (renamed on 2026-10-06; the project
-id and its settings are unchanged). GitHub's Deployments list shows that project's per-deployment
-`*.vercel.app` URLs; the repository's homepage is `https://fairbeam.org`. The ping function does not check the host
-(only the browser origin, see `api/_ping-core.js`), so no code change is needed to accept both.
-`npm run check:telemetry` asserts both that the old host's pings are stored and that the redirect rule
-never matches `/api`. Keep the old domain for as long as old apps are installed.
+Both domains are attached to the same Vercel project, `fairbeam`. GitHub's Deployments list shows
+that project's per-deployment `*.vercel.app` URLs; the repository's homepage is `https://fairbeam.org`.
 
 ## Updating the demo content
 

@@ -1,4 +1,4 @@
-// The designer's Run dialog (CST "Start simulation"): engine, threads, frequency points and a name
+// The designer's Run dialog: engine, threads, frequency points and a name
 // for the result. It saves the design first when it has unsaved changes and refuses while the
 // Checks list has errors; the run itself goes through the run store (src/runner/store.ts), and
 // its progress and results show in the designer's bottom dock (RunDock.tsx).

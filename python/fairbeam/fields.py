@@ -7,7 +7,7 @@ What is recorded
     in-plane Yee edge encloses the sheet's surface current, so the in-plane components of rot(H)
     equal J_s / Δn, where Δn is the (constant) dual cell width normal to the plane. The normalised
     magnitude sqrt(|J_u|^2 + |J_v|^2) is therefore the surface current density magnitude |J_s|,
-    the quantity CST calls "surface current" (A/m), up to one constant per plane.
+    in A/m, up to one constant per plane.
 
 What is stored
     The magnitude is resampled bilinearly from the (non-uniform) FDTD mesh onto a regular grid of

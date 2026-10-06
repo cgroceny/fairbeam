@@ -1222,7 +1222,7 @@ class _Lint:
         if area >= max(t[0] for t in touched) * (1 - 1e-9):
             return
         # Two metal plates alone do not establish a resonant patch antenna. A centerd feed
-        # into a larger brick is a normal feed in other designs (including CST models).
+        # into a larger brick is a normal feed in other designs (including imported VBA macro models).
         if hi[k] - lo[k] > 0.02 * min(hi[u] - lo[u], hi[v] - lo[v]):
             return
         ground = next((t for t in touched if t[0] > area and t[1] != name), None)

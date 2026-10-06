@@ -19,6 +19,6 @@ body:
     id: example
     attributes:
       label: Example (optional)
-      description: An antenna, a screenshot, or how another tool (CST, HFSS, ...) does it.
+      description: An antenna, a screenshot, or how another tool does it.
     validations:
       required: false

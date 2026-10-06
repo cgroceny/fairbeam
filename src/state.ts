@@ -153,7 +153,7 @@ export function openBundle(raw: Bundle | unknown, label: string) {
   setLoadWarnings(v.warnings);
   // Preview rebuilds and result/geometry switches for the same model retain session visibility.
   // A different model starts with all of its parts visible. untrack: an effect that opens a bundle
-  // must not start depending on bundle() (a History click looped: #132 review).
+  // must not start depending on bundle() (a History click looped).
   if (untrack(bundle)?.model.id !== b.model.id) setHiddenParts(reconcile({}));
   setFarfieldIndex(0);
   const zIdx = b.mesh.z.findIndex((z) => z >= 0);

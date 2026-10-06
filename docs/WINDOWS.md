@@ -44,7 +44,7 @@ Fairbeam's own parameter and component suggestions still work.
 
 Use PowerShell. Python must match the wheels in the openEMS archive (3.13 or 3.14 for
 v0.37.0-rc3). The paths below use `C:\opt\openEMS` and `C:\code\fairbeam`; any other folder or
-drive works the same way (the verified install used `E:\opt\openEMS` and `E:\code\fairbeam`):
+drive works the same way:
 only `OPENEMS_INSTALL_PATH` has to point at the folder that contains `openEMS.exe`.
 
 1. **Tools** (skip what is installed):
@@ -58,7 +58,7 @@ only `OPENEMS_INSTALL_PATH` has to point at the folder that contains `openEMS.ex
 
    Open a new PowerShell afterwards so `PATH` is refreshed, then check `py -3.13 --version`. To put
    Python on another drive without changing the default `python`:
-   `winget install --id Python.Python.3.13 -e --scope user --override "/quiet InstallAllUsers=0 TargetDir=E:\Python313 PrependPath=0 Include_launcher=0"`
+   `winget install --id Python.Python.3.13 -e --scope user --override "/quiet InstallAllUsers=0 TargetDir=D:\Python313 PrependPath=0 Include_launcher=0"`
    (`py -3.13` still finds it).
 
 2. **The repository**, with LF line endings (the export checks compare files byte for byte; the
@@ -159,7 +159,7 @@ See [DESKTOP.md](DESKTOP.md) for the contract. On Windows:
   install, re-run, `-Repair`, `--app-only`, damaged downloads, no network, paths with spaces and
   non-ASCII characters. The server started from that runtime passes the same checks as step 4 and
   5 above (run, cancel, Ctrl+C with nothing left running).
-- The installed app (the 0.2 shell) was verified end to end: first-start install, run, cancel, quit, kill,
+- The installed app was verified end to end: first-start install, run, cancel, quit, kill,
   second start, an existing Python and uninstall. See the Windows list in [DESKTOP.md](DESKTOP.md).
 - An existing Python (the venv from the install steps above) needs `OPENEMS_INSTALL_PATH` in the
   user environment, as set in step 3. Without it the app shows "The chosen Python cannot run
@@ -182,6 +182,5 @@ See [DESKTOP.md](DESKTOP.md) for the contract. On Windows:
   its jobs; canceling then terminates the job object after the grace period (5 s), so openEMS
   stops without its graceful abort. The result is the same: no bundle, no processes left. (Not
   tried: every verified setup ran the server from a console.)
-- The installer is not code-signed, and there is no plan to buy a certificate: SmartScreen shows
-  "Windows protected your PC" on the first run of the downloaded `.exe` (More info › Run anyway).
-  The macOS build is signed and notarized. The options that were compared are on issue #2.
+- The installer is not code-signed: SmartScreen shows "Windows protected your PC" on the first run
+  of the downloaded `.exe` (More info › Run anyway). The macOS build is signed and notarized.

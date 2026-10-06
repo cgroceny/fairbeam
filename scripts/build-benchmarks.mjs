@@ -103,7 +103,7 @@ export function buildBenchmarks() {
   const entries = []; // { model, order, row }
   const push = (model, r) => entries.push({ model, ...r });
 
-  // 1. the committed Mac bundles
+  // 1. the committed Apple M5 Pro bundles
   for (const { file, b } of all) {
     const run = b.run;
     if (!run) continue;

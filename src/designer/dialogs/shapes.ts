@@ -1,5 +1,5 @@
-// Default shapes for the ribbon's Shapes buttons: on the work plane (WCS), sized from the design,
-// the way CST opens its shape dialogs when you press Esc instead of picking points.
+// Default shapes for the ribbon's Shapes buttons: on the work plane (WCS), sized from the design;
+// these are the defaults a shape dialog gets when Esc is pressed instead of picking points.
 import type { Axis, DesignPrimitive, Expr } from "../types";
 import { designScale, draft, file, type ShapeKind } from "../store";
 import { lastShapeMaterial, pickShapeMaterial, rememberShapeMaterial as remember } from "../shapeMaterial";

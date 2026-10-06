@@ -1,4 +1,4 @@
-// Sweep and optimizer defaults (UX audit 2.4): a new range is a window around the current value,
+// Sweep and optimizer defaults: a new range is a window around the current value,
 // never the parameter's whole min..max; the parameter to vary is a geometric one, not f0.
 //
 //   node --experimental-strip-types scripts/check-range-defaults.mjs

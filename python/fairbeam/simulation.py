@@ -1064,7 +1064,7 @@ def _pattern_directivity(e_norm, theta_deg, phi_deg, mirror_factor=1.0):
     """Maximum directivity from the pattern alone: 4 pi U_max / (integral of U over the sphere).
 
     openEMS' own Dmax divides by the power flowing through the NF2FF box; this estimate integrates
-    the transformed far field instead (as CST does). The two agree when the near-field data are
+    the transformed far field instead. The two agree when the near-field data are
     clean; a gap of more than ~0.1 dB points at boundary reflections or a coarse NF2FF surface.
     Needs a full sphere: theta 0..180 and a uniform phi grid over 360 degrees; otherwise ``None``.
     ``mirror_factor`` (2^m) converts the image-space integral to the physical half/quarter space.

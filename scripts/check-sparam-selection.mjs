@@ -1,5 +1,5 @@
 // The S-parameter selection never ends up empty, the designer's S-parameters tab always has the
-// picker, and the CST import entries say "file" (0.6.2: the maintainer's one-port design showed
+// picker, and the CST import entries say "file" (a one-port design showed
 // "choose in the picker" with no picker in sight).
 //
 //   node scripts/check-sparam-selection.mjs

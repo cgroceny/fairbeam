@@ -344,8 +344,8 @@ mod tests {
     fn uninstall_string_parsing() {
         let p = |s: &str| parse_uninstall_string(s);
         assert_eq!(
-            p(r#""C:\Users\İsmail Akdağ\AppData\Local\antenlab\uninstall.exe""#).as_deref(),
-            Some(r"C:\Users\İsmail Akdağ\AppData\Local\antenlab\uninstall.exe")
+            p(r#""C:\Users\İrem Çelik\AppData\Local\antenlab\uninstall.exe""#).as_deref(),
+            Some(r"C:\Users\İrem Çelik\AppData\Local\antenlab\uninstall.exe")
         );
         assert_eq!(
             p(r#"  "C:\Program Files\antenlab\uninstall.exe" /currentuser "#).as_deref(),
@@ -366,7 +366,7 @@ mod tests {
         assert_eq!(uninstall_args(r"C:\Users\x\AppData\Local\antenlab"), r"/S _?=C:\Users\x\AppData\Local\antenlab");
         // spaces stay unquoted, a trailing separator goes
         assert_eq!(uninstall_args(r"C:\Program Files\antenlab\"), r"/S _?=C:\Program Files\antenlab");
-        assert_eq!(uninstall_args(r"D:\İsmail Akdağ\antenlab"), r"/S _?=D:\İsmail Akdağ\antenlab");
+        assert_eq!(uninstall_args(r"D:\İrem Çelik\antenlab"), r"/S _?=D:\İrem Çelik\antenlab");
         assert!(uninstall_args(r"C:\a b").ends_with(r"_?=C:\a b"), "_?= is last");
     }
 

@@ -12,7 +12,7 @@ Classic 2.4 GHz design (Balanis, *Antenna Theory*, 4th ed., sec. 14.2):
 openEMS puts the resonance at ~2.39 GHz with S11 about -20 dB (docs/VALIDATION.md, section 2b).
 
 Feed: the microstrip line runs from the board edge (-x) into the notch. A 50 ohm lumped port sits
-across the substrate at the line end on the board edge (same as a CST discrete face port there). The
+across the substrate at the line end on the board edge. The
 S-parameters therefore include the line: S11 magnitude is reference-plane independent, phase is not.
 """
 

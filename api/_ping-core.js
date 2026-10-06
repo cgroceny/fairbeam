@@ -6,7 +6,7 @@
 //   - validates strictly (size, the eight schema fields, known counter keys, numeric caps);
 //   - replaces the install id by HMAC-SHA256(STATS_SALT, id), so the plain id is never stored;
 //   - accepts at most MAX_PER_ID_PER_DAY pings per hashed id per receiving day;
-//   - appends one line to data/<receiving day>.jsonl in the private stats repository through the
+//   - appends one line to data/<receiving day>.jsonl in the stats repository (STATS_REPO) through the
 //     GitHub Contents API, retrying when the file changed in between (SHA conflict).
 // Everything it needs comes in as `deps` ({env, fetch, now}), so the tests use a fake GitHub.
 import { createHmac } from "node:crypto";
@@ -49,7 +49,7 @@ export function validatePing(body, nowMs) {
   const want = [...SCHEMA.fields].sort();
   if (fields.length !== want.length || fields.some((f, i) => f !== want[i])) return fail("unexpected fields");
   const { schema, install_id, app_version, os, arch, gpu_available, day, counters } = body;
-  // installed apps of the older name (0.4 to 0.6) keep sending their own id; it is accepted, never written
+  // installed apps of earlier versions keep sending their own schema id; it is accepted, never written
   if (schema !== SCHEMA.schema && !SCHEMA.legacy_schemas.includes(schema)) return fail("schema");
   if (typeof install_id !== "string" || !UUID_V4.test(install_id)) return fail("install_id");
   if (typeof app_version !== "string" || !VERSION.test(app_version)) return fail("app_version");
@@ -122,7 +122,7 @@ export async function handlePing(request, deps) {
  * already) or "limited" (MAX_PER_ID_PER_DAY reached). Retries on a SHA conflict. */
 export async function appendLine(deps, receivedDay, line) {
   const { env, fetch: fetchImpl = globalThis.fetch } = deps;
-  const repo = env.STATS_REPO || "ismailakdag/fairbeam-stats";
+  const repo = env.STATS_REPO ?? "";
   const branch = env.STATS_BRANCH || "main";
   if (!REPO.test(repo)) throw new Error("STATS_REPO must be owner/name");
   const api = `https://api.github.com/repos/${repo}/contents/`;

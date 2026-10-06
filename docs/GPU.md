@@ -7,7 +7,7 @@
 npm run serve:gpu          # run server using the GPU build; the Run panel and the designer's Run dialog then offer an Engine picker
 ```
 
-The desktop app uses `~/opt/openEMS-gpu/venv` by itself when its openEMS lists the gpu engine (General settings › Start with the GPU build of openEMS, on by default; [DESKTOP.md](DESKTOP.md#shell-both)).
+The desktop app uses `~/opt/openEMS-gpu/venv` by itself when its openEMS lists the gpu engine (General settings › Start with the GPU build of openEMS, on by default; [DESKTOP.md](DESKTOP.md#shell)).
 
 Measured on an Apple M5 Pro, identical results on both engines (same stopping timestep, |S11|, Dmax, efficiency):
 
@@ -22,7 +22,7 @@ The committed `public/projects/patch-antenna.json` says 16.06 s: it predates the
 schedule and ran 18468 timesteps.
 
 The same models on a Windows desktop (Ryzen 9 7900X, CPU engine), and how its results compare with
-the Mac's bundles: [BENCHMARKS.md](BENCHMARKS.md).
+the Apple M5 Pro (Metal) bundles: [BENCHMARKS.md](BENCHMARKS.md).
 
 The engine actually used is read back from the openEMS log and stored in the bundle (`run.engine`); asking for `--engine gpu` on a build without it prints a warning and runs on the CPU. The fork does not support `--exact-endcriteria`; Fairbeam then falls back to the fork's own (on-device, fine-grained) energy check. The fork is a beta by a single developer: keep using the CPU build for reference results until you have compared the two on your structures.
 
@@ -65,12 +65,12 @@ same machine's CPU engine with 4 threads. The times are the solver times summed 
 | Wilkinson divider (3 runs) | 113,103 | 41.1 s | 4.4 s | 9 × | 825 |
 
 The results were compared with `scripts/bench_compare.py`:
-- **Against this machine's CPU engine.** Where both stop at the same timestep (patch antenna, 4 × 1
-  array, Wilkinson), every value agrees to 0.000 dB. The horn and the Sierpinski monopole stop 50
-  to 480 timesteps apart, because the fork checks the end criterion on the device. Dmax still
-  agrees within 0.009 dB and |S11| within 0.1 dB.
-- **Against the Mac's Metal bundles** (horn, 4 × 1 array and Wilkinson, all stopping at the same
-  timestep): within 0.1 dB in every S-parameter above −30 dB and 0.005 dB in Dmax.
+- **Against the CPU engine on the same machine.** Where both stop at the same timestep (patch
+  antenna, 4 × 1 array, Wilkinson), every value agrees to 0.000 dB. The horn and the Sierpinski
+  monopole stop 50 to 480 timesteps apart, because the fork checks the end criterion on the
+  device. Dmax still agrees within 0.009 dB and |S11| within 0.1 dB.
+- **Against the Apple M5 Pro Metal bundles** (horn, 4 × 1 array and Wilkinson, all stopping at
+  the same timestep): within 0.1 dB in every S-parameter above −30 dB and 0.005 dB in Dmax.
 
 All numbers are in [BENCHMARKS.md](BENCHMARKS.md).
 
@@ -104,10 +104,10 @@ folder.
 **In the desktop app** (no managed runtime needed):
 
 1. With the install script's default prefix (`C:\opt\openEMS-gpu`), or `\opt\openEMS-gpu` on
-   another fixed drive (`D:\opt\openEMS-gpu`, `E:\opt\openEMS-gpu`, …, for a PC whose C: is full;
-   C: is looked at first, then the other fixed drives in order), the app takes the GPU venv by
-   itself (General settings › **Start with the GPU build of openEMS**, on by default). The setup
-   screen's **Prefer the GPU build** names the folder it found. Only the existence of
+   another fixed drive (for example `D:\opt\openEMS-gpu`; C: is looked at first, then the other
+   fixed drives in order), the app takes the GPU venv by itself (General settings › **Start with
+   the GPU build of openEMS**, on by default). The setup screen's **Prefer the GPU build** names
+   the folder it found. Only the existence of
    `<drive>:\opt\openEMS-gpu\venv\Scripts\python.exe` is checked, and network, removable and
    optical drives are skipped. At another prefix, choose "Use an existing Python…" and pick
    `<prefix>\venv\Scripts\python.exe`, or edit `python` in
@@ -136,5 +136,5 @@ the current server or a running simulation. A supported existing GPU installatio
 without downloading another copy. A missing, unsupported or broken GPU runtime leaves the CPU
 path available. The Run dialog offers CPU and GPU only when the active runtime advertises both.
 
-The optional GPU build remains upstream beta software. Native macOS and Linux managed GPU
-installation are separate follow-ups; their existing external-runtime flows are unchanged.
+The optional GPU build remains upstream beta software. Managed GPU installation is currently
+available on Windows only; on macOS and Linux the existing external-runtime flows are unchanged.

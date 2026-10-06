@@ -1,4 +1,4 @@
-// The headline numbers of a run (UX audit bet 3: result summaries in Design): resonance, |S11| minimum,
+// The headline numbers of a run (the result summary in Design): resonance, |S11| minimum,
 // -10 dB bandwidth, far-field Dmax and realized gain at the resonance, total efficiency, and the
 // quality verdict. Read from a bundle when one is loaded, else from the project-index entry (which
 // only knows the band centres, the cell count and the verdict). Pure (no Solid, no DOM), so

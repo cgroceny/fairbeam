@@ -137,7 +137,7 @@ try {
       const pendingOpen = openUserProject(isFile
         ? { name: 'picked.json', text: () => slowLoad.promise }
         : 'picked.json');
-      // Reproduce the review: the preview resolves DURING the project fetch/file read.
+      // Reproduce the race: the preview resolves DURING the project fetch/file read.
       slowPreview.resolve({ bundle: preview });
       await pendingPreview;
       assert.equal(state.source(), 'previous.json', `${path}: pending preview is ignored`);

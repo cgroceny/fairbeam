@@ -10,7 +10,7 @@ import { primitiveGeometry } from "../src/scene/geometry.ts";
 const box = (name, start, stop, extra = {}) => ({ name, material: "Cu", primitives: [{ kind: "box", exact: true, start, stop }], ...extra });
 const design = () => ({ parts: [box("brick", [-50, 50, 0], [-27, 63, 0]), box("sub", [-50, 50, 0], [50, 100, 1.6]), box("patch", [-10, 60, 1.6], [10, 80, 1.6])] });
 
-// maintainer's case: A = brick's far corner (-27, 63, 0), B = (-50, 50, 0) -> the brick (the owner of A) moves by B - A
+// reported case: A = brick's far corner (-27, 63, 0), B = (-50, 50, 0) -> the brick (the owner of A) moves by B - A
 assert.deepEqual(alignOffset([-27, 63, 0], [-50, 50, 0]), [-23, -13, 0]);
 // all three axes, float noise removed, no negative zero
 assert.deepEqual(alignOffset([1, 2, 3], [4, 6, 3.1]), [3, 4, 0.1]);

@@ -1,6 +1,6 @@
 {
  "compared": "cuda",
- "ref": ".sim/bench/t4",
+ "ref": "<benchmark-root>/t4",
  "models": [
   {
    "bundle": "patch-antenna",

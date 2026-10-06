@@ -11,7 +11,7 @@ assert.match(planParameterSweep({ ...base, sequences: [{ name: "A", axes: [{ key
 assert.equal(planParameterSweep({ ...base, sequences: [...base.sequences, { name: "B", axes: [{ key: "w", kind: "list", list: "w / 2, 10" }] }] }, design, { w: 10 }).count, 5);
 assert.match(planParameterSweep({ ...base, sequences: [...base.sequences, base.sequences[0]] }, design, { w: 10 }).error, /Duplicate sequence name/);
 assert.match(planParameterSweep({ ...base, sequences: [{ name: "A", axes: [{ key: "w", kind: "range", start: "10", stop: "10.0000000001", steps: "3" }] }] }, design, { w: 10 }).error, /duplicate values/);
-// server parity (#151 review): sequence and axis caps, int parameters take whole samples only
+// server parity: sequence and axis caps, int parameters take whole samples only
 import { MAX_SWEEP_SEQUENCES, MAX_SEQUENCE_AXES } from "../src/designer/sweepPlan.ts";
 assert.equal(MAX_SWEEP_SEQUENCES, 100); assert.equal(MAX_SEQUENCE_AXES, 6);
 const manySeq = Array.from({ length: 101 }, (_, i) => ({ name: `S${i}`, axes: [{ key: "w", kind: "list", list: "10" }] }));

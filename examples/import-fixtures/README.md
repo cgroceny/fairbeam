@@ -19,7 +19,7 @@ must import as the same complex S11:
 
 | File | Format |
 | --- | --- |
-| `csv/s11_comma_re_im.csv` | plain comma CSV `Frequency (GHz),S11 Real,S11 Imaginary` (issue #100) |
+| `csv/s11_comma_re_im.csv` | plain comma CSV `Frequency (GHz),S11 Real,S11 Imaginary` |
 | `csv/s11_quoted_re_im_crlf.csv` | fully quoted CSV with commas and doubled quotes inside names (`"S1,1 ""meas, run 2"" [Imaginary Part]"`), quoted numbers, CRLF |
 | `csv/s11_semicolon_db_phase.csv` | European CSV `Freq [MHz];\|S11\| (dB);S11 Phase (deg)` with decimal commas |
 | `csv/s11_s21_tab_re_im.txt` | tab separated `# f (GHz)  Re(S11)  Im(S11)  S21_re  S21_im`: one complex curve per S-parameter, S11 used |

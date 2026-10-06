@@ -160,11 +160,11 @@ in a warning banner (`.banner-warn`) with a details list.
   | Series 8 | `--al-series-8` | red |
 
   Series always take colors in this order, so the same slot means the same thing across charts. Series 3 falls below 3:1 contrast on the light surface, so whenever it is used it **must** have a direct label, not only a legend swatch.
-- **Up to eight series** (compared runs or projects). The eight slots are the dataviz reference palette and pass its validator on the *adjacent* pairlist in both themes (worst CVD ΔE 9.1 light / 8.4 dark, normal vision ≥ 19), which is the pairlist for line charts; slots 4 and 5 are also below 3:1 on the light surface. Past four series the chart drops the direct labels, so the relief is the legend, the tooltip that lists every series, and the table view (every chart has one). A ninth series is never a generated hue: comparisons stop at eight.
+- **Up to eight series** (compared runs or projects). The eight slots pass a color-vision and contrast check on *adjacent* pairs in both themes (worst CVD ΔE 9.1 light / 8.4 dark, normal vision ≥ 19), the pairs that matter for line charts; slots 4 and 5 are also below 3:1 on the light surface. Past four series the chart drops the direct labels, so the relief is the legend, the tooltip that lists every series, and the table view (every chart has one). A ninth series is never a generated hue: comparisons stop at eight.
 - **Composite encoding** where one color stands for one entity with several curves: compared multi-port runs draw each run in its color and each picked S_ij with its own dash (solid, dashed, dotted); legend and tooltip swatches repeat the dash.
 - **Sequential data** uses the blue ramp `--al-seq-0` to `--al-seq-5`. In light mode high values are darker. In dark mode the ramp is re-selected so high values are lighter; it is not simply reversed.
 - **3D field quantities** (the directivity surface and the surface current) use the field map `--al-field-0` to `--al-field-8` (Turbo, low → high, the same in both themes). The directivity surface still encodes dB in its radius too, so color is never the only channel.
-- The palette comes from the validated reference palette (dataviz). Do not introduce new chart colors in components; add a token instead.
+- The palette is checked for contrast and color-vision differences. Do not introduce new chart colors in components; add a token instead.
 
 ## 3D view
 

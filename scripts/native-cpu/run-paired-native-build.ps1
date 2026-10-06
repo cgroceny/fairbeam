@@ -238,7 +238,6 @@ function Copy-Dlls([string]$From, [string]$To) {
 
 if ($RunName -notmatch '^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$') { throw 'RunName must be 1-64 simple filename characters.' }
 $StudyRoot = Resolve-Dir $StudyRoot 'Study root'
-if (-not $StudyRoot.StartsWith('E:\', [StringComparison]::OrdinalIgnoreCase)) { throw "Study outputs must stay under E:\; got $StudyRoot" }
 $VcpkgRoot = Resolve-Dir $VcpkgRoot 'vcpkg source'
 $VcpkgManifestRoot = Resolve-Dir $VcpkgManifestRoot 'vcpkg manifest'
 $VcpkgTripletsRoot = Resolve-Dir $VcpkgTripletsRoot 'vcpkg triplets'
