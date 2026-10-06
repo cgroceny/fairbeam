@@ -1307,7 +1307,7 @@ python. The checks that a browser cannot do are in [DESKTOP-CHECKLIST.md](DESKTO
   efficiency slightly above 100 %, and the excess grows with a finer mesh. The cause is under
   investigation (issue #12); results with an efficiency above 100 % carry a QA warning.
 - **Unsigned Windows installer.** The macOS app is signed and notarized (since 0.4.4) and opens with
-  a double-click, but the Windows installer is not signed yet: SmartScreen warns on the first run
+  a double-click, but the Windows installer is not code-signed: SmartScreen warns on the first run
   (More info › Run anyway; [DESKTOP.md](DESKTOP.md)).
 
 ## Feedback

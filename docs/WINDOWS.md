@@ -182,5 +182,6 @@ See [DESKTOP.md](DESKTOP.md) for the contract. On Windows:
   its jobs; canceling then terminates the job object after the grace period (5 s), so openEMS
   stops without its graceful abort. The result is the same: no bundle, no processes left. (Not
   tried: every verified setup ran the server from a console.)
-- The installer is not signed yet: SmartScreen warns on the first run of the downloaded `.exe`.
-  (The macOS build has been signed and notarized since 0.4.4; Windows signing is still open.)
+- The installer is not code-signed, and there is no plan to buy a certificate: SmartScreen shows
+  "Windows protected your PC" on the first run of the downloaded `.exe` (More info › Run anyway).
+  The macOS build is signed and notarized. The options that were compared are on issue #2.

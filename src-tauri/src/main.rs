@@ -529,7 +529,10 @@ mod external_link_tests {
     #[test]
     fn opens_only_fixed_links_by_key() {
         assert_eq!(external_url("developer"), Some("https://akdag.dev"));
-        // only public places: the source repository is private
+        assert_eq!(
+            external_url("source"),
+            Some("https://github.com/ismailakdag/fairbeam")
+        );
         assert_eq!(
             external_url("repository"),
             Some("https://github.com/ismailakdag/fairbeam-releases")
@@ -1480,8 +1483,9 @@ fn open_url(url: &'static str) -> Result<(), String> {
 fn external_url(link: &str) -> Option<&'static str> {
     Some(match link {
         "developer" => "https://akdag.dev",
-        // public places only (the source repository is private): the releases repository, the
+        // the source repository, the releases repository (installers and the issue forms), the
         // getting-started guide on the website and the issue forms of the public tracker
+        "source" => "https://github.com/ismailakdag/fairbeam",
         "repository" => "https://github.com/ismailakdag/fairbeam-releases",
         "docs" => "https://fairbeam.org/guide.html",
         "issues" => "https://github.com/ismailakdag/fairbeam-releases/issues/new/choose",

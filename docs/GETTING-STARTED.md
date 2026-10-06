@@ -19,7 +19,7 @@ Download the installer from [fairbeam.org](https://fairbeam.org) or the
 - **macOS** (Apple silicon, macOS 27 or newer): open the `.dmg` and drag Fairbeam to Applications.
   The app is signed and notarized by Apple (since 0.4.4), so it opens with a normal double-click.
 - **Windows** (10/11, x64): run the `-setup.exe`. It installs for your user, without an
-  administrator prompt. The installer is not signed yet, so SmartScreen shows "Windows protected
+  administrator prompt. The installer is not code-signed, so SmartScreen shows "Windows protected
   your PC": choose **More info › Run anyway**.
 
 **First start.** Fairbeam needs its simulation runtime (Python, openEMS and the Fairbeam

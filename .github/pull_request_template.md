@@ -11,4 +11,3 @@
 <!-- See AI_POLICY.md. Delete the lines that don't apply. -->
 - [ ] No AI tools were used.
 - [ ] AI tools were used. Tool and model: … ; what they did: …
-- [ ] I understand every line of this change and can explain it in review.
