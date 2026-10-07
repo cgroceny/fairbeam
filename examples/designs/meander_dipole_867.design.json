@@ -3,7 +3,7 @@
   "model": {
     "id": "meander-dipole-867",
     "name": "Printed meander dipole (867 MHz)",
-    "description": "Vertical printed dipole for a UAV with a non-metal (composite or foam) fuselage: it needs no ground plane. Each arm is a straight strip from the centre feed that ends in a meandered tip, printed as copper on one face of a 1.6 mm FR-4 board with a blade-like outline (x: flight axis, +x aft; z: up). A balanced 50 ohm lumped port bridges the centre gap; a real build needs a balun or a common-mode choke, and the coax is not modelled. Tuned about 1.3 % above 867 MHz for the 863-870 MHz SRD / LoRa band, as a margin for a radome. See examples/designs/README.md in the fairbeam repository."
+    "description": "Vertical printed dipole for a UAV with a non-metal (composite or foam) fuselage: it needs no ground plane. Each arm is a straight strip from the centre feed that ends in a meandered tip, printed as copper on one face of a 1.6 mm FR-4 board with a blade-like outline (x: flight axis, +x aft; z: up). A balanced 50 ohm lumped port bridges the centre gap; a real build needs a balun or a common-mode choke, and the coax is not modelled. Tuned about 1.3 % above 867 MHz for the 863-870 MHz SRD / LoRa band, as a margin for a radome. Its tuning, its results and how to scale it to other bands are described with the example designs in the Fairbeam documentation."
   },
   "params": [
     {"key": "f0", "default": 0.867, "label": "Design frequency", "unit": "GHz", "min": 0.1, "max": 6},

@@ -41,11 +41,16 @@ export async function saveRenderFile(designId: string, name: string, blob: Blob)
   return { name: result.name, path: result.path, via: "download" };
 }
 
-/** Open the design's renders folder in the system file manager (the server does it). */
-export async function openRendersFolder(designId: string): Promise<void> {
+/** Open the design's renders folder in the system file manager (the server does it); the folder's absolute path on the
+ *  computer the server runs on. */
+export async function openRendersFolder(designId: string): Promise<string> {
   const response = await post(`/renders/${encodeURIComponent(renderFolderId(designId))}/open`, {});
   if (!response.ok) throw new Error(((await response.json().catch(() => null)) as { error?: string } | null)?.error ?? `HTTP ${response.status}`);
+  return ((await response.json().catch(() => null)) as { dir?: string } | null)?.dir ?? `renders/${renderFolderId(designId)}`;
 }
+
+/** The folder of a saved file's absolute path (either separator). */
+export const folderOf = (path: string): string => path.replace(/[\\/][^\\/]*$/, "");
 
 /** Put a PNG on the clipboard. False when the browser or webview does not allow it. */
 export async function copyImageToClipboard(blob: Blob): Promise<boolean> {

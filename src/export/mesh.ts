@@ -45,6 +45,8 @@ export function exportGeometry(primitive: Primitive): THREE.BufferGeometry {
 
 /** Default thickness of a metal sheet when the user asks for solids: 1 oz copper. */
 export const DEFAULT_SHEET_THICKNESS_UM = 35;
+/** The sheet thicknesses the export dialog accepts (µm): 1 µm to 5 mm. */
+export const SHEET_THICKNESS_UM = { min: 1, max: 5000 } as const;
 
 export interface MeshOptions {
   /** Thickness (micrometres) given to zero-thickness sheets; 0 or absent keeps them flat, two-sided surfaces. */
@@ -231,7 +233,8 @@ export function binaryStlParts(source: Bundle, options: MeshOptions = {}): { nam
     for (const item of items) parts.set(item.part, [...(parts.get(item.part) ?? []), item]);
     const used = new Set<string>();
     return [...parts].map(([part, list]) => {
-      const stem = (part.name || "solid").replace(/[^a-z0-9_-]+/gi, "_").replace(/^_+|_+$/g, "").slice(0, 60) || "solid";
+      // the label the tree shows (Ground plane.stl), else the internal name
+      const stem = (part.label || part.name || "solid").normalize("NFKD").replace(/[̀-ͯ]/g, "").replace(/[^a-z0-9_-]+/gi, "_").replace(/^_+|_+$/g, "").slice(0, 60) || "solid";
       let name = `${stem}.stl`;
       for (let n = 2; used.has(name.toLowerCase()); n++) name = `${stem}_${n}.stl`;
       used.add(name.toLowerCase());

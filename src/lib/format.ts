@@ -2,8 +2,34 @@
 // Not for inputs or exported files: `numPlain` is the locale-independent formatter for text that
 // goes into files (lib/run.ts writes the report's convergence and efficiency sentences with it).
 import { fmt, t, decimalComma } from "../i18n/index.ts";
+import { ghzDigits } from "./ghzDigits.ts";
 
 export const GHz = (hz: number, digits = 3) => `${fmt.fixed(hz / 1e9, digits)} GHz`;
+
+/** Four significant digits of a frequency in GHz (lib/ghzDigits.ts, locale-free). */
+export { ghzDigits };
+/** A frequency given in GHz, four significant digits, with the decimal point (copied data). */
+export const ghzPlain = (ghz: number) => (Number.isFinite(ghz) ? ghz.toFixed(ghzDigits(ghz)) : "—");
+/** A frequency given in GHz, four significant digits, in the UI language's decimal separator. */
+export const ghzText = (ghz: number) => (Number.isFinite(ghz) ? fmt.fixed(ghz, ghzDigits(ghz)) : "—");
+/** A frequency given in Hz as display text with its unit: "2.404 GHz". */
+export const freqText = (hz: number) => `${ghzText(hz / 1e9)} GHz`;
+
+/** A value with its unit that never breaks between the two ("−1.22 dB", "75.5 %"): a no-break space. */
+export const withUnit = (value: string, unit: string) => `${value} ${unit}`;
+
+/** The decimals of a table column of numbers (a parameter across runs): as many as its most precise
+ * value needs, at most `max`, so every value is shown as it was set and the column reads alike
+ * (0.4660 / 0.4194 / 0.5126, not 0.466 / 0.4194 / 0.5126). Non-numbers are ignored. */
+export function columnDecimals(values: readonly unknown[], max = 4): number {
+  let digits = 0;
+  for (const v of values) {
+    if (typeof v !== "number" || !Number.isFinite(v)) continue;
+    const s = v.toFixed(max).replace(/0+$/, "");
+    digits = Math.max(digits, s.length - s.indexOf(".") - 1);
+  }
+  return Math.min(max, digits);
+}
 
 export function num(v: number | null | undefined, digits = 2): string {
   if (v === null || v === undefined || !Number.isFinite(v)) return "—";
@@ -50,9 +76,3 @@ export function dims(bbox: [number[], number[]]): string {
   return d.join(" × ") + " mm";
 }
 
-export const BOUNDARY_LABEL: Record<string, string> = {
-  MUR: "Mur ABC",
-  PML_8: "PML (8)",
-  PEC: "PEC",
-  PMC: "PMC",
-};

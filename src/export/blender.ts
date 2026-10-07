@@ -3,11 +3,12 @@ import * as THREE from "three";
 import { GLTFExporter } from "three/addons/exporters/GLTFExporter.js";
 import { strToU8, zipSync } from "fflate";
 import type { Bundle } from "../types";
+import { designStem } from "../lib/exportNames.ts";
 import { buildParts, type SceneColors } from "../scene/geometry.ts";
 import { prepareSheets, sheetThicknessUnits, validateMeshPrimitive, validMeshGeometry, type MeshOptions } from "./mesh.ts";
 
 export function blenderFileStem(id: string): string {
-  return id.replace(/[^a-z0-9_-]+/gi, "_").slice(0, 80).replace(/^_+|_+$/g, "") || "fairbeam";
+  return designStem(id);
 }
 
 /** Uses the viewport's tessellation (including affine transforms), never a bounding-box substitute. */

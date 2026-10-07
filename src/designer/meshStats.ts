@@ -93,14 +93,18 @@ export interface TimeEstimate {
  * ports run one after the other (multiply by their number). The throughput is openEMS's MCells/s,
  * which counts the line product (MeshStats.nodes), not the displayed cells: a 53 × 55 × 37 patch
  * run reported 1480 timesteps at 28.8 MCells/s in 5.54 s = 107 855 × 1480 / 28.8e6 (with the
- * 101 088 cells it would be 5.19 s). */
-export function estimateTime(b: Bundle | null | undefined, engine = "cpu", ports = 1): TimeEstimate | null {
+ * 101 088 cells it would be 5.19 s).
+ *
+ * `opts.maxTimesteps` is the limit the run will have, when the caller knows it better than the bundle:
+ * a design's own `simulation.max_timesteps` (null or undefined: none set, the server sizes the limit
+ * to the pulse and its decay, so the estimate is not capped). Without it the bundle's limit applies. */
+export function estimateTime(b: Bundle | null | undefined, engine = "cpu", ports = 1, opts?: { maxTimesteps?: number | null }): TimeEstimate | null {
   const s = meshStats(b);
   if (!s || !b) return null;
   const ex = b.solver.excitation;
   const fc = (ex.f_min + ex.f_max) / 2;
   if (!(fc > 0) || !(s.dt > 0)) return null;
-  const cap = b.solver.max_timesteps || Infinity;
+  const cap = (opts && "maxTimesteps" in opts ? opts.maxTimesteps : b.solver.max_timesteps) || Infinity;
   // the run cannot end before the excitation pulse does, and needs time to decay after it: the pulse
   // (10 tau, tau = 1 / (sqrt(2) pi f max / 2.76), fairbeam.excitation) at the timestep openEMS really
   // takes (0.8 to 0.96 of the Courant estimate: design.DT_SAFETY) bounds the range from below

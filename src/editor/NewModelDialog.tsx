@@ -3,7 +3,8 @@ import { X } from "lucide-solid";
 import { useModal } from "../lib/dialog";
 import { radioGroupKeys } from "../lib/a11y";
 import { ApiError } from "../runner/api";
-import { models } from "../runner/store";
+import { health, models } from "../runner/store";
+import { BUNDLED_EXAMPLE_IDS, freeDesignId } from "../lib/designId";
 import { createModel, dialog, newModelKind, file, loadTemplates, setDialog, setPanelTab, templates } from "./store";
 import { createDesign } from "../designer/store";
 import { t } from "../i18n";
@@ -17,11 +18,18 @@ function WithFile(props: { id: string; file: string }) {
 const ID_RE = /^[a-z][a-z0-9_]{1,40}$/;
 /** Windows device names (python/fairbeam/modelfiles.py RESERVED_ID_RE) */
 const RESERVED_ID_RE = /^(con|prn|aux|nul|com[0-9]|lpt[0-9])$/;
-const suggestId = (name: string) =>
-  name.toLowerCase().normalize("NFKD").replace(/[^a-z0-9]+/g, "_").replace(/^[^a-z]+/, "").replace(/_+$/, "").slice(0, 41);
+const bundledIds = new Set<string>(BUNDLED_EXAMPLE_IDS);
 
-/** "New model" (from a template) and "Duplicate" (of the open model) dialog. */
-export default function NewModelDialog(props: { onPythonCreated?: (id: string) => void } = {}) {
+/** Where a new Python model is saved: the workspace's models folder (the run server's), not a
+ * source-tree path. */
+const modelFile = (name: string) => {
+  const dir = health()?.models_dir?.replace(/[\\/]+$/, "");
+  return dir ? `${dir}${dir.includes("\\") ? "\\" : "/"}${name}` : `models/${name}`;
+};
+
+/** "New model" (from a template) and "Duplicate" (of the open model) dialog. `opensDesign`: Start's
+ * "New Python model…", which opens the new model as a linked design in the designer. */
+export default function NewModelDialog(props: { onPythonCreated?: (id: string) => void; opensDesign?: boolean } = {}) {
   let box: HTMLDivElement | undefined;
   let nameInput: HTMLInputElement | undefined;
   const duplicate = () => dialog() === "duplicate";
@@ -45,6 +53,7 @@ export default function NewModelDialog(props: { onPythonCreated?: (id: string) =
     if (!v) return "";
     if (!ID_RE.test(v)) return t("editor.newModel.error.id");
     if (RESERVED_ID_RE.test(v)) return t("editor.newModel.error.reserved");
+    if (bundledIds.has(v)) return t("designId.bundled");
     if (models().some((m) => m.key === v)) return t("editor.newModel.error.exists");
     return "";
   });
@@ -87,7 +96,7 @@ export default function NewModelDialog(props: { onPythonCreated?: (id: string) =
                 ? <WithFile id="editor.newModel.duplicateDesc" file={source()?.file ?? ""} />
                 : kind() === "design"
                   ? <WithFile id="editor.newModel.designDesc" file="<id>.design.json" />
-                  : <WithFile id="editor.newModel.pythonDesc" file="python/models/<id>.py" />}
+                  : <WithFile id={props.opensDesign ? "editor.newModel.pythonDesignDesc" : "editor.newModel.pythonDesc"} file={modelFile("<id>.py")} />}
             </p>
           </div>
           <button class="icon-btn" onClick={close} aria-label={t("common.close")}><X size={16} /></button>
@@ -97,14 +106,14 @@ export default function NewModelDialog(props: { onPythonCreated?: (id: string) =
             <label class="field">
               <span>{t("editor.newModel.displayName")}</span>
               <input autocomplete="off" ref={nameInput} class="field-text" type="text" maxLength={80} value={name()} placeholder={t("editor.newModel.namePlaceholder")}
-                onInput={(e) => { setName(e.currentTarget.value); if (!idTouched()) setId(suggestId(e.currentTarget.value)); }} />
+                onInput={(e) => { setName(e.currentTarget.value); if (!idTouched()) setId(freeDesignId(e.currentTarget.value, models().map((m) => m.key)).id); }} />
             </label>
             <label class="field">
               <span>{t("editor.newModel.id")} <span class="muted">{t("editor.newModel.idNote")}</span></span>
               <input autocomplete="off" type="text" maxLength={41} value={id()} aria-invalid={!!(idError() || errors().id)} aria-describedby="nm-id-hint"
                 onInput={(e) => { setIdTouched(true); setId(e.currentTarget.value); }} />
               <span id="nm-id-hint" class={idError() || errors().id ? "rp-error nm-hint" : "rp-hint nm-hint"}>
-                {idError() || errors().id || (id() ? (kind() === "design" && !duplicate() ? `${id()}.design.json` : `python/models/${id()}.py`) : t("editor.newModel.idHint"))}
+                {idError() || errors().id || (id() ? (kind() === "design" && !duplicate() ? `${id()}.design.json` : `${id()}.py`) : t("editor.newModel.idHint"))}
               </span>
             </label>
           </div>

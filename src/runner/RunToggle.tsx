@@ -14,13 +14,17 @@ import { t } from "../i18n";
 export default function RunToggle() {
   const busy = () => !!live.job && !isTerminal(live.job.status);
   const designing = () => appMode() === "design" && !!designFile();
+  // a toggle only where it shows and hides the Run panel: in the designer it opens the Run dialog
+  // (never drawn as "on"), on Start it goes to the Python models
+  const toggles = () => appMode() !== "home" && !designing();
   return (
     <button
       id="run-toggle"
       class="btn"
-      classList={{ "btn-primary": designing(), "btn-ghost": !designing(), "rs-toggle-on": runOpen() && appMode() !== "home" }}
-      aria-expanded={appMode() === "home" ? undefined : runOpen()}
-      aria-controls={appMode() === "home" ? undefined : "run-panel"}
+      classList={{ "btn-primary": designing(), "btn-ghost": !designing(), "rs-toggle-on": toggles() && runOpen() }}
+      aria-expanded={toggles() ? runOpen() : undefined}
+      aria-controls={toggles() ? "run-panel" : undefined}
+      aria-haspopup={designing() ? "dialog" : undefined}
       onClick={() => {
         // with a design open, run what is on screen: the designer's Run saves and checks first
         // (the Run panel would submit the file as last saved, without the unsaved edits)
@@ -31,8 +35,8 @@ export default function RunToggle() {
         if (appMode() === "home") { void runPythonFromStart(); return; }
         if (runOpen()) closeRunPanel(); else openRunPanel();
       }}
-      title={runOpen() ? t("runToggle.closeTitle") : t(designing() ? "runToggle.openTitle" : "runToggle.modelTitle")}
-      aria-label={runOpen() ? t("runToggle.closeTitle") : t(designing() ? "runToggle.openAria" : "runToggle.modelAria")}
+      title={toggles() && runOpen() ? t("runToggle.closeTitle") : t(designing() ? "runToggle.openTitle" : "runToggle.modelTitle")}
+      aria-label={toggles() && runOpen() ? t("runToggle.closeTitle") : t(designing() ? "runToggle.openAria" : "runToggle.modelAria")}
     >
       <Show when={busy()} fallback={<Play size={14} aria-hidden="true" />}>
         <LoaderCircle size={14} class="rs-spin" aria-hidden="true" />

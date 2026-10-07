@@ -2,21 +2,23 @@
 // nodes they open as main-area tabs (the surface currents show in the 3D view).
 import { designResult } from "../runner/designRun";
 import { nearestIndex } from "../lib/rf";
-import { bundle, farfieldIndex, setPackageOpen, source } from "../state";
+import { farfieldIndex, setPackageOpen } from "../state";
 import type { Bundle, FarField } from "../types";
 import { appMode } from "../workspace";
 import type { RunContent } from "./navModel";
 import { focusResult, resultFocus, type ResultView } from "./resultFocus";
 import { runContentOf } from "./runResults";
+import { designResultState } from "./activeResult";
 import { t } from "../i18n";
 
 export const ribbonResult = () => resultFocus() ?? (designResult() ? { file: designResult()!.file, view: "sparams" as const } : null);
 
-/** Export only the focused run already shown in 3D, never a preview or the previous run while loading. */
-export const ribbonExportReady = () => {
-  const result = resultFocus();
-  return appMode() === "design" && !!result && source() === result.file && !!bundle()?.results && !bundle()?.preview;
-};
+/** The PDF report and Package export the design's run: the one it shows, else its latest completed run, whatever the
+ * 3D view shows (the geometry preview after an edit or a visit to Examples; designer/activeResult.ts). */
+export const ribbonExportReady = () => appMode() === "design" && !!designResultState().bundle;
+
+/** Why the PDF report and Package are disabled: the latest run is still being read, or the design has none. */
+export const ribbonExportReason = () => (designResultState().loading ? t("package.readingRun") : t("package.noRunYet"));
 
 export interface Availability { ok: boolean; reason: string }
 

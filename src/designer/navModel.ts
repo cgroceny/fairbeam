@@ -9,6 +9,7 @@ import type { Selection } from "./types";
 import { newestResults } from "../runner/resultsIndex.ts";
 import { projectLabels } from "../lib/projectLabels.ts";
 import { studySub } from "./convergence.ts";
+import { freqText } from "../lib/format.ts";
 import { fmt, localeTag, t } from "../i18n/index.ts";
 
 export type NavSection = "parameters" | "components" | "materials" | "ports" | "lumped" | "results" | "optimizations";
@@ -40,6 +41,9 @@ export interface NavNode {
   /** a run's headline numbers ("2.415 GHz · −15.0 dB · 6.6 dBi"), on a second line under its name */
   metrics?: string;
   title?: string;
+  /** an empty section's whole hint ("none yet: Simulation › Run"): the row's tooltip and accessible
+   * description, while `sub` shows its short form ("none yet") */
+  hint?: string;
   /** Searchable geometry labels retained when a single-solid part uses one visible row. */
   searchText?: string;
   icon?: NavIcon;
@@ -167,7 +171,7 @@ export function sweepNode(sweep: SweepTreeMeta, runs: readonly RunRow[], content
     id: `sweep:${sweep.id}`,
     label: t("tree.convergence"),
     sub: studySub(sweep),
-    title: t("tree.sweep.compareAll", { name: sweep.name }),
+    title: t("tree.sweep.title", { name: sweep.name }),
     icon: "group",
     action: { kind: "sweep", id: sweep.id },
     open: false,
@@ -178,7 +182,8 @@ export function sweepNode(sweep: SweepTreeMeta, runs: readonly RunRow[], content
     id: `sweep:${sweep.id}`,
     label: t("tree.sweep", { name: sweep.name }),
     sub: [t("tree.sweep.runs", { count: sweep.total }), status, t("tree.sweep.done", { count: sweep.done }), ...(sweep.failed ? [t("tree.sweep.failed", { count: sweep.failed })] : [])].join(" · "),
-    title: t("tree.sweep.compareAll", { name: sweep.id }),
+    // a click opens or closes the folder like any other; double-click (or its menu) compares all runs
+    title: t("tree.sweep.title", { name: sweep.name }),
     icon: "group",
     action: { kind: "sweep", id: sweep.id },
     open: false,
@@ -198,15 +203,30 @@ export function resultNodes(runs: readonly RunRow[], jobs: Parameters<typeof gro
 const SEP = " · ";
 const stamp = (created: string | undefined) => /^(\d{4}-\d{2}-\d{2})[T ](\d{2}:\d{2})/.exec(created ?? "");
 
+/** A sweep point as its label names it: "k=0.466", "w=12, h=1.6" (four significant digits). */
+export function sweepPointText(values: Readonly<Record<string, number | string>>): string {
+  return Object.entries(values).map(([k, v]) => `${k}=${typeof v === "number" ? +v.toPrecision(4) : v}`).join(", ");
+}
+
 /** The runs of one model, newest first: the picker label (projectLabels: the name, plus the engine,
  * parameters or time when names repeat) and a sub line with when and where it ran, minus what the
- * label already says. `finished` holds sub-second completion times from the job history. */
-export function runRows(entries: readonly ProjectIndexEntry[], model: string, finished: ReadonlyMap<string, number> = new Map()): RunRow[] {
+ * label already says. `finished` holds sub-second completion times from the job history.
+ * `sweepValues` (bundle file -> its sweep point, from the job history): a sweep's run is named by its
+ * parameter values ("Dip C · k=0.466"), also the point at the design's own value, which has no
+ * parameter of its own in the index and would otherwise be told apart by engine and time. */
+export function runRows(entries: readonly ProjectIndexEntry[], model: string, finished: ReadonlyMap<string, number> = new Map(),
+  sweepValues: ReadonlyMap<string, Readonly<Record<string, number | string>>> = new Map()): RunRow[] {
   const runs = newestResults(entries, model, finished);
   const labels = projectLabels(runs);
   const days = new Set(runs.map((r) => stamp(r.created)?.[1]).filter(Boolean));
   return runs.map((r) => {
-    const label = labels.get(r.file) ?? r.file;
+    const point = sweepValues.get(r.file);
+    // the server names a point that changes a parameter after it ("Dip C · k=0.4194"): that name is
+    // kept; the point at the design's own value has the plain name, and gets its value added
+    const name = (r.name ?? "").trim() || r.file.replace(/\.json$/i, "");
+    const label = point && Object.keys(point).length
+      ? (Object.keys(point).every((k) => name.includes(`${k}=`)) ? name : `${name}${SEP}${sweepPointText(point)}`)
+      : labels.get(r.file) ?? r.file;
     const m = stamp(r.created);
     // the label may carry the time already (with seconds, or the date) when names repeat
     const when = !m || label.includes(m[2]) ? "" : days.size > 1 ? `${m[1].slice(5)} ${m[2]}` : m[2];
@@ -242,7 +262,8 @@ export function runContent(b: unknown): RunContent {
   };
 }
 
-const ghz = (f: number) => `${fmt.num(+(f / 1e9).toPrecision(4), 9)} GHz`;
+// a monitor frequency as every result view prints it (four significant digits: 2.400 GHz)
+const ghz = freqText;
 
 /** The children of a run node: 1D results, far fields, 2D/3D results, tables and the log
  * (result folders). Far fields and currents are listed once the run's bundle has been read. */

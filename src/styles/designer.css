@@ -53,6 +53,18 @@
 .dz-inspector { padding: var(--al-space-3); min-width: 0; }
 .dz-form { display: grid; gap: var(--al-space-3); }
 .dz-h { font-size: var(--al-text-ui); font-weight: 600; }
+/* Label/value facts in Properties (a run, a parameter, an optimization): muted label left, value
+   right, the same rows as the example panel's key/value list (.kv in app.css). */
+.dz-facts {
+  display: grid; grid-template-columns: minmax(88px, 1fr) minmax(0, max-content);
+  gap: var(--al-space-1) var(--al-space-3); margin: 0; font-size: var(--al-text-sm); line-height: 20px;
+}
+.dz-facts dt { color: var(--al-text-3); min-width: 0; overflow-wrap: anywhere; }
+.dz-facts dd { margin: 0; min-width: 0; text-align: right; overflow-wrap: anywhere; font-variant-numeric: tabular-nums; }
+.dz-facts .mono { font-size: var(--al-text-sm); }
+/* a heading followed by its facts reads as one block */
+.dz-form > .dz-h + .dz-facts, .dz-form > .dz-h + .dz-facts-list { margin-top: calc(var(--al-space-2) - var(--al-space-3)); }
+.dz-facts-list { margin: 0; padding-left: var(--al-space-4); display: grid; gap: var(--al-space-1); font-size: var(--al-text-sm); line-height: 20px; }
 .dz-h4 { margin-top: var(--al-space-2); font-size: var(--al-text-xs); font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: var(--al-text-3); }
 .dz-field { display: grid; align-content: start; gap: 2px; min-width: 0; } /* start: a field beside a taller one keeps its own row heights */
 .dz-label { font-size: var(--al-text-xs); color: var(--al-text-2); }
@@ -158,8 +170,14 @@ textarea.dz-autogrow { resize: none; overflow-y: auto; min-height: 0; max-height
 .home-tpl-list .nm-option { padding: var(--al-space-1) var(--al-space-2); gap: var(--al-space-2); }
 .home-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; }
 .home-list-cols { grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); }
-/* examples: wide enough for the full name; the copy action is a small icon at the row's end */
+/* examples: grouped like the header picker; the full name wraps (two Sierpinski runs differ only at
+   the end), the copy action is a small icon at the row's end */
 .home-examples .home-list-cols { grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); }
+.home-ex-group { display: grid; gap: var(--al-space-1); }
+.home-ex-group + .home-ex-group { margin-top: var(--al-space-2); }
+.home-examples .home-item-name { white-space: normal; overflow-wrap: anywhere; }
+.home-examples .home-row { align-items: flex-start; }
+.home-examples .home-row > .home-copy { margin-top: var(--al-space-1); padding-inline: 0; }
 .home-item {
   display: grid; gap: 1px; width: 100%; padding: var(--al-space-2) var(--al-space-3); border: 1px solid transparent; border-radius: var(--al-radius);
   background: transparent; color: var(--al-text); text-align: left; cursor: pointer;
@@ -192,6 +210,9 @@ textarea.dz-autogrow { resize: none; overflow-y: auto; min-height: 0; max-height
   }
   .app .workspace.design-mode.tree-collapsed { --dw-left-col: var(--dw-strip-w); }
   .app .workspace.design-mode.side-collapsed { --dw-right-col: var(--dw-strip-w); }
+  /* the Python source in Properties needs room for its lines and its Edit / Copy / Save row: the column
+     is at least 360 px while it is open (a wider dragged width stays) */
+  .app .workspace.design-mode:not(.side-collapsed):has(> .panel-right .python-panel) { --dw-right-col: max(360px, var(--scaling-right, var(--al-right-w))); }
   .workspace.design-mode.tree-collapsed > :is(.panel-left, .panel-resize-left),
   .workspace.design-mode.side-collapsed > :is(.panel-right, .panel-resize-right) { display: none; }
   .workspace.design-mode > .dw-strip {
@@ -245,6 +266,18 @@ textarea.dz-autogrow { resize: none; overflow-y: auto; min-height: 0; max-height
   background: var(--al-accent-soft); border-bottom: 1px solid var(--al-accent-line); font-size: var(--al-text-xs); color: var(--al-text);
 }
 .rb-hint-x { margin-left: auto; }
+/* Tool hints (DrawHint) float over the top of the 3D view, below its camera-view row, instead of
+   taking a row above it: the canvas size and the camera do not change when a hint appears or grows. */
+.dw-hints {
+  position: absolute; z-index: 5; top: calc(var(--al-pad-hud) + var(--al-control-h) + var(--al-space-2));
+  left: var(--al-pad-hud); right: var(--al-pad-hud); display: grid; gap: var(--al-space-1); pointer-events: none;
+}
+.dw-hints:empty { display: none; }
+.dw-hints > * {
+  pointer-events: auto; border: 1px solid var(--al-accent-line); border-radius: var(--al-radius);
+  box-shadow: var(--al-shadow-pop); max-height: 40vh; overflow: auto;
+}
+.dw-hints > .point-tools-panel { background: var(--al-surface); border-color: var(--al-border); }
 /* Boolean set-up: the operand colours of the 3D preview (tokens --al-3d-bool-*) as legend chips */
 .bool-chip { display: inline-flex; align-items: center; gap: var(--al-space-1); font-weight: 600; }
 .bool-chip::before { content: ""; width: 10px; height: 10px; border-radius: 2px; background: var(--bool-chip); border: 1px solid color-mix(in srgb, var(--bool-chip) 70%, var(--al-text)); }

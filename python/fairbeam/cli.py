@@ -621,6 +621,17 @@ def _index_engine(run: dict) -> str | None:
     return "Metal" if (run.get("host") or {}).get("os") == "Darwin" else "GPU"
 
 
+def _index_band_ranges(bands) -> list:
+    """The -10 dB bands' edges in GHz and whether each runs into the edge of the simulated range."""
+    out = []
+    for x in bands or []:
+        if not isinstance(x, dict) or not (_finite(x.get("f_lo")) and _finite(x.get("f_hi"))):
+            continue
+        out.append({"lo": round(x["f_lo"] / 1e9, 4), "hi": round(x["f_hi"] / 1e9, 4),
+                    "edge_lo": bool(x.get("edge_lo")), "edge_hi": bool(x.get("edge_hi"))})
+    return out
+
+
 def _index_params(model: dict) -> dict:
     """Parameters set to something other than their default (like src/lib/benchmarks.ts changedParams)."""
     out = {}
@@ -768,6 +779,11 @@ def _read_index_entry(f: Path) -> dict | None:
         "bands": [round(x["f_center"] / 1e9, 3) for x in res.get("bands", [])],
         "cells": b.get("mesh", {}).get("total_cells"),
     }
+    # optional (newer indexes only): each band's edges, for the picker's band text (src/lib/bands.ts):
+    # the middle of the edges, or the range of a band that runs past the simulated range
+    ranges = _index_band_ranges(res.get("bands"))
+    if ranges:
+        entry["band_ranges"] = ranges
     # optional (newer indexes only): what tells runs of the same model apart in the viewer's pickers
     engine = _index_engine(b.get("run"))
     if engine:
@@ -881,8 +897,9 @@ def main(argv=None):
     p.add_argument("--id", help="model id (default: from the first file name)")
     p.add_argument("--name", help="display name (default: the id)")
     p.add_argument("--layer-map", metavar="NAME=ROLE,...",
-                   help="layer or file name (patterns allowed) to top_copper, bottom_copper, outline or ignore, e.g. "
-                        "TOP=top_copper,BOT=bottom_copper; layers not listed are recognised by name")
+                   help="layer or file name (patterns allowed) to top_copper, bottom_copper, outline, ignore, or "
+                        "top_clearance / bottom_clearance (cut out of that copper), e.g. TOP=top_copper,BOT=bottom_copper; "
+                        "layers not listed are recognized by name")
     p.add_argument("--substrate", default="FR4", help="substrate: a library id (fr4, ro4003c, rt5880 ...) or a name (default FR4)")
     p.add_argument("--thickness", type=float, default=1.6, help="substrate thickness in mm (default 1.6)")
     p.add_argument("--eps-r", type=float, help="relative permittivity (default: the library value, else 4.3)")

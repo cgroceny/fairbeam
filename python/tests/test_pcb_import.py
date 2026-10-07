@@ -870,5 +870,113 @@ class Cli(unittest.TestCase):
         self.assertIn("the role must be", err)
 
 
+FAB = HERE.parent.parent / "examples" / "fab" / "patch-antenna"   # Fairbeam's own fab export (scripts/check-fab.mjs)
+ANTIPAD_MM = 4.2   # src/fab/layers.ts DEFAULT_FAB_OPTIONS.antipadMm
+
+
+def fab_files(*patterns):
+    return [(f.name, f.read_bytes()) for pat in patterns for f in sorted(FAB.glob(pat))]
+
+
+def hole_sizes(design, name):
+    """Width and height of each hole a part's Boolean subtraction cuts."""
+    hist = part(design, name).get("booleanHistory")
+    if not hist:
+        return []
+    return [(max(q[0] for q in h["points"]) - min(q[0] for q in h["points"]), max(q[1] for q in h["points"]) - min(q[1] for q in h["points"]))
+            for h in hist["B"]["primitives"]]
+
+
+@unittest.skipUnless(FAB.is_dir(), "examples/fab is written by scripts/check-fab.mjs")
+class FabRoundTrip(unittest.TestCase):
+    """Fairbeam's own fabrication export read back: the 4.2 mm anti-pad round the probe stays cut out of the ground plane."""
+
+    def assert_ground_with_antipad(self, res):
+        design = res["design"]
+        (size,) = hole_sizes(design, "bottom_copper")
+        for s in size:   # a tessellated circle: its chords stay within the 0.02 mm chord tolerance of the curve
+            self.assertAlmostEqual(s, ANTIPAD_MM, delta=0.05)
+        self.assertEqual(hole_sizes(design, "top_copper"), [])
+        self.assertEqual(res["report"]["counts"]["hole"], 1)
+        self.assertFalse(notes(res, "refused"), [n["message"] for n in notes(res, "refused")])
+        self.assertEqual(lint_errors(design), ["no-port"])
+
+    def test_dxf(self):
+        res = import_pcb(fab_files("*.dxf"))
+        roles = {(lay["source"].split("-", 1)[1], lay["layer"]): lay["role"] for lay in res["report"]["detected"]}
+        self.assertEqual(roles[("B_Cu.dxf", "B_Cu_Antipad")], "bottom_clearance")
+        self.assertEqual(roles[("B_Cu.dxf", "B_Cu")], "bottom_copper")
+        self.assertEqual(roles[("F_Cu.dxf", "F_Cu")], "top_copper")
+        self.assertEqual(roles[("Edge_Cuts.dxf", "Edge_Cuts")], "outline")
+        self.assertEqual(len(part(res["design"], "bottom_copper")["booleanHistory"]["A"]["primitives"]), 1, "one ground plane, not a second polygon")
+        self.assertFalse(notes(res, "warning", "units"), "the export states its unit ($INSUNITS 4)")
+        self.assert_ground_with_antipad(res)
+
+    def test_gerber_and_drill(self):
+        res = import_pcb(fab_files("*.gbr", "*.drl"))
+        self.assertTrue(notes(res, "info", "clear (LPC) object(s) cut out of the copper"))
+        self.assert_ground_with_antipad(res)
+        # the probe's plated drill is a pin from the patch through the anti-pad: it does not touch the ground plane
+        (pin,) = part(res["design"], "vias")["primitives"]
+        self.assertLess(pin["radius"] * 2, ANTIPAD_MM)
+
+    def test_clearance_roles_from_names_and_the_layer_map(self):
+        self.assertEqual(guess_role("B_Cu_Antipad"), "bottom_clearance")
+        self.assertEqual(guess_role("F.Cu clearance"), "top_clearance")
+        self.assertEqual(guess_role("Top antipads"), "top_clearance")
+        self.assertIsNone(guess_role("antipad"), "a clearance of no named copper has no role")
+        self.assertEqual(parse_layer_map("A=bottom_clearance,B=top_antipad"), {"A": "bottom_clearance", "B": "top_clearance"})
+
+
+def lint_errors(design):
+    return sorted({c["code"] for c in lint(design) if c["severity"] == "error"})
+
+
+class Clearances(unittest.TestCase):
+    ground = [(-30, -30), (30, -30), (30, 30), (-30, 30)]
+
+    def test_a_clearance_outside_the_copper_cuts_nothing(self):
+        text = dxf_text([lwpoly("B_Cu", self.ground), lwpoly("B_Cu_Antipad", [(40, 40), (42, 40), (42, 42), (40, 42)])])
+        res = import_pcb([("a.dxf", text)])
+        self.assertTrue(notes(res, "info", "outside the copper"))
+        self.assertNotIn("booleanHistory", part(res["design"], "bottom_copper"))
+
+    def test_a_clearance_layer_of_the_top_copper(self):
+        text = dxf_text([lwpoly("F_Cu", self.ground), lwpoly("F_Cu_Antipad", [(-1, -1), (1, -1), (1, 1), (-1, 1)])])
+        res = import_pcb([("a.dxf", text)])
+        self.assertEqual([tuple(round(v, 6) for v in s) for s in hole_sizes(res["design"], "top_copper")], [(2.0, 2.0)])
+
+    def test_gerber_clear_objects_other_than_holes_are_still_reported(self):
+        head = "%FSLAX46Y46*%\n%MOMM*%\n%ADD10C,2.000000*%\n%ADD11R,2.000000X2.000000*%\n"
+        region = "G36*\nX-10000000Y-10000000D02*\nX10000000Y-10000000D01*\nX10000000Y10000000D01*\nX-10000000Y10000000D01*\nX-10000000Y-10000000D01*\nG37*\n"
+        # a clear circle flash inside the region: a hole; a clear rectangle flash and a clear circle across the edge: not applied
+        lay = parse_gerber(head + region + "%LPC*%\nD10*\nX0Y0D03*\nD11*\nX5000000Y5000000D03*\nD10*\nX10000000Y0D03*\nM02*\n", "t.gbr", chord_tol=0.01)
+        (poly,) = lay.polys
+        self.assertEqual(len(poly.holes), 1)
+        self.assertEqual(sum(count for count, _line in lay.skips.values()), 2)
+
+
+class AppWording(unittest.TestCase):
+    """Rows that name a command-line flag carry a key and parameters: the app words them for its own controls."""
+
+    def test_the_unit_warning_once_for_all_files(self):
+        a = dxf_text([lwpoly("F_Cu", [(0, 0), (20, 0), (20, 10), (0, 10)])], units=None)
+        b = dxf_text([lwpoly("B_Cu", [(-5, -5), (25, -5), (25, 15), (-5, 15)]), lwpoly("Edge_Cuts", [(-6, -6), (26, -6), (26, 16), (-6, 16)])], units=None)
+        res = import_pcb([("x-F_Cu.dxf", a), ("x-B_Cu.dxf", b)])
+        rows = [n for n in res["report"]["notes"] if n.get("key") == "dxf-units-missing"]
+        self.assertEqual(len(rows), 1)
+        self.assertEqual(rows[0]["params"], {"files": "x-F_Cu.dxf, x-B_Cu.dxf", "count": "2"})
+        self.assertIn("--units inch", rows[0]["message"], "the command line keeps its flag")
+
+    def test_origin_and_unclear_layer_rows(self):
+        text = dxf_text([lwpoly("F_Cu", [(10, 10), (30, 10), (30, 20), (10, 20)]), lwpoly("Mystery", [(0, 0), (1, 0), (1, 1)])])
+        res = import_pcb([("a.dxf", text)])
+        keyed = {n["key"]: n for n in res["report"]["notes"] if n.get("key")}
+        self.assertEqual(keyed["origin-centered"]["params"], {"x": "20.0000", "y": "15.0000"})
+        self.assertIn("--origin keep", keyed["origin-centered"]["message"])
+        self.assertEqual(keyed["layer-unclear"]["params"], {"layer": "Mystery"})
+        self.assertEqual(keyed["no-outline"]["params"], {"margin": "2"})
+
+
 if __name__ == "__main__":
     unittest.main()

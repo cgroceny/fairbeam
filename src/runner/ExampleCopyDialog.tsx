@@ -4,6 +4,7 @@ import { copyExampleFile, copyExampleKey, models, refreshModels, setCopyExampleK
 import { enterDesign } from "../designer/store";
 import { setAppMode } from "../workspace";
 import { fmt, t } from "../i18n";
+import { DESIGN_ID_RE, isReservedDesignId } from "../lib/designId";
 
 const slug = (s: string) => s.toLowerCase().normalize("NFKD").replace(/[^a-z0-9]+/g, "_").replace(/^_+|_+$/g, "").replace(/^[^a-z]+/, "").slice(0, 41);
 export default function ExampleCopyDialog() {
@@ -41,7 +42,8 @@ export default function ExampleCopyDialog() {
       const keys = new Set(models().map((m) => m.key));
       const baseId = slug(n);
       let candidate = baseId;
-      for (let suffix = 2; keys.has(candidate); suffix++) {
+      // a bundled example's id is reserved too, whether or not its file is in the models folder
+      for (let suffix = 2; keys.has(candidate) || isReservedDesignId(candidate); suffix++) {
         const ending = `_${suffix}`;
         candidate = `${baseId.slice(0, 41 - ending.length)}${ending}`;
       }
@@ -51,7 +53,7 @@ export default function ExampleCopyDialog() {
   });
   const uniqueId = () => {
     const base = id();
-    if (!/^[a-z][a-z0-9_]{1,40}$/.test(base) || /^(con|prn|aux|nul|com[0-9]|lpt[0-9])$/.test(base)) return "";
+    if (!DESIGN_ID_RE.test(base) || isReservedDesignId(base)) return "";
     return models().some((m) => m.key === base) ? "" : base;
   };
   const close = () => { if (!busy()) setCopyExampleKey(null); };
@@ -77,15 +79,18 @@ export default function ExampleCopyDialog() {
       <form class="stack" onSubmit={submit}>
         <h2 id="example-copy-title">{t("exampleCopy.title")}</h2>
         <p class="muted">{t("exampleCopy.intro")}</p>
-        <div class="ec-carry" role="group" aria-label={t("exampleCopy.carry.label")}>
-          <p><b>{t("exampleCopy.carried")}</b> {t("exampleCopy.carried.body")}</p>
-          <p><b>{t("exampleCopy.notCarried")}</b> {t("exampleCopy.notCarried.body")}</p>
-        </div>
-        <Show when={preview()?.params_carried !== undefined}>
-          <p class="muted" role="status">{t("exampleCopy.params", { carried: preview()!.params_carried!, total: preview()!.params_total ?? 0, expressions: preview()!.expressions ?? 0 })}</p>
-          <Show when={(preview()!.params_partial ?? []).length > 0}><p class="muted">{t("exampleCopy.partial", { keys: preview()!.params_partial!.join(", ") })}</p></Show>
+        {/* an example that is itself a design (the 867 MHz ones) is copied as it is: no conversion to describe */}
+        <Show when={source()?.kind !== "design"} fallback={<p class="muted">{t("exampleCopy.designCopy")}</p>}>
+          <div class="ec-carry" role="group" aria-label={t("exampleCopy.carry.label")}>
+            <p><b>{t("exampleCopy.carried")}</b> {t("exampleCopy.carried.body")}</p>
+            <p><b>{t("exampleCopy.notCarried")}</b> {t("exampleCopy.notCarried.body")}</p>
+          </div>
+          <Show when={preview()?.params_carried !== undefined}>
+            <p class="muted" role="status">{t("exampleCopy.params", { carried: preview()!.params_carried!, total: preview()!.params_total ?? 0, expressions: preview()!.expressions ?? 0 })}</p>
+            <Show when={(preview()!.params_partial ?? []).length > 0}><p class="muted">{t("exampleCopy.partial", { keys: preview()!.params_partial!.join(", ") })}</p></Show>
+          </Show>
+          <p class="muted">{t("exampleCopy.meshNote")}</p>
         </Show>
-        <p class="muted">{t("exampleCopy.meshNote")}</p>
         <Show when={previewPending()}><p class="muted" role="status">{t("exampleCopy.checkingMesh")}</p></Show>
         <Show when={preview() && preview()!.source_cells !== null}>
           <div class={preview()!.within_tolerance ? "mesh-preview" : "mesh-preview mesh-preview-warning"} role={preview()!.within_tolerance ? "status" : "alert"}>

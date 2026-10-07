@@ -8,8 +8,8 @@ import { radioGroupKeys } from "../lib/a11y";
 import { bundle, layers, meshPlane, setLayers, setMeshPlane, setSolidFade, type Axis } from "../state";
 import { previewState } from "../runner/store";
 import { engine } from "../runner/store";
-import { cellsText, estimateText, estimateTime, meshStats } from "./meshStats";
-import { draft } from "./store";
+import { cellsText, estimateText } from "./meshStats";
+import { draftEstimate, draftExcitedPorts, draftMeshStats } from "./draftMesh";
 import { t } from "../i18n";
 
 export const [meshView, setMeshViewSignal] = createSignal(false);
@@ -26,9 +26,10 @@ export const toggleMeshView = () => setMeshView(!meshView());
 export function MeshViewPanel() {
   // leaving the designer ends the mesh view (Examples mode keeps its own layer toggle)
   onCleanup(() => setMeshView(false));
-  const stats = () => meshStats(bundle());
-  const excited = () => Math.max(1, (draft.ports ?? []).filter((p) => p.excite !== false).length);
-  const est = () => estimateTime(bundle(), engine(), excited());
+  // the numbers are the draft's (its latest preview), also while a run's results are shown
+  const stats = draftMeshStats;
+  const excited = draftExcitedPorts;
+  const est = () => draftEstimate(engine());
   const lines = () => bundle()?.mesh[meshPlane.axis] ?? [];
   const pick = (a: Axis) => {
     const l = bundle()?.mesh[a] ?? [];

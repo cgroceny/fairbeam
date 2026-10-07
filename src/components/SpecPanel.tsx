@@ -1,11 +1,22 @@
 import { For, Show } from "solid-js";
 import { CircleCheck, TriangleAlert } from "lucide-solid";
 import { bundle, farfieldIndex, setDockTab, setFarfieldIndex, setLayers } from "../state";
-import { BOUNDARY_LABEL, compact, GHz, num, seconds, timeUnit } from "../lib/format";
+import { bandTexts } from "../lib/bands";
+import { compact, GHz, ghzText, num, seconds, timeUnit } from "../lib/format";
+import { bundleWriter } from "../lib/appVersion";
 import { convergenceTextUi, efficiencyIssue, efficiencyWarningUi } from "../lib/runText";
 import ComparisonCard from "./ComparisonCard";
 import MeasuredTimes from "./MeasuredTimes";
 import { fmt, t } from "../i18n";
+
+// The solver card's terms in plain words: the method and the boundaries are translated where the
+// bundle carries a known value, and each has a tooltip for a newcomer (an unknown value shows as is).
+const FDTD_YEE = "FDTD (Yee, staircase)";
+const methodLabel = (method: string) => (method === FDTD_YEE ? t("spec.method.fdtdYee") : method);
+const methodTitle = (method: string) => (method === FDTD_YEE ? t("spec.method.fdtdYee.title") : undefined);
+const BOUNDARY_HINT: Record<string, string> = { MUR: "sim.bound.mur.hint", PML_8: "sim.bound.pml.hint", PEC: "sim.bound.pec.hint", PMC: "sim.bound.pmc.hint" };
+const boundaryLabel = (code: string) => (BOUNDARY_HINT[code] ? t(`spec.boundary.${code}`) : code);
+const boundaryHint = (code: string) => (BOUNDARY_HINT[code] ? t(BOUNDARY_HINT[code]) : undefined);
 
 export default function SpecPanel() {
   return (
@@ -27,26 +38,31 @@ export default function SpecPanel() {
                       <thead>
                         <tr>
                           <th>#</th>
-                          <th class="num">{t("spec.centre")}<span class="th-unit">GHz</span></th>
+                          <th class="num" title={t("spec.centre.title")}>{t("spec.centre")}<span class="th-unit">GHz</span></th>
+                          <th class="num" title={t("spec.bestMatch.title")}>{t("spec.bestMatch")}<span class="th-unit">GHz</span></th>
                           <th class="num">|S11| min<span class="th-unit">dB</span></th>
                           <th class="num">{t("spec.bw")}<span class="th-unit">%</span></th>
                         </tr>
                       </thead>
                       <tbody>
                         <For each={res()!.bands}>
-                          {(band, i) => (
-                            <tr>
-                              <td>{i() + 1}</td>
-                              <td class="num">{num(band.f_center / 1e9, 3)}</td>
-                              <td class="num">{num(band.s11_min_db, 1)}</td>
-                              <td class="num" title={`${num(band.f_lo / 1e9, 3)}–${num(band.f_hi / 1e9, 3)} GHz`}>
-                                {num(band.fractional_bw * 100, 1)}
-                              </td>
-                            </tr>
-                          )}
+                          {(band, i) => {
+                            // the centre is the middle of the edges; the |S11| minimum is the best match
+                            const c = bandTexts(band, (hz) => ghzText(hz / 1e9), fmt.fixed);
+                            return (
+                              <tr title={`${c.range} GHz${c.open ? ` · ${t("spec.bandOpen")}` : ""}`}>
+                                <td>{i() + 1}</td>
+                                <td class="num">{c.centre}</td>
+                                <td class="num">{c.best}</td>
+                                <td class="num">{num(band.s11_min_db, 1).replace(/^-/, "−")}</td>
+                                <td class="num">{c.percent}</td>
+                              </tr>
+                            );
+                          }}
                         </For>
                       </tbody>
                     </table>
+                    <Show when={res()!.bands.some((b) => b.edge_lo || b.edge_hi)}><p class="note">{t("spec.bandOpenNote")}</p></Show>
                   </Show>
                   <Show when={res()!.farfield.length}>
                     <table class="table table-ff">
@@ -76,7 +92,7 @@ export default function SpecPanel() {
                               <Show when={res()!.farfield.some((f) => f.port)}>
                                 <td class="mono">{ff.port ? `P${ff.port}` : "—"}</td>
                               </Show>
-                              <td class="num">{num(ff.f / 1e9, 3)}</td>
+                              <td class="num">{ghzText(ff.f / 1e9)}</td>
                               <td class="num">{num(ff.dmax_dbi, 2)}</td>
                               <td class="num">{ff.gain_dbi !== undefined ? num(ff.gain_dbi, 2) : "—"}</td>
                               <td class="num" classList={{ "cell-warn": !!efficiencyIssue(ff) }} title={efficiencyWarningUi(ff) ?? undefined}>
@@ -143,11 +159,11 @@ export default function SpecPanel() {
                 <h3 class="section-label">{t("spec.solver")}</h3>
                 <dl class="kv">
                   <dt>{t("measured.engine")}</dt><dd>{b().solver.engine}<span class="mono kv-sub" title={b().generator.openems ?? undefined}>{b().generator.openems}</span></dd>
-                  <dt>{t("spec.method")}</dt><dd>{b().solver.method}</dd>
+                  <dt>{t("spec.method")}</dt><dd title={methodTitle(b().solver.method)}>{methodLabel(b().solver.method)}</dd>
                   <dt>{t("spec.excitation")}</dt>
                   <dd>
                     {b().solver.excitation.type === "gaussian-derivative" ? t("spec.gaussDerivative") : t("spec.modulatedGauss")}
-                    <Show when={b().solver.excitation.dc_free}><span class="chip">{t("spec.dcFree")}</span></Show>
+                    <Show when={b().solver.excitation.dc_free}><span class="chip" title={t("spec.dcFree.title")}>{t("spec.dcFree")}</span></Show>
                   </dd>
                   <dt>{t("spec.band")}</dt><dd class="mono">{num(b().solver.excitation.f_min / 1e9, 2)}–{num(b().solver.excitation.f_max / 1e9, 2)} GHz</dd>
                   <dt>{t("spec.endCriterion")}</dt><dd class="mono">{fmt.num(b().solver.end_criteria_db, 1)} dB</dd>
@@ -155,9 +171,9 @@ export default function SpecPanel() {
                 <div class="bc-grid" aria-label={t("spec.boundaries")}>
                   <For each={["x-", "x+", "y-", "y+", "z-", "z+"] as const}>
                     {(face) => (
-                      <div class="bc-cell" classList={{ pec: b().solver.boundaries[face] === "PEC" }}>
+                      <div class="bc-cell" classList={{ pec: b().solver.boundaries[face] === "PEC" }} title={boundaryHint(b().solver.boundaries[face])}>
                         <span class="mono bc-face">{face}</span>
-                        <span>{BOUNDARY_LABEL[b().solver.boundaries[face]] ?? b().solver.boundaries[face]}</span>
+                        <span>{boundaryLabel(b().solver.boundaries[face])}</span>
                       </div>
                     )}
                   </For>
@@ -197,7 +213,7 @@ export default function SpecPanel() {
 
               <section class="section section-foot">
                 <p class="muted mono">
-                  {b().schema} · Fairbeam {b().generator.version} · CSXCAD {b().generator.csxcad}
+                  {[b().schema, bundleWriter(b()), b().generator.csxcad ? `CSXCAD ${b().generator.csxcad}` : null].filter(Boolean).join(" · ")}
                 </p>
                 <p class="muted mono">{b().created}</p>
               </section>

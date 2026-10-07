@@ -233,7 +233,7 @@
         },
         {
           "title": "Examples keep their mesh",
-          "description": "An example opened as a new project keeps its exact mesh lines, so it gives the same results.",
+          "description": "An example opened as a new design keeps its exact mesh lines, so it gives the same results.",
           "links": [164, 165, 169],
           "status": "available",
           "release": "0.7.0"
@@ -446,7 +446,7 @@
         },
         {
           "title": "Start, Design and Examples",
-          "description": "Examples open read-only with their results; Open as new project turns one into a design.",
+          "description": "Examples open read-only with their results; Open as new design makes an editable copy.",
           "links": [51, 76, 153, 157],
           "status": "available",
           "release": "0.7.0"

@@ -1,9 +1,11 @@
 # Example designs
 
 Designer files (`<name>.design.json`, format in [docs/DESIGNER.md](../../docs/DESIGNER.md#files)).
-To edit one in the designer, copy it into your models folder (`~/Documents/fairbeam/models/` for the
-desktop app, `python/models/` in a checkout). It then appears under Start › Your designs. They also
-run from the command line like any model:
+The `*_867` designs are the sources of the app's 867 MHz examples: the desktop app installs them,
+read-only, in the workspace's models folder, and **Open as new design…** on one of those examples
+makes an editable copy under Start › Your designs. In a checkout, copy one under a new file name into
+`python/models/` to edit it (the `*_867` names are reserved for the examples). They also run from the
+command line like any model:
 
 ```bash
 fairbeam run examples/designs/blade_867.design.json --engine gpu --out /tmp/blade

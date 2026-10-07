@@ -5,8 +5,8 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import {
-  admitFiles, buildOptions, fieldValue, isChosen, layerKey, PCB_DEFAULTS, PCB_LIMITS, PCB_RANGES, PCB_ROLES, pruneMap, reasonKey,
-  roleChoices, roleValue, toBase64, withoutRole, withRole,
+  admitFiles, buildOptions, designNameFromFiles, fieldValue, guessedRoles, isChosen, layerKey, noteKey, PCB_DEFAULTS, PCB_LIMITS, PCB_RANGES,
+  PCB_ROLES, pruneMap, reasonKey, roleChoices, roleValue, toBase64, withoutRole, withRole,
 } from "../src/lib/pcbLayers.ts";
 import { MENU_ACTION_IDS } from "../src/lib/menuActions.ts";
 
@@ -77,9 +77,11 @@ assert.equal(layerKey(dxf), "F.Cu", "a DXF layer is keyed by its layer");
 assert.equal(layerKey(gbr), "top.gtl", "a Gerber file by its file");
 // fnmatch: [ * ? become one-character classes (python/tests/test_pcb_import.py PcbApi checks the server side of this)
 assert.equal(layerKey({ ...dxf, layer: "Cu[1]*?" }), "Cu[[]1][*][?]", "pattern characters match only themselves");
-assert.deepEqual(roleChoices({ kind: "dxf", role: "top_copper" }), ["top_copper", "bottom_copper", "outline", "ignore"]);
-assert.deepEqual(roleChoices({ kind: "dxf", role: null }), ["", "top_copper", "bottom_copper", "outline", "ignore"], "an unclear layer can stay unclear");
-assert.deepEqual(roleChoices({ kind: "gerber", role: "outline" }), ["top_copper", "bottom_copper", "outline", "ignore"]);
+const ALL = ["top_copper", "bottom_copper", "outline", "ignore", "top_clearance", "bottom_clearance"];
+assert.deepEqual(roleChoices({ kind: "dxf", role: "top_copper" }), ALL);
+assert.deepEqual(roleChoices({ kind: "dxf", role: null }), ["", ...ALL], "an unclear layer can stay unclear");
+assert.deepEqual(roleChoices({ kind: "gerber", role: "outline" }), ALL);
+for (const r of ALL) assert.ok(`pcbImport.role.${r}` in en && `pcbImport.role.${r}` in tr, `role ${r} has a label`);
 assert.deepEqual(roleChoices({ kind: "drill", role: "drill" }), ["drill", "ignore"], "a drill file is drills or ignored");
 assert.equal(roleValue({ role: null }), "");
 const first = Object.freeze({});
@@ -96,6 +98,48 @@ assert.deepEqual(withoutRole(m1, dxf), {});
 assert.deepEqual(pruneMap({ "F.Cu": "top_copper", "gone.gtl": "ignore" }, [dxf, gbr]), { "F.Cu": "top_copper" }, "a removed file's entry goes");
 assert.equal(isChosen({ because: "layer map F.Cu" }), true);
 assert.equal(isChosen({ because: "layer name" }), false);
+
+// ---- the summary names the roles the importer guessed (never "everything was imported" over a guess)
+const detected = [
+  { kind: "dxf", layer: "B_Cu", source: "x-B_Cu.dxf", role: "bottom_copper", because: "layer name" },
+  { kind: "dxf", layer: "B_Cu_Antipad", source: "x-B_Cu.dxf", role: "bottom_clearance", because: "layer name" },
+  { kind: "dxf", layer: "Drill", source: "x-B_Cu.dxf", role: "ignore", because: "layer name" },
+  { kind: "dxf", layer: "F_Cu", source: "x-F_Cu.dxf", role: "top_copper", because: "layer map F_Cu" },
+  { kind: "gerber", layer: "x-B_Cu", source: "x-B_Cu.gbr", role: "bottom_copper", because: "Gerber file function" },
+  { kind: "drill", layer: "x-PTH", source: "x-PTH.drl", role: "drill", because: "Excellon file" },
+];
+assert.deepEqual(guessedRoles(detected), [{ layer: "B_Cu", role: "bottom_copper" }, { layer: "B_Cu_Antipad", role: "bottom_clearance" }],
+  "guessed from the name: the copper and its clearance; not an ignored layer, the viewer's choice, a file function or a drill file");
+assert.ok("pcbImport.guessed" in en && en["pcbImport.guessed"].includes("{list}"));
+assert.match(dialog, /fallback=\{<Show when=\{!guessed\(\)\}><span>\{t\("pcbImport\.allImported"\)\}<\/span><\/Show>\}/, "\"everything was imported\" only when no role is a guess");
+
+// ---- the proposed design name: the stem the files share, without the layer part of each name
+assert.equal(designNameFromFiles(["export_patch-F_Cu.dxf", "export_patch-B_Cu.dxf", "export_patch-Edge_Cuts.dxf"]), "export_patch");
+assert.equal(designNameFromFiles(["export-patch-F_Cu.gbr", "export-patch-B_Cu.gbr", "export-patch-Edge_Cuts.gbr", "export-patch-PTH.drl"]), "export-patch");
+assert.equal(designNameFromFiles(["x-B_Cu_Antipad.dxf"]), "x");
+assert.equal(designNameFromFiles(["patch_top.GTL", "patch_bottom.GBL", "patch.GKO"]), "patch");
+assert.equal(designNameFromFiles(["board.dxf"]), "board");
+assert.equal(designNameFromFiles(["F_Cu.dxf"]), "F_Cu", "a name that is only a layer stays");
+assert.equal(designNameFromFiles(["a-F_Cu.dxf", "b-B_Cu.dxf", "b-Edge_Cuts.dxf"]), "b", "the stem most files share");
+assert.match(dialog, /setName\(freeName\(designNameFromFiles\(entries\(\)\.map\(\(e\) => e\.name\)\)\)\)/, "the dialog proposes it");
+
+// ---- rows that name a command-line flag are worded by the app: every key pcb_import.py gives has a text in both
+// languages, whose parameters are the row's or the dialog's own
+const injected = new Set(["units", "origin", "keep", "table", "outline", "bottom"]);
+const keyed = [...importer.matchAll(/key="([\w-]+)"(?:, params=\{(.*?)\}\))?/g)].map((m) => ({ key: m[1], params: [...(m[2] ?? "").matchAll(/"(\w+)":/g)].map((p) => p[1]) }));
+const dynamic = [...importer.matchAll(/note = \("([\w-]+)"/g)].map((m) => m[1]);
+assert.ok(keyed.length >= 6 && dynamic.length === 3, `keyed rows found (${keyed.length}, ${dynamic.length})`);
+for (const key of [...keyed.map((k) => k.key), ...dynamic]) {
+  const id = `pcbImport.note.${key}`;
+  assert.ok(id in en && id in tr, `${id} in both languages`);
+  assert.doesNotMatch(en[id], /--\w/, `${id}: the app's text names no command-line flag`);
+}
+for (const { key, params } of keyed) {
+  for (const p of en[`pcbImport.note.${key}`].matchAll(/\{(\w+)\}/g)) assert.ok(params.includes(p[1]) || injected.has(p[1]), `${key}: {${p[1]}} is given`);
+}
+assert.deepEqual(noteKey({ key: "origin-centered", params: { x: "1", y: "2" } }, (k) => k in en), { key: "pcbImport.note.origin-centered", params: { x: "1", y: "2" } });
+assert.equal(noteKey({ key: "new-row" }, (k) => k in en), null, "a row an older app has no text for is shown as the server wrote it");
+assert.equal(noteKey({}, (k) => k in en), null);
 
 // ---- files
 const kb = (n) => n * 1000;

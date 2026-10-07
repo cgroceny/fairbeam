@@ -7,6 +7,8 @@ import { cancelRun, jobs, live, liveEnergy, liveInfo, liveLog, liveProgress, liv
 import { StatusBadge, paramSummary } from "./status";
 import { api } from "./api";
 import { cancelSweep } from "./sweep";
+import { pulseNote as livePulseNote } from "./liveRun";
+import { engineThreadsText } from "./RunQueue";
 import { fmt, t } from "../i18n";
 
 /** label: an i18n key */
@@ -65,14 +67,15 @@ export default function ProgressCard() {
     return 0;
   };
   const endDb = () => liveInfo().end_criteria_db ?? job().end_criteria_db ?? -40;
-  /** Why the energy line is flat at the start: the excitation pulse is still running (the energy only
-   * starts to fall once it ends), or it would not end before the limit at all. */
+  /** the end criterion as text, with the same minus sign (U+2212) as the energy beside it */
+  const endText = () => fmt.int(endDb());
+  /** Why the energy line is flat at the start (liveRun.ts): gone once the solver is past the pulse or
+   * has finished, also when the run ended between two progress lines. */
   const pulseNote = () => {
-    const end = liveInfo().pulse_steps, limit = liveInfo().max_timesteps;
-    const ts = liveProgress()?.timestep ?? 0;
-    if (!end) return null;
-    if (limit && end >= limit) return t("progress.pulse.overLimit", { pulse: fmt.int(end), limit: fmt.int(limit) });
-    return ts < end ? t("progress.pulse.running", { n: fmt.int(end), left: fmt.int(end - ts) }) : null;
+    const note = livePulseNote(liveInfo(), liveProgress(), liveStats(), job().phase, job().status);
+    if (!note) return null;
+    return note.kind === "overLimit" ? t("progress.pulse.overLimit", { pulse: fmt.int(note.pulse), limit: fmt.int(note.limit) })
+      : t("progress.pulse.running", { n: fmt.int(note.end), left: fmt.int(note.left) });
   };
   const sweepProgress = () => {
     const sw = job().sweep;
@@ -143,7 +146,7 @@ export default function ProgressCard() {
         </span>
         <Show when={!done()}>
           <button class="btn btn-ghost btn-sm push" onClick={() => job().sweep ? cancelSweep(job().sweep!.id) : cancelRun()} title={job().sweep ? t("progress.stopSweepTitle") : t("progress.stopRunTitle")}>
-            <Square size={14} aria-hidden="true" /> {job().sweep ? t("progress.stopSweep") : t("common.cancel")}
+            <Square size={14} aria-hidden="true" /> {job().sweep ? t("progress.stopSweep") : t("runDock.stopRun")}
           </button>
         </Show>
       </div>
@@ -182,7 +185,7 @@ export default function ProgressCard() {
           {liveStats().final_energy_db === undefined && liveStats().final_energy_bound_db !== undefined
             ? `≤ ${num(liveStats().final_energy_bound_db, 1)}`
             : num(liveProgress()?.energy_db ?? liveStats().final_energy_db, 1)}{" "}dB
-          <span class="muted"> · {t("progress.target", { db: endDb() })}</span>
+          <span class="muted"> · {t("progress.target", { db: endText() })}</span>
         </dd>
         <Show when={!done() && pulseNote()}>
           <dt>{t("progress.pulse")}</dt>
@@ -201,8 +204,9 @@ export default function ProgressCard() {
           <dt>{t("spec.grid")}</dt>
           <dd class="mono">{liveInfo().grid!.join(" × ")} · {t("progress.cells", { cells: compact(liveInfo().cells) })}</dd>
         </Show>
-        <dt>{t("progress.threads")}</dt>
-        <dd class="mono">{liveInfo().threads ?? job().threads}</dd>
+        {/* a GPU run has no thread count to show (the job's 1 is a placeholder) */}
+        <dt>{t("run.engine")}</dt>
+        <dd class="mono">{engineThreadsText(liveInfo().engine ?? job().engine, liveInfo().threads ?? job().threads)}</dd>
       </dl>
 
       <Show when={series().length || !done()}>
@@ -217,7 +221,7 @@ export default function ProgressCard() {
               xLabel={t("results.mesh.timestep")}
               yLabel={t("progress.energyDb")}
               yDomain={yDomain()}
-              hlines={[{ y: endDb(), label: t("progress.endLine", { db: endDb() }) }]}
+              hlines={[{ y: endDb(), label: t("progress.endLine", { db: endText() }) }]}
               xFormat={(v) => compact(v)}
               yFormat={(v) => v.toFixed(1)}
             />

@@ -35,7 +35,7 @@ PARAMS = [
     Param("eps_r", 3.38, "Substrate permittivity", "", minimum=1),
     Param("tan_d", 1e-3, "Loss tangent", "", minimum=0),
     Param("feed_x", -6.0, "Feed position (x)", "mm"),
-    Param("mesh_div", 20, "Max cell = lambda(f_max) / mesh_div", "", minimum=8, maximum=60),
+    Param("mesh_div", 20, "Mesh: cells per λ at f max", "", minimum=8, maximum=60),
     Param("f_min", 1.8, "Band start", "GHz", minimum=0.01),
     Param("f_max", 3.0, "Band stop", "GHz", minimum=0.02),
 ]

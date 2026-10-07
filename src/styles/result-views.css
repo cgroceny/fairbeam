@@ -1,0 +1,37 @@
+/* The result views around their charts (ResultViews.tsx in Design, Dock.tsx in Examples): the toolbar's
+   data format and export buttons, the result pane's height, and the Efficiency card's details. */
+
+/* the result data format select: as wide as its longest choice ("Linear magnitude + phase"), not cut */
+.dock-tools > select.btn.result-format, .dw-result-bar > select.btn.result-format,
+.dock-narrow .dock-tools > select.btn.result-format { width: auto; min-width: 7rem; max-width: 16rem; text-overflow: clip; }
+
+/* CSV and Touchstone keep a short label ("CSV", ".s2p") beside their icons when the bar folds its
+   labelled buttons to icons: the two downloads never look alike */
+.btn-short { font-family: var(--al-font-mono); font-size: var(--al-text-xs); }
+.dw-result-bar.is-narrow > button.btn:has(> .btn-short),
+.dock-narrow .dock-tools > button.btn:has(> .btn-short) { width: auto; gap: var(--al-space-1); padding: 0 var(--al-space-2); }
+
+/* a result tab: the plot keeps a usable height (about 260 px) under the toolbar and the run's notes; a
+   window too short for that scrolls the tab instead of squeezing the plot or running under the dock */
+.dw-result { overflow-y: auto; scrollbar-width: thin; }
+.dw-result > .dw-result-plot { flex: 1 0 auto; min-height: 260px; height: 0; }
+.dw-result > .dw-result-bar { position: sticky; top: 0; z-index: 2; background: var(--al-surface); }
+
+/* the Runs table (RunDock.tsx): the run letter in the row's font and line height, so it sits on the
+   same baseline as the row's text (the mono letter sat lower); the last column keeps its padding at the
+   end of the table's own horizontal scroll */
+.rdk-runs .rdk-run-btn { font-family: var(--al-font-sans); font-weight: 600; line-height: inherit; }
+.rdk-runs :is(th, td):last-child { padding-right: var(--al-space-3); }
+
+/* the dock's top edge can be dragged: a small grip in its middle says so (DockResizeHandle.tsx) */
+.dock-resize > .dock-grip {
+  position: absolute; top: 0; left: 50%; width: 36px; height: 4px; transform: translateX(-50%);
+  border-radius: 0 0 3px 3px; background: var(--al-border-strong); pointer-events: none;
+}
+.dock-resize:hover > .dock-grip, .dock-resize:focus-visible > .dock-grip { background: var(--al-focus); }
+
+/* the Efficiency card: one line, the rest under Details */
+.rdk-details { margin-top: var(--al-space-2); font-size: var(--al-text-xs); }
+.rdk-details > summary { cursor: pointer; color: var(--al-text-2); width: max-content; }
+.rdk-details > summary:focus-visible { outline: 2px solid var(--al-focus); outline-offset: 1px; }
+.rdk-details > .rdk-note { margin-top: var(--al-space-1); }

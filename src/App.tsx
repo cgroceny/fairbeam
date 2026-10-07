@@ -1,7 +1,9 @@
 import { captureActiveSurface, exportNotice, geometryAvailable } from "./components/exportContext";
 import PanelResizeHandles from "./components/PanelResizeHandles";
+import ToastHost from "./components/ToastHost";
+import { dismissToast, downloadToast, showToast } from "./lib/toast";
 import { createEffect, createSignal, For, lazy, on, onCleanup, onMount, Show } from "solid-js";
-import { ChevronsLeft, ChevronsRight, CircleAlert, PanelLeft, PanelRight, TriangleAlert } from "lucide-solid";
+import { ChevronsLeft, ChevronsRight, PanelLeft, PanelRight, TriangleAlert } from "lucide-solid";
 import Header from "./components/Header";
 import ModelPanel from "./components/ModelPanel";
 import SpecPanel from "./components/SpecPanel";
@@ -12,7 +14,7 @@ import { importReferenceFile } from "./compare/store";
 import Home from "./home/Home";
 import { DesignDock, DesignKeys, DesignSide, DesignTreePanel, DrawHint, Ribbon } from "./designer/DesignWorkspace";
 import { file as designFile, draft as designDraft, removeSelected, canRemove, save as saveDesign, enterDesign, reopenLastDesign, undo as undoDesign, redo as redoDesign } from "./designer/store";
-import SaveAsDialog from "./designer/SaveAsDialog";
+import SaveAsDialog, { canSaveAs, openSaveAs, saveAsOpen, setSaveAsOpen } from "./designer/SaveAsDialog";
 import { MeshViewPanel } from "./designer/MeshView";
 import MainArea from "./designer/MainArea";
 import StatusBar from "./designer/StatusBar";
@@ -36,7 +38,8 @@ const UsageStatsPrompt = lazy(() => import("./components/UsageStatsPrompt"));
 import { PreviewBadge, RunNotice } from "./runner/Overlays";
 import { openUserProject } from "./runner/openProject";
 import { fileDropHandlers } from "./lib/fileDrop";
-import { currentModel, probeServer, recheckServer, runOpen, watchServer } from "./runner/store";
+import { currentModel, probeServer, recheckServer, runOpen, setRunOpen, watchServer } from "./runner/store";
+import { setStartedPythonModel, startedPythonModel } from "./runner/startPython";
 import { DEMO } from "./env";
 import { panelTab } from "./editor/store";
 import ExampleCopyDialog from "./runner/ExampleCopyDialog";
@@ -45,7 +48,6 @@ import { bundle, centerView, exportOpen, index, lastProject, failedProject, load
 import { createMenuActionRouter } from "./lib/menuActions";
 import { ShortcutHelp, showShortcutHelp } from "./designer/ShortcutHelp";
 import { exportResultTouchstone } from "./designer/resultTouchstone";
-import { downloadMessage } from "./lib/download";
 import { exampleEntries } from "./runner/examples";
 import { cstImportOpen, setCstImportOpen } from "./lib/cstImport";
 import { pcbImportOpen, setPcbImportOpen } from "./lib/pcbImport";
@@ -56,7 +58,7 @@ import UpdateProgress from "./components/UpdateProgress";
 import { watchUpdate } from "./lib/updateProgress";
 
 export default function App() {
-  const onScreenshot=()=>{void captureActiveSurface().catch(error=>exportNotice(t("contextExport.failed",{error:String(error)})));};
+  const onScreenshot=()=>{void captureActiveSurface().catch(error=>exportNotice(t("contextExport.failed",{error:String(error)}),{tone:"error"}));};
   onMount(()=>{window.addEventListener("fairbeam:screenshot",onScreenshot);onCleanup(()=>window.removeEventListener("fairbeam:screenshot",onScreenshot));});
   const [dragging, setDragging] = createSignal(false);
   // file drags only (a tree part drag is not a file drop, #87): project bundles open; anything
@@ -80,6 +82,14 @@ export default function App() {
   // Examples) closes them, and with them a dialog's error panel. A running render
   // keeps its dialog: closing it would cancel the render (e.g. File > Open from the native menu mid-render).
   createEffect(on(appMode, () => { setExportOpen(false); if (!renderBusy()) setRenderDialogOpen(false); setPackageOpen(false); }, { defer: true }));
+  // The Run panel belongs to the Examples screen (a Python model opened from Start). Leaving it closes
+  // the panel, so Design gets its Properties back instead of another model's Run panel; it is only
+  // hidden (closeRunPanel would put back the project from before the preview, over the design's).
+  createEffect(on(appMode, (mode, previous) => {
+    if (previous !== "results" || mode === "results") return;
+    setStartedPythonModel(null);
+    if (runOpen()) setRunOpen(false);
+  }));
   createEffect(() => {
     if (runOpen() && appMode() === "design") {
       setSidePanelCollapsed(false);
@@ -92,23 +102,31 @@ export default function App() {
   // screen, and building the 3D view first only to drop it again (a WebGL context and its shaders)
   // cost ~130 ms of the start screen's first paint
   const [probed, setProbed] = createSignal(DEMO);
-  // Examples are a read-only viewer: no Run panel for a bundled (read-only) example there. A user's
-  // own Python model (Start > Python models) still runs in this workspace.
-  const resultsRunOpen = () => runOpen() && !DEMO && appMode() === "results" && !currentModel()?.readonly;
-  const [menuNotice, setMenuNotice] = createSignal("");
-  const [saveAsOpen, setSaveAsOpen] = createSignal(false);
+  // Examples are a read-only viewer: no Run panel for a bundled (read-only) example there. A Python
+  // model chosen on Start (Start > Python models: the user's own, or a bundled one) runs in this workspace.
+  const resultsRunOpen = () => runOpen() && !DEMO && appMode() === "results"
+    && (!currentModel()?.readonly || currentModel()?.key === startedPythonModel());
+  // a project that could not be opened: a persistent error toast with Retry. It goes when the user
+  // closes it or when the next open starts (which clears loadError).
+  createEffect(() => {
+    const error = loadError();
+    if (!error) { dismissToast("load-error"); return; }
+    const file = failedProject();
+    showToast(error, { tone: "error", key: "load-error", onClose: () => setLoadError(null),
+      action: file ? { label: t("common.retry"), run: () => void loadProject(file) } : undefined });
+  });
   let openInput: HTMLInputElement | undefined;
   const menuAction = createMenuActionRouter({
     "file-new": () => setAppMode("home"), "file-open": () => openInput?.click(),
     "file-import-cst": () => { if (DEMO) notice(t("app.notice.cstImportDesktop")); else setCstImportOpen(true); },
     "file-import-pcb": () => { if (DEMO) notice(t("app.notice.pcbImportDesktop")); else setPcbImportOpen(true); },
     "file-save": () => { if (appMode() === "design" && designFile()) void saveDesign(); else window.dispatchEvent(new Event("fairbeam:menu-notice")); },
-    "file-save-as": () => { if (appMode() === "design" && designFile()) setSaveAsOpen(true); },
+    "file-save-as": () => { if (appMode() === "design" && designFile()) openSaveAs(); },
     "export-cst": () => { if (appMode() !== "home" && geometryAvailable()) import("./state").then((s) => s.setExportOpen(true)); },
     "export-package": () => { if (bundle()) import("./state").then((s) => s.setPackageOpen(true)); },
     "export-python": () => { if (appMode() === "design") document.querySelector<HTMLButtonElement>(".rb-btn[data-action='open-python']")?.click(); },
     "export-touchstone": () => { const current = bundle(); if (!current?.results) { notice(t("app.notice.touchstoneNeedsResult")); return; }
-      void exportResultTouchstone(current, source() || current.model.id).then((result) => notice(downloadMessage(result))).catch((error) => notice(t("app.notice.touchstoneFailed", { error: String(error) }))); },
+      void exportResultTouchstone(current, source() || current.model.id).then((result) => { downloadToast(result); }).catch((error) => showToast(t("app.notice.touchstoneFailed", { error: String(error) }), { tone: "error" })); },
     "file-close": () => window.dispatchEvent(new Event("fairbeam:close-project")),
     "file-open-recent:": (id) => { if (id) void enterDesign(decodeURIComponent(id.slice("file-open-recent:".length))); },
     settings: () => window.dispatchEvent(new Event("fairbeam:open-settings")), about: () => window.dispatchEvent(new Event("fairbeam:open-about")),
@@ -148,7 +166,7 @@ export default function App() {
     const hasViewport = !!currentBundle && viewportPresent() && (mode === "design" || mode === "results");
     const availability: Record<string, boolean> = {
       "file-save": inDesign,
-      "file-save-as": inDesign,
+      "file-save-as": canSaveAs(),
       "file-close": hasDesign,
       "export-cst": appMode() !== "home" && geometryAvailable(),
       "export-python": inDesign,
@@ -211,7 +229,8 @@ export default function App() {
     onCleanup(() => compact.removeEventListener("change", syncCompact));
     (window as Window & { fairbeamMenuAction?: (raw: string) => boolean }).fairbeamMenuAction = menuAction;
     const onAction = (event: Event) => menuAction((event as CustomEvent<string>).detail);
-    const onNotice = (event: Event) => { setMenuNotice((event as CustomEvent<string>).detail ?? ""); window.setTimeout(() => setMenuNotice(""), 3500); };
+    // menu, export and download feedback: a toast over the app (lib/toast.ts), never a bar in the layout
+    const onNotice = (event: Event) => { const text = (event as CustomEvent<string>).detail; if (typeof text === "string") showToast(text); };
     // the desktop shell's update progress (downloading, installing, restarting); a failed install
     // restarts the server, which the store looks for again
     onCleanup(watchUpdate(undefined, () => window.setTimeout(() => void recheckServer(), 3000)));
@@ -247,12 +266,12 @@ export default function App() {
       {/* the one host of confirmDraftDiscard (the designer asks too, with the Run panel closed) */}
       <ConfirmDialog />
       <UpdateProgress />
-      <Show when={menuNotice()}><div class="banner" role="status">{menuNotice()}</div></Show>
+      <ToastHost />
       <input ref={openInput} type="file" accept=".json,application/json" hidden onChange={(e) => { const f = e.currentTarget.files?.[0]; if (f) void openUserProject(f); e.currentTarget.value = ""; }} />
       <ExampleCopyDialog />
       <Show when={!DEMO && cstImportOpen()}><CstImportDialog /></Show>
       <Show when={!DEMO && pcbImportOpen()}><PcbImportDialog /></Show>
-      <Show when={saveAsOpen() && appMode() === "design" && designFile()}>
+      <Show when={saveAsOpen() && canSaveAs()}>
         <SaveAsDialog source={{ id: designFile()!.id, name: designDraft.model?.name ?? designFile()!.id }} close={() => setSaveAsOpen(false)} />
       </Show>
       <Show when={!DEMO}><CloseProjectHost /></Show>
@@ -267,14 +286,6 @@ export default function App() {
             title={t("app.panels.rightTitle")}>
             <PanelRight aria-hidden="true" /> {t("app.panels.specs")}
           </button>
-        </div>
-      </Show>
-      <Show when={loadError()}>
-        <div class="banner banner-critical" role="alert">
-          <CircleAlert size={14} aria-hidden="true" />
-          <span>{loadError()}</span>
-          <Show when={failedProject()}>{(file) => <button class="btn btn-ghost btn-sm" onClick={() => void loadProject(file())}>{t("common.retry")}</button>}</Show>
-          <button class="btn btn-ghost btn-sm" onClick={() => setLoadError(null)}>{t("app.dismiss")}</button>
         </div>
       </Show>
       <Show when={loadWarnings().length}>
@@ -328,7 +339,6 @@ export default function App() {
               <PanelBoundary name="Ribbon" class="rb-wrap">
                 <div class="rb-stack">
                   <Ribbon />
-                  <DrawHint />
                 </div>
               </PanelBoundary>
               {/* the 3D view is the first of the main area's document tabs; result tabs open beside it */}
@@ -337,6 +347,8 @@ export default function App() {
                   <Viewport />
                 </PanelBoundary>
                 <MeshViewPanel />
+                {/* tool hints float over the top of the 3D view: the canvas keeps its size */}
+                <DrawHint />
               </MainArea>
               <PanelBoundary name="Checks" class="dock dw-dock-wrap">
                 <DesignDock />
@@ -372,16 +384,16 @@ export default function App() {
         <PanelBoundary name="Model panel" class="panel panel-left">
           <ModelPanel />
         </PanelBoundary>
-        <main class="center">
+        <main class="center" classList={{ "center-no-dock": !bundle() }}>
           <Show
             when={bundle() || index().length}
             fallback={
               <Show when={!booting()} fallback={<div class="loading" role="status">{t("app.loadingProject")}</div>}>
                 <div class="empty">
                   <h1>{t("app.noProjects.title")}</h1>
-                  <p>{t("app.noProjects.run")}</p>
-                  <pre class="code code-inline">fairbeam run python/models/patch_antenna.py</pre>
+                  <p>{t(DEMO || isDesktopShell() ? "app.noProjects.body" : "app.noProjects.bodyServer")}</p>
                   <p class="muted">{t("app.noProjects.drop")}</p>
+                  <Show when={!DEMO}><button class="btn btn-primary" onClick={() => setAppMode("home")}>{t("app.noDesign.startScreen")}</button></Show>
                 </div>
               </Show>
             }
@@ -400,9 +412,12 @@ export default function App() {
               </Show>
             </div>
           </Show>
-          <PanelBoundary name="Results dock" class="dock">
-            <Dock />
-          </PanelBoundary>
+          {/* nothing open: no result tabs to show */}
+          <Show when={bundle()}>
+            <PanelBoundary name="Results dock" class="dock">
+              <Dock />
+            </PanelBoundary>
+          </Show>
           <PreviewBadge />
         </main>
         <Show

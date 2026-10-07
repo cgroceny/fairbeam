@@ -67,7 +67,7 @@ function previewBundle(d) {
   const extra = Math.max(0, (cpw - 20) * 3);
   for (let i = 0; i < extra; i++) x.push(x[x.length - 1] + 1);
   b.domain.max[0] = x[x.length - 1];
-  b.name = `${d.model.name} (preview)`;
+  b.name = d.model.name;
   b.preview = true;
   return b;
 }

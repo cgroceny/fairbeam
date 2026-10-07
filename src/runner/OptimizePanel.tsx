@@ -36,12 +36,12 @@ import {
   startOptimize,
   vary,
 } from "./optimize";
-import { health, runName, setRunName, specs, submitError, submitting, threads, setThreads } from "./store";
+import { health, meshSource, runName, setRunName, specs, submitError, submitting, threads, setThreads } from "./store";
 import { t } from "../i18n";
 import NumberField from "../components/NumberField";
 import { PreflightNote } from "../designer/PreflightNote";
+import { methodName } from "../designer/optimizationResults";
 import { meshStats } from "../designer/meshStats";
-import { bundle } from "../state";
 
 /** The target field's label: an i18n key, or a symbol that stays as it is */
 const TARGET_LABEL: Record<GoalKind, string> = {
@@ -251,7 +251,7 @@ export default function OptimizePanel(props: { onStarted?: (job: import("./api")
         <label class="rp-inline-field" title={methodTitle(optPlan().method)}>
           <span>{t("opt.method")}</span>
           <select class="rp-select rp-select-sm" aria-describedby="op-method-hint" value={method()} onChange={(e) => setMethod(e.currentTarget.value as import("./optimize").OptimizeMethod)}>
-            <option value="auto" title={t("opt.method.auto.title")}>{t("opt.method.auto", { method: optPlan().method })}</option>
+            <option value="auto" title={t("opt.method.auto.title")}>{t("opt.method.auto", { method: methodName(optPlan().method) })}</option>
             <option value="secant" title={methodTitle("secant")} disabled={!(vary.length === 1 && goals.some((g) => g.kind === "f0"))}>{t("opt.method.secant")}</option>
             <option value="nelder-mead" title={methodTitle("nelder-mead")}>Nelder–Mead</option>
             <option value="bayesian" title={methodTitle("bayesian")}>{t("opt.method.bayesian")}</option>
@@ -279,7 +279,7 @@ export default function OptimizePanel(props: { onStarted?: (job: import("./api")
         <span>{t("opt.name")} <span class="muted">{t("opt.name.optional")}</span></span>
         <input autocomplete="off" id="op-name" class="rp-input rp-input-text" type="text" maxlength="80" value={runName()} placeholder={t("opt.name.placeholder")} onInput={(e) => setRunName(e.currentTarget.value)} />
       </label>
-      <PreflightNote cells={meshStats(bundle())?.nodes} engine={optEngine() || "cpu"} />
+      <PreflightNote cells={meshStats(meshSource())?.nodes} engine={optEngine() || "cpu"} />
       <Show when={submitError()}>
         <p class="status-block status-critical" role="alert"><CircleAlert size={14} aria-hidden="true" /> <span>{submitError()}</span></p>
       </Show>

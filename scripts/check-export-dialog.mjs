@@ -3,7 +3,8 @@
 // while the dialog mounts; it called the file-stem helper declared below it and the dialog crashed with
 // "Cannot access 'O' before initialization". This mounts the real dialog (Solid's server renderer, real
 // stores, an example bundle) in results mode with the CST format, and in design mode, and checks that a
-// dialog's error panel can be closed and is dismissed by navigation. No DOM, no server, no solver.
+// dialog's error panel can be closed and is dismissed by navigation. The Export package dialog of a design
+// lists its run's data whatever the 3D view shows, and says why when the design has no run. No DOM, no server, no solver.
 //
 //   node scripts/check-export-dialog.mjs
 import assert from "node:assert/strict";
@@ -28,6 +29,10 @@ const built = await build({
         `export * as state from ${src("state.ts")};`,
         `export * as workspace from ${src("workspace.ts")};`,
         `export * as designer from ${src("designer/store.ts")};`,
+        `export { default as PackageDialog } from ${src("components/PackageDialog.tsx")};`,
+        `export * as designRun from ${src("runner/designRun.ts")};`,
+        `export * as ribbon from ${src("designer/ribbonResults.ts")};`,
+        `export { validateBundle } from ${src("lib/validate.ts")};`,
         // the renderer from the same bundle, so the component and the stores share one reactive runtime
         `export { renderToString } from "solid-js/web";`,
         `export { createComponent } from "solid-js";`,
@@ -42,7 +47,7 @@ const built = await build({
 });
 const chunk = (Array.isArray(built) ? built[0] : built).output.find((o) => o.type === "chunk");
 globalThis.localStorage = { getItem: () => null, setItem() {}, removeItem() {} };
-const { ExportDialog, PanelBoundary, state, workspace, designer, renderToString, createComponent } =
+const { ExportDialog, PanelBoundary, PackageDialog, state, workspace, designer, designRun, ribbon, validateBundle, renderToString, createComponent } =
   await import(`data:text/javascript;base64,${Buffer.from(chunk.code).toString("base64")}`);
 const en = JSON.parse(read("src/i18n/en.json"));
 const text = (html) => html.replace(/<!--[^>]*-->/g, "").replace(/<[^>]+>/g, " ").replace(/&#39;/g, "'").replace(/&quot;/g, '"').replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/\s+/g, " ");
@@ -56,7 +61,8 @@ assert.equal(workspace.appMode(), "results");
 let html;
 assert.doesNotThrow(() => { html = mount(); }, "the export dialog mounts in results mode with the CST format");
 const shown = text(html);
-const stem = coupler.model.id.replace(/[^a-z0-9_-]+/gi, "_");
+// every export of a design shares its file stem: the workspace id, with "_" where the model id has "-"
+const stem = coupler.model.id.replace(/-/g, "_");
 assert.match(html, /<select[^>]*value="cst"/, "outside the Design tab the dialog opens on CST (.bas)");
 assert.ok(shown.includes(`${stem}.bas`), `the macro is named after the model (${stem}.bas)`);
 assert.ok(shown.includes("Sub Main"), "the macro preview is rendered on open");
@@ -65,7 +71,7 @@ assert.ok(!shown.includes(en["export.sourcePreparing"]), "a results bundle needs
 
 // a model id with characters CST does not take in a file name
 state.openBundle({ ...coupler, model: { ...coupler.model, id: "branch line/coupler v2" } }, "renamed.json");
-assert.ok(text(mount()).includes("branch_line_coupler_v2.bas"), "the file stem keeps letters, digits, _ and - only");
+assert.ok(text(mount()).includes("branch_line_coupler_v2.bas"), "the file stem keeps letters, digits and _ only");
 state.openBundle(coupler, "branchline-coupler.json");
 
 // ---- design mode: the preview arrives later (onMount, not run here) and the format starts as Blender
@@ -76,6 +82,33 @@ workspace.setAppMode("design");
 assert.doesNotThrow(() => { html = mount(); }, "the export dialog mounts in design mode");
 assert.match(html, /<select[^>]*value="blender"/, "in the Design tab the dialog opens on Blender");
 assert.ok(text(html).includes(en["export.sourcePreparing"]), "the design's geometry is being prepared");
+
+// ---- Export package in Design mode: the design's run, whatever the 3D view shows. After a visit to Examples the 3D
+// view shows the geometry preview again (bundle() has no results), and the package still holds the run's data, figures
+// and report; the Post-processing PDF report and Package stay enabled. Without a completed run both say so.
+{
+  const run = validateBundle({ ...JSON.parse(read("public/projects/patch-antenna.json")), model: { ...JSON.parse(read("public/projects/patch-antenna.json")).model, id: design.model.id } }).bundle;
+  const preview = { ...run, preview: true, results: null, run: null, fields: undefined, name: design.model.name };
+  designer.setFile({ id: "ux_inset_patch_24", file: "ux_inset_patch_24.design.json", hash: "1", design });
+  workspace.setAppMode("design");
+  state.openBundle(preview, design.model.name);
+  assert.ok(!state.bundle().results, "the 3D view shows the geometry preview");
+  designRun.setDesignResult({ file: "ux_inset_patch_24_20261006.json", bundle: run });
+  const shown = text(renderToString(() => createComponent(PackageDialog, {})));
+  for (const path of ["data/s11.s1p", "figures/s11.svg", "report.pdf", "images/view_iso.png"]) assert.ok(shown.includes(path), `the package of a design with a run lists ${path}`);
+  assert.ok(!shown.includes(en["package.noRunYet"]) && !shown.includes(en["package.needsResults"]), "nothing asks for results the design has");
+  assert.ok(new RegExp(`${design.model.id.replace(/-/g, "_")}_\\d{8}-\\d{4}`).test(shown), "the package is named after the design's file stem");
+  assert.equal(ribbon.ribbonExportReady(), true, "the ribbon's PDF report and Package are enabled with a completed run");
+  designRun.setDesignResult(null);
+  const none = text(renderToString(() => createComponent(PackageDialog, {})));
+  assert.ok(!none.includes("data/s11.s1p") && none.includes(en["package.noRunYet"]), "without a run: geometry only, and the reason is the missing run");
+  assert.equal(ribbon.ribbonExportReady(), false, "without a run the ribbon's PDF report and Package are disabled");
+  assert.equal(ribbon.ribbonExportReason(), en["package.noRunYet"], "with the reason that the design has no completed run");
+  // a run of another model is never exported for this design
+  designRun.setDesignResult({ file: "other.json", bundle: validateBundle(JSON.parse(read("public/projects/dipole.json"))).bundle });
+  assert.equal(ribbon.ribbonExportReady(), false, "a run of another model does not count");
+  designRun.setDesignResult(null);
+}
 workspace.setAppMode("results");
 
 // ---- a dialog that fails to render: its error panel can be closed (button, Escape via the shared modal)
@@ -98,6 +131,23 @@ const inlinePanel = boundary({});
 assert.ok(!/role="alertdialog"/.test(inlinePanel) && !new RegExp(`aria-label="${en["common.close"]}"`).test(inlinePanel), "a workspace panel's error stays inline, without a close button");
 assert.equal(closed, 0, "rendering does not close anything");
 assert.deepEqual(logged, Array(2).fill("[fairbeam] Geometry export failed to render: broken on purpose"), "the error is logged (once per panel), for bug reports");
+
+// ---- the geometry formats: each says what it carries; an invalid sheet thickness is shown and blocks the export (no
+// silent 35 µm); the dialog keeps its height; the right pane does not repeat the header
+{
+  const src = read("src/components/ExportDialog.tsx"), css = read("src/styles/app.css");
+  assert.match(src, /format\(\) === "stl" \? "export\.stl\.scope" : format\(\) === "glb" \? "export\.glb\.scope" : "export\.blender\.scope"/, "glTF and STL have their own scope text");
+  for (const key of ["export.glb.scope", "export.stl.scope"]) assert.ok(!/render/i.test(en[key]), `${key} does not speak of the render`);
+  assert.doesNotMatch(src, /\?\? DEFAULT_SHEET_THICKNESS_UM/, "no fallback to 35 µm behind an invalid thickness");
+  assert.match(src, /\(isCst\(\) && !result\(\)\) \|\| sheetInvalid\(\)\}/, "an invalid thickness disables the export");
+  assert.match(src, /t\("export\.sheet\.range", \{ min: SHEET_THICKNESS_UM\.min, max: SHEET_THICKNESS_UM\.max \}\)/, "the error names the real range");
+  assert.ok(en["export.sheet.range"].includes("{min}") && en["export.sheet.range"].includes("{max}"));
+  assert.match(css, /\.export-dialog \.dialog-head p \{[^}]*min-height: 3lh/, "the header description reserves its lines");
+  const side = src.slice(src.indexOf('class="export-options export-side"'), src.indexOf("<pre class=\"code\""));
+  assert.ok(side && !side.includes("formatHint()"), "the right pane does not repeat the header's description");
+  assert.match(side, /class="export-summary"/, "the design and its solids are a summary row");
+  assert.doesNotMatch(src, /class="status-block" role="note"/, "the CST notes are plain muted text, aligned with the column");
+}
 
 // the dialogs are wired to close from their error panel, and navigation closes them
 const app = read("src/App.tsx");

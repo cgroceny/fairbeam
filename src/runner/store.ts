@@ -30,7 +30,23 @@ export const [values, setValues] = createStore<Record<string, string>>({});
 export const [fieldErrors, setFieldErrors] = createStore<Record<string, string>>({});
 export const [threads, setThreadsSignal] = createSignal<number>(0);
 let hasLiveThreadChoice = false;
-export const [engine, setEngine] = createSignal<string>("cpu");
+const [engine, setEngineSignal] = createSignal<string>("cpu");
+export { engine };
+/** Where the engine choice comes from: General settings' default, or a run set up in this session
+ * (the Run dialog then labels it "Last used"). */
+export const [engineSource, setEngineSource] = createSignal<"settings" | "session">("settings");
+/** The engine picked for a run (Run dialog, sweep, mesh convergence, Run panel): later runs of this
+ * session start from it, also after the server is found again. */
+export function setEngine(e: string) {
+  setEngineSignal(e);
+  setEngineSource("session");
+}
+/** General settings' default engine, at start and when it changes there: it replaces a session's
+ * choice, the newest one the user made. */
+export function followSettingsEngine(e: string) {
+  setEngineSignal(e);
+  setEngineSource("settings");
+}
 export const [previewState, setPreviewState] = createSignal<PreviewState>("idle");
 export const [previewError, setPreviewError] = createSignal<string | null>(null);
 export const [previewActive, setPreviewActive] = createSignal(false);
@@ -40,8 +56,16 @@ export const [previewMs, setPreviewMs] = createSignal<number | null>(null);
  * the request in flight and reset with every edit; this keeps saying that the mesh numbers and
  * server checks on screen are from the last successful preview, not from the current draft. */
 export const [previewFailure, setPreviewFailure] = createSignal<string | null>(null);
-/** Forget a preview failure: the document or the shown project was replaced. */
-export const forgetPreviewFailure = () => setPreviewFailure(null);
+/** The latest preview of the designer's draft (the browser-built one, then the server's), kept apart
+ * from the viewer's bundle(): a run's results shown in the designer replace bundle(), not the draft's
+ * mesh. The mesh readouts and the time estimates of the design read this (draftMesh.ts). */
+const [draftPreview, setDraftPreview] = createSignal<Bundle | null>(null);
+export { draftPreview };
+/** The bundle whose mesh describes what the next run simulates: the draft's own preview in the
+ * designer, the shown project (the Run panel's preview of a model) elsewhere. */
+export const meshSource = (): Bundle | null => (appMode() === "design" ? draftPreview() : bundle());
+/** Another document was opened in the designer: forget the last one's preview failure and preview. */
+export const forgetPreviewFailure = () => { setPreviewFailure(null); setDraftPreview(null); };
 /** How the mesh numbers of the shown bundle relate to the current inputs: "current" (a successful
  * server preview of them, or a project/result that is not a preview), "updating" (the server
  * preview of the latest edit is pending), "stale" (the last preview failed: the numbers are from
@@ -95,7 +119,9 @@ export function probeServer(): Promise<boolean> {
       void loadHostRates(h, publicUrl("benchmarks.json"));
       setServerState("online");
       everOnline = true;
-      const pref = readGeneralSettings(); setEngine(pref.engine === "gpu" && !h.engines?.includes("gpu") ? "cpu" : pref.engine);
+      // the Settings default, unless a run of this session chose an engine the server still has
+      const pref = readGeneralSettings();
+      if (engineSource() !== "session" || !(h.engines ?? ["cpu"]).includes(engine())) followSettingsEngine(pref.engine === "gpu" && !h.engines?.includes("gpu") ? "cpu" : pref.engine);
       setThreadsSignal(chooseRunThreads(h.cpu_count, hasLiveThreadChoice ? threads() : 0, storedRunThreads(), pref.threads, h.default_threads,
         { live: hasLiveThreadChoice && threads() === AUTO_THREADS, remembered: storedRunAuto() }));
       await Promise.all([refreshModels(), refreshRuns()]);
@@ -155,15 +181,42 @@ export function storedRunAuto(): boolean {
   try { return localStorage.getItem(RUN_THREADS_KEY) === RUN_THREADS_AUTO; } catch { return false; }
 }
 
+/** The last manual thread count, kept while Auto is chosen: unticking Auto goes back to it. */
+const LAST_MANUAL_THREADS_KEY = "fairbeam.run.threads.manual";
+export function lastManualThreads(): number {
+  try {
+    const n = Number(localStorage.getItem(LAST_MANUAL_THREADS_KEY));
+    if (Number.isInteger(n) && n >= 1) return n;
+  } catch {
+    /* ignore */
+  }
+  return storedRunThreads();
+}
+function rememberManual(n: number) {
+  try { if (Number.isInteger(n) && n >= 1) localStorage.setItem(LAST_MANUAL_THREADS_KEY, String(n)); } catch { /* ignore */ }
+}
+
 /** n >= 1 is a manual choice, 0 is Auto */
 export function setThreads(n: number) {
   hasLiveThreadChoice = Number.isInteger(n) && n >= 0;
   setThreadsSignal(n);
+  rememberManual(n);
   try {
     localStorage.setItem(RUN_THREADS_KEY, n === AUTO_THREADS ? RUN_THREADS_AUTO : String(n));
   } catch {
     /* ignore */
   }
+}
+
+/** General settings › Default CPU threads changed: the Run dialog starts from it at once, without a
+ * reload. It stays a default: an earlier Run choice is forgotten (the newer default replaces it), not
+ * overwritten with the Settings value. */
+export function followSettingsThreads(n: number) {
+  hasLiveThreadChoice = false;
+  rememberManual(n);
+  try { localStorage.removeItem(RUN_THREADS_KEY); } catch { /* ignore */ }
+  const h = health();
+  setThreadsSignal(h ? chooseRunThreads(h.cpu_count, 0, 0, n, h.default_threads) : n);
 }
 
 export async function refreshModels() {
@@ -555,7 +608,7 @@ function showPreview(b: Bundle): boolean {
   setKeepCamera(sameModel);
   previewOpenCount = openCount() + 1;
   try {
-    openBundle(b, b.name); // the server names it "<model> · <overrides> (preview)"
+    openBundle(b, b.name); // the server names it "<model> · <overrides>"; b.preview marks it
   } catch (e) {
     previewOpenCount = -1;
     if (first) saved = null;
@@ -565,6 +618,7 @@ function showPreview(b: Bundle): boolean {
   }
   previewIdentity.didOpen(openCount());
   setPreviewActive(true);
+  if (appMode() === "design") setDraftPreview(b);
   return true;
 }
 
@@ -925,9 +979,14 @@ export async function openResult(file: string) {
 export const liveEnergy = createRoot(() =>
   createMemo(() => {
     let pts: { ts: number; db: number }[] = [];
+    let port: number | undefined;
     for (const e of live.events) {
-      if (e.type === "info" && e.port_run) pts = []; // multi-port: openEMS starts over for every driven port
-      else if (e.type === "progress" && typeof e.energy_db === "number") pts.push({ ts: e.timestep, db: e.energy_db });
+      // multi-port: openEMS starts over for every driven port. Only another port starts a new line:
+      // the first port's info can arrive after its first energy reading, which must stay
+      if (e.type === "info" && e.port_run) {
+        if (port !== undefined && e.port_run !== port) pts = [];
+        port = e.port_run;
+      } else if (e.type === "progress" && typeof e.energy_db === "number") pts.push({ ts: e.timestep, db: e.energy_db });
     }
     return pts;
   }),

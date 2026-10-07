@@ -190,7 +190,7 @@ Everything lives in the **workspace** folder, `Documents/Fairbeam` in your home 
 
 The gear button at the top (**General settings**) shows the **Workspace folder** with an **Open
 folder** button, the **Language** of the interface (System, English or Türkçe, native menus
-included) and the **Decimal separator** for numbers shown as text. The examples on the Start screen are copies: **Open as new project…** makes a
+included) and the **Decimal separator** for numbers shown as text. The examples on the Start screen are copies: **Open as new design…** makes a
 design of your own from one, and the original stays unchanged.
 
 ## 5. Report a problem

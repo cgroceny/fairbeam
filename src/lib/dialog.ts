@@ -7,6 +7,8 @@ type ModalLayer = {
   close: () => void;
   initial?: () => HTMLElement | null | undefined;
   opener: HTMLElement | null;
+  /** how to find the opener again if its node was re-rendered or detached meanwhile */
+  openerKey: string | null;
   fallback: HTMLElement | null;
 };
 
@@ -17,6 +19,15 @@ let observer: MutationObserver | undefined;
 let redirectingFocus = false;
 let recentFallback: HTMLElement | null = null;
 let recentFallbackTimer: number | undefined;
+// The control that lost focus last, and when: a command whose click briefly drops focus (its
+// region re-renders, a save disables it) still counts as the dialog's opener.
+let lastBlur: { el: HTMLElement; at: number } | null = null;
+const OPENER_GRACE_MS = 1500;
+if (typeof document !== "undefined") {
+  document.addEventListener("focusout", (event) => {
+    if (event.target instanceof HTMLElement && event.target !== document.body) lastBlur = { el: event.target, at: Date.now() };
+  }, true);
+}
 
 const topLayer = () => layers[layers.length - 1];
 
@@ -33,6 +44,21 @@ function focusableElements(dialog: HTMLElement): HTMLElement[] {
 
 function canFocus(el: HTMLElement | null | undefined, dialog: HTMLElement): el is HTMLElement {
   return !!el && (el === dialog || dialog.contains(el)) && isRendered(el) && !el.matches(":disabled");
+}
+
+/** A selector that finds the same control again after a re-render: its id, its data-action, or its
+ * accessible name inside the nearest region with an id (a ribbon tab panel, a dialog, a panel). */
+export function openerLocator(el: HTMLElement): string | null {
+  const esc = (v: string) => (typeof CSS !== "undefined" && CSS.escape ? CSS.escape(v) : v.replace(/["\\]/g, "\\$&"));
+  if (el.id) return `#${esc(el.id)}`;
+  const tag = el.tagName.toLowerCase();
+  const scope = el.parentElement?.closest<HTMLElement>("[id]");
+  const within = scope ? `#${esc(scope.id)} ` : "";
+  const action = el.getAttribute("data-action");
+  if (action) return `${within}${tag}[data-action="${esc(action)}"]`;
+  const label = el.getAttribute("aria-label");
+  if (label) return `${within}${tag}[aria-label="${esc(label)}"]`;
+  return null;
 }
 
 function focusElement(el: HTMLElement): void {
@@ -103,7 +129,17 @@ function onKeyDown(event: KeyboardEvent): void {
   const index = candidates.findIndex((el) => el === active);
   if (index < 0) {
     event.preventDefault();
-    focusElement(event.shiftKey ? candidates[candidates.length - 1] : candidates[0]);
+    // Focus on something inside the dialog that is not a Tab stop of its own (a scrolling body that
+    // Chromium makes keyboard-focusable): continue from there in document order, so Tab still
+    // reaches the controls after it (Shortcuts: Close, list, Done, Close).
+    if (active instanceof HTMLElement && active !== top.dialog && top.dialog.contains(active)) {
+      const next = event.shiftKey
+        ? [...candidates].reverse().find((el) => active.compareDocumentPosition(el) & Node.DOCUMENT_POSITION_PRECEDING)
+        : candidates.find((el) => active.compareDocumentPosition(el) & Node.DOCUMENT_POSITION_FOLLOWING);
+      focusElement(next ?? (event.shiftKey ? candidates[candidates.length - 1] : candidates[0]));
+    } else {
+      focusElement(event.shiftKey ? candidates[candidates.length - 1] : candidates[0]);
+    }
   } else if (event.shiftKey && index === 0) {
     event.preventDefault();
     focusElement(candidates[candidates.length - 1]);
@@ -126,7 +162,14 @@ function onFocusIn(event: FocusEvent): void {
 function startManaging(): void {
   document.addEventListener("keydown", onKeyDown);
   document.addEventListener("focusin", onFocusIn, true);
-  observer = new MutationObserver(() => syncIsolation());
+  observer = new MutationObserver(() => {
+    syncIsolation();
+    // the focused control inside the top dialog was re-rendered or removed: focus went to the page,
+    // so put it back in the dialog (a modal never leaves the keyboard on <body>)
+    const top = topLayer();
+    const active = document.activeElement;
+    if (top?.dialog.isConnected && (!active || active === document.body)) focusLayer(top);
+  });
   observer.observe(document.body, { childList: true, subtree: true });
 }
 
@@ -139,7 +182,10 @@ function stopManaging(): void {
 
 function addLayer(dialog: HTMLElement, close: () => void, initial?: () => HTMLElement | null | undefined): ModalLayer {
   const active = document.activeElement;
-  const opener = active instanceof HTMLElement ? active : null;
+  // the opener: the focused control, or the one whose click dropped focus just before the dialog came
+  const recent = lastBlur && Date.now() - lastBlur.at < OPENER_GRACE_MS && !dialog.contains(lastBlur.el) ? lastBlur.el : null;
+  const opener = active instanceof HTMLElement && active !== document.body && !dialog.contains(active) ? active : recent;
+  const openerKey = opener ? openerLocator(opener) : null;
   const parent = topLayer();
   const fallback = parent?.opener?.isConnected ? parent.opener : parent?.fallback ?? recentFallback;
   if (recentFallbackTimer !== undefined) {
@@ -148,11 +194,18 @@ function addLayer(dialog: HTMLElement, close: () => void, initial?: () => HTMLEl
   }
   recentFallback = null;
 
-  const layer = { dialog, close, initial, opener, fallback };
+  const layer: ModalLayer = { dialog, close, initial, opener, openerKey, fallback };
   if (!layers.length) startManaging();
   layers.push(layer);
   syncIsolation();
   focusLayer(layer);
+  // the dialog's first control may render a moment later (data it waits for): focus it then, unless
+  // the user has already moved on inside the dialog
+  requestAnimationFrame(() => {
+    if (topLayer() !== layer || !dialog.isConnected) return;
+    const now = document.activeElement;
+    if (!now || now === document.body || now === dialog || !dialog.contains(now)) focusLayer(layer);
+  });
   return layer;
 }
 
@@ -166,7 +219,13 @@ function removeLayer(layer: ModalLayer): void {
 
   if (!wasTop) return;
 
-  const destination = [layer.opener, layer.fallback, topLayer()?.dialog]
+  // the opener node itself, or the same control found again (its region re-rendered while the dialog
+  // was open), then the parent dialog's opener, then the parent dialog
+  const again = () => {
+    if (!layer.openerKey) return null;
+    try { return document.querySelector<HTMLElement>(layer.openerKey); } catch { return null; }
+  };
+  const destination = [layer.opener, again(), layer.fallback, topLayer()?.dialog]
     .find((target): target is HTMLElement => !!target && isRendered(target) && !target.matches(":disabled"));
   if (destination) focusElement(destination);
 

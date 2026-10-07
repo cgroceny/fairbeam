@@ -3,11 +3,11 @@
 // the selection on the right, checks and results at the bottom. Helper dialogs set the work plane
 // (WCS) and add transforms. The inspector, fields and checks come from DesignPane.tsx; drawing is
 // src/designer/draw.ts + src/scene/drawOverlay.ts.
-import { createEffect, createSignal, For, type JSX, lazy, on, onCleanup, onMount, Show } from "solid-js";
+import { createEffect, createSignal, For, type JSX, lazy, Match, on, onCleanup, onMount, Show, Suspense, Switch } from "solid-js";
 import {
   Box, CircleDot, Cone, Cylinder, Eye, EyeOff, FileCode, Globe, Grid3x3, Hexagon, Home, Layers, LayoutGrid, Library,
   Camera, FileText, Radio, Waves, History, Move3d,
-  MousePointer2, MousePointerClick, Pencil, Play, Plus, Redo2, Save, Settings2, Cog, SlidersHorizontal, Spline, Torus, Trash2, Triangle, Undo2, X, Zap, Keyboard,
+  MousePointer2, MousePointerClick, Pencil, Play, Plus, Redo2, Save, SaveAll, Settings2, Cog, SlidersHorizontal, Spline, Torus, Trash2, Triangle, Undo2, X, Zap, Keyboard,
   ChevronDown, ChevronUp, ChevronsRight, FileUp, Activity, Gauge, Layers2, CircuitBoard, ClipboardList, LocateFixed, Shapes, ScanLine, ChartNoAxesCombined, SlidersVertical,
   ArrowUpFromLine, Combine, Circle, PenTool, Fullscreen, AudioWaveform, Radar, Package, Omega, Timer, ChartScatter, ChartLine, Grid2x2, Diamond, Anvil, CopyPlus, Clipboard,
   SquareDashed, RectangleHorizontal, Rotate3d, LayoutDashboard, Gem, Aperture,
@@ -18,6 +18,7 @@ import { setPcbImportOpen } from "../lib/pcbImport";
 import { CLOSE_KEY, requestCloseProject } from "./CloseProject";
 import { bundle, layers, setLayers, setSelectedPart, setSelectedShape, type Layers as LayerState } from "../state";
 import { SAVE_KEY } from "../editor/store";
+import { openSaveAs } from "./SaveAsDialog";
 import { openSimSettings, runDialogOpen, setRunDialogOpen, setSimSettingsOpen, simSettingsOpen, sweepDialogOpen } from "../runner/designRun";
 import { EFFICIENCY_POINTS_DEFAULT } from "./checks";
 import FeedCreationDialog from "./FeedCreationDialog";
@@ -44,11 +45,12 @@ import { selectedVertexTarget, stopVertexEdit, toggleVertexEdit, vertexTarget } 
 import type { BooleanOperation } from "./booleanUi";
 import { tryEvaluate } from "./expr";
 import { shown as fmt } from "./displayNumber.ts";
-import { t } from "../i18n";
-import { cellsText, meshStats } from "./meshStats";
+import { fmt as i18nFmt, t } from "../i18n";
+import { cellsText } from "./meshStats";
+import { draftMeshStats } from "./draftMesh";
 import { leaveResultsFor, resultFocus } from "./resultFocus";
 import { activateMainTab, cycleMainTabs, focusActiveMainTab } from "./mainTabsState";
-import { openRibbonResult, ribbonCurrents, ribbonExportReady, ribbonFarfield, ribbonFieldPlanes, ribbonPattern3d, ribbonResult } from "./ribbonResults";
+import { openRibbonResult, ribbonCurrents, ribbonExportReady, ribbonExportReason, ribbonFarfield, ribbonFieldPlanes, ribbonPattern3d, ribbonResult } from "./ribbonResults";
 import { ARRAY_PATTERN_NOTE, PatternQuantitySelect } from "../components/FarfieldCard";
 import { farfieldOverride } from "../lib/arrayStore";
 import RibbonField from "./RibbonField";
@@ -112,7 +114,7 @@ function RButton(props: { icon: typeof Box; label: string; title?: string; actio
 /** A ribbon group. When the ribbon runs out of room (see fitRibbon) its buttons first lose their
  *  labels (data-size="icons"; the label stays as tooltip and accessible name) and, only when that
  *  is not enough, the group folds into one drop-down button (data-collapsed). */
-function RGroup(props: { label: string; icon: typeof Box; class?: string; children: JSX.Element }) {
+function RGroup(props: { label: string; icon: typeof Box; class?: string; children: JSX.Element; /** tooltip of the group name (an abbreviation explained) */ hint?: string }) {
   const [open, setOpen] = createSignal(false);
   let host!: HTMLDivElement;
   let toggle!: HTMLButtonElement;
@@ -125,7 +127,7 @@ function RGroup(props: { label: string; icon: typeof Box; class?: string; childr
     <div ref={host} class={`rb-group ${props.class ?? ""}`} role="group" aria-label={props.label} data-open={open() ? "" : undefined}
       onFocusOut={(e) => { const next = e.relatedTarget as Node | null; if (open() && (!next || !host.contains(next))) setOpen(false); }}
       onKeyDown={(e) => { if (e.key === "Escape" && open() && !e.defaultPrevented) { e.stopPropagation(); setOpen(false); toggle.focus(); } }}>
-      <button ref={toggle} type="button" class="rb-btn rb-group-toggle" aria-expanded={open()} title={props.label} onClick={() => setOpen(!open())}>
+      <button ref={toggle} type="button" class="rb-btn rb-group-toggle" aria-expanded={open()} title={props.hint ?? props.label} onClick={() => setOpen(!open())}>
         <props.icon size={16} aria-hidden="true" /><span>{props.label}<ChevronDown size={11} aria-hidden="true" /></span>
       </button>
       {/* a command chosen from a folded group closes it; toggles and pop-up openers keep it open */}
@@ -144,12 +146,14 @@ function RGroup(props: { label: string; icon: typeof Box; class?: string; childr
           });
         }
       }}>{props.children}</div>
-      <div class="rb-label" title={props.label}>{props.label}</div>
+      <div class="rb-label" title={props.hint ?? props.label}>{props.label}</div>
     </div>
   );
 }
 
 type RibbonDensity = "wide" | "full" | "compact";
+/** the narrowest room (px) in which the ribbon note is still readable in three lines */
+const NOTE_MIN = 96;
 /** Fits the shown ribbon tab into one row. It keeps inline fields and command labels as long as
  *  possible, folds groups from the right before resorting to icon-only commands. */
 function fitRibbon(shell: HTMLElement) {
@@ -158,13 +162,20 @@ function fitRibbon(shell: HTMLElement) {
   const groups = [...toolbar.querySelectorAll<HTMLElement>(":scope > .rb-group")];
   for (const g of groups) { delete g.dataset.size; delete g.dataset.collapsed; delete g.dataset.align; }
   const room = toolbar.clientWidth;
-  const fits = () => groups.reduce((sum, g) => sum + g.offsetWidth, 0) <= room;
+  const used = () => groups.reduce((sum, g) => sum + g.offsetWidth, 0);
+  const fits = () => used() <= room;
+  // the commands come first: the note at the end of a tab (Post-processing) takes the room the groups
+  // leave. It wraps to up to three lines there; with less room than NOTE_MIN it is hidden rather than
+  // cut to a few letters (its text is also the tooltip of the disabled result buttons).
+  const notes = [...toolbar.querySelectorAll<HTMLElement>(":scope > .rb-result-note")];
   const done = () => {
     shell.dataset.fit = fits() ? "row" : "scroll";
     for (const g of groups) {
       if (g.dataset.collapsed !== undefined) g.dataset.align = g.offsetLeft + 300 > room ? "end" : "start";
       g.dataset.popAlign = g.getBoundingClientRect().left < 340 ? "start" : "end";
     }
+    const left = room - used();
+    for (const note of notes) note.dataset.room = left >= NOTE_MIN ? "" : "none";
   };
   const foldFromRight = () => {
     for (let i = groups.length - 1; i >= 0; i--) {
@@ -362,7 +373,7 @@ function BooleanMenuButton() {
                   {(op) => <BooleanTargets op={op()} a={selectedPartIndex()} itemClass="btn btn-ghost btn-sm bool-menu-item" onBack={() => setListOp(null)} onDone={() => close(true)} />}
                 </Show>
                 <Show when={!listOp() && booleanHistory().length}><button class="btn btn-ghost btn-sm" type="button" role="menuitem"
-                  title={booleanHistory().map(h=>`${BOOLEAN_LABELS[h.operation]}: ${h.a}, ${h.b} → ${h.result}`).join("\n")}
+                  title={booleanHistory().map(h=>`${BOOLEAN_LABELS[h.operation]}: ${h.a} ${BOOLEAN_SYMBOLS[h.operation]} ${h.b} → ${h.result}`).join("\n")}
                   onClick={() => { setBooleanPending({a:-1,operation:"add"}); close(true); }}>{t("ribbon.tools.booleanHistory")}</button></Show>
               </div>
             </Show>
@@ -411,14 +422,19 @@ export function Ribbon() {
   const fit = () => { activateMainTab("3d"); document.querySelector<HTMLButtonElement>(".viewport [data-action='fit']")?.click(); };
   const currentMonitors = () => (draft as typeof draft & { monitors?: { currents?: Expr[] } }).monitors?.currents ?? [];
   const fieldPlaneCount = () => (draft as typeof draft & { monitors?: { field_planes?: unknown[] } }).monitors?.field_planes?.length ?? 0;
+  // Post-processing's note: how to get plots, or how to compare (and why currents are off)
+  const resultNote = () => ribbonResult()
+    ? `${t("ribbon.post.compareNote")}${ribbonCurrents().ok ? "" : ` ${ribbonCurrents().reason}`}`
+    : t("ribbon.results.selectResult");
   /** the efficiency-over-the-band monitor's number of frequencies (undefined: no such monitor) */
   const efficiencyPoints = () => {
     const eff = (draft as typeof draft & { monitors?: { efficiency?: { points?: number } } }).monitors?.efficiency;
     return eff ? eff.points ?? EFFICIENCY_POINTS_DEFAULT : undefined;
   };
+  // five significant digits in the language's notation (99.931 / 99,931), like the mesh numbers beside it
   const wavelength = (v: Expr) => {
     const f = tryEvaluate(v, names().names).value;
-    return f && f > 0 ? `${Number((299.792458 / f).toPrecision(5))}` : "—";
+    return f && f > 0 ? fmt(Number((299.792458 / f).toPrecision(5))) : "—";
   };
   // one row at every width: re-fit when the centre column resizes, the tab changes or the ribbon
   // is expanded again (fitRibbon only touches data attributes, never Solid-owned content)
@@ -448,7 +464,7 @@ export function Ribbon() {
   createEffect(on([ribbonTab, ribbonMinimized, simSettingsOpen, saving], () => { if (shell) { fitRibbon(shell); refit(); } }));
   // the Simulation ribbon's mesh readout: after a failed preview it names the numbers as the last
   // successful preview's (or unknown), never as the mesh of the current draft
-  const stats = () => meshFreshness() === "unknown" ? null : meshStats(bundle());
+  const stats = () => meshFreshness() === "unknown" ? null : draftMeshStats();
   const meshReadout = () => {
     const s = stats(), fresh = meshFreshness();
     if (!s) return fresh === "unknown" ? t("ribbon.sim.meshUnknown") : t("ribbon.sim.meshPending");
@@ -461,6 +477,10 @@ export function Ribbon() {
     stale: "ribbon.sim.meshTitle.stale",
     unknown: "ribbon.sim.meshTitle.unknown",
   } as const)[meshFreshness()]);
+  /** the Frequency group's tooltip: the wavelength range and the draft's mesh */
+  const frequencyReadout = () => t("ribbon.sim.frequencyTitle", {
+    min: wavelength(draft.simulation.f_max), max: wavelength(draft.simulation.f_min), meshTitle: meshReadoutTitle(), mesh: meshReadout(),
+  });
   const boundariesText = () => {
     const raw = draft.simulation.boundaries;
     const values = Array.isArray(raw) ? raw : String(raw).split(/[\s,]+/).filter(Boolean);
@@ -485,6 +505,8 @@ export function Ribbon() {
   };
   return (
     <div class="rb-shell" ref={shell}>
+      {/* the designer's one h1 (screen readers): which design this is */}
+      <h1 class="visually-hidden">{t("ribbon.designHeading", { name: draft.model?.name || file()?.id || "" })}</h1>
       <div class="rb-tabs" aria-label={t("ribbon.tabs.aria")}>
         <div role="tablist" aria-label={t("ribbon.tabs.list")} onKeyDown={onTabKeyDown}>
         <For each={RIBBON_TABS}>{(tab) => (
@@ -507,6 +529,8 @@ export function Ribbon() {
           <RButton icon={FileUp} label={t("ribbon.home.importCst")} title={t("ribbon.home.importCstTitle")} onClick={() => setCstImportOpen(true)} />
           <RButton icon={CircuitBoard} label={t("ribbon.home.importPcb")} title={t("ribbon.home.importPcbTitle")} onClick={() => setPcbImportOpen(true)} />
           <RButton icon={Save} label={saving() ? t("ribbon.home.saving") : t("common.save")} title={saving() ? t("ribbon.home.saving") : !dirty() && !conflict() ? t("ribbon.home.noChanges") : t("ribbon.home.saveTitle", { key: SAVE_KEY })} onClick={save} disabled={saving() || (!dirty() && !conflict())} />
+          <RButton icon={SaveAll} label={t("ribbon.home.saveAs")} action="save-as" title={t("ribbon.home.saveAsTitle", { key: SHORTCUTS.saveAs.key })} onClick={openSaveAs} disabled={saving()}
+            ariaKeyShortcuts={isMacPlatform() ? "Meta+Shift+S" : "Control+Shift+S"} />
           <RButton icon={X} label={t("common.close")} title={health()?.desktop ? t("ribbon.home.closeTitle", { key: CLOSE_KEY }) : t("ribbon.home.closeProject")} onClick={requestCloseProject} />
           <RButton icon={Keyboard} label={t("ribbon.home.shortcuts")} title={t("ribbon.home.shortcutsTitle", { key: SHORTCUTS.help.key })} onClick={showShortcutHelp} />
         </RGroup>
@@ -534,7 +558,7 @@ export function Ribbon() {
             <Show when={drawOptionsOpen()}><DrawOptionsPanel onClose={() => setDrawOptionsOpen(false)} /></Show>
           </div>
         </RGroup>
-        <RGroup label={t("ribbon.wcs.group")} icon={Grid3x3}>
+        <RGroup label={t("ribbon.wcs.group")} hint={t("ribbon.wcs.groupTitle")} icon={Grid3x3}>
           <RButton icon={MousePointerClick} label={t("ribbon.wcs.face")} title={t("ribbon.wcs.faceTitle")} pressed={facePicking()}
             onClick={() => { startTool(null); setExtrudeFacePicking(false); setFacePicking(!facePicking()); }} />
           <RButton icon={Move3d} label={t("ribbon.wcs.transform")} title={t("ribbon.wcs.transformTitle")} onClick={() => setWcsDialog(true)} />
@@ -580,16 +604,18 @@ export function Ribbon() {
             onClick={() => openSimSettings("freq")} />
         </RGroup>
         {/* inline fields: only while the ribbon has room to spare (the Frequency band and Mesh
-            settings dialogs hold the same values) */}
+            settings dialogs hold the same values). The wavelength and mesh readout is the group's
+            tooltip (and its accessible description): a third line made this tab 7 px taller than the
+            others, so the 3D view jumped when switching tabs; the status bar shows the mesh too. */}
         <RGroup label={t("ribbon.sim.frequency")} icon={Waves} class="rb-extra">
-          <div class="rb-frequency">
+          <div class="rb-frequency" title={frequencyReadout()}>
             <Show when={!simSettingsOpen()}>
               <div class="rb-field-pair">
                 <RibbonField label={t("ribbon.sim.fMin")} unit="GHz" value={draft.simulation.f_min} path="simulation.f_min" onChange={(v) => edit((d) => { d.simulation.f_min = v; }, "fmin")} />
                 <RibbonField label={t("ribbon.sim.fMax")} unit="GHz" value={draft.simulation.f_max} path="simulation.f_max" onChange={(v) => edit((d) => { d.simulation.f_max = v; }, "fmax")} />
               </div>
             </Show>
-            <span class="rb-info mono" title={t("ribbon.sim.wavelengthTitle", { meshTitle: meshReadoutTitle(), mesh: meshReadout() })}>λ {wavelength(draft.simulation.f_max)}–{wavelength(draft.simulation.f_min)} mm · <span class="rb-mesh-readout" data-fresh={meshFreshness()}>{meshReadout()}</span></span>
+            <span class="visually-hidden rb-mesh-readout" data-fresh={meshFreshness()}>{frequencyReadout()}</span>
           </div>
         </RGroup>
         <RGroup label={t("ribbon.sim.boundaries")} icon={SquareDashed}>
@@ -599,9 +625,25 @@ export function Ribbon() {
             onClick={() => openSimSettings("bounds")} />
         </RGroup>
         <RGroup label={t("ribbon.sim.mesh")} icon={ScanLine}>
+          {/* the Classic mesh's density as a field; the other modes say what the mesh is, so the
+              block is never empty (in the folded group's drop-down too) */}
           <div class="rb-mesh-fields rb-extra">
-            <Show when={!simSettingsOpen() && (draft.mesh.mode === "auto" || !draft.mesh.mode)}>
-              <RibbonField label={t("ribbon.sim.cellsPerWavelength")} value={draft.mesh.cells_per_wavelength ?? 20} path="mesh.cells_per_wavelength" onChange={(v) => edit((d) => { d.mesh.cells_per_wavelength = v; }, "cpw")} />
+            <Show when={!simSettingsOpen()}>
+              <Switch>
+                <Match when={draft.mesh.mode === "auto" || !draft.mesh.mode}>
+                  <RibbonField label={t("ribbon.sim.cellsPerWavelength")} value={draft.mesh.cells_per_wavelength ?? 20} path="mesh.cells_per_wavelength" onChange={(v) => edit((d) => { d.mesh.cells_per_wavelength = v; }, "cpw")} />
+                </Match>
+                <Match when={draft.mesh.mode === "manual"}>
+                  <span class="rb-info rb-mesh-line" title={t("sim.mesh.manualNote")}>{t("ribbon.sim.meshManualLines", {
+                    x: draft.mesh.lines?.x?.length ?? 0, y: draft.mesh.lines?.y?.length ?? 0, z: draft.mesh.lines?.z?.length ?? 0,
+                  })}</span>
+                </Match>
+                <Match when={draft.mesh.mode === "design"}>
+                  <span class="rb-info rb-mesh-line">{draft.mesh.overrides?.cells_per_wavelength !== undefined && draft.mesh.overrides?.cells_per_wavelength !== null
+                    ? t("ribbon.sim.meshAutoCpw", { cpw: valueText(draft.mesh.overrides.cells_per_wavelength) })
+                    : t("sim.mesh.mode.design")}</span>
+                </Match>
+              </Switch>
             </Show>
           </div>
           <RButton icon={SlidersVertical} label={t("ribbon.sim.meshSettings")}
@@ -638,7 +680,7 @@ export function Ribbon() {
         <RGroup label={t("ribbon.sim.solver")} icon={Settings2}>
           <RButton icon={Timer} label={t("ribbon.sim.solverLimits")}
             issue={issueFor("simulation.end_criteria_db", "simulation.max_timesteps")}
-            title={issueTitle(t("ribbon.sim.solverLimitsTitle", { db: draft.simulation.end_criteria_db ?? -60, steps: draft.simulation.max_timesteps ?? 60000 }), issueFor("simulation.end_criteria_db", "simulation.max_timesteps"))}
+            title={issueTitle(t("ribbon.sim.solverLimitsTitle", { db: fmt(draft.simulation.end_criteria_db ?? -60), steps: draft.simulation.max_timesteps ? i18nFmt.int(draft.simulation.max_timesteps) : t("sim.solver.maxStepsAuto") }), issueFor("simulation.end_criteria_db", "simulation.max_timesteps"))}
             onClick={() => openSimSettings("solver")} />
         </RGroup>
         <RGroup label={t("ribbon.sim.run")} icon={Play}>
@@ -664,7 +706,13 @@ export function Ribbon() {
           <RButton icon={Layers2} label={t("ribbon.fieldPlane")} title={ribbonFieldPlanes().reason} disabled={!ribbonFieldPlanes().ok} pressed={resultFocus()?.view === "fieldplane"} onClick={() => void openRibbonResult("fieldplane")} />
           <RButton icon={Grid2x2} label={t("ribbon.post.fieldMap")} title={ribbonFieldPlanes().ok ? t("ribbon.post.fieldMapTitle") : ribbonFieldPlanes().reason} disabled={!ribbonFieldPlanes().ok} pressed={resultFocus()?.view === "fieldmap"} onClick={() => void openRibbonResult("fieldmap")} />
         </RGroup>
-        {/* while a pattern is shown (the Pattern tab or the 3D pattern): the quantity it draws */}
+        <RGroup label={t("ribbon.post.report")} icon={FileText}>
+          <RButton icon={FileText} label={t("ribbon.post.pdf")} title={ribbonExportReady() ? t("ribbon.post.pdfTitle") : ribbonExportReason()} disabled={!ribbonExportReady()} onClick={() => openRibbonResult("report")} />
+          <RButton icon={Package} label={t("ribbon.post.package")} title={ribbonExportReady() ? t("ribbon.post.packageTitle") : ribbonExportReason()} disabled={!ribbonExportReady()} onClick={() => openRibbonResult("export")} />
+          <RButton icon={FileCode} label={t("ribbon.post.python")} action="open-python" title={t("ribbon.post.pythonTitle")} onClick={() => { setRunOpen(false); setSidePanelCollapsed(false); void openPythonPanel(); }} />
+        </RGroup>
+        {/* while a pattern is shown (the Pattern tab or the 3D pattern): the quantity it draws. It comes
+            after the report group, so PDF report, Package and Python keep their place when it appears. */}
         <Show when={ribbonFarfield()}>{(shown) => (
           <RGroup label={t("ribbon.post.farfield")} icon={Globe}>
             <label class="rb-ff-quantity"><span>{t("ribbon.post.quantity")}</span>
@@ -673,13 +721,8 @@ export function Ribbon() {
             </label>
           </RGroup>
         )}</Show>
-        <RGroup label={t("ribbon.post.report")} icon={FileText}>
-          <RButton icon={FileText} label={t("ribbon.post.pdf")} title={ribbonExportReady() ? t("ribbon.post.pdfTitle") : t("ribbon.post.openRunFirst")} disabled={!ribbonExportReady()} onClick={() => openRibbonResult("report")} />
-          <RButton icon={Package} label={t("ribbon.post.package")} title={ribbonExportReady() ? t("ribbon.post.packageTitle") : t("ribbon.post.openRunFirst")} disabled={!ribbonExportReady()} onClick={() => openRibbonResult("export")} />
-          <RButton icon={FileCode} label={t("ribbon.post.python")} action="open-python" title={t("ribbon.post.pythonTitle")} onClick={() => { setRunOpen(false); setSidePanelCollapsed(false); void openPythonPanel(); }} />
-        </RGroup>
-        <p class="rb-result-note" title={ribbonResult() ? t("ribbon.post.compareNote") : t("ribbon.results.selectResult")}>{ribbonResult() ? t("ribbon.post.compareNote") : t("ribbon.results.selectResult")}
-          <Show when={ribbonResult() && !ribbonCurrents().ok}> {ribbonCurrents().reason}</Show></p>
+        {/* wraps to at most three lines inside the ribbon (ribbon.css); the tooltip has the whole text */}
+        <p class="rb-result-note" title={resultNote()}>{resultNote()}</p>
       </Show>
       </Show>
       </div>
@@ -688,7 +731,8 @@ export function Ribbon() {
         <RunDialog />
       </Show>
       <OptimizeDialog />
-      <Show when={sweepDialogOpen()}><SweepDialog /></Show>
+      {/* lazily loaded: its own boundary, so loading it never swaps the ribbon for a placeholder */}
+      <Show when={sweepDialogOpen()}><Suspense><SweepDialog /></Suspense></Show>
       <ConvergenceDialog />
       <Show when={simSettingsOpen()}>
         <SimSettingsDialog />
@@ -703,7 +747,7 @@ export function Ribbon() {
       <ShapeDialogHost />
       <WcsDialogHost />
       <FaceExtrudeDialog />
-      <Show when={booleanPending()?.a === -1}><div class="rb-pop dm-boolean-history" role="dialog" aria-label={t("boolean.history")}><h3 class="dz-h">{t("boolean.history")}</h3><For each={booleanHistory()}>{h=><p>{BOOLEAN_LABELS[h.operation]}: {h.a} + {h.b} → {h.result} <button class="btn btn-ghost btn-sm" onClick={()=>restoreBooleanPart(h.index)}>{t("boolean.restore")}</button></p>}</For><button class="btn btn-ghost btn-sm" onClick={()=>setBooleanPending(null)}>{t("common.close")}</button></div></Show>
+      <Show when={booleanPending()?.a === -1}><div class="rb-pop dm-boolean-history" role="dialog" aria-label={t("boolean.history")}><h3 class="dz-h">{t("boolean.history")}</h3><For each={booleanHistory()}>{h=><p>{BOOLEAN_LABELS[h.operation]}: {h.a} {BOOLEAN_SYMBOLS[h.operation]} {h.b} → {h.result} <button class="btn btn-ghost btn-sm" onClick={()=>restoreBooleanPart(h.index)}>{t("boolean.restore")}</button></p>}</For><button class="btn btn-ghost btn-sm" onClick={()=>setBooleanPending(null)}>{t("common.close")}</button></div></Show>
       <NewParamHost />
       <ContextMenu />
       <ColorPopoverHost />
@@ -712,10 +756,12 @@ export function Ribbon() {
   );
 }
 
-/** Under the ribbon while a draw tool is on: what to click, and how many points so far. */
+/** Over the top of the 3D view while a tool, a pick or a Boolean is on: what to click, and how many
+ * points so far. The bars float over the view (designer.css .dw-hints), so showing, growing or hiding
+ * one never resizes the canvas or moves the model under the pointer. */
 export function DrawHint() {
   return (
-    <>
+    <div class="dw-hints">
     <PointReadout />
     <Show when={automaticOverlap()}>{(overlap) =>
       <div class="rb-hint" role="group" aria-label={t("boolean.overlap.aria")}>
@@ -783,7 +829,7 @@ export function DrawHint() {
         <button class="icon-btn icon-btn-sm rb-hint-x" onClick={() => startTool(null)} aria-label={t("draw.stop")} title={t("draw.stopTitle")}><X size={13} /></button>
       </div>
     </Show>
-    </>
+    </div>
   );
 }
 
@@ -913,6 +959,7 @@ export function DesignKeys() {
       // Save works everywhere, as before the shortcut table: while typing in a field, in a dialog,
       // with a drawing tool active. Always suppress the browser's "Save page as".
       if (matchesShortcut("save", e)) { e.preventDefault(); if (!e.repeat) void save(); return; }
+      if (matchesShortcut("saveAs", e)) { e.preventDefault(); if (!e.repeat && !t?.closest?.(".dialog, .scrim, dialog[open]")) openSaveAs(); return; }
       // Save remains ahead of the field/dialog/drawing guard (`if (inField || inOverlay || tool()) return;`).
       // Tree and viewport handlers run first and own their local keys.
       if (e.defaultPrevented && !(desktop && mod && ["t", "n", "w", "r"].includes(k))) return;

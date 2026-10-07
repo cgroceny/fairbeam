@@ -17,7 +17,7 @@
   border-bottom: 1px solid var(--al-border);
 }
 .python-panel-head h2 { margin: 0; font-size: var(--al-text-sm); font-weight: 600; }
-.python-panel-actions { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: var(--al-space-1); min-width: 0; }
+.python-panel-actions { display: flex; flex-wrap: nowrap; align-items: center; justify-content: flex-end; gap: var(--al-space-1); min-width: 0; margin-left: auto; }
 .python-panel-actions .btn { white-space: nowrap; }
 .python-panel-code {
   flex: 1;

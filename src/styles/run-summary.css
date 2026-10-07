@@ -31,11 +31,18 @@
 .rs-compare { width: 100%; }
 .rs-compare thead th { position: sticky; top: 0; z-index: 1; background: var(--al-surface-2); padding-top: var(--al-space-1); padding-bottom: var(--al-space-1); }
 .rs-compare th, .rs-compare td { padding-left: var(--al-space-2); padding-right: var(--al-space-2); }
+/* the last column keeps its padding (the generic table rule drops it), so its header is not cut at the box edge */
+.rs-compare :is(th, td):last-child { padding-right: var(--al-space-3); }
 .rs-compare td { height: 26px; }
-.rs-compare .rs-letter { font-family: var(--al-font-mono); font-weight: 600; color: var(--al-accent-text); }
-.rs-compare .rs-name-in { display: flex; align-items: center; gap: var(--al-space-2); max-width: 16ch; }
-.rs-compare .rs-name-in > span:first-child { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.rs-compare .rs-name-in > .rq-badge { flex: none; }
+/* the run letter (a row header) in the middle of its row like the name, not at the bottom where the
+   generic table puts a header cell, and in the row's font */
+.rs-compare tbody th.rs-letter { vertical-align: middle; padding-bottom: 0; font-size: inherit; line-height: inherit; font-family: var(--al-font-sans); font-weight: 600; color: var(--al-accent-text); }
+/* the name and the quality badge (an icon): the name takes the width, the icon stays beside it */
+.rs-compare .rs-name-in { display: flex; align-items: baseline; gap: var(--al-space-1); max-width: 28ch; }
+.rs-compare .rs-name-text { min-width: 6ch; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.rs-compare .rs-name-in > .rq-badge { flex: none; margin-left: 0; }
+/* a band's range with its edge marks ("≤ 0.200–2.172") stays on one line */
+.rs-table .rs-range { white-space: nowrap; }
 /* the comparison's view switch (Values / Δ vs A) above the table */
 .rs-modebar { display: flex; align-items: center; flex-wrap: wrap; gap: var(--al-space-2); margin-bottom: var(--al-space-2); }
 .rs-modebar .note { margin: 0; }

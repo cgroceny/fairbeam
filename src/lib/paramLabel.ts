@@ -12,3 +12,9 @@ export function paramLabelText<T extends string | undefined>(label: T): T | stri
   const key = label === undefined ? undefined : DEFAULT_LABELS[label];
   return key ? t(key) : label;
 }
+
+/** A parameter's tooltip: its description, else its (translated) label, and only without either its
+ * key. A tooltip that repeats the raw key ("sub_h") tells a newcomer nothing the row does not. */
+export function paramTooltip(p: { key: string; label?: string; description?: string }): string {
+  return p.description?.trim() || paramLabelText(p.label)?.trim() || p.key;
+}

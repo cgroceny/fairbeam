@@ -753,7 +753,9 @@ export function quickBundle(d: Design, names: Record<string, number>, previous: 
     const f0 = evaluate(d.simulation.f_min, names) * 1e9, f1 = evaluate(d.simulation.f_max, names) * 1e9;
     for (const [part, entry] of pending) expanded.set(part, entry);
     return {
-      schema: "fairbeam.project/1", name: `${d.model.name} (preview)`, preview: true,
+      // the design's own name: exports of a preview (drawings, reports, macros, file names) are deliverables; `preview`
+      // marks it as not simulated for the UI
+      schema: "fairbeam.project/1", name: d.model.name, preview: true,
       model: { id: d.model.id, name: d.model.name, description: d.model.description ?? "", params: [] },
       solver: { excitation: { type: "gauss", f_min: f0, f_max: f1 > f0 ? f1 : f0 * 2 }, boundaries: Object.fromEntries(["x-", "x+", "y-", "y+", "z-", "z+"].map((k, i) => [k, typeof d.simulation.boundaries === "string" ? d.simulation.boundaries : d.simulation.boundaries[i]])), end_criteria_db: d.simulation.end_criteria_db ?? -60, max_timesteps: 60000, engine: "openEMS", method: "FDTD" },
       parts, ports,

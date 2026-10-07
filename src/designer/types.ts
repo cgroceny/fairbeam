@@ -157,7 +157,7 @@ export interface Design {
   /** Explicit component folders, including empty folders; geometry remains on parts. */
   components?: string[];
   schema: "fairbeam.design/1";
-  model: { id: string; name: string; description?: string; reference?: string };
+  model: { id: string; name: string; description?: string; reference?: string; conversion?: DesignConversion };
   /** Saved Python model whose code created this Design; the source panel can keep using that script. */
   python_source_model?: string;
   /** SHA-256 of that source when it was converted, so later source edits can be identified. */
@@ -186,6 +186,11 @@ export interface Design {
    * about `normal`. Geometry never depends on it: shapes drawn in a local WCS store their own transforms. */
   wcs?: DesignWcs;
 }
+
+/** How a design was made from a bundled example (python/fairbeam/example_design.py): the example
+ * and the conversion notes. A note's `code` names its text (exampleCopy.note.<code>, filled in with
+ * `values`); `text` is the English sentence, for a code this version does not know. */
+export interface DesignConversion { source?: string; notes: { code: string; text: string; values?: Record<string, string | number> }[] }
 
 export interface DesignWcs { normal: Axis; origin: [Expr, Expr, Expr]; angle: 0 | 90 | 180 | 270; flip?: boolean }
 

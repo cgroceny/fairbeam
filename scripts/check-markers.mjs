@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { findResonances, globalExtrema, isReflectionTrace, nearestFiniteSample, nextMinimum, pickTraceSample } from '../src/charts/markerMath.ts';
-import { initialMarkerMode, toggleMarkerMode } from '../src/charts/markerMode.ts';
+import { baseSeriesId, createChartMarkerStore, emptyChartMarkers, initialMarkerMode, markSeries, nextMarkId, toggleMarkerMode } from '../src/charts/markerMode.ts';
 
 for (const id of ['s11', '2,2', 'cmp-0-1,1', 'cmp-0']) assert.equal(isReflectionTrace(id), true, id);
 for (const id of ['s21', '2,1', 'cmp-0-2,1']) assert.equal(isReflectionTrace(id), false, id);
@@ -74,5 +74,82 @@ const resonances = findResonances(bundle.results.frequency, db, -10);
 assert.ok(resonances.length >= 1);
 assert.ok(resonances.some(r => Math.abs(r.x - bundle.results.bands[0].f_center) <= 5e6));
 assert.ok(resonances.some(r => Math.abs(r.low - bundle.results.bands[0].f_lo) <= 5e6 && Math.abs(r.high - bundle.results.bands[0].f_hi) <= 5e6));
+
+// ---- the inspector is kept per chart, not per plotted quantity: dB <-> phase keeps the mode, the markers
+// and the table; the panes of a stack share them (one Markers button for the stack)
+{
+  const store = createChartMarkerStore();
+  assert.deepEqual(store.get('designer:a.json:reflection'), emptyChartMarkers, 'a chart starts closed, without markers');
+  store.update('designer:a.json:reflection', (s) => ({ ...s, mode: toggleMarkerMode(s.mode), marks: [{ id: 1, seriesId: '1,1:db', x: 2.4 }] }));
+  assert.equal(store.get('designer:a.json:reflection').mode.active, true, 'the mode is the chart\'s');
+  assert.equal(store.get('designer:a.json:reflection').marks.length, 1, 'and so are its markers');
+  assert.equal(store.get('designer:b.json:reflection').mode.active, false, 'another chart keeps its own');
+  store.update(undefined, (s) => ({ ...s, auto: false }));
+  assert.equal(store.get(undefined).auto, true, 'no chart key: nothing is stored');
+  // a marker on S11 in dB stands on S11 in phase (and on Re S11 of the Re/Im pane)
+  const phase = [{ id: '1,1:phase' }, { id: '2,1:phase' }];
+  assert.equal(markSeries(phase, '1,1:db')?.id, '1,1:phase', 'the same trace in another quantity');
+  assert.equal(markSeries(phase, '2,1:phase')?.id, '2,1:phase', 'its own trace first');
+  assert.equal(markSeries(phase, '3,1:db'), undefined, 'a trace that is not drawn');
+  assert.equal(baseSeriesId('cmp-0-1,1:mag'), 'cmp-0-1,1');
+  assert.equal(nextMarkId([{ id: 1 }, { id: 4 }]), 5);
+  assert.equal(nextMarkId([]), 1);
+  const chart = readFileSync(new URL('../src/charts/LineChart.tsx', import.meta.url), 'utf8');
+  assert.ok(/const chartKey = \(\) => \(props\.inspection \? props\.inspection\.chart \?\? props\.inspection\.key : undefined\);/.test(chart), 'LineChart keeps its inspector by the chart key');
+  assert.equal(/inspectorMarks|createSignal\(initialMarkerMode\)/.test(chart), false, 'no per-instance marker state any more');
+  assert.ok(/<Show when=\{ownsToolbar\(\)\}>/.test(chart) && /toolbar !== false/.test(chart), 'the lower panes of a stack have no Markers button of their own');
+  const stack = readFileSync(new URL('../src/charts/StackedCharts.tsx', import.meta.url), 'utf8');
+  assert.ok(/chart: props\.inspectionChart, kind: g\(\)\.kind, toolbar: i === 0/.test(stack), 'a stack shares one chart key, the top pane owns the button');
+  for (const f of ['../src/designer/ResultViews.tsx', '../src/components/Dock.tsx', '../src/components/SParamView.tsx']) {
+    const src = readFileSync(new URL(f, import.meta.url), 'utf8');
+    assert.ok(/<StackedCharts /.test(src), `${f}: the stacked panes`);
+    assert.equal(/groups\(\)\.map\(\(g\) => <div style=/.test(src), false, `${f}: no hand-made stack`);
+  }
+  // the Δ row of the two user markers carries the units of the axes
+  const en = JSON.parse(readFileSync(new URL('../src/i18n/en.json', import.meta.url), 'utf8'));
+  assert.equal(en['chart.deltaCell'], 'Δf {df} · Δ {dv}');
+  assert.ok(/tr\("chart\.deltaCell", \{ df: withUnit\(X\(r\.f\), xUnit\(\)\), dv: withUnit\(Y\(r\.value\), yUnit\(\)\) \}\)/.test(chart), 'Δf −0.2196 GHz · Δ 9.7 dB');
+  // a label at the plot's end stays inside the plot (the horn's far-field marker read "−28.00" over a tick)
+  assert.ok(/x: insideX\(cx, m\.label\)/.test(chart) && /insideX\(sx\(p\.x\), text\)/.test(chart), 'marker labels are kept inside the plot');
+}
+
+// ---- one format for a frequency read off a chart: four significant digits in GHz, from one helper (the
+// readouts, the marker table, the S11 tooltip, the Smith tooltip and labels, the tree's monitor nodes)
+{
+  const { ghzDigits, ghzPlain, freqText } = await import('../src/lib/format.ts');
+  assert.deepEqual([2.4036, 11.1634, 0.86704, 123.45].map(ghzPlain), ['2.404', '11.16', '0.8670', '123.5']);
+  assert.equal(ghzDigits(-0.2196), 4, 'a difference of frequencies');
+  assert.equal(freqText(2.4e9), '2.400 GHz');
+  const chart = readFileSync(new URL('../src/charts/LineChart.tsx', import.meta.url), 'utf8');
+  assert.ok(/const txPlain = \(v: number\) => \(xUnit\(\) === "GHz" \? ghzPlain\(v\)/.test(chart), 'tooltips and the table: the frequency format on a GHz axis');
+  assert.ok(/const fxCellPlain = \(v: number\) => minus\(txPlain\(v\)\);/.test(chart), 'the marker table uses the same');
+  const smith = readFileSync(new URL('../src/charts/SmithChart.tsx', import.meta.url), 'utf8');
+  assert.ok(/<div class="tip-head">\{freqText\(props\.f\[hover\(\)!\]\)\}<\/div>/.test(smith), 'the Smith tooltip');
+  const views = readFileSync(new URL('../src/designer/ResultViews.tsx', import.meta.url), 'utf8');
+  assert.ok(/label: freqText\(f\.f\)/.test(views), 'the Smith chart\'s far-field labels');
+  const dock = readFileSync(new URL('../src/components/Dock.tsx', import.meta.url), 'utf8');
+  assert.ok(/label: ghzText\(f \/ 1e9\)/.test(dock) && /label: freqText\(f\)/.test(dock), 'the Examples markers and Smith labels');
+  // the Smith chart's real-axis labels that do not fit a small chart are left out, by importance
+  assert.ok(/for \(const r of \[1, 0\.5, 2, 0\.2, 5\]\)/.test(smith) && /shownAxis\(\)\.has\(r\)/.test(smith), 'Smith labels: no "0.51" on a small chart');
+}
+
+// ---- a stack of panes: a readable height each, three ticks at least, axis titles that fit
+{
+  const { quantityDomain, quantityLines, PHASE_TICKS } = await import('../src/charts/quantityAxes.ts');
+  {
+    assert.deepEqual(quantityDomain({ key: 'db', series: [{ y: [-12, -3, 0.24] }] }), [-30, 5], 'the |S11| axis reaches above 0 dB when the data do');
+    assert.deepEqual(quantityDomain({ key: 'db', series: [{ y: [-42, -3] }] }), [-45, 0]);
+    assert.deepEqual(quantityDomain({ key: 'phase', series: [] }), [-180, 180]);
+    assert.equal(quantityDomain({ key: 'mag', series: [] }), undefined);
+    assert.deepEqual(quantityLines({ key: 'db', kind: 'reflection', series: [{ y: [0.24] }] }).map((h) => h.label), ['−10 dB', '0 dB'], 'a 0 dB line over an unphysical part');
+    assert.deepEqual(PHASE_TICKS, [-180, -90, 0, 90, 180]);
+  }
+  const chart = readFileSync(new URL('../src/charts/LineChart.tsx', import.meta.url), 'utf8');
+  assert.ok(/Math\.max\(h >= 56 \? 3 : 2, Math\.floor\(h \/ 44\)\)/.test(chart), 'three y ticks at least on a short pane');
+  assert.ok(/const yTitle = createMemo/.test(chart) && /\{yTitle\(\)\}/.test(chart), 'the y-axis title fits the pane');
+  const css = readFileSync(new URL('../src/styles/charts.css', import.meta.url), 'utf8');
+  assert.ok(/\.chart-stack \{[^}]*overflow-y: auto/.test(css) && /\.chart-stack\.is-stacked > \.chart-stack-pane \{ flex: 1 0 var\(--chart-pane-h, 168px\); \}/.test(css), 'panes keep their height, the stack scrolls');
+  assert.ok(/\.chart-inspector-table-wrap \{[^}]*max-height: calc\(var\(--chart-row\) \* 8\)/.test(css) && /\.chart-inspector-panel \{ flex: none;/.test(css), 'the marker table keeps its rows; the plot shrinks first');
+}
 
 console.log('Marker mathematics checks passed.');

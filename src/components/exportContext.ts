@@ -3,8 +3,10 @@ import { appMode } from "../workspace";
 import { bundle, centerView, setExportOpen } from "../state";
 import { draft, exportPython, file } from "../designer/store";
 import { activeMainResult } from "../designer/mainTabsState";
-import { downloadMessage, saveDownload } from "../lib/download";
+import { saveDownload } from "../lib/download";
+import { downloadToast, showToast, type ToastOptions } from "../lib/toast";
 import { t } from "../i18n";
+import { designStem } from "../lib/exportNames";
 import { setRenderDialogOpen } from "../render/state";
 export type ExportSurface = "viewport" | "drawing" | "design-result" | "examples-result";
 export interface SurfaceExports { ready:()=>boolean; screenshot?:()=>Promise<void>|void; actions:()=>ContextAction[] }
@@ -15,7 +17,8 @@ export function registerSurfaceExports(surface:ExportSurface,owner:SurfaceExport
   setOwners(o=>({...o,[surface]:owner}));
   return ()=>setOwners(o=>{if(o[surface]!==owner)return o;const next={...o};delete next[surface];return next;});
 }
-export function exportNotice(text:string) { window.dispatchEvent(new CustomEvent("fairbeam:menu-notice",{detail:text})); }
+/** Export feedback is a toast over the app (lib/toast.ts): one message per action, no layout change. */
+export function exportNotice(text:string, options?:ToastOptions) { showToast(text, options); }
 export function activeExportSurface():ExportSurface|null {
   if(appMode()==="home")return null;
   if(appMode()==="design")return file() ? activeMainResult() ? "design-result" : "viewport" : null;
@@ -32,7 +35,7 @@ export const screenshotReason=()=>t(activeExportSurface()==="design-result" ? "c
 export async function captureActiveSurface() {
   const surface=activeExportSurface();
   if(!surface || !screenshotAvailable()) { exportNotice(screenshotReason());return; }
-  try { await owners()[surface]!.screenshot!(); } catch(error) { exportNotice(t("contextExport.failed",{error:String(error)})); }
+  try { await owners()[surface]!.screenshot!(); } catch(error) { exportNotice(t("contextExport.failed",{error:String(error)}),{tone:"error"}); }
 }
 export function contextualExportActions():ContextAction[] {
   const surface=activeExportSurface();if(!surface)return [];
@@ -43,11 +46,11 @@ export function contextualExportActions():ContextAction[] {
   if(appMode()==="results" && surface==="viewport")actions.push(...(owners()["examples-result"]?.actions()??[]));
   if(appMode()==="design" && surface==="viewport" && file()) {
     actions.push({id:"design-json",label:t("contextExport.designJson"),run:async()=>{
-      const snapshot=JSON.stringify(draft,null,2),name=`${draft.model.id}.design.json`;
-      exportNotice(downloadMessage(await saveDownload(name,snapshot,"application/json")));
+      const snapshot=JSON.stringify(draft,null,2),name=`${designStem(file()?.id ?? draft.model.id)}.design.json`;
+      downloadToast(await saveDownload(name,snapshot,"application/json"));
     }},{id:"design-python",label:t("contextExport.designPython"),run:async()=>{
-      const name=`${draft.model.id}.py`,text=await exportPython();if(text)exportNotice(downloadMessage(await saveDownload(name,text,"text/x-python")));
-      else exportNotice(t("contextExport.pythonFailed"));
+      const name=`${designStem(file()?.id ?? draft.model.id)}.py`,text=await exportPython();if(text)downloadToast(await saveDownload(name,text,"text/x-python"));
+      else exportNotice(t("contextExport.pythonFailed"),{tone:"error"});
     }});
   }
   return actions;

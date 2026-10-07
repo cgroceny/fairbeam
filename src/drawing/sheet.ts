@@ -3,8 +3,8 @@
 
 import type { Bundle } from "../types";
 import { roleOf, type Projection } from "./geometry.ts";
-import { fit, textWidth, wrap } from "./metrics.ts";
-import { circle, group, line, polygon, rect, text } from "./svg.ts";
+import { fit, fitLines, textWidth, wrap } from "./metrics.ts";
+import { circle, group, line, n, polygon, rect, text } from "./svg.ts";
 
 export type SheetSize = "A4" | "A3";
 
@@ -84,6 +84,8 @@ interface Cell {
   label: string;
   value: string;
   big?: boolean;
+  /** set smaller or on two lines so that the whole value fits the cell (never shortened) */
+  fitAll?: boolean;
   custom?: (x: number, y: number, w: number, h: number) => string;
 }
 
@@ -117,7 +119,8 @@ export function materialRows(b: Bundle): string[][] {
     }
     if (p.material) {
       const m = p.material;
-      const tan = m.tan_d === null ? `σ ${m.kappa.toPrecision(3)} S/m` : `${fmtVal(m.tan_d)}${m.tan_d_freq ? ` @ ${fmtVal(m.tan_d_freq / 1e9)} GHz` : ""}`;
+      // an instant preview carries no loss: "—" (a run or a server preview has tan δ, or the conductivity)
+      const tan = m.tan_d == null ? (typeof m.kappa === "number" ? `σ ${m.kappa.toPrecision(3)} S/m` : "—") : `${fmtVal(m.tan_d)}${m.tan_d_freq ? ` @ ${fmtVal(m.tan_d_freq / 1e9)} GHz` : ""}`;
       return [label, m.mu_r !== 1 ? `Dielectric, μr ${fmtVal(m.mu_r)}` : "Dielectric", fmtVal(m.eps_r), tan];
     }
     return [label, p.type, "—", "—"];
@@ -156,12 +159,16 @@ export function titleBlock(b: Bundle, info: Omit<TitleInfo, "scale">, st: { fs: 
         if (i) thinL.push(line(cx, y, cx, y + tablesH));
         texts.push(text(cx + 1.2, y + rowH * 0.74, head[i], { "font-weight": 600, "font-size": st.fs * 0.76 }));
         rows.forEach((r, j) => {
-          const v = fit(r[i] ?? "", st.fs * 0.76, cw - 2.4);
+          // a long value (a loss tangent with its frequency) is set smaller to fit; only a very long one is shortened
+          const fs0 = st.fs * 0.76;
+          const shrunk = fitLines(r[i] ?? "", fs0, cw - 2.4, fs0 * 0.7);
+          const fs = shrunk.lines.length === 1 ? shrunk.size : fs0 * 0.7;
+          const v = shrunk.lines.length === 1 ? shrunk.lines[0] : fit(r[i] ?? "", fs, cw - 2.4);
           const ty = y + rowH * (j + 1) + rowH * 0.74;
           texts.push(
             alignRight.includes(i)
-              ? text(cx + cw - 1.2, ty, v, { "text-anchor": "end", "font-size": st.fs * 0.76 })
-              : text(cx + 1.2, ty, v, { "font-size": st.fs * 0.76 }),
+              ? text(cx + cw - 1.2, ty, v, { "text-anchor": "end", "font-size": n(fs) })
+              : text(cx + 1.2, ty, v, { "font-size": n(fs) }),
           );
         });
         cx += cw;
@@ -178,11 +185,11 @@ export function titleBlock(b: Bundle, info: Omit<TitleInfo, "scale">, st: { fs: 
     const changed = geometryParams(b).some((p) => p.value !== p.default);
     const rows: Cell[][] = [
       [
-        { w: 140, label: "Title", value: b.name, big: true },
+        { w: 140, label: "Title", value: b.name, big: true, fitAll: true },
         { w: 40, label: "Sheet", value: "1 / 1" },
       ],
       [
-        { w: 52, label: "Model", value: b.model.id },
+        { w: 52, label: "Model", value: b.model.id, fitAll: true },
         { w: 24, label: "Scale", value: scale },
         { w: 18, label: "Units", value: "mm" },
         {
@@ -195,7 +202,8 @@ export function titleBlock(b: Bundle, info: Omit<TitleInfo, "scale">, st: { fs: 
         { w: 30, label: "Date", value: info.date },
         { w: 42, label: "Generator", value: `Fairbeam ${info.version}` },
         { w: 78, label: "Solver", value: `${b.solver.engine}${b.generator.openems ? ` ${b.generator.openems.split(/\.post|\+/)[0]}` : ""} · ${b.solver.method.split(" (")[0]}` },
-        { w: 30, label: "Drawing no.", value: `${b.model.id.toUpperCase().slice(0, 14)}-01` },
+        // the whole model id: set smaller, or on two lines, to fit the cell; never cut
+        { w: 30, label: "Drawing no.", value: `${b.model.id.toUpperCase()}-01`, fitAll: true },
       ],
     ];
     let cy = y + tablesH;
@@ -207,7 +215,13 @@ export function titleBlock(b: Bundle, info: Omit<TitleInfo, "scale">, st: { fs: 
         if (k) out.push(line(cx, cy, cx, cy + ch, { stroke: "#000", "stroke-width": st.thin }));
         texts.push(text(cx + 1.2, cy + labelFs + 0.8, c.label, { "font-size": labelFs, fill: "#444" }));
         if (c.custom) out.push(c.custom(cx, cy, c.w, ch));
-        else {
+        else if (c.fitAll) {
+          const fs0 = c.big ? st.fs * 1.4 : st.fs;
+          const f = fitLines(c.value, fs0, c.w - 2.4, fs0 * 0.6, ch - labelFs - 2.2, c.big ? 600 : 400);
+          const lh = f.size * 1.1;
+          f.lines.forEach((l, k) => texts.push(text(cx + 1.2, cy + ch - (c.big ? 1.6 : 1.1) - (f.lines.length - 1 - k) * lh, l,
+            { "font-size": n(f.size), "font-weight": c.big ? 600 : undefined })));
+        } else {
           const fs = c.big ? st.fs * 1.4 : st.fs;
           texts.push(text(cx + 1.2, cy + ch - (c.big ? 1.6 : 1.1), fit(c.value, fs, c.w - 2.4, c.big ? 600 : 400), { "font-size": fs, "font-weight": c.big ? 600 : undefined }));
         }

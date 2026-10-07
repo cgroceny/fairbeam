@@ -1,6 +1,6 @@
 G04 Board outline (substrate footprint)*
-G04 Rectangular patch antenna (patch-antenna), Fairbeam 0.1.0*
-%TF.GenerationSoftware,Fairbeam,Fairbeam,0.1.0*%
+G04 Rectangular patch antenna (patch-antenna), Fairbeam 0.7.0*
+%TF.GenerationSoftware,Fairbeam,Fairbeam,0.7.0*%
 %TF.CreationDate,2026-09-25T00:00:00+00:00*%
 %TF.SameCoordinates,Original*%
 %TF.FileFunction,Profile,NP*%
