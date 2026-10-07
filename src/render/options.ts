@@ -59,6 +59,16 @@ export const DEFAULT_RENDER_OPTIONS: RenderOptions = {
   quality: "standard",
 };
 
+/** A side length as typed in the dialog: a whole number of pixels from MIN_SIDE to MAX_SIDE (a decimal is rounded, a
+ *  comma read as the decimal point), else an error. The dialog never clamps silently: the picture has the size shown. */
+export function parseRenderSide(text: string | number): { value: number } | { error: "range" } {
+  const s = String(text).trim().replace(",", ".");
+  const n = s === "" ? Number.NaN : Number(s);
+  if (!Number.isFinite(n)) return { error: "range" };
+  const v = Math.round(n);
+  return v >= MIN_SIDE && v <= MAX_SIDE ? { value: v } : { error: "range" };
+}
+
 const pick = <T extends string>(value: unknown, allowed: readonly T[], fallback: T): T =>
   allowed.includes(value as T) ? (value as T) : fallback;
 

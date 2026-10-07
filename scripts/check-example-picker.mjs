@@ -14,10 +14,8 @@
 import { readFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import { EXAMPLE_CATEGORIES, exampleCategory, exampleDetail, filterGroups, flatItems, initialActive, matchesQuery, pickerKeyTarget } from "../src/lib/examplePicker.ts";
-import { projectLabels, labelOf } from "../src/lib/projectLabels.ts";
-import { resultGroups } from "../src/runner/resultsIndex.ts";
-import { exampleConversionBlocker, exampleEntries } from "../src/runner/examples.ts";
+import { EXAMPLE_CATEGORIES, exampleCategory, exampleDetail, exampleGroups, filterGroups, flatItems, initialActive, matchesQuery, pickerKeyTarget } from "../src/lib/examplePicker.ts";
+import { designFor, exampleConversionBlocker, exampleEntries, exampleSourceFor } from "../src/runner/examples.ts";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const read = (p) => readFileSync(join(root, p), "utf8").replaceAll("\r\n", "\n");
@@ -29,18 +27,28 @@ const check = (ok, what) => {
 };
 const eq = (got, want, what) => check(JSON.stringify(got) === JSON.stringify(want), `${what}: got ${JSON.stringify(got)}, want ${JSON.stringify(want)}`);
 
-// ---- rows from the shipped index, the way the component builds them
+// ---- rows from the shipped index, the way the component (and the Start screen) builds them
 const index = JSON.parse(read("public/projects/index.json")).projects;
 const examples = exampleEntries(index);
-const labels = projectLabels(resultGroups(examples).flatMap((g) => g.entries));
-const models = resultGroups(examples);
-const groups = EXAMPLE_CATEGORIES.map((c) => ({
-  label: c,
-  items: models.filter((g) => exampleCategory(g.model) === c).flatMap((g) =>
-    g.entries.map((p) => ({ file: p.file, label: labelOf(labels, p), detail: exampleDetail(p), results: p.simulated }))),
-})).filter((g) => g.items.length > 0);
+const groups = exampleGroups(examples);
 const all = flatItems(groups);
-eq(all.length, examples.filter((p) => p.simulated).length, "every example with results is a row");
+eq(all.length, examples.length, "every example is a row");
+eq(exampleGroups([...examples, { file: "geo.json", name: "Geometry only", model: "geo-patch", created: "", simulated: false, bands: [], cells: 0 }])
+  .flatMap((g) => g.items).find((i) => i.file === "geo.json")?.results, false, "an example without results is listed too, marked as such");
+const sierpinski = all.filter((i) => i.file.startsWith("sierpinski")).map((i) => i.label);
+eq(sierpinski, ["Sierpinski gasket monopole · iterations=0", "Sierpinski gasket monopole · iterations=3"], "the two Sierpinski runs read apart, next to each other");
+// one helper for the header picker and the Start screen's Examples card
+const picker0 = read("src/components/ExamplePicker.tsx"), home0 = read("src/home/Home.tsx");
+check(picker0.includes("exampleGroups(examples(), (c) => t(`examples.group.${c}`))") && home0.includes("exampleGroups(examples(), (c) => t(`examples.group.${c}`))"),
+  "the picker and Start group the examples with the same helper");
+check(home0.includes("<span class=\"home-item-sub\">{[p.detail, p.results ? \"\" : t(\"home.examples.geometryOnly\")].filter(Boolean).join(\" · \")}</span>"),
+  "Start shows the picker's detail line (band, cells)");
+check(/class="icon-btn icon-btn-sm home-copy"[^>]*aria-label=\{t\("home\.examples\.openAsNewAria", \{ name: p\.label \}\)\} title=\{copyReason\(\) \?\? t\("home\.examples\.copyTitle"\)\}/.test(home0),
+  "Start's copy action is an icon button with a label and the reason it is off");
+check(/fallback=\{\s*<p class="muted" role="status">\{t\(DEMO \|\| isDesktopShell\(\) \? "home\.examples\.empty" : "home\.examples\.emptyServer"\)\}<\/p>/.test(home0),
+  "an empty workspace says what happened instead of an empty card");
+const css0 = read("src/styles/designer.css");
+check(/\.home-examples \.home-item-name \{ white-space: normal; overflow-wrap: anywhere; \}/.test(css0), "Start's example names wrap instead of being cut");
 eq(groups.map((g) => g.label), ["uav", "printed", "horns", "arrays", "wire"], "groups follow the category order; the empty category (other) is hidden");
 eq(exampleCategory("yagi_867"), "uav", "an 867 model is in the UAV group");
 eq(exampleCategory("patch-array-2x1"), "arrays", "an array beats the patch rule");
@@ -55,6 +63,13 @@ eq(exampleDetail({ bands: [3.303, 6.219, 7.297], cells: 1964256 }), "3.3, 6.22, 
 eq(exampleDetail({ bands: [], cells: 0 }), "", "no bands and no cells: an empty secondary line");
 eq(exampleDetail({ bands: [2.4], cells: 1000, engine: "CUDA" }), "2.4 GHz · 1000 cells · CUDA", "the engine is named when the index has it");
 check(all.every((i) => i.results), "the list holds examples with results (the badge reads \"with results\")");
+
+// ---- the source of an 867 MHz example is its read-only example design, never "Open in designer"
+const yagiSource = { key: "yagi_867", file: "yagi_867.design.json", kind: "design", readonly: true, model: { id: "yagi-867", name: "Yagi" } };
+const myYagi = { key: "my_yagi", file: "my_yagi.design.json", kind: "design", readonly: false, model: { id: "yagi-867", name: "My Yagi" } };
+eq(exampleSourceFor([yagiSource], "yagi-867")?.key, "yagi_867", "the example design is the copy's source");
+eq(designFor([yagiSource], "yagi-867"), undefined, "a bundled example design does not open in the designer");
+eq(designFor([yagiSource, myYagi], "yagi-867")?.key, "my_yagi", "the user's design of that model does");
 
 // ---- filtering
 const names = (q) => flatItems(filterGroups(groups, q)).map((i) => i.label);

@@ -147,6 +147,8 @@ input[data-bad-input] { border-color: var(--al-critical); }
 .rp-sweep-body .rp-hlist { margin: 0; }
 .rp-summary { overflow-x: auto; }
 .rp-summary th { padding-right: var(--al-space-2); }
+/* a radiation efficiency above 100 %: not physical (RunHistory.tsx SweepSummary) */
+.rp-summary td.rp-over { color: var(--al-warn); font-weight: 600; }
 .rp-summary td { padding-right: var(--al-space-2); }
 .rp-sweep-f { width: 96px; flex: none; height: var(--al-control-h-sm); font-size: var(--al-text-sm); }
 .rp-sort {

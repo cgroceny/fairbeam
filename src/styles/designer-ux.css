@@ -93,7 +93,10 @@
 .home-row > .home-del { margin-inline-start: var(--al-space-2); padding-inline-start: var(--al-space-2); border-inline-start: 1px solid var(--al-border); }
 .home-del, .home-copy { flex: none; opacity: 0.55; }
 .home-row:hover .home-del, .home-del:focus-visible, .home-row:hover .home-copy, .home-copy:focus-visible { opacity: 1; }
-.home-copy:disabled { opacity: 0.3; }
+/* a disabled action stays faint on a hovered row too (it says why in its title) */
+.home-copy:disabled, .home-row:hover .home-copy:disabled { opacity: 0.3; cursor: not-allowed; }
+/* "example, read-only" beside a bundled Python model's file name */
+.home-item-tag { margin-inline-start: var(--al-space-1); padding: 0 var(--al-space-1); border: 1px solid var(--al-border); border-radius: var(--al-radius-sm); color: var(--al-text-2); font-family: var(--al-font-sans); white-space: nowrap; }
 .home-confirm { display: grid; gap: var(--al-space-2); padding: var(--al-space-2) var(--al-space-3); border: 1px solid var(--al-critical); border-radius: var(--al-radius); background: var(--al-critical-bg); font-size: var(--al-text-sm); }
 .home-del-btn { background: var(--al-critical); color: var(--al-surface); border-color: var(--al-critical); }
 .home-del-btn:hover:not(:disabled) { filter: brightness(1.08); }
@@ -101,6 +104,15 @@
 .dz-color-popover { position: fixed; z-index: 60; min-width: 0; padding: var(--al-space-2); display: grid; gap: var(--al-space-1); }
 .home-python-hint { color: var(--al-text-1, inherit); border-left: 2px solid var(--al-accent, currentColor); padding-left: var(--al-space-2); }
 .home-python-hint:focus-visible { outline: 2px solid var(--al-accent, currentColor); outline-offset: 2px; }
+/* menus: a disabled item looks disabled (its title gives the reason) */
+.menu-item:disabled, .menu-item[aria-disabled="true"] { color: var(--al-text-3); cursor: not-allowed; }
+.menu-item:disabled:hover, .menu-item[aria-disabled="true"]:hover { background: transparent; }
+.menu-item:disabled svg, .menu-item[aria-disabled="true"] svg { opacity: 0.5; }
+/* Examples screen with nothing open: no empty dock row under the message */
+.center.center-no-dock { grid-template-rows: minmax(0, 1fr); }
+/* Design Properties: a copied example's conversion notes, collapsed under the description */
+.dz-conversion summary { cursor: pointer; }
+.dz-conversion-notes { margin: var(--al-space-1) 0 0; padding-inline-start: var(--al-space-4); display: grid; gap: var(--al-space-1); font-size: var(--al-text-xs); color: var(--al-text-2); }
 
 /* F6 pane cycling (src/designer/panes.ts): a visible ring on the pane the focus was moved to */
 [data-pane].pane-ring:focus-within { outline: 2px solid var(--accent, #2563eb); outline-offset: -2px; }

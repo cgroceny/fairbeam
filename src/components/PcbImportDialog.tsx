@@ -22,11 +22,11 @@ import { setPcbImportOpen } from "../lib/pcbImport";
 import { carriesFiles } from "../lib/fileDrop";
 import { gapCounts, lineRuns, mergeNotes, type ReportNote } from "../lib/cstReport";
 import {
-  admitFiles, buildOptions, isChosen, PCB_DEFAULTS, PCB_LIMITS, PCB_RANGES, pruneMap, reasonKey, roleChoices, roleValue, toBase64,
-  withoutRole, withRole, type FileProblem, type PcbForm,
+  admitFiles, buildOptions, designNameFromFiles, guessedRoles, isChosen, noteKey, PCB_DEFAULTS, PCB_LIMITS, PCB_RANGES, pruneMap, reasonKey,
+  roleChoices, roleValue, toBase64, withoutRole, withRole, type FileProblem, type PcbForm,
 } from "../lib/pcbLayers";
 import type { PcbRole } from "../runner/api";
-import { fmt, t } from "../i18n";
+import { fmt, hasKey, t } from "../i18n";
 
 const ID_RE = /^[a-z][a-z0-9_]{1,40}$/;
 /** Windows device names (python/fairbeam/modelfiles.py RESERVED_ID_RE) */
@@ -117,7 +117,8 @@ export default function PcbImportDialog() {
       setNoCopper(false);
       const kept = pruneMap(overrides(), res.layers);
       if (Object.keys(kept).length !== Object.keys(overrides()).length) setOverrides(kept);
-      if (!nameTyped() || !name().trim()) setName(freeName(entries()[0].name.replace(/\.[^.]+$/, "") /* a name (and id) stored in the design: the file's */));
+      // a name (and id) stored in the design: the stem the files share, without their layer suffixes
+      if (!nameTyped() || !name().trim()) setName(freeName(designNameFromFiles(entries().map((e) => e.name))));
     } catch (err) {
       if (mine !== seq || (err as Error).name === "AbortError") return;
       const a = err as ApiError;
@@ -240,6 +241,14 @@ export default function PcbImportDialog() {
     return r ? t(r.key, r.params) : l.because;
   };
   const roleLabel = (r: string) => t(r === "" ? "pcbImport.role.unclear" : `pcbImport.role.${r}`);
+  /** a row's text: the app's own wording (its controls, not command-line flags) where it has one */
+  const noteText = (n: ReportNote) => {
+    const k = noteKey(n as ReportNote & { key?: string; params?: Record<string, string> }, hasKey);
+    return k ? t(k.key, { ...k.params, units: `${t("pcbImport.advanced")} › ${t("pcbImport.units")}`, origin: `${t("pcbImport.advanced")} › ${t("pcbImport.origin")}`,
+      keep: t("pcbImport.origin.keep"), table: t("pcbImport.layers"), outline: t("pcbImport.role.outline"), bottom: t("pcbImport.role.bottom_copper") }) : n.message;
+  };
+  /** roles the importer guessed from the layer names: the summary names them instead of "everything was imported" */
+  const guessed = () => guessedRoles(layers()).map((g) => `${g.layer} → ${roleLabel(g.role)}`).join(", ");
   const numberField = (label: string, field: "thickness" | "epsR" | "tanD" | "f0" | "chordTol" | "margin", unit?: string) => {
     const [lo, hi] = PCB_RANGES[field];   // the arrow keys stay inside the range
     return (
@@ -393,9 +402,10 @@ export default function PcbImportDialog() {
             <section class="ci-report" aria-label={t("pcbImport.report")}>
               <p class="ci-summary" role="status">
                 <b>{counts()}</b>.{" "}
-                <Show when={refusedRows().length} fallback={<span>{t("pcbImport.allImported")}</span>}>
+                <Show when={refusedRows().length} fallback={<Show when={!guessed()}><span>{t("pcbImport.allImported")}</span></Show>}>
                   <span class="ci-bad">{t("pcbImport.refused", { count: refusedRows().length })}</span> {t("cstImport.listedBelow")}
                 </Show>
+                <Show when={guessed()}> <span>{t("pcbImport.guessed", { list: guessed() })}</span></Show>
                 <Show when={gaps().changed}> {t("pcbImport.warnings", { count: gaps().changed })}</Show>
               </p>
               <Show when={checkErrors().length || errorsOf("warning").length}>
@@ -411,7 +421,7 @@ export default function PcbImportDialog() {
                       <span class="ci-sev">{t(SEVERITY[n.severity])}</span>
                       <span class="ci-msg">
                         <Show when={n.where}><span class="ci-where">{where(n) ? `${where(n)} · ` : ""}{n.where}: </span></Show>
-                        {n.message}
+                        {noteText(n)}
                         <Show when={(n.count ?? 1) > 1}><span class="ci-count"> ×{n.count}</span></Show>
                       </span>
                     </li>

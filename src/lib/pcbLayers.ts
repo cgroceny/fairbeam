@@ -10,7 +10,45 @@ import { parseNumber } from "./numberField.ts";   // the number entry's own pars
  * (scripts/check-pcb-import.mjs compares them). */
 export const PCB_LIMITS = { files: 12, file: 8_000_000, total: 16_000_000 } as const;
 
-export const PCB_ROLES: readonly PcbRole[] = ["top_copper", "bottom_copper", "outline", "ignore"];
+export const PCB_ROLES: readonly PcbRole[] = ["top_copper", "bottom_copper", "outline", "ignore", "top_clearance", "bottom_clearance"];
+
+/** The part of an artwork file name that names its layer (export_patch-F_Cu.dxf, board.GTL, x-B_Cu_Antipad, x-PTH.drl). */
+const LAYER_SUFFIX = /[-_. ]+(?:(?:F|B|In\d+)[._]Cu(?:[-_. ]*(?:antipads?|clearances?))?|Edge[._]Cuts|N?PTH(?:[-_.]drl)?|antipads?|clearances?|top|bottom|bot|front|back|copper|outline|profile|board[-_. ]?outline|drills?|drl|g[tb][lops]|gko|gm\d+|silk\w*|mask\w*|paste\w*|courtyard|crtyd|fab)$/i;
+
+/** The design name proposed for a set of artwork files: the stem they share once the extension and the layer part of each
+ * name are taken off (export_patch-F_Cu.dxf, export_patch-B_Cu.dxf, export_patch-Edge_Cuts.dxf: "export_patch"); the stem
+ * most files share, else the first file's. */
+export function designNameFromFiles(names: readonly string[]): string {
+  const stems = names.map((n) => {
+    let s = n.replace(/\.[^.]+$/, "");
+    for (let before = ""; before !== s && s;) { before = s; s = s.replace(LAYER_SUFFIX, ""); }
+    return s.trim() || n.replace(/\.[^.]+$/, "");
+  });
+  if (!stems.length) return "";
+  const count = new Map<string, number>();
+  for (const s of stems) count.set(s, (count.get(s) ?? 0) + 1);
+  return [...count].sort((a, b) => b[1] - a[1] || stems.indexOf(a[0]) - stems.indexOf(b[0]))[0][0];
+}
+
+/** The layers whose role the importer guessed from their name (a role it is not sure of), each layer once. */
+export function guessedRoles(layers: readonly Pick<PcbLayer, "kind" | "layer" | "source" | "role" | "because">[]): { layer: string; role: PcbRole }[] {
+  const seen = new Set<string>();
+  const out: { layer: string; role: PcbRole }[] = [];
+  for (const l of layers) {
+    if (l.because !== "layer name" || !l.role || l.role === "drill" || l.role === "ignore") continue;
+    const layer = l.kind === "dxf" ? l.layer : l.source;
+    if (seen.has(`${layer}\u0000${l.role}`)) continue;
+    seen.add(`${layer}\u0000${l.role}`);
+    out.push({ layer, role: l.role });
+  }
+  return out;
+}
+
+/** The i18n key and parameters of a report row the app words itself (python/fairbeam/pcb_import.py rows with a `key`, whose
+ * message names a command-line flag), or null: the row is shown as the server wrote it. */
+export function noteKey(n: { key?: string; params?: Record<string, string> }, has: (key: string) => boolean): { key: string; params: Record<string, string> } | null {
+  return n.key && has(`pcbImport.note.${n.key}`) ? { key: `pcbImport.note.${n.key}`, params: n.params ?? {} } : null;
+}
 
 /** The key of a layer in the server's layer map (pcb_import.py _match_map matches a layer's name, its file name or
  * its file stem, case-insensitively, as a pattern). A DXF layer is named by its layer, a Gerber or drill file by

@@ -46,8 +46,35 @@ for (const [logical, physical, cells, expected] of table.cases) {
 }
 assert.equal(autoThreads(8, undefined, null), 4, "physical cores unknown: all logical CPUs count");
 assert.match(runDialog, /autoThreads\(cpu\(\), health\(\)\?\.physical_cores, cells\(\)\)/, "the dialog resolves Auto with the grid it will send");
-assert.match(runDialog, /run\.threads\.autoHint", \{ n: autoCount\(\) \}/, "the hint names that number, not the server's small-grid default");
+assert.match(runDialog, /run\.threads\.autoHint", \{ n: autoCount\(\), cells: [^}]*cores: cores\(\) \}/, "the hint names that number, the mesh and the cores, not the server's small-grid default");
+assert.match(runDialog, /run\.threads\.autoHintNoMesh", \{ n: autoCount\(\), cores: cores\(\) \}/, "before the mesh is known the hint says it counts as small");
 assert.doesNotMatch(runDialog, /run\.threads\.autoHint", \{ n: health\(\)/, "no hint from default_threads");
 assert.match(designRun, /\.\.\.\(nodes \? \{ cells: nodes \} : \{\}\)/, "the run sends the same cell count");
+
+// General settings reach the Run dialog without a reload: a changed default thread count and engine
+// apply at once, as defaults (an earlier Run choice is forgotten, not overwritten with the Settings value)
+const store = readFileSync(new URL("../src/runner/store.ts", import.meta.url), "utf8");
+assert.match(settingsDialog, /if \(patch\.threads !== undefined\) followSettingsThreads\(patch\.threads\);/, "Settings › Default CPU threads updates the run store");
+assert.match(settingsDialog, /if \(patch\.engine\) followSettingsEngine\(/, "Settings › Default engine is a default, not a session choice");
+assert.match(store, /export function followSettingsThreads\(n: number\) \{\s*hasLiveThreadChoice = false;[\s\S]*?localStorage\.removeItem\(RUN_THREADS_KEY\)[\s\S]*?setThreadsSignal\(h \? chooseRunThreads\(h\.cpu_count, 0, 0, n, h\.default_threads\) : n\);/,
+  "the new default replaces the live and remembered Run choice");
+// unticking Auto goes back to the last manual count, not to Auto's number
+assert.match(store, /const LAST_MANUAL_THREADS_KEY = "fairbeam\.run\.threads\.manual";/);
+assert.match(runDialog, /e\.currentTarget\.checked \? 0 : Math\.min\(cpu\(\), lastManualThreads\(\) \|\| autoCount\(\)\)/, "unticking Auto keeps the last used count");
+// the engine: the Settings default unless a run of this session chose one ("Last used")
+assert.match(store, /export function setEngine\(e: string\) \{\s*setEngineSignal\(e\);\s*setEngineSource\("session"\);/, "a run's engine is the session's choice");
+assert.match(store, /if \(engineSource\(\) !== "session" \|\| !\(h\.engines \?\? \["cpu"\]\)\.includes\(engine\(\)\)\) followSettingsEngine\(/, "finding the server again keeps the session's engine");
+assert.match(runDialog, /const lastUsed = engineSource\(\) === "session" && engines\(\)\.includes\(storedEngine\(\)\);/, "the dialog opens on the Settings default unless the session chose");
+assert.match(runDialog, /t\("run\.engine\.lastUsed"\)/, "and says when it shows the last used engine");
+// the estimate is for Auto's count when no per-thread speed exists; the GPU hint is never cut off
+assert.match(runDialog, /run\.estimate\.autoThreads", \{ n: autoCount\(\) \}/);
+assert.match(runDialog, /<p class="dz-value dz-wrap" title=\{t\("run\.gpuNote"\)\}>/);
+// the memory check names what it could not read, with the mesh size it knows
+const preflight = readFileSync(new URL("../src/designer/PreflightNote.tsx", import.meta.url), "utf8");
+assert.match(preflight, /engine === "gpu" \? t\("run\.preflight\.gpuUnknown", \{ need \}\) : t\("run\.preflight\.freeUnknown", \{ need \}\)/);
+assert.doesNotMatch(preflight, /run\.preflight\.unknown"/, "no 'free memory or the mesh size is unknown' guess");
+const en = JSON.parse(readFileSync(new URL("../src/i18n/en.json", import.meta.url), "utf8"));
+assert.doesNotMatch(en["settings.threads.note"], /fewer for small grids/, "Settings states the rule as the Run dialog does");
+assert.doesNotMatch(en["run.threads.hint"], /4 is a good default/);
 
 console.log("Run thread precedence and repeated probe passed");

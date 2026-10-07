@@ -1,5 +1,5 @@
 import { createMemo, createSignal, For, Show } from "solid-js";
-import { ArrowDown, ArrowUp, ChevronRight, GitCompareArrows, Square, Trash2 } from "lucide-solid";
+import { ArrowDown, ArrowUp, ChevronRight, GitCompareArrows, Square, Trash2, TriangleAlert } from "lucide-solid";
 import { num, seconds } from "../lib/format";
 import { api, isTerminal, type Job, type JobStatus } from "./api";
 import { loadIndex as loadIndexQuiet } from "../state";
@@ -9,7 +9,7 @@ import { cancelSweep, historyItems, sweepLongCsv, summaryRows, type SummaryRow, 
 import { saveDownload } from "../lib/download";
 import { useModal } from "../lib/dialog";
 import SweepSummaryMulti, { isMultiPortGroup } from "./SweepSummaryMulti";
-import { ClearQueueButton, QueueButton } from "./RunQueue";
+import { ClearQueueButton, engineThreadsText, QueueButton } from "./RunQueue";
 import { t } from "../i18n";
 
 type StatusFilter = "all" | "active" | "done" | "failed" | "stopped";
@@ -100,7 +100,7 @@ function JobRow(props: { job: Job; inSweep?: boolean }) {
             <span class="rp-hrow-sub mono">
               {ago(j().created)}
               <Show when={j().duration_s !== null && isTerminal(j().status)}> · {seconds(j().duration_s)}</Show>
-              {" · "}{t("runHistory.threadsShort", { n: j().threads })}
+              {" · "}{engineThreadsText(j().engine, j().info?.threads ?? j().threads, true)}
             </span>
           </span>
         </button>
@@ -128,8 +128,11 @@ export function SweepSummary(props: { group: SweepGroup; onOpenRun?: (file: stri
     { key: "f", label: t("spec.band"), unit: "GHz", get: (r: SummaryRow) => r.fCenter, digits: 3 },
     { key: "s11", label: "|S11| min", unit: "dB", get: (r: SummaryRow) => r.s11Min, digits: 1 },
     { key: "dmax", label: "Dmax", unit: "dBi", get: (r: SummaryRow) => r.dmax, digits: 2 },
-    { key: "eff", label: "η", unit: "%", get: (r: SummaryRow) => (r.eff === null ? null : r.eff * 100), digits: 1 },
+    // the radiation efficiency (the far field's), named so it is not read as the Runs table's total
+    // efficiency; a value above 100 % is flagged: the far field of that run is not physical
+    { key: "eff", label: t("runHistory.col.radEff"), unit: "%", get: (r: SummaryRow) => (r.eff === null ? null : r.eff * 100), digits: 1 },
   ];
+  const over = (key: string, v: number | null) => key === "eff" && v !== null && v > 100;
   const copyData = async () => { await navigator.clipboard.writeText(sweepLongCsv(props.group)); };
   const exportCsv = async () => { await saveDownload(`${props.group.name.replace(/[^\w.-]+/g, "-")}-results.csv`, sweepLongCsv(props.group), "text/csv;charset=utf-8"); };
   const rows = createMemo(() => {
@@ -182,7 +185,8 @@ export function SweepSummary(props: { group: SweepGroup; onOpenRun?: (file: stri
                 <tr class="row-select" tabindex={0} onClick={open} onKeyDown={(e) => (e.key === "Enter" || e.key === " ") && (e.preventDefault(), open())}>
                   <td>{runName(r.job.sweep, r.job.sweep!.index)}</td>
                   <td>{t(`progress.status.${r.job.status}`)}</td>
-                  <For each={cols()}>{(c) => <td class="num">{c.get(r) === null ? "—" : num(c.get(r), c.digits)}</td>}</For>
+                  <For each={cols()}>{(c) => <td class="num" classList={{ "rp-over": over(c.key, c.get(r)) }} title={over(c.key, c.get(r)) ? t("runHistory.radEffOver") : undefined}>
+                    <Show when={over(c.key, c.get(r))}><TriangleAlert size={11} aria-hidden="true" /> </Show>{c.get(r) === null ? "—" : num(c.get(r), c.digits)}</td>}</For>
                 </tr>
               );
             }}

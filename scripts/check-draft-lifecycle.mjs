@@ -387,7 +387,8 @@ await openA();
 {
   store.releaseDraft();
   await store.openDesign("a");
-  createdMesh = "design";
+  // the server creates a Classic mesh; the default setting (the recommended automatic mesh) changes it
+  createdMesh = "auto";
   let finishSave;
   nextSave = new Promise(resolve => { finishSave = resolve; });
   const before = calls.filter(x => x.startsWith("PUT ")).length;

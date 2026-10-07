@@ -32,15 +32,19 @@
 .rdk-count-bad { background: var(--al-critical-bg); color: var(--al-critical); }
 .rdk-count-warn { background: var(--al-warn-bg); color: var(--al-warn); }
 
-.rdk-run { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(220px, 1fr); gap: var(--al-space-3); height: 100%; min-height: 0; padding: var(--al-space-2) var(--al-space-3); }
-.rdk-run-main { display: flex; flex-direction: column; gap: var(--al-space-2); min-width: 0; overflow: auto; }
+/* the live panel is at least as tall as its fields: no inner scrollbar crowds the Stop run button (a
+   dock lower than the fields scrolls as a whole, the chart beside them keeps the panel's height) */
+.rdk-run { display: grid; grid-template-columns: minmax(0, 1.5fr) minmax(220px, 1fr); gap: var(--al-space-3); height: 100%; min-height: fit-content; padding: var(--al-space-2) var(--al-space-3); }
+.rdk-run-main { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+/* the fields stay compact, so they fit the dock's default height: the notes in small type */
+.rdk-run-main > .rdk-pulse { padding: 2px var(--al-space-2); font-size: var(--al-text-xs); line-height: 1.35; }
+.rdk-eta-stat { flex: 1 1 100%; }
+.rdk-eta-note { margin: 0; font-size: var(--al-text-xs); line-height: 1.35; color: var(--al-text-3); }
 .rdk-run-head { font-size: var(--al-text-sm); }
 .rdk-push { margin-left: auto; }
 .rdk-compare-control { position: relative; }
 .rdk-compare-popover { position: fixed; z-index: 30; display: grid; gap: var(--al-space-1); width: min(320px, calc(100vw - 16px)); max-height: min(280px, calc(100vh - 16px)); overflow: auto; padding: var(--al-space-2) var(--al-space-3); border: 1px solid var(--al-border); border-radius: var(--al-radius); background: var(--al-surface); box-shadow: var(--al-shadow-pop); font-size: var(--al-text-xs); }
 .rdk-compare-popover label { display: flex; gap: var(--al-space-2); align-items: center; padding: 2px 0; }
-.rdk-action-feedback { display: inline-flex; align-items: center; gap: var(--al-space-1); font-size: var(--al-text-xs); color: var(--al-text-2); }
-.rdk-action-feedback.is-problem { color: var(--al-warn); }
 .rdk-copy.copied { color: var(--al-good); }
 .rdk-run-chart { min-height: 0; min-width: 0; position: relative; }
 .rdk-phases { display: flex; flex-wrap: wrap; gap: 2px; margin: 0; padding: 0; list-style: none; font-size: var(--al-text-xs); }
@@ -172,8 +176,16 @@
   border-top: 1px solid var(--al-border); background: var(--al-surface-2); font-size: var(--al-text-xs); color: var(--al-text-2); white-space: nowrap;
   container: sb / inline-size;
 }
-.sb-cursor { min-width: 210px; }
-.sb-item { flex: none; display: inline-flex; align-items: center; gap: 4px; height: 100%; padding: 0 var(--al-space-3); border-right: 1px solid var(--al-border); white-space: pre; }
+.sb-cursor { min-width: 0; flex-basis: 210px; }
+/* the items left of the gap give way when a run and a queue add theirs (the cursor first, then the
+   mesh, then the run items), each down to an ellipsis; the right group (the preview time and the
+   server state) never shrinks, so "Server online · GPU" stays whole */
+.sb-item { flex: 0 1 auto; min-width: 0; overflow: hidden; display: inline-flex; align-items: center; gap: 4px; height: 100%; padding: 0 var(--al-space-3); border-right: 1px solid var(--al-border); white-space: pre; }
+.sb-item > svg { flex: none; }
+.sb-text { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.sb-cursor { flex-shrink: 6; }
+.sb-mesh { flex-shrink: 3; }
+.sb-fixed { flex: none; }
 .sb-item:last-child { border-right: 0; }
 .sb-grow { flex: 1 1 0; min-width: 0; padding: 0; }
 .sb-btn { border: 0; border-right: 1px solid var(--al-border); border-radius: 0; background: transparent; color: inherit; font: inherit; cursor: pointer; }

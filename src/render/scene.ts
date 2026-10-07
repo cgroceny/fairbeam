@@ -10,7 +10,7 @@ import { primitiveGeometry } from "../scene/geometry.ts";
 import { isGhostPart } from "../scene/partKind.ts";
 import { lookFor, MATERIAL_LOOKS, partInfo, type MaterialClass, type MaterialLook, type RenderPartInfo } from "./materials.ts";
 import type { RenderBackground, RenderPorts, SolderMask } from "./options.ts";
-import { buildPorts, smdElement, type PortBuild, type Solid } from "./ports.ts";
+import { buildPorts, smdElement, updateMarkerSizes, type PortBuild, type Solid } from "./ports.ts";
 
 export interface StageOptions {
   background: RenderBackground;
@@ -57,6 +57,9 @@ export interface BuiltModel {
   /** the bounding sphere's radius, in drawing units */
   radius: number;
   center: THREE.Vector3;
+  /** the lowest z of the design's own parts (a board's underside): the floor the shadow falls on; a connector under the
+   *  board reaches below it */
+  floor: number;
   /** millimetres per drawing unit */
   unitMm: number;
   ports: PortBuild;
@@ -118,6 +121,7 @@ export function buildModel(bundle: Bundle, infoOf: PartInfoLookup | undefined, o
   if (bounds.isEmpty()) bounds.set(new THREE.Vector3(-1, -1, -1), new THREE.Vector3(1, 1, 1));
   const sphere = bounds.getBoundingSphere(new THREE.Sphere());
   const radius = Math.max(sphere.radius, 1e-6);
+  const floor = bounds.min.z;
 
   const ports = buildPorts(bundle.ports ?? [], solids, { mode: o.ports, unitMm, sceneRadius: radius, mk: shared });
   group.add(ports.group);
@@ -130,7 +134,7 @@ export function buildModel(bundle: Bundle, infoOf: PartInfoLookup | undefined, o
   ports.group.traverse((x) => { const m = x as THREE.Mesh; if (m.geometry) owned.geometries.push(m.geometry); });
   group.traverse((x) => { const m = x as THREE.Mesh; if (m.isMesh && m.castShadow) m.receiveShadow = false; });
   return {
-    group, bounds, radius: Math.max(fullSphere.radius, 1e-6), center: bounds.getCenter(new THREE.Vector3()), unitMm, ports, drawn, skipped,
+    group, bounds, radius: Math.max(fullSphere.radius, 1e-6), center: bounds.getCenter(new THREE.Vector3()), floor, unitMm, ports, drawn, skipped,
     dispose() {
       owned.geometries.forEach((g) => g.dispose());
       owned.materials.forEach((m) => m.dispose());
@@ -245,7 +249,8 @@ export class Stage {
     cam.near = radius * 2; cam.far = radius * 11;
     cam.updateProjectionMatrix();
     this.key.target.updateMatrixWorld();
-    const floor = bounds.min.z - radius * 1e-3;
+    // the shadow touches the board: the floor is the parts' lowest face, not the bottom of a connector hanging under it
+    const floor = model.floor - radius * 1e-3;
     const span = radius * 14;
     this.ground.scale.set(span, span, 1);
     this.ground.position.set(center.x, center.y, floor);
@@ -253,9 +258,11 @@ export class Stage {
     this.blob.position.set(center.x, center.y, floor + radius * 5e-4);
   }
 
-  /** Fill and rim follow the camera, like lights on a photographer's stand: every view is lit. */
-  update(camera: THREE.Camera): void {
+  /** Fill and rim follow the camera, like lights on a photographer's stand: every view is lit. With the picture's height
+   *  in pixels, the port markers keep their minimum size on screen. */
+  update(camera: THREE.Camera, heightPx = 0): void {
     if (!this.model) return;
+    if (heightPx > 0) updateMarkerSizes(this.model.ports.group, camera, heightPx);
     const { center, radius } = this.model;
     const toCamera = camera.position.clone().sub(center).normalize();
     const up = new THREE.Vector3().setFromMatrixColumn(camera.matrixWorld, 1).normalize();

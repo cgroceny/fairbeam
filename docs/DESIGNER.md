@@ -16,7 +16,7 @@ designer.
 
 ## Start screen
 
-![Start screen: a new project, your designs, the Python models and the examples](designer/start.png)
+![Start screen: a new design, your designs, the Python models and the examples](designer/start.png)
 
 The start screen opens when the run server is reachable. It has three parts:
 
@@ -38,19 +38,33 @@ The start screen opens when the run server is reachable. It has three parts:
   the file moves to the model history folder, so it can be restored. A design file that does not
   open (damaged, or made by a newer Fairbeam) stays in the list, grayed, with the reason.
 - **Python models** and **Examples**: open a model in the Run panel, or an example with its
-  results (in Examples mode). **Open as new project…** next to an example makes an editable
+  results (in Examples mode). **Open as new design…** next to an example makes an editable
   design of your own from it. The runs of your designs are not listed here: they open under the
   design (see [Running and results](#running-and-results)).
 
 The footer's **Send feedback** links open the public issue tracker in your browser; see
 [Feedback](#feedback).
 
+Start lists your own Python models first, then the bundled examples' models, marked *example,
+read-only*: a click opens one in the Run panel (a bundled one asks to copy it or to run it as it is),
+and its copy button makes an editable design of it. On Start, the header's **Run a Python model…**
+scrolls to this list. The Examples card groups the examples like the header's picker, with their
+bands and mesh sizes. A new design's file name is the ASCII form of its name; a name that is a
+bundled example's ID gets a number (Patch antenna is saved as `patch_antenna_2.design.json`), as the
+line under the Name field shows. **Save as…** (Home ribbon › Project, the header's More menu,
+Shift+Ctrl+S or ⇧⌘S where the browser leaves it to the page, and File › Save As in the desktop app)
+saves a copy of the open design under a new name.
+
 The header's **Start · Design · Examples** switch moves between the start screen, the designer and
 the examples:
 
 The header's **More** menu keeps secondary actions available with arrow-key navigation and Escape.
-**Open result file** is available there and through desktop **File → Open**. Opening a design lists
-its saved runs under **Results** in the tree; select a run to view it without opening a file manually.
+**Open result or design file…** is available there and through desktop **File → Open**: a result
+file (`.json` of a run) opens in Examples; a design file (`.design.json`, e.g. Export › Current
+design JSON from a colleague) is created as a new design in the workspace, under a free file name
+from its name, and opened in Design. Dropping either on the window does the same. Opening a design
+lists its saved runs under **Results** in the tree; select a run to view it without opening a file
+manually.
 On narrow windows the tree and properties panels share one overlay slot so they do not cover
 both sides of the canvas at once. Resizing back restores the independently remembered desktop
 panel choices. General Settings and About take focus whenever opened; dialogs contain Tab,
@@ -62,7 +76,7 @@ inner control handles it first.
 - **Examples** is the viewer described in the [README](../README.md) and [RESULTS.md](RESULTS.md),
   on the example projects: the bundled ones, with their results ready, and your runs of the Python
   models. The searchable project picker in the header (type to filter, grouped by model) lists
-  them; the runs of your designs are not among them. **Open as new project…** (next to the picker,
+  them; the runs of your designs are not among them. **Open as new design…** (next to the picker,
   and in the model panel) makes an editable design from the open example; it is disabled, with the
   reason as its tooltip, for an example the design format cannot hold or a project that is not a
   bundled example. **Open in designer** appears in the model panel when the project was simulated
@@ -284,8 +298,17 @@ expression that does not evaluate.
   as you type. A design file that already has one does not load (the server's error names the key,
   as for any invalid design file) until the key is renamed in the file.
 
-Add a parameter with ribbon Modeling › Parameters › Parameter or **Add parameter** in the Parameters dock.
-Every keystroke in the table applies at once (the 3D view follows). **Enter** commits the cell and
+Add a parameter with ribbon Modeling › Parameters › Parameter or **Add parameter** in the Parameters dock:
+it gets the first free key p1, p2, … and no unit (fill the unit cell for a length or a frequency; a ratio
+or εr stays a bare number). Every keystroke in the table applies at once (the 3D view follows), except
+in the Key cell: a new key applies on **Enter** or when the cell is left, and renames the parameter
+everywhere it is used in one undo step (the shapes, transforms, cuts, ports, lumped elements, materials,
+mesh and simulation fields, the other parameters, the operands a Boolean result keeps and the parameter
+sweep), so renaming `fw` to `feed_w` leaves nothing that names `fw`. An invalid or taken key shows
+its error under the cell and is not applied; Escape returns to the key as it was. A parameter that a
+field still uses is not deleted (the trash button, Home › Edit › Delete, the Delete key): the message
+names the places that use it, as for a material in use; **Duplicate** copies it as `key_2`.
+**Enter** commits the cell and
 moves down to the same cell of the next row; **Escape** takes back only what was typed since the
 last commit, never a value already committed; leaving a cell (Tab, a click) commits it.
 The compact table shows Key, Expression / value, Evaluated value, Unit and Description.
@@ -302,6 +325,9 @@ field. The new value can itself be an expression of preceding parameters, such a
 
 A **material** is a metal or a dielectric with εr, a loss tangent tan δ and the frequency where
 tan δ holds (the band center if empty). Add one with ribbon Modeling › Materials › Dielectric or Metal.
+A new dielectric (also one added from the library) gives tan δ at `f0` when the design has an `f0`
+parameter inside its band, else at the band center (the frequency left empty), not at a datasheet's
+1 or 10 GHz.
 
 openEMS applies tan δ as a constant conductivity, so the loss is exact at that frequency only and
 scales as f_ref / f elsewhere: a datasheet value at 10 GHz used at 2.45 GHz gives four times the
@@ -425,8 +451,10 @@ The Modeling tab's Draw on the work plane group draws with the mouse on the work
 - **Polygon**: click the corners; click the first point again, double-click or press Enter to close
   it.
 
-A hint under the ribbon says what to click next and how many points are placed. Escape cancels
-(first the points, then the tool), Backspace removes the last point. A finished shape opens the
+A hint under the ribbon says what to click next and how many points are placed. Escape or Backspace
+removes the last point (the first one too, staying in the tool); Escape with no point placed stops
+drawing, and a tool armed again starts with no points. Enter before the first click opens the tool's
+shape dialog with default values. A finished shape opens the
 shape dialog, prefilled with what you drew, unless "Confirm drawn shapes in a dialog" is off in the
 group's Options panel; then it goes straight into a new part. Finishing a shape also leaves the
 drawing mode: OK in the dialog ends with the new shape selected and no tool left to
@@ -511,8 +539,10 @@ chosen as **Operation**:
 - **Mirror** across the plane through a **Point on plane** whose **Plane normal axis** is x, y or
   z; **Keep original (add mirrored copy)** decides whether the original stays.
 
-**Duplicate** (Home › Edit, or Ctrl/Cmd+D) copies the selected solid, shape or port; **Delete**
-removes the selection.
+**Duplicate** (Home › Edit, or Ctrl/Cmd+D) copies the selected solid, shape, port, lumped element,
+parameter or material; **Delete** removes the selection (a material or a parameter only while nothing
+uses it). A duplicated solid lies on its original on purpose, so it raises no overlap prompt; moving or
+editing it into another solid does.
 
 **Selection in the 3D view.** The selected solid gets a red tint, an outline and an x-ray fill drawn
 over everything. When one shape of a solid is selected in the tree, only that shape gets the full
@@ -561,7 +591,7 @@ on picked geometry:
 
 - **Boolean** combines two parts, A (kept) and B: **Add** (union), **Subtract** (A − B), **Intersect**
   and **Insert** (A − B with B kept). Select A, choose the operation (or press + − * / with A then
-  B selected). With A selected, the Tools › Boolean menu and the right-click › Boolean submenu list the other
+  B selected: the 3D view previews A op B, Enter or the same key again applies it). With A selected, the Tools › Boolean menu and the right-click › Boolean submenu list the other
   solids: **Subtract ›** (or **Add ›**, **Intersect ›**, **Insert ›**) and one pick applies the
   Boolean at once, in one undo step. Without a selection, choose the operation, then pick B.
   The 3D view previews the result with the operands in color; **Apply** (Enter) keeps it,
@@ -1134,7 +1164,13 @@ and the search goes on. Sweeps run every point as it is.
   your models folder, all for UAV telemetry at 867 MHz: a swept blade antenna, a slotted wideband
   planar dipole, a printed meander dipole for airframes without a metal skin, a printed sleeve
   dipole, a printed 2-element collinear and a ground-station 5-element Yagi, each with its results
-  and how to scale it to other bands.
+  and how to scale it to other bands. The desktop app installs them in the workspace's models folder,
+  read-only, as the sources of the 867 MHz examples: **Open as new design…** on one of them makes an
+  editable copy. Their IDs, like those of the bundled Python models, are reserved for them.
+- **Copies of examples**: a copy of a bundled Python example keeps the example's description, the
+  names and labels of its solids and the names of its materials. What the conversion did (the
+  parameters it carried over, the ones it fixed) is in `model.conversion`, shown as **Conversion
+  notes** in the design's Properties.
 - **Command line**: a design runs like a model file:
   `fairbeam run python/models/my_patch.design.json --set W=30` ([CLI.md](CLI.md)).
 - **Python export**: ribbon Post-processing › Report and export › **Python** (also File › Export
@@ -1204,20 +1240,25 @@ fairbeam import-pcb board.gtl board.gbl board.gko board.drl --substrate RO4003C 
 - **Layers.** Each copper layer becomes a part of `polygon` sheets on a z plane: top copper at
   z = `h` (the substrate thickness, a parameter), bottom copper at z = 0. Layers are recognized by
   name (F.Cu, Top, GTL, Edge.Cuts, Profile ...) or by the Gerber X2 file function; `--layer-map
-  NAME=role` overrides that, with the roles `top_copper`, `bottom_copper`, `outline` and `ignore`
-  (a layer name, file name or pattern on the left). A file with a single unrecognised layer of
-  outlines is taken as top copper, with a warning.
+  NAME=role` overrides that, with the roles `top_copper`, `bottom_copper`, `outline`, `ignore`,
+  `top_clearance` and `bottom_clearance` (a layer name, file name or pattern on the left). A file
+  with a single unrecognized layer of outlines is taken as top copper, with a warning.
+- **Clearances.** A layer named after a copper layer with `_Antipad` (or "clearance"), as
+  Fairbeam's own fab export writes them (`B_Cu_Antipad`), is the clearance of that copper: its
+  circles and outlines are cut out of the copper as holes. Fairbeam's fab DXF and Gerber files
+  therefore read back with the anti-pad round the probe in the ground plane.
 - **Substrate.** A box over the board outline (the Edge.Cuts / Profile layer), else the copper's
   bounding box plus `--margin` (2 mm). `--substrate` takes a library name (FR4, RO4003C ...) or a
   name with `--eps-r` and `--tan-d`; tan δ is applied at the design frequency `f0` (`--f0`, default
   2.45 GHz; the band is 0.6 to 1.3 f0). The board center is moved to x = y = 0 (`--origin keep`
   leaves the file's coordinates; the report gives the offset).
-- **Units.** DXF: `$INSUNITS` (mm assumed, with a warning, when absent; `--units mm|inch` forces).
-  Gerber and Excellon files carry their own.
+- **Units.** DXF: `$INSUNITS` (mm assumed, with one warning for all the files that lack it;
+  `--units mm|inch` forces). Gerber and Excellon files carry their own.
 - **Curves.** Arcs and circles are tessellated so that no chord is more than `--chord-tol` (0.02 mm)
   from the curve.
-- **Holes.** CSXCAD polygons have no holes, so a loop inside a loop (or a Gerber aperture hole)
-  makes the copper part a **live Boolean subtraction** (outlines minus holes, see Cuts above): the
+- **Holes.** CSXCAD polygons have no holes, so a loop inside a loop (a Gerber aperture hole, a clear
+  (LPC) circle flash or region inside one dark region, a clearance layer's circle) makes the copper
+  part a **live Boolean subtraction** (outlines minus holes, see Cuts above): the
   stored sheets are the exact difference, and the operands stay editable. An island inside a hole
   is a separate part (`top_copper_islands`).
 - **Ports.** None: the importer cannot know the feed. The report says "add a port at the feed".
@@ -1225,7 +1266,8 @@ fairbeam import-pcb board.gtl board.gbl board.gko board.drl --substrate RO4003C 
 The **import report** (printed by the command) lists the layers and their roles, what was created
 and every entity that was not imported, with its line and the reason: text, hatches, splines, block
 references, open paths that do not close, self-crossing outlines, Gerber aperture macros, clear
-polarity, step and repeat, unplated holes, routed slots.
+polarity objects other than circle flashes and regions inside one dark region, step and repeat,
+unplated holes, routed slots.
 
 ### The Import PCB artwork dialog
 
@@ -1235,8 +1277,8 @@ desktop app) does the same with a form. Choose the files or drop them on the dia
 nothing until you create the design).
 
 - **Layers.** A table lists every layer of the files (a DXF layer, or a Gerber or drill file) with
-  what it holds, a **role** dropdown (top copper, bottom copper, board outline, ignore; a drill file
-  is drills or ignored) and why that role was picked: the layer name, the Gerber file function, the
+  what it holds, a **role** dropdown (top copper, bottom copper, board outline, ignore, clearance in
+  the top or bottom copper; a drill file is drills or ignored) and why that role was picked: the layer name, the Gerber file function, the
   Excellon file, or your choice. A layer whose name gives no hint shows "Unclear: not used" and
   is highlighted; pick its role. Each change imports again, so the report always matches the table.
   The arrow next to a role you chose goes back to the importer's pick. A map entry names a DXF layer
@@ -1246,8 +1288,12 @@ nothing until you create the design).
   are the ones the design gets. **Advanced**: the units of DXF files, the arc chord tolerance, the
   margin used when no layer is the board outline, and center or keep the file's origin.
 - **Report.** The entries that were not imported come first, then warnings and notes, then the
-  design checks (the missing port is left out of them: the dialog says so itself). Name the design
-  and **Create and open** it.
+  design checks (the missing port is left out of them: the dialog says so itself). The summary lists
+  the roles guessed from layer names instead of "everything was imported", and notes that name a
+  command-line flag are worded for the dialog's own controls (Advanced › Units of DXF files,
+  Advanced › Origin, the Layers table). The proposed name is the stem the files share without their
+  layer suffixes (`export_patch` for `export_patch-F_Cu.dxf`, `export_patch-B_Cu.dxf` ...). Name the
+  design and **Create and open** it.
 - **Port.** The importer cannot know the feed, so a new design has no port. After the design opens,
   the dialog shows "Add a port at the feed" with a button that goes to Simulation › Ports › Lumped
   and adds a lumped port to move to the feed.

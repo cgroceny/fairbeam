@@ -46,6 +46,46 @@ assert.equal(await Promise.reject("workspace_not_writable").catch((reason) => er
 assert.equal(errorText(new Error("could not open folder")), "could not open folder");
 console.log("general settings persistence, validation and command error mapping passed");
 
+// New design mesh: the setting is named after the design's mesh mode, so the label in Settings and
+// the mode a new design gets are the same thing ("design" = Automatic (recommended), "auto" = Classic)
+assert.equal(GENERAL_DEFAULTS.meshMode, "design", "new installs create designs with the recommended automatic mesh");
+const meshLegacy = new MemoryStorage();
+meshLegacy.setItem(THREADS_MIGRATED_KEY, "1");
+meshLegacy.setItem("fairbeam.generalSettings", JSON.stringify({ ...GENERAL_DEFAULTS, meshMode: "legacy", theme: "dark" }));
+assert.deepEqual(readGeneralSettings(meshLegacy), { ...GENERAL_DEFAULTS, meshMode: "design", theme: "dark" },
+  "the old value behind 'Automatic (recommended)' becomes the design-aware mesh, other settings kept");
+const meshClassic = new MemoryStorage();
+meshClassic.setItem(THREADS_MIGRATED_KEY, "1");
+meshClassic.setItem("fairbeam.generalSettings", JSON.stringify({ ...GENERAL_DEFAULTS, meshMode: "auto" }));
+assert.equal(readGeneralSettings(meshClassic).meshMode, "auto", "a stored Classic (old) choice stays Classic");
+for (const mode of ["design", "auto"]) {
+  const s = new MemoryStorage();
+  s.setItem("fairbeam.mesh.mode", mode);
+  assert.equal(readGeneralSettings(s).meshMode, mode, `the older mesh key "${mode}" maps 1:1`);
+  writeGeneralSettings({ ...GENERAL_DEFAULTS, meshMode: mode }, s);
+  assert.equal(s.getItem("fairbeam.mesh.mode"), mode, "the older mesh key is written with the same name");
+}
+assert.throws(() => writeGeneralSettings({ ...GENERAL_DEFAULTS, meshMode: "legacy" }, new MemoryStorage()), /Invalid general settings/,
+  "the old value name is only read, never written");
+{
+  const { readFileSync } = await import("node:fs");
+  const read = (p) => readFileSync(new URL(`../${p}`, import.meta.url), "utf8");
+  const store = read("src/designer/store.ts");
+  assert.match(store, /const preferredMesh = readGeneralSettings\(\)\.meshMode;/, "createDesign uses the setting's mesh mode as it is");
+  const settings = read("src/components/GeneralSettings.tsx");
+  assert.match(settings, /<option value="design">\{t\("sim\.mesh\.mode\.design"\)\}<\/option><option value="auto">\{t\("sim\.mesh\.mode\.auto"\)\}<\/option>/,
+    "Settings labels its values with the Simulation settings' mesh mode names");
+  const sim = read("src/designer/SimSettingsDialog.tsx");
+  assert.match(sim, /const openedClassic = d\(\)\.mesh\.mode === "auto" \|\| !d\(\)\.mesh\.mode;/, "the dialog remembers a Classic mesh at open");
+  assert.match(sim, /<Show when=\{offerClassic\(\)\}><option value="auto">/, "Classic stays offered while the dialog is open");
+  for (const lang of ["en", "tr"]) {
+    const table = JSON.parse(read(`src/i18n/${lang}.json`));
+    assert.ok(!("settings.mesh.legacy" in table) && !("settings.mesh.auto" in table), `${lang}: no second set of mesh mode labels`);
+  }
+  assert.equal(JSON.parse(read("src/i18n/en.json"))["sim.mesh.mode.design"], "Automatic (recommended)");
+}
+console.log("new design mesh setting: names, migration and createDesign mapping passed");
+
 // Existing installs get the exact Plex pair without rewriting other saved preferences.
 const appearance = new MemoryStorage();
 appearance.setItem(THREADS_MIGRATED_KEY, "1");
@@ -70,3 +110,21 @@ assert.throws(() => writeGeneralSettings({ ...fonts, uiFont: "missing-font" }, a
 appearance.setItem("fairbeam.generalSettings", JSON.stringify({ ...fonts, theme: "invalid" }));
 assert.equal(readGeneralSettings(appearance).language, "tr", "invalid appearance does not discard unrelated preferences");
 console.log("appearance migration, fallback, independent font application and reset passed");
+
+// The settings dialog has a tab row between its head and its body. The shared .dialog grid has one
+// shrinkable track (head, body, foot), so the dialog declares its own rows: the tab row keeps its
+// height and only the body scrolls (otherwise the tabs shrink under the body and cannot be clicked).
+{
+  const { readFileSync } = await import("node:fs");
+  const tsx = readFileSync(new URL("../src/components/GeneralSettings.tsx", import.meta.url), "utf8");
+  const css = readFileSync(new URL("../src/styles/general-settings.css", import.meta.url), "utf8");
+  const dialog = tsx.match(/<div class="([^"]*\bdialog\b[^"]*)"[^>]*aria-labelledby="gs-title"/);
+  assert.ok(dialog, "the settings dialog element is found");
+  assert.match(dialog[1], /\bgs-dialog\b/, "the settings dialog carries the gs-dialog layout class");
+  const rows = css.match(/\.gs-dialog\s*\{[^}]*grid-template-rows:\s*([^;]+);/);
+  assert.ok(rows, ".gs-dialog declares its grid rows");
+  assert.equal(rows[1].trim().split(/\s+(?![^(]*\))/).length, 3, "head, tab row and body each get a track");
+  assert.match(rows[1], /^auto auto minmax\(0, 1fr\)$/, "only the body track shrinks");
+  assert.match(css, /\.gs-dialog > \.gs-body\s*\{[^}]*min-height:\s*0/, "the body can shrink below its content and scroll");
+  console.log("settings dialog layout: the tab row keeps its height and the body scrolls");
+}

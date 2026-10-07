@@ -49,7 +49,7 @@ for provenance and the separate client-preflight limitation.
 ## Explicit run setup
 
 In the designer's Simulation settings, **Run setup** offers Quick exploration (10 cells per
-wavelength, -30 dB), Balanced (20, -40 dB), and Refinement check (30, -60 dB). Selecting a setup
+wavelength, -40 dB), Balanced (20, -40 dB), and Refinement check (30, -60 dB). Selecting a setup
 does not edit the design: **Apply setup** changes automatic mesh resolution and the energy
 stopping criterion as one undoable edit. **Cancel** restores the draft and its history from when
 the dialog opened. Geometry, frequency band, boundaries, monitor settings, and the timestep

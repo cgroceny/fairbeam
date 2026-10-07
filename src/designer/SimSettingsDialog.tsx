@@ -7,13 +7,13 @@ import { Activity, Box, Gauge, Grid3x3, Radio, Timer, Waves, X } from "lucide-so
 import { openMeshConvergence } from "./ConvergenceDialog";
 import { FOCUSABLE, useModal } from "../lib/dialog";
 import { tabKeyTarget } from "../lib/tabKeys";
-import { bundle } from "../state";
-import { engine, meshFreshness } from "../runner/store";
+import { draftPreview, engine, meshFreshness } from "../runner/store";
 import { setSimSettingsOpen, setSimSettingsSection, simSettingsSection } from "../runner/designRun";
 import { ExprField } from "./DesignPane";
 import FieldPlanesEditor, { addFieldPlane, fieldPlanes } from "./FieldPlanesEditor";
 import { setMeshView } from "./MeshView";
-import { cellsText, estimateText, estimateTime, meshStats } from "./meshStats";
+import { cellsText, estimateText } from "./meshStats";
+import { draftEstimate, draftMeshStats } from "./draftMesh";
 import { EFFICIENCY_POINTS_DEFAULT, EFFICIENCY_POINTS_MAX, EFFICIENCY_POINTS_MIN, END_DB_MAX, END_DB_MIN } from "./checks";
 import { changedSince, draft, edit, fieldId, historyMark, issueUnder, issues, names, rollbackTo } from "./store";
 import { tryEvaluate } from "./expr";
@@ -111,10 +111,23 @@ export default function SimSettingsDialog() {
   const close = () => setSimSettingsOpen(false);
   const cancel = () => { rollbackTo(opened); close(); };
   useModal(() => box, cancel);
+  // Enter in a field commits it and closes the dialog, like OK (the Brick and Run dialogs confirm on
+  // Enter too); not in a select, a text area, a button or a check box, nor when the field used the key
+  // itself (an expression field offering to create a parameter)
+  const onEnter = (e: KeyboardEvent) => {
+    if (e.key !== "Enter" || e.defaultPrevented || e.isComposing || e.shiftKey || e.altKey || e.ctrlKey || e.metaKey) return;
+    const el = e.target;
+    if (!(el instanceof HTMLInputElement) || ["checkbox", "radio", "button", "submit", "reset", "range", "file", "color"].includes(el.type)) return;
+    e.preventDefault();
+    el.blur(); // a field that commits on change or blur does so now
+    close();
+  };
 
   const [face, setFace] = createSignal(4);
   const [section, setSection] = createSignal<string>("freq");
   const [profile, setProfile] = createSignal<RunProfile>("balanced");
+  /** the setup last applied in this dialog, confirmed below the button */
+  const [applied, setApplied] = createSignal<RunProfile | null>(null);
   const bounds = () => (typeof d().simulation.boundaries === "string" ? Array(6).fill(d().simulation.boundaries) : (d().simulation.boundaries as string[]));
   const setBound = (k: number | "all", v: string) => edit((x) => {
     if (k === "all") { x.simulation.boundaries = v; return; }
@@ -123,11 +136,16 @@ export default function SimSettingsDialog() {
     x.simulation.boundaries = b.every((y) => y === b[0]) ? b[0] : b;
   }, `boundaries${k}`);
   const open = () => bounds().some((b) => b === "MUR" || b.startsWith("PML"));
-  const stats = () => meshStats(bundle());
+  // the draft's own preview, never a run shown in the 3D view
+  const stats = draftMeshStats;
   const designMesh = () => d().mesh.mode === "design";
   const manualMesh = () => d().mesh.mode === "manual";
-  const autoSettings = () => bundle()?.mesh?.auto?.settings ?? {};
-  const autoNotes = () => bundle()?.mesh?.auto?.notes ?? {};
+  // the Classic (old) mesh is offered only to a design that used it when the dialog opened: then it
+  // stays in the list while the dialog is open, so Automatic and back works without Cancel
+  const openedClassic = d().mesh.mode === "auto" || !d().mesh.mode;
+  const offerClassic = () => !manualMesh() && (openedClassic || !designMesh());
+  const autoSettings = () => draftPreview()?.mesh?.auto?.settings ?? {};
+  const autoNotes = () => draftPreview()?.mesh?.auto?.notes ?? {};
   const currentAuto = () => meshFreshness() === "current" && autoSettings().mode === "design";
   const autoValue = (key: string, fallback: Expr | string) => currentAuto() ? (autoSettings()[key] ?? fallback) : fallback;
   const override = (key: string) => (d().mesh.overrides as Record<string, Expr | null | undefined> | undefined)?.[key];
@@ -151,8 +169,7 @@ export default function SimSettingsDialog() {
       x.mesh = previousLegacy ?? { mode: "auto", cells_per_wavelength: 20, thin_metal: x.mesh.thin_metal };
     }
   }, "mesh-mode");
-  const excited = () => Math.max(1, (d().ports ?? []).filter((p) => p.excite !== false).length);
-  const est = () => estimateTime(bundle(), engine(), excited());
+  const est = () => draftEstimate(engine());
   const currents = () => d().monitors?.currents ?? [];
   const setCurrents = (v: Expr[]) => edit((x) => {
     const w = x as WithMonitors;
@@ -253,7 +270,7 @@ export default function SimSettingsDialog() {
 
   return (
     <div class="scrim" onPointerDown={(e) => e.target === e.currentTarget && cancel()}>
-      <div class="dialog ss-dialog" role="dialog" aria-modal="true" aria-labelledby="ss-title" ref={box} tabindex={-1}>
+      <div class="dialog ss-dialog" role="dialog" aria-modal="true" aria-labelledby="ss-title" ref={box} tabindex={-1} onKeyDown={onEnter}>
         <div class="dialog-head">
           <div>
             <h2 id="ss-title">{t("sim.title")}</h2>
@@ -279,18 +296,26 @@ export default function SimSettingsDialog() {
                 <label class="field">
                   <span class="dz-label">{t("sim.profile.choice")}</span>
                   <select class="rp-select dz-input" value={profile()} disabled={!runProfileSupported(d())}
-                    onChange={(e) => setProfile(e.currentTarget.value as RunProfile)}>
+                    title={runProfileSupported(d()) ? undefined : t("sim.profile.manual")}
+                    onChange={(e) => { setProfile(e.currentTarget.value as RunProfile); setApplied(null); }}>
                     <For each={Object.keys(RUN_PROFILES) as RunProfile[]}>{(key) => <option value={key}>{t(`sim.profile.${key}`)}</option>}</For>
                   </select>
                 </label>
+                {/* a manual mesh is never replaced: the button says why it is off */}
                 <button class="btn btn-ghost" type="button" disabled={!runProfileSupported(d())}
-                  onClick={() => edit((x) => { applyRunProfile(x, profile()); }, "run-profile")}>
+                  title={runProfileSupported(d()) ? undefined : t("sim.profile.manual")}
+                  onClick={() => { const p = profile(); edit((x) => { applyRunProfile(x, p); }, "run-profile"); setApplied(p); }}>
                   {t("sim.profile.apply")}
                 </button>
               </div>
               <p class="note">{runProfileSupported(d())
-                ? t("sim.profile.summary", { cpw: RUN_PROFILES[profile()].cpw, endDb: RUN_PROFILES[profile()].endDb })
+                ? t("sim.profile.summary", { cpw: RUN_PROFILES[profile()].cpw, endDb: fmt.int(RUN_PROFILES[profile()].endDb) })
                 : t("sim.profile.manual")}</p>
+              <Show when={applied()}>{(p) => (
+                <p class="status-block status-good ss-applied" role="status">
+                  {t("sim.profile.applied", { name: t(`sim.profile.${p()}`), cpw: RUN_PROFILES[p()].cpw, endDb: fmt.int(RUN_PROFILES[p()].endDb) })}
+                </p>
+              )}</Show>
             </section>
             <section id="ss-freq" class="stack">
               <h3>{t("sim.freq.title")}</h3>
@@ -325,7 +350,7 @@ export default function SimSettingsDialog() {
                     </div>
                   </fieldset>
                   <div class="ss-legend">
-                    <For each={TYPES}>{(ty) => <span><span class="ss-swatch" style={{ background: ty.color }} aria-hidden="true" />{typeLabel(ty)}</span>}</For>
+                    <For each={TYPES}>{(ty) => <span title={typeHint(ty)}><span class="ss-swatch" style={{ background: ty.color }} aria-hidden="true" />{typeLabel(ty)}</span>}</For>
                   </div>
                 </div>
               </div>
@@ -386,8 +411,8 @@ export default function SimSettingsDialog() {
                 >
                   <Show when={manualMesh()}><option value="manual">{t("sim.mesh.mode.manual")}</option></Show>
                   <option value="design">{t("sim.mesh.mode.design")}</option>
-                  {/* the old automatic mesh is only offered to a design that already uses it */}
-                  <Show when={!manualMesh() && !designMesh()}><option value="auto">{t("sim.mesh.mode.auto")}</option></Show>
+                  {/* the old automatic mesh is only offered to a design that used it when the dialog opened */}
+                  <Show when={offerClassic()}><option value="auto">{t("sim.mesh.mode.auto")}</option></Show>
                 </select>
               </label>
               <Show when={manualMesh()}>

@@ -39,7 +39,7 @@ async function assertCompactHeader(page, mode, language, capture = false) {
     setLanguage(nextLanguage);
   }, language);
   if (mode === "results") {
-    await page.click('.mode-switch [role="radio"]:nth-child(3)');
+    await page.click('.mode-switch button:nth-child(3)');
   } else {
     await page.evaluate(async (nextMode) => {
       const { setAppMode } = await import("/src/workspace.ts");
@@ -47,7 +47,7 @@ async function assertCompactHeader(page, mode, language, capture = false) {
     }, mode);
   }
   const modeIndex = { home: 1, design: 2, results: 3 }[mode];
-  await page.waitForFunction((index) => document.querySelector(`.mode-switch [role="radio"]:nth-child(${index})`)?.getAttribute("aria-checked") === "true", {}, modeIndex);
+  await page.waitForFunction((index) => document.querySelector(`.mode-switch button:nth-child(${index})`)?.getAttribute("aria-current") === "page", {}, modeIndex);
   await page.waitForFunction((lang) => document.documentElement.lang === lang, {}, language);
 
   const overflow = await page.evaluate(() => document.documentElement.scrollWidth > document.documentElement.clientWidth);
@@ -185,7 +185,7 @@ try {
 
   // Results panels open one at a time on compact screens. Resizing restores the desktop panel
   // choices exactly, and responsive changes do not move focus outside a panel.
-  await page.click('.mode-switch [role="radio"]:nth-child(3)');
+  await page.click('.mode-switch button:nth-child(3)');
   await page.waitForSelector(".workspace:not(.design-mode) .panel-left");
   await page.waitForFunction(() => document.querySelector(".workspace:not(.design-mode)")?.classList.contains("left-closed") &&
     document.querySelector(".workspace:not(.design-mode)")?.classList.contains("right-closed"));

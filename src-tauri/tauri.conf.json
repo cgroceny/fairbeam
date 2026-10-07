@@ -35,6 +35,7 @@
       "../dist/": "ui/",
       "../python/fairbeam/*.py": "python/fairbeam/",
       "../python/models/*.py": "models/",
+      "../examples/designs/*_867.design.json": "models/",
       "../python/templates/*.py": "templates/",
       "../public/projects/": "projects/",
       "../runtime/pins.json": "runtime/pins.json",

@@ -15,10 +15,16 @@ Accepted input (``SUPPORTED`` has the list):
 * **Gerber RS-274X**: regions (G36/G37), flashes of the standard apertures (circle, rectangle,
   obround, polygon, with a hole), draws with circle or rectangle apertures (turned into outlines:
   a stroke is the aperture swept along the line or arc), lines and arcs in single or multi
-  quadrant mode, mm or inch, leading or trailing zero omission. Aperture macros, block apertures,
-  step and repeat and clear polarity are reported, not read.
+  quadrant mode, mm or inch, leading or trailing zero omission. Clear polarity (LPC) circle flashes
+  and regions that lie inside one dark region before them become holes in it (an anti-pad in a
+  ground plane); other clear objects, aperture macros, block apertures and step and repeat are
+  reported, not read.
 * **Excellon drill**: plated holes become metal pins between the two copper planes (vias); unplated
   holes and routed slots are reported.
+
+A DXF layer named after a copper layer with ``_Antipad`` (or ``clearance``), as Fairbeam's own fab
+export writes them (``B_Cu_Antipad``), is the clearance of that copper: its circles and outlines are
+cut out of the copper as holes, so the round trip keeps the probe's clearance in the ground plane.
 
 Arcs and circles are tessellated so that no chord is more than ``chord_tol`` (mm) from the curve.
 A loop nested in another (a hole cut in a patch) has no place in a ``polygon`` primitive (CSXCAD
@@ -48,8 +54,12 @@ MAX_NEST = 1500               # outlines whose nesting (holes) is worked out
 MAX_ARC_SEGMENTS = 2048
 MAX_VIAS = 5000
 
-ROLES = ("top_copper", "bottom_copper", "outline", "ignore")
+ROLES = ("top_copper", "bottom_copper", "outline", "ignore", "top_clearance", "bottom_clearance")
+#: the copper a clearance layer is cut out of
+CLEARANCE_OF = {"top_clearance": "top_copper", "bottom_clearance": "bottom_copper"}
 _ROLE_ALIAS = {
+    "top_clearance": "top_clearance", "clearance_top": "top_clearance", "top_antipad": "top_clearance",
+    "bottom_clearance": "bottom_clearance", "clearance_bottom": "bottom_clearance", "bottom_antipad": "bottom_clearance",
     "top": "top_copper", "top_copper": "top_copper", "topcopper": "top_copper", "copper_top": "top_copper",
     "bottom": "bottom_copper", "bot": "bottom_copper", "bottom_copper": "bottom_copper",
     "bottomcopper": "bottom_copper", "copper_bottom": "bottom_copper",
@@ -60,10 +70,10 @@ _ROLE_ALIAS = {
 SUPPORTED = {
     "dxf": "ASCII DXF: LWPOLYLINE and POLYLINE (closed, or open with coinciding ends; bulges are arcs), CIRCLE, ARC, "
            "ELLIPSE, LINE (lines, arcs and open polylines meeting end to end are assembled into loops); "
-           "$INSUNITS; a loop inside a loop is a hole",
+           "$INSUNITS; a loop inside a loop is a hole; a <copper>_Antipad layer is cut out of that copper",
     "gerber": "RS-274X: G36/G37 regions, flashes of C, R, O and P apertures (with a hole), draws with circle or "
               "rectangle apertures (linear and G02/G03 arcs, G74/G75), MOMM / MOIN, FS with L or T zero omission, "
-              "X2 file function (top / bottom / outline)",
+              "X2 file function (top / bottom / outline), clear (LPC) circle flashes and regions inside one dark region",
     "drill": "Excellon: METRIC / INCH, LZ / TZ, tool definitions, plated holes as metal pins (vias)",
     "layers": "top copper at z = thickness, bottom copper at z = 0 (sheets of the metal material), the board outline "
               "(Edge.Cuts, Profile, Outline ...) sets the substrate box, else the copper's bounding box plus a margin",
@@ -107,6 +117,7 @@ class RawLayer:
     notes: list = field(default_factory=list)   # (severity, message)
     counts: dict = field(default_factory=dict)  # entity kind -> number read
     units: str = "mm"
+    unit_note: tuple | None = None              # DXF: (key, message) of the unit warning, reported once for all files
 
     def skip(self, what: str, reason: str, line: int | None = None, count: int = 1):
         entry = self.skips.setdefault((what, reason), [0, line])
@@ -121,8 +132,15 @@ class _Report:
         self.notes: list[dict] = []
         self.created: list[dict] = []
 
-    def note(self, severity: str, message: str, where: str, line: int | None = None):
-        self.notes.append({"severity": severity, "where": where, "line": line or 0, "message": message})
+    def note(self, severity: str, message: str, where: str, line: int | None = None, key: str | None = None,
+             params: dict | None = None):
+        """A row of the report. ``message`` is the command line's wording; ``key`` and ``params`` name the row for the
+        app, which words it for its own controls (pcbImport.note.<key>), where the message names a command-line flag."""
+        row = {"severity": severity, "where": where, "line": line or 0, "message": message}
+        if key:
+            row["key"] = key
+            row["params"] = {k: str(v) for k, v in (params or {}).items()}
+        self.notes.append(row)
 
     def made(self, kind: str, name: str, detail: str = ""):
         self.created.append({"kind": kind, "name": name, "detail": detail})
@@ -501,23 +519,21 @@ def parse_dxf(text: str, source: str, *, units: str, chord_tol: float) -> list[R
             note = None
         elif code in (None, 0):
             scale, unit = 1.0, "mm"
-            note = ("warning", "the DXF does not say its units ($INSUNITS): mm assumed (use --units inch if the drawing is in inches)")
+            note = ("dxf-units-missing", None)
         else:
             scale, unit = 1.0, "mm"
-            note = ("warning", f"DXF unit code {code} is not known: mm assumed (use --units)")
+            note = ("dxf-units-unknown", code)
     else:
         scale, unit = {"mm": 1.0, "inch": 25.4}[units], units
         note = None
         if code in _INSUNITS_MM and abs(_INSUNITS_MM[code] - scale) > 1e-9:
-            note = ("warning", f"--units {units} overrides the DXF's own unit ({_INSUNITS_NAME[code]})")
+            note = ("dxf-units-override", _INSUNITS_NAME[code])
     tol = chord_tol / scale
     layers: dict[str, RawLayer] = {}
 
     def layer(name):
         if name not in layers:
-            layers[name] = RawLayer(name, source, "dxf", units=unit)
-            if note:
-                layers[name].notes.append(note)
+            layers[name] = RawLayer(name, source, "dxf", units=unit, unit_note=note)
         return layers[name]
 
     def add(lay, pts, closed, label, line):
@@ -667,6 +683,7 @@ class _Gerber:
         self.starts = _line_index(text)
         self.stroked = 0
         self.role_note = None
+        self.clears: list = []  # clear circle flashes and regions: (points, label, line, dark shapes before it)
 
     # ---- numbers
     def num(self, s: str, dec: int, integer: int) -> float:
@@ -682,9 +699,15 @@ class _Gerber:
         self.lay.skip(what, reason, self.line, count)
 
     # ---- objects
-    def add_poly(self, outer, holes=(), label=""):
+    def add_poly(self, outer, holes=(), label="", clear_hole=False):
         if not self.dark:
-            self.skip("clear polarity object", "clear polarity (LPC) objects are not applied; the dark copper under them stays")
+            # a clear circle flash or region is kept to become a hole of the dark region it lies in (run() decides);
+            # any other clear object is reported as before
+            if clear_hole:
+                self.clears.append((list(outer), label, self.line, len(self.lay.polys)))
+            else:
+                self.skip("clear polarity object", "clear polarity (LPC) objects other than circle flashes and regions inside "
+                          "one dark region are not applied; the dark copper under them stays")
             return
         if len(self.lay.polys) >= MAX_RINGS:
             raise PcbImportError(f"{self.lay.source}: more than {MAX_RINGS} shapes")
@@ -721,7 +744,7 @@ class _Gerber:
             outer = [(x + r * math.cos(rot + 2 * math.pi * k / n), y + r * math.sin(rot + 2 * math.pi * k / n)) for k in range(n)]
         holes = [_circle_pts(x, y, hole / 2, self.tol)] if hole and hole > 0 else []
         self.lay.read("flash")
-        self.add_poly(outer, holes, f"flash D{self.cur}")
+        self.add_poly(outer, holes, f"flash D{self.cur}", clear_hole=kind == "C" and not holes)
 
     def arc_geometry(self, p0, p1, i, j):
         """(centre, start angle, signed sweep, r0, r1) of the arc p0 -> p1, or None."""
@@ -773,7 +796,8 @@ class _Gerber:
             pts = _arc_pts(c[0], c[1], r0, a0, sweep, self.tol, r1)
         self.lay.extent += pts
         if not self.dark:
-            self.skip("clear polarity object", "clear polarity (LPC) objects are not applied; the dark copper under them stays")
+            self.skip("clear polarity object", "clear polarity (LPC) objects other than circle flashes and regions inside "
+                      "one dark region are not applied; the dark copper under them stays")
             return
         if ap["type"] == "C":
             w = ap["d"] / 2
@@ -832,7 +856,7 @@ class _Gerber:
             self.lay.notes.append(("warning", "a region contour did not end where it started: closed with a straight line"))
         self.lay.extent += pts
         self.lay.read("region")
-        self.add_poly(pts, (), "region")
+        self.add_poly(pts, (), "region", clear_hole=True)
 
     # ---- commands
     def apply(self, op, x, y, i, j, has_ij):
@@ -977,6 +1001,7 @@ class _Gerber:
                 self.word(m.group(2))
         if self.region and self.contour:
             self.contour_close()
+        self.apply_clears()
         for name in sorted(self.macros):
             n = sum(1 for a in self.apertures.values() if a["type"] == name)
             if n:
@@ -984,6 +1009,34 @@ class _Gerber:
         if self.role_note:
             self.lay.notes.append(("info", self.role_note))
         return self.lay
+
+
+    def apply_clears(self):
+        """Clear (LPC) circle flashes and regions that lie inside exactly one dark shape drawn before them (and not in
+        one of its holes) become holes of that shape: the anti-pad round a probe in a ground plane. Anything else
+        clear is reported: general clear polarity (partial overlaps, several shapes) is not applied."""
+        cut = 0
+        for pts, label, line, before in self.clears:
+            ring = _clean_ring(pts, 1e-9)
+            if ring is None:
+                continue
+            ibox = _bbox(ring)
+            hosts = [p for p in self.lay.polys[:before] if _contains(p.outer, ring, _bbox(p.outer), ibox)]
+            # a clear shape that also touches another dark shape (or lies across an edge) is not a plain hole
+            overlapping = [p for p in self.lay.polys[:before] if p not in hosts and _boxes_overlap(_bbox(p.outer), ibox)
+                           and any(_pip(q, p.outer) == 1 for q in ring)]
+            if len(hosts) == 1 and not overlapping and not any(_contains(h, ring, _bbox(h), ibox) for h in hosts[0].holes):
+                hosts[0].holes.append(list(ring))
+                cut += 1
+            else:
+                self.lay.skip("clear polarity object", "clear polarity (LPC) objects other than circle flashes and regions inside "
+                              "one dark region are not applied; the dark copper under them stays", line)
+        if cut:
+            self.lay.notes.append(("info", f"{cut} clear (LPC) object(s) cut out of the copper as holes (anti-pads)"))
+
+
+def _boxes_overlap(a, b) -> bool:
+    return a[0] <= b[2] and b[0] <= a[2] and a[1] <= b[3] and b[1] <= a[3]
 
 
 def parse_gerber(text: str, source: str, *, chord_tol: float) -> RawLayer:
@@ -1101,23 +1154,31 @@ def parse_layer_map(text: str | dict | None) -> dict:
     return out
 
 
-def guess_role(name: str) -> str | None:
-    """A role from a layer or file name (KiCad, Altium, Eagle and generic names), else None."""
-    low = name.lower()
-    tokens = set(t for t in re.split(r"[^a-z0-9]+", low) if t)
-    joined = re.sub(r"[^a-z0-9]", "", low)
-    if tokens & {"silk", "silks", "silkscreen", "mask", "paste", "overlay", "legend", "fab", "crtyd", "courtyard", "gto",
-                 "gts", "gtp", "gbo", "gbs", "gbp", "assembly", "adhesive", "drill", "drl", "comment", "comments"}:
-        return "ignore"
-    if tokens & {"outline", "profile", "gko", "gm1", "gml", "edge", "edgecuts", "boardoutline"} or "edgecuts" in joined \
-            or "boardoutline" in joined:
-        return "outline"
+def _copper_side(tokens: set, joined: str) -> str | None:
     if tokens & {"top", "gtl", "front", "toplayer", "l1"} or {"f", "cu"} <= tokens or "topcopper" in joined or "coppertop" in joined:
         return "top_copper"
     if tokens & {"bottom", "bot", "gbl", "back", "bottomlayer", "botlayer", "l2"} or {"b", "cu"} <= tokens \
             or "bottomcopper" in joined or "copperbottom" in joined:
         return "bottom_copper"
     return None
+
+
+def guess_role(name: str) -> str | None:
+    """A role from a layer or file name (KiCad, Altium, Eagle and generic names), else None. A clearance layer
+    (``B_Cu_Antipad``, ``top clearance``) is the clearance of the copper its name names."""
+    low = name.lower()
+    tokens = set(t for t in re.split(r"[^a-z0-9]+", low) if t)
+    joined = re.sub(r"[^a-z0-9]", "", low)
+    if tokens & {"antipad", "antipads", "clearance", "clearances"} or "antipad" in joined:
+        side = _copper_side(tokens, joined)
+        return {"top_copper": "top_clearance", "bottom_copper": "bottom_clearance"}.get(side or "")
+    if tokens & {"silk", "silks", "silkscreen", "mask", "paste", "overlay", "legend", "fab", "crtyd", "courtyard", "gto",
+                 "gts", "gtp", "gbo", "gbs", "gbp", "assembly", "adhesive", "drill", "drl", "comment", "comments"}:
+        return "ignore"
+    if tokens & {"outline", "profile", "gko", "gm1", "gml", "edge", "edgecuts", "boardoutline"} or "edgecuts" in joined \
+            or "boardoutline" in joined:
+        return "outline"
+    return _copper_side(tokens, joined)
 
 
 def _match_map(layer_map: dict, lay: RawLayer):
@@ -1210,7 +1271,8 @@ def import_pcb(files, *, layer_map=None, substrate: str = "FR4", thickness: floa
             elif kind == "gerber":
                 layers = [parse_gerber(text, fname, chord_tol=chord_tol)]
                 if units != "auto" and layers[0].units != units:
-                    rep.note("info", f"--units applies to DXF files; {fname} says its own units ({layers[0].units})", fname)
+                    rep.note("info", f"--units applies to DXF files; {fname} says its own units ({layers[0].units})", fname,
+                             key="units-gerber", params={"file": fname, "own": layers[0].units})
             else:
                 layers = [parse_excellon(text, fname)]
         except RecursionError:
@@ -1248,7 +1310,8 @@ def import_pcb(files, *, layer_map=None, substrate: str = "FR4", thickness: floa
         if len(cand) == 1:
             roles[cand[0]], why[cand[0]] = "top_copper", "the only layer with outlines"
             rep.note("warning", f"layer '{raw[cand[0]].name}' is not recognised as copper: taken as top copper "
-                     f"(--layer-map {raw[cand[0]].name}=top_copper|bottom_copper|outline|ignore to choose)", raw[cand[0]].source)
+                     f"(--layer-map {raw[cand[0]].name}=top_copper|bottom_copper|outline|ignore to choose)", raw[cand[0]].source,
+                     key="layer-taken-as-top", params={"layer": raw[cand[0]].name})
     layer_info = []
     detected = []  # every layer of the files, also the ones without a role (the import dialog's table)
     for n, lay in enumerate(raw):
@@ -1260,16 +1323,19 @@ def import_pcb(files, *, layer_map=None, substrate: str = "FR4", thickness: floa
         where = f"{lay.source} · layer {lay.name}" if lay.kind == "dxf" else lay.source
         if role is None:
             if has_geo(lay) or lay.holes:
-                rep.note("warning", f"layer not used: its role is not clear (--layer-map {lay.name}=top_copper|bottom_copper|outline|ignore)", where)
+                rep.note("warning", f"layer not used: its role is not clear (--layer-map {lay.name}=top_copper|bottom_copper|outline|ignore)", where,
+                         key="layer-unclear", params={"layer": lay.name})
             continue
         layer_info.append({"source": lay.source, "layer": lay.name, "role": role, "because": why[n]})
 
     # ---- copper
     names0 = {"h": thickness, "f0": f0}
     copper: dict[str, list[Poly]] = {"top_copper": [], "bottom_copper": []}
+    clearances: dict[str, list] = {"top_copper": [], "bottom_copper": []}   # rings cut out of that copper: (ring, where, line)
     outline_pts: list = []
     drills: list = []
     src_of: dict[str, list[str]] = {"top_copper": [], "bottom_copper": [], "outline": []}
+    unit_notes: dict[tuple, list[str]] = {}   # DXF unit warnings, one row for all the files that share one
     for n, lay in enumerate(raw):
         role = roles[n]
         where = f"{lay.source} · layer {lay.name}" if lay.kind == "dxf" else lay.source
@@ -1277,6 +1343,8 @@ def import_pcb(files, *, layer_map=None, substrate: str = "FR4", thickness: floa
             if role == "ignore":
                 rep.note("info", f"layer ignored ({why[n]})", where)
             continue
+        if lay.unit_note and lay.source not in unit_notes.setdefault(lay.unit_note, []):
+            unit_notes[lay.unit_note].append(lay.source)
         for sev, msg in lay.notes:
             rep.note(sev, msg, where)
         for (what, reason), (count, line) in lay.skips.items():
@@ -1287,6 +1355,15 @@ def import_pcb(files, *, layer_map=None, substrate: str = "FR4", thickness: floa
             continue
         if role == "drill":
             drills += [(lay, h) for h in lay.holes]
+            continue
+        if role in CLEARANCE_OF:
+            # a clearance layer: its closed outlines (circles) are cut out of the copper below
+            for pts, label, line in lay.rings + [(p.outer, p.label, p.line) for p in lay.polys]:
+                r = _clean_ring(pts, 1e-7)
+                if r is not None and not polygon_problems([list(p) for p in r]):
+                    clearances[CLEARANCE_OF[role]].append((r, where, line))
+            for pts, label, line in lay.open:
+                rep.note("refused", f"1 x open {label} ({len(pts)} points): a clearance must be a closed outline", where, line)
             continue
         src_of[role].append(where)
         if lay.kind == "drill":
@@ -1328,6 +1405,41 @@ def import_pcb(files, *, layer_map=None, substrate: str = "FR4", thickness: floa
                      "close it or fix the gap", where, line)
         copper[role] += polys
 
+    # the DXF unit warning once for all the files it concerns
+    for (key, value), sources in unit_notes.items():
+        files_text = ", ".join(sources)
+        if key == "dxf-units-missing":
+            rep.note("warning", f"{'the DXF files do' if len(sources) > 1 else 'the DXF does'} not say {'their' if len(sources) > 1 else 'its'} "
+                     f"units ($INSUNITS): mm assumed (use --units inch if the drawing is in inches): {files_text}", "units",
+                     key=key, params={"files": files_text, "count": len(sources)})
+        elif key == "dxf-units-unknown":
+            rep.note("warning", f"DXF unit code {value} is not known: mm assumed (use --units): {files_text}", "units",
+                     key=key, params={"files": files_text, "code": value})
+        else:
+            rep.note("warning", f"--units {units} overrides the DXF's own unit ({value}): {files_text}", "units",
+                     key=key, params={"files": files_text, "chosen": units, "own": value})
+
+    # clearances: holes in the copper they lie in (Fairbeam's fab export writes the anti-pad round a probe this way)
+    for role, rings in clearances.items():
+        cut = 0
+        for ring, where, line in rings:
+            ibox = _bbox(ring)
+            hosts = [p for p in copper[role] if _contains(p.outer, ring, _bbox(p.outer), ibox)]
+            # the innermost copper shape that holds it (a shape inside another's hole is an island)
+            host = min(hosts, key=lambda p: abs(_area(p.outer))) if hosts else None
+            if host is None:
+                rep.note("info", "a clearance outside the copper: nothing to cut", where, line)
+            elif any(_contains(h, ring, _bbox(h), ibox) for h in host.holes):
+                rep.note("info", "a clearance inside a hole of the copper: already clear", where, line)
+            elif any(_boxes_overlap(_bbox(h), ibox) and any(_pip(q, h) == 1 for q in ring) for h in host.holes):
+                rep.note("refused", "a clearance that overlaps a hole of the copper is not cut", where, line)
+            else:
+                host.holes.append(list(ring))
+                cut += 1
+        if cut:
+            side = "top" if role == "top_copper" else "bottom"
+            rep.note("info", f"{cut} clearance(s) cut out of the {side} copper", f"{side} copper")
+
     if not copper["top_copper"] and not copper["bottom_copper"]:
         err = PcbImportError("no copper outlines found: nothing is on a copper layer (check --layer-map; "
                              + (f"layers found: {', '.join(sorted({l.name for l in raw}))}" if raw else "no layers") + ")")
@@ -1347,14 +1459,16 @@ def import_pcb(files, *, layer_map=None, substrate: str = "FR4", thickness: floa
         x0, y0, x1, y1 = x0 - margin, y0 - margin, x1 + margin, y1 + margin
         box_from = f"copper bounding box plus {margin:g} mm"
         rep.note("info", f"no board outline layer: the substrate spans the copper's bounding box plus {margin:g} mm "
-                 "(map an Edge.Cuts / Profile / Outline layer with --layer-map NAME=outline)", "substrate")
+                 "(map an Edge.Cuts / Profile / Outline layer with --layer-map NAME=outline)", "substrate",
+                 key="no-outline", params={"margin": f"{margin:g}"})
     if x1 - x0 < 1e-6 or y1 - y0 < 1e-6:
         raise PcbImportError("the board outline has no area")
     dx = dy = 0.0
     if origin == "center":
         dx, dy = -(x0 + x1) / 2, -(y0 + y1) / 2
         rep.note("info", f"the board centre ({(x0 + x1) / 2:.4f}, {(y0 + y1) / 2:.4f} mm in the files) is moved to x = y = 0; "
-                 "add these to a design coordinate for the file position (--origin keep leaves it)", "coordinates")
+                 "add these to a design coordinate for the file position (--origin keep leaves it)", "coordinates",
+                 key="origin-centered", params={"x": f"{(x0 + x1) / 2:.4f}", "y": f"{(y0 + y1) / 2:.4f}"})
     sx0, sy0, sx1, sy1 = round(x0 + dx, 6), round(y0 + dy, 6), round(x1 + dx, 6), round(y1 + dy, 6)
 
     # ---- eps_r, tan d
@@ -1370,7 +1484,7 @@ def import_pcb(files, *, layer_map=None, substrate: str = "FR4", thickness: floa
         lib = None
     if lib is None and eps_r is None:
         rep.note("warning", f"substrate '{substrate}' is not in the material library: FR4 values (eps_r 4.3, tan d 0.02) used "
-                 "(--eps-r, --tan-d)", "substrate")
+                 "(--eps-r, --tan-d)", "substrate", key="substrate-unknown", params={"substrate": substrate})
     base = design_material(lib["id"], re.sub(r"[^A-Za-z0-9_ .-]", "", substrate)[:40] or "substrate") if lib else \
         {"name": re.sub(r"[^A-Za-z0-9_ .-]", "", substrate)[:40] or "substrate", "kind": "dielectric", "eps_r": 4.3, "tan_d": 0.02,
          "tan_d_freq": 1}
@@ -1453,7 +1567,7 @@ def import_pcb(files, *, layer_map=None, substrate: str = "FR4", thickness: floa
                      (f" (from {'; '.join(src_of[role])})" if src_of[role] else ""))
     if not copper["bottom_copper"]:
         rep.note("warning", "no bottom copper: the design has no ground plane (a patch or monopole usually needs one; "
-                 "map the ground layer with --layer-map or draw a ground plane in the designer)", "parts")
+                 "map the ground layer with --layer-map or draw a ground plane in the designer)", "parts", key="no-bottom-copper")
     if not copper["top_copper"]:
         rep.note("warning", "no top copper: only the bottom copper was imported", "parts")
     # ---- vias

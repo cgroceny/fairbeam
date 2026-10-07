@@ -5,10 +5,10 @@
 import { createSignal, For, onMount, Show } from "solid-js";
 import { CircleAlert, Play, X } from "lucide-solid";
 import { useModal } from "../lib/dialog";
-import { engine as storedEngine, health, probeServer, selectModel, serverState, setThreads, submitError, submitErrorDetail, submitting, threads as storedThreads } from "../runner/store";
+import { engine as storedEngine, engineSource, health, lastManualThreads, probeServer, selectModel, serverState, setThreads, submitError, submitErrorDetail, submitting, threads as storedThreads } from "../runner/store";
 import { setRunDialogOpen, startDesignRun, storedPoints } from "../runner/designRun";
-import { bundle } from "../state";
-import { estimateText, estimateTime, meshStats } from "./meshStats";
+import { cellsText, estimateText } from "./meshStats";
+import { draftEstimate, draftExcitedPorts, draftMeshStats } from "./draftMesh";
 import { PreflightNote } from "./PreflightNote";
 import { addPort, applyFix, checks, conflict, dirty, draft, errorCount, file, focusPath, save, saving } from "./store";
 import { openDesignerOptimize } from "./OptimizeDialog";
@@ -34,7 +34,10 @@ export default function RunDialog() {
   const engines = () => health()?.engines ?? ["cpu"];
   const defaults = readGeneralSettings();
   const preferred = defaults.engine === "gpu" && engines().includes("gpu") ? "gpu" : defaults.engine;
-  const [eng, setEng] = createSignal(engines().includes(storedEngine()) && storedEngine() !== "cpu" ? storedEngine() : engines().includes(preferred) ? preferred : "cpu");
+  // General settings' default engine, unless a run of this session chose another one ("Last used")
+  const lastUsed = engineSource() === "session" && engines().includes(storedEngine());
+  const [eng, setEng] = createSignal(lastUsed ? storedEngine() : engines().includes(preferred) ? preferred : "cpu");
+  const engineOrigin = () => eng() !== storedEngine() ? null : lastUsed ? t("run.engine.lastUsed") : eng() === preferred ? t("run.engine.settingsDefault") : null;
   // 0 is Auto. The store's choice already follows live > remembered Run choice > Settings default.
   const [thr, setThr] = createSignal(Math.min(health()?.cpu_count ?? 64, storedThreads()));
   const [points, setPoints] = createSignal(storedPoints());
@@ -47,16 +50,24 @@ export default function RunDialog() {
   });
 
   const errors = () => checks().filter((c) => c.severity === "error");
-  const excited = () => Math.max(1, (draft.ports ?? []).filter((p) => p.excite !== false).length);
-  const est = () => estimateTime(bundle(), eng(), excited());
+  const excited = draftExcitedPorts;
+  // the draft's own mesh and timestep limit, never a run shown in the 3D view
+  const est = () => draftEstimate(eng());
   const cpu = () => health()?.cpu_count ?? 64;
   const pointsBad = () => !Number.isInteger(points()) || points() < 11 || points() > 20001;
   const threadsBad = () => eng() === "cpu" && thr() !== 0 && (!Number.isInteger(thr()) || thr() < 1 || thr() > cpu());
   // memory / CPU check of this mesh (the server refuses the run above ~90 % of free memory)
-  const cells = () => meshStats(bundle())?.nodes;
+  const cells = () => draftMeshStats()?.nodes;
   // what Auto resolves to for this grid: the server's rule with the cell count the run sends (a big
   // grid gets more threads than the small-grid default health() reports)
   const autoCount = () => autoThreads(cpu(), health()?.physical_cores, cells());
+  const cores = () => health()?.physical_cores ?? cpu();
+  // the rule and its numbers, as General settings states them (lib/autoThreads.ts, the server's rule)
+  const autoHint = () => cells()
+    ? t("run.threads.autoHint", { n: autoCount(), cells: cellsText(draftMeshStats()?.cells ?? cells()!), cores: cores() })
+    : t("run.threads.autoHintNoMesh", { n: autoCount(), cores: cores() });
+  // the measured speeds are of runs with Auto's thread count: another count has no data of its own
+  const otherThreads = () => eng() === "cpu" && thr() !== 0 && thr() !== autoCount() && !threadsBad();
 
   const run = async (e: Event) => {
     e.preventDefault();
@@ -133,17 +144,18 @@ export default function RunDialog() {
               <select ref={(el) => (first = el)} class="rp-select dz-input" value={eng()} onChange={(e) => setEng(e.currentTarget.value)}>
                 <For each={engines()}>{(x) => <option value={x}>{ENGINE_LABEL[x] ? t(ENGINE_LABEL[x]) : x}</option>}</For>
               </select>
+              <Show when={engineOrigin()}><span class="dz-value dz-wrap">{engineOrigin()}</span></Show>
             </label>
-            <Show when={eng() === "cpu"} fallback={<p class="dz-value">{t("run.gpuNote")}</p>}>
+            <Show when={eng() === "cpu"} fallback={<p class="dz-value dz-wrap" title={t("run.gpuNote")}>{t("run.gpuNote")}</p>}>
               <label class="dz-field">
                 <span class="dz-label">{t("run.threads")} <span class="dz-unit">1–{cpu()}</span></span>
                 <label class="gs-check"><input type="checkbox" checked={thr() === 0}
-                  onChange={(e) => { const n = e.currentTarget.checked ? 0 : autoCount(); setThr(n); setThreads(n); }} /> {t("run.threads.auto")}</label>
+                  onChange={(e) => { const n = e.currentTarget.checked ? 0 : Math.min(cpu(), lastManualThreads() || autoCount()); setThr(n); setThreads(n); }} /> {t("run.threads.auto")}</label>
                 <Show when={thr() !== 0}>
                   <NumberField class="rp-input dz-input mono" min="1" max={cpu()} step="1" value={thr()}
                     aria-invalid={threadsBad()} onInput={(e) => { const n = Number(e.currentTarget.value); setThr(n); if (Number.isInteger(n) && n >= 1 && n <= cpu()) setThreads(n); }} />
                 </Show>
-                <span class="dz-value dz-wrap" classList={{ "dz-bad": threadsBad() }}>{threadsBad() ? t("run.threads.bad", { max: cpu() }) : thr() === 0 ? t("run.threads.autoHint", { n: autoCount() }) : t("run.threads.hint")}</span>
+                <span class="dz-value dz-wrap" classList={{ "dz-bad": threadsBad() }}>{threadsBad() ? t("run.threads.bad", { max: cpu() }) : thr() === 0 ? autoHint() : t("run.threads.hint", { n: autoCount() })}</span>
               </label>
             </Show>
             <label class="dz-field">
@@ -165,7 +177,7 @@ export default function RunDialog() {
               <dt>{t("run.estimate")}</dt>
               <dd><span class="mono">{estimateText(est())}</span>{excited() > 1 ? <span class="muted"> · {t("run.excitedPorts", { count: excited() })}</span> : null}</dd>
             </dl>
-            <p class="note">{t("run.estimateNote", { basis: est()?.basis ?? t("run.estimate.noMesh") })}</p>
+            <p class="note">{t("run.estimateNote", { basis: est()?.basis ?? t("run.estimate.noMesh") })}{otherThreads() ? ` ${t("run.estimate.autoThreads", { n: autoCount() })}` : ""}</p>
           </Show>
           <PreflightNote cells={cells()} engine={eng()} />
           <Show when={err()}>

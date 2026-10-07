@@ -8,7 +8,7 @@ import { lumpedLabel } from "../lumped.ts";
 // the geometry, and Ctrl/⌘-click on runs compares them.
 import { createEffect, createMemo, createSignal, For, type JSX, on, Show } from "solid-js";
 import {
-  BookmarkPlus, Box, ChevronDown, ChevronRight, ChevronsDownUp, ChevronsUpDown, Copy, Crosshair, Download, Eye, EyeOff, FolderClosed, FolderOpen,
+  BookmarkPlus, Box, ChevronDown, ChevronRight, ChevronsDownUp, ChevronsUpDown, Copy, Crosshair, Download, Eye, EyeOff, FolderClosed, FolderOpen, Info,
   GitCompareArrows, History, Layers, Move, Orbit, Palette, Pencil, Plus, Radar, ScrollText, Search, SlidersHorizontal, Square, Table2, Trash2, Ungroup, Variable, Waves,
   X, Zap, ChartSpline, ChevronsLeft,
 } from "lucide-solid";
@@ -167,7 +167,8 @@ function Row(props: { row: NavRow; selected: boolean; tabStop: boolean; onActiva
           selected: props.selected, "nt-shown": props.shown(), "nt-section": !!r.section, "nt-has-sub": !!r.sub, "nt-has-metrics": !!r.metrics, "dm-folder": a.kind === "folder" || a.kind === "group", "nt-hidden": props.hidden(),
           "dz-bad-node": r.issue === "error", "dz-warn-node": r.issue === "warning", "dz-drop": dropTarget !== null && dropAt() === dropTarget.key,
         }}
-        style={{ "padding-left": `${8 + (r.level - 1) * 12}px` }} title={part ? t("tree.part.dragTitle", { name: r.label }) : r.title ?? (r.sub && !r.section ? `${r.label} · ${r.sub}` : r.label)}
+        style={{ "padding-left": `${8 + (r.level - 1) * 12}px` }} title={part ? t("tree.part.dragTitle", { name: r.label }) : r.hint ?? r.title ?? (r.sub && !r.section ? `${r.label} · ${r.sub}` : r.label)}
+        aria-description={r.hint}
         aria-level={r.level} aria-setsize={r.size} aria-posinset={r.pos} aria-selected={props.selected}
         aria-expanded={r.expandable ? r.expanded : undefined} aria-haspopup={geometry || a.kind === "folder" || r.section === "components" ? "menu" : undefined}
         tabindex={props.tabStop ? 0 : -1}
@@ -186,7 +187,7 @@ function Row(props: { row: NavRow; selected: boolean; tabStop: boolean; onActiva
         <span class="nt-icon" aria-hidden="true"><Show when={Icon}>{(() => { const I = Icon!; return <I size={13} />; })()}</Show></span>
         <span class="dz-node-label" classList={{ mono: r.icon === "param" }}>{r.label}<Show when={props.shown()}><span class="visually-hidden">{t("tree.shownSuffix")}</span></Show><Show when={a.kind === "run"}><RunQualityBadge compact q={runQualityOf((a as { file: string }).file)} /></Show></span>
         <Show when={r.count !== undefined}><span class="nt-count">{r.count}</span></Show>
-        <Show when={r.sub}><span class="dz-node-sub">{r.sub}</span></Show>
+        <Show when={r.sub}><span class="dz-node-sub">{r.sub}<Show when={r.hint}><Info size={12} class="nt-hint-icon" aria-hidden="true" /></Show></span></Show>
         <Show when={props.toggleHidden}><button class="icon-btn icon-btn-sm nt-eye" tabindex={-1} aria-label={t(props.hidden() ? "tree.showParts" : "tree.hideParts")} title={t(props.hidden() ? "tree.showParts" : "tree.hideParts")} aria-pressed={!props.hidden()} onClick={(e) => { e.stopPropagation(); props.toggleHidden?.(); }}>{props.hidden() ? <EyeOff size={14} /> : <Eye size={14} />}</button></Show>
         <Show when={add}>
           <button class="icon-btn icon-btn-sm nt-add" tabindex={-1} aria-label={t(add!.label)} title={t(add!.label)}
@@ -223,6 +224,8 @@ const setOpen = (ids: string[], value: boolean) => setOpenState((m) => {
 /** Selections a click on a run keeps: none of the geometry or parameter kinds, which would hide
  * the run's Properties. */
 const runKeepsSelection = (s: Selection) => s.type === "design" || s.type === "simulation";
+/** two clicks on a sweep folder this close together are a double-click (Compare all) */
+const DOUBLE_CLICK_MS = 500;
 
 export function NavTree() {
   createEffect(on(() => file()?.id, () => setSweepViewId(null), { defer: true }));
@@ -305,9 +308,10 @@ export function NavTree() {
       sec("lumped", t("tree.lumped"), d.resistors.map((r, i) => ({
         id: `res-el:${i}`, label: r.name || `R${i + 1}`, sub: lumpedLabel(r), icon: "resistor", issue: worst(`resistors[${i}]`), action: select({ type: "resistor", i }),
       })), { issue: worst("resistors") }),
-      sec("results", t("tree.results"), results, results.length ? { title: t("tree.results.title") } : { sub: t("tree.results.none") }),
+      // an empty section shows "none yet" and an info icon; the whole hint is the tooltip and description
+      sec("results", t("tree.results"), results, results.length ? { title: t("tree.results.title") } : { sub: t("tree.section.noneYet"), hint: t("tree.results.none") }),
       // each optimization (running or finished) is a node here, like the mesh convergence studies in Results
-      sec("optimizations", t("tree.optimizations"), optimizations, optimizations.length ? { title: t("tree.optimizations.title") } : { sub: t("optTree.none") }),
+      sec("optimizations", t("tree.optimizations"), optimizations, optimizations.length ? { title: t("tree.optimizations.title") } : { sub: t("tree.section.noneYet"), hint: t("optTree.none") }),
     ];
   });
 
@@ -383,6 +387,7 @@ export function NavTree() {
   });
 
   const toggle = (r: NavRow) => { if (r.expandable) setOpen([r.id], !r.expanded); };
+  let lastSweepClick = { id: "", at: 0 };
   const folderIndices = (path: string) => draft.parts.flatMap((p, i) => {
     const component = normComponent(p.component);
     return component === path || component.startsWith(`${path}/`) ? [i] : [];
@@ -407,7 +412,16 @@ export function NavTree() {
         if (!selectRun(a.file, e.ctrlKey || e.metaKey, activeMainResult() ? "main" : "keep")) setNote(t("tree.note.compareFull", { max: MAX_COMPARE })); break;
       // a result node opens (or shows) its main-area tab, as the 1D Results do
       case "result": if (!runKeepsSelection(selection())) setSelection({ type: "design" }); focusResult({ file: a.file, view: a.view, ...(a.f === undefined ? {} : { f: a.f }), ...(a.map === undefined ? {} : { map: a.map }) }, "main"); break;
-      case "sweep": openSweepView(a.id); break;
+      // a sweep folder opens and closes like the other folders; a second click on it right after the
+      // first (a double-click: the first one re-renders the row, so no dblclick event reaches it) or
+      // its menu compares all runs
+      case "sweep": {
+        const at = performance.now();
+        const double = e instanceof MouseEvent && lastSweepClick.id === r.id && at - lastSweepClick.at < DOUBLE_CLICK_MS;
+        lastSweepClick = { id: r.id, at: double ? 0 : at };
+        if (double) openSweepView(a.id); else toggle(r);
+        break;
+      }
       case "convergence": openMeshConvergence(a.id); break;
       case "optimization": {
         const job = optJob(a.jobId);
@@ -468,7 +482,7 @@ export function NavTree() {
       if(a.sel.type==="material") { const mi=a.sel.i; actions.push({label:t("contextMenu.color"),run:()=>openColor({kind:"materials",indices:[mi],label:r.label,x,y}),icon:Palette},{label:t("userMaterials.saveTo"),run:()=>void saveDesignMaterial(mi),icon:BookmarkPlus}); }
     }
     else if(a.kind==="parameters") { activate(r,new KeyboardEvent("keydown")); return; }
-    else if(a.kind==="sweep") { openSweepView(a.id); return; }
+    else if(a.kind==="sweep") actions.push({label:t(r.expanded?"tree.menu.collapse":"tree.menu.expand"),run:()=>toggle(r),icon:r.expanded?ChevronsDownUp:ChevronsUpDown},{label:t("tree.sweep.compareAllMenu"),run:()=>openSweepView(a.id),icon:GitCompareArrows});
     else if (a.kind === "convergence") { openMeshConvergence(a.id); return; }
     else if (a.kind === "optimization" || a.kind === "optimization-history" || a.kind === "optimization-best") {
       const job = optJob(a.jobId);

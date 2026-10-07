@@ -1,6 +1,6 @@
 G04 Board outline (substrate footprint)*
-G04 Wilkinson divider (2.4 GHz) (wilkinson-divider), Fairbeam 0.1.0*
-%TF.GenerationSoftware,Fairbeam,Fairbeam,0.1.0*%
+G04 Wilkinson divider (2.4 GHz) (wilkinson-divider), Fairbeam 0.7.0*
+%TF.GenerationSoftware,Fairbeam,Fairbeam,0.7.0*%
 %TF.CreationDate,2026-09-25T00:00:00+00:00*%
 %TF.SameCoordinates,Original*%
 %TF.FileFunction,Profile,NP*%

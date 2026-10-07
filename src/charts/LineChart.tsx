@@ -99,13 +99,20 @@ export default function LineChart(props: LineChartProps) {
   // the legend strip wraps (many compared runs): the plot starts below its measured height
   const [legendH, setLegendH] = createSignal(16);
   let legendObserver: ResizeObserver | undefined;
+  let legendFrame = 0;
   const legendRef = (el: HTMLDivElement) => {
     legendObserver?.disconnect();
     if (typeof ResizeObserver === "undefined") return;
-    legendObserver = new ResizeObserver(([e]) => setLegendH(Math.max(16, Math.ceil(e.contentRect.height))));
+    // applied in the next frame: the plot moving under the legend must not resize it in the same
+    // observer pass (useSize.ts)
+    legendObserver = new ResizeObserver(([e]) => {
+      const h = Math.max(16, Math.ceil(e.contentRect.height));
+      cancelAnimationFrame(legendFrame);
+      legendFrame = requestAnimationFrame(() => { if (legendH() !== h) setLegendH(h); });
+    });
     legendObserver.observe(el);
   };
-  onCleanup(() => legendObserver?.disconnect());
+  onCleanup(() => { cancelAnimationFrame(legendFrame); legendObserver?.disconnect(); });
   const isTextEntry = (target: EventTarget | null) => target instanceof Element && !!target.closest("input, textarea, select, [contenteditable='true']");
   const onMarkerShortcut = (e: KeyboardEvent) => {
     if ((e.key !== "m" && e.key !== "M") || e.ctrlKey || e.altKey || e.metaKey || isTextEntry(e.target)) return;

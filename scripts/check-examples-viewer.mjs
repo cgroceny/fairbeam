@@ -12,7 +12,22 @@ assert.ok(examples.includes("BUNDLED_EXAMPLE_FILES") && examples.includes("bundl
 assert.ok(!examples.includes("designs.has(entry.model)"), "user model runs must not be treated as examples");
 assert.ok(header.includes("<ExamplePicker />") && picker.includes("exampleEntries(index())") && home.includes("exampleEntries(index())"));
 assert.ok(home.includes("openExampleCopy(sourceModel()!.key, p.file)"), "Start passes the selected example file");
-assert.ok(home.includes('m.kind !== "design" && !m.error && !m.readonly'), "bundled examples stay out of the user's Python models list");
+const start = read("src/runner/startPython.ts");
+assert.ok(home.includes("createMemo(runnablePythonModels)") && start.includes("[...python.filter((m) => !m.readonly), ...python.filter((m) => m.readonly)]"),
+  "Start lists the user's Python models, then the bundled ones");
+assert.ok(home.includes('<Show when={m.readonly}><span class="home-item-tag">{t("home.python.exampleTag")}</span></Show>'), "a bundled Python model is marked example, read-only");
+assert.ok(home.includes("onClick={() => openExampleCopy(m.key)}"), "a bundled Python model opens as an editable copy, never as a design linked to a read-only file");
+assert.ok(home.includes("models().filter((m) => !m.readonly && (m.error ?"), "the bundled example designs are sources only: not under Your designs");
+assert.ok(app.includes("currentModel()?.key === startedPythonModel()") && start.includes("setStartedPythonModel(key);"),
+  "a bundled Python model chosen on Start gets its Run panel in Examples");
+assert.ok(/createEffect\(on\(appMode, \(mode, previous\) => \{\s*if \(previous !== "results" \|\| mode === "results"\) return;\s*setStartedPythonModel\(null\);\s*if \(runOpen\(\)\) setRunOpen\(false\);/.test(app),
+  "leaving Examples closes the Run panel: Design gets its Properties back");
+const toggle = read("src/runner/RunToggle.tsx");
+assert.ok(toggle.includes('"rs-toggle-on": toggles() && runOpen()') && toggle.includes('const toggles = () => appMode() !== "home" && !designing();'),
+  "the designer's Run (a dialog) is never drawn as a pressed toggle");
+const panelRun = read("src/components/RunPanel.tsx");
+assert.ok(panelRun.includes("<Show when={live.job && (!isTerminal(live.job.status) || live.job.model === modelKey())}>"),
+  "a finished run is shown only under its own model");
 assert.ok(picker.includes("openExampleCopy(m.key, source())") && panel.includes("openExampleCopy(sourceModel()!.key, source())"), "viewer passes the loaded example file");
 assert.ok(picker.includes("const currentFile = () => pending() ?? source()"), "picker shows the loaded source (or the pick still loading)");
 assert.ok(!panel.includes("Run again") && !panel.includes("openRunPanelFrom"));

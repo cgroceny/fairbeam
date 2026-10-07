@@ -1,5 +1,5 @@
 // DXF R12 (AC1009) writer: closed POLYLINE outlines (VERTEX … SEQEND, flag 70 = 1) and CIRCLEs,
-// one named layer per content, in mm. R12 has no LWPOLYLINE; POLYLINE is what every reader takes.
+// one named layer per content, in mm ($INSUNITS 4). R12 has no LWPOLYLINE; POLYLINE is what every reader takes.
 
 import type { Region, Ring } from "./polygon.ts";
 
@@ -19,6 +19,8 @@ export function dxf(layers: DxfLayer[]): string {
   const pair = (code: number, value: string | number) => out.push(g(code, value));
   pair(0, "SECTION"); pair(2, "HEADER");
   pair(9, "$ACADVER"); pair(1, "AC1009");
+  // the drawing's unit (4 = millimetres): readers do not have to guess it (R12 readers skip a variable they do not know)
+  pair(9, "$INSUNITS"); pair(70, 4);
   pair(0, "ENDSEC");
   pair(0, "SECTION"); pair(2, "TABLES");
   pair(0, "TABLE"); pair(2, "LTYPE"); pair(70, 1);

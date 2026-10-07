@@ -76,9 +76,3 @@ export function dims(bbox: [number[], number[]]): string {
   return d.join(" × ") + " mm";
 }
 
-export const BOUNDARY_LABEL: Record<string, string> = {
-  MUR: "Mur ABC",
-  PML_8: "PML (8)",
-  PEC: "PEC",
-  PMC: "PMC",
-};

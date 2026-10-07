@@ -107,15 +107,16 @@ for (const [key,starter] of Object.entries(starters)) {
   assert.ok(jsonStarter.materials.every(m=>m.doubleSided),`${key}: glTF sheets are double sided`);
 }
 const strip = starters.microstrip, stripStl = Object.fromEntries(binaryStlParts(strip).map(f=>[f.name,parse(f.bytes)]));
-assert.deepEqual(Object.keys(stripStl).sort(),['gnd.stl','line.stl','substrate.stl']);
-assert.equal(stripStl['line.stl'].count,4,'the line is a two-sided sheet'); assert.equal(stripStl['substrate.stl'].count,12);
+// the members are named by the labels the tree shows, not the internal part names
+assert.deepEqual(Object.keys(stripStl).sort(),['Ground_plane.stl','Strip.stl','Substrate.stl']);
+assert.equal(stripStl['Strip.stl'].count,4,'the line is a two-sided sheet'); assert.equal(stripStl['Substrate.stl'].count,12);
 // "Give sheets a thickness": 35 um slab, the trace above the substrate, the ground plane below it.
 const slabs = Object.fromEntries(binaryStlParts(strip,{sheetThicknessUm:35}).map(f=>[f.name,parse(f.bytes)]));
-assert.equal(slabs['line.stl'].count,12,'closed slab: 12 triangles');
-near(zRange(slabs['line.stl']),[1.6,1.635]); near(zRange(slabs['gnd.stl']),[-0.035,0]);
-near(zRange(slabs['substrate.stl']),[0,1.6]);
+assert.equal(slabs['Strip.stl'].count,12,'closed slab: 12 triangles');
+near(zRange(slabs['Strip.stl']),[1.6,1.635]); near(zRange(slabs['Ground_plane.stl']),[-0.035,0]);
+near(zRange(slabs['Substrate.stl']),[0,1.6]);
 const centre = new THREE.Vector3(0,0,1.6175);
-for (const facet of slabs['line.stl'].triangles) assert.ok(facet.normal.dot(facet.center.clone().sub(centre))>0,'slab faces point outward');
+for (const facet of slabs['Strip.stl'].triangles) assert.ok(facet.normal.dot(facet.center.clone().sub(centre))>0,'slab faces point outward');
 const slabScene = blenderScene(strip,colors,{},{sheetThicknessUm:35});
 let lineMesh; slabScene.traverse(n=>{ if(n.isMesh&&n.name.startsWith('line_')) lineMesh=n; });
 assert.equal(new THREE.Box3().setFromObject(lineMesh).getSize(new THREE.Vector3()).y.toFixed(6),'0.000035','glTF slab thickness in metres (Y is up)');
@@ -123,6 +124,9 @@ assert.equal(new THREE.Box3().setFromObject(lineMesh).getSize(new THREE.Vector3(
 const free = binaryStlParts({...bundle,parts:[{...bundle.parts[0],name:'free',primitives:[sheet]}]},{sheetThicknessUm:100})[0];
 near(zRange(parse(free.bytes)),[6.95,7.05]);
 assert.throws(()=>binaryStl(strip,{sheetThicknessUm:-1}));
+// two parts with one label: unique names; a part without a label keeps its internal name
+const twin = binaryStlParts({...strip,parts:strip.parts.map(p=>p.name==='line'?{...p,label:'Ground plane'}:p.name==='substrate'?{...p,label:undefined}:p)}).map(f=>f.name).sort();
+assert.deepEqual(twin,['Ground_plane.stl','Ground_plane_2.stl','substrate.stl']);
 const output=process.argv[2];
 if(output) { await mkdir(output,{recursive:true});await writeFile(`${output}/model.glb`,new Uint8Array(glb));await writeFile(`${output}/model-mm.stl`,binaryStl(patch));await copyFile(new URL('../src/export/blender-render.py',import.meta.url),`${output}/blender-render.py`); }
 console.log('Mesh export: binary STL facets/normals, reflected transforms, mm scaling, two-sided and thickened sheets, per-solid STL, starters (microstrip, patch, dipole), hierarchy, GLB and invalid geometry pass');
