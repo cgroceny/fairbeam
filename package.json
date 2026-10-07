@@ -62,6 +62,7 @@
     "check:appearance": "npm run -s check:general-settings && node --experimental-strip-types scripts/check-appearance-presets.mjs && node --experimental-strip-types scripts/check-appearance-events.mjs && node --experimental-strip-types scripts/check-theme-settings-sync.mjs",
     "check:account": "node --experimental-strip-types scripts/check-account.mjs",
     "check:run-threads": "node --experimental-strip-types scripts/check-run-threads.mjs",
+    "check:run-numbers": "node --experimental-strip-types scripts/check-run-numbers.mjs",
     "check:startup-watchdog": "node scripts/check-startup-watchdog.mjs",
     "check:host-rates": "node --experimental-strip-types scripts/check-host-rates.mjs",
     "check:measure": "node --experimental-strip-types scripts/check-measure.mjs",

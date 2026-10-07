@@ -22,8 +22,7 @@ import {
 } from "../runner/store";
 import { axes, lastDuration, setAxes } from "../runner/sweep";
 import { PreflightNote } from "./PreflightNote";
-import { meshStats } from "./meshStats";
-import { bundle } from "../state";
+import { draftMeshStats } from "./draftMesh";
 import { draft, editParameterSweep, file, names } from "./store";
 import { MAX_SWEEP_CELLS, planParameterSweep } from "./sweepPlan";
 import { pickVaryParam, sweepRange } from "../lib/rangeDefaults";
@@ -64,7 +63,7 @@ export default function SweepDialog() {
 }
 function Content() {
   // the current design's mesh: the memory check of the whole batch
-  const designCells = () => meshStats(bundle())?.nodes;
+  const designCells = () => draftMeshStats()?.nodes;
   let box: HTMLDivElement | undefined;
   let input: HTMLInputElement | undefined;
   const close = () => setSweepDialogOpen(false);

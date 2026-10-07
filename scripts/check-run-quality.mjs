@@ -151,7 +151,7 @@ assert.equal(runQuality(preview), null, "a geometry preview has no verdict");
   const src = (p) => readFileSync(new URL(`../src/${p}`, import.meta.url), "utf8");
   const dock = src("designer/RunDock.tsx");
   assert.ok(/watchSpeed\(since, at, measured, untrack\(expected\)\)/.test(dock) && /slowHint\(slowSince\(\), now\(\)\)/.test(dock), "RunDock: the watch and the hint");
-  assert.ok(/estimateTime\(bundle\(\), job\(\)\.engine \?\? "cpu"\)\?\.mcps/.test(dock), "RunDock: the expected speed is the estimate's");
+  assert.ok(/estimateTime\(meshSource\(\), job\(\)\.engine \?\? "cpu"\)\?\.mcps/.test(dock), "RunDock: the expected speed is the estimate's (of the draft's mesh)");
   assert.ok(/<Show when=\{slow\(\)\}>[\s\S]*t\("runDock\.slow", \{ speed: num\(speed\(\) \?\? 0, 0\), expected: num\(expected\(\) \?\? 0, 0\) \}\)/.test(dock), "RunDock: the hint shows the two speeds");
   const en = JSON.parse(src("i18n/en.json")), tr = JSON.parse(src("i18n/tr.json"));
   assert.ok(en["runDock.slow"] && tr["runDock.slow"], "worded in both languages");

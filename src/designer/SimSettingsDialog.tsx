@@ -7,13 +7,13 @@ import { Activity, Box, Gauge, Grid3x3, Radio, Timer, Waves, X } from "lucide-so
 import { openMeshConvergence } from "./ConvergenceDialog";
 import { FOCUSABLE, useModal } from "../lib/dialog";
 import { tabKeyTarget } from "../lib/tabKeys";
-import { bundle } from "../state";
-import { engine, meshFreshness } from "../runner/store";
+import { draftPreview, engine, meshFreshness } from "../runner/store";
 import { setSimSettingsOpen, setSimSettingsSection, simSettingsSection } from "../runner/designRun";
 import { ExprField } from "./DesignPane";
 import FieldPlanesEditor, { addFieldPlane, fieldPlanes } from "./FieldPlanesEditor";
 import { setMeshView } from "./MeshView";
-import { cellsText, estimateText, estimateTime, meshStats } from "./meshStats";
+import { cellsText, estimateText } from "./meshStats";
+import { draftEstimate, draftMeshStats } from "./draftMesh";
 import { EFFICIENCY_POINTS_DEFAULT, EFFICIENCY_POINTS_MAX, EFFICIENCY_POINTS_MIN, END_DB_MAX, END_DB_MIN } from "./checks";
 import { changedSince, draft, edit, fieldId, historyMark, issueUnder, issues, names, rollbackTo } from "./store";
 import { tryEvaluate } from "./expr";
@@ -123,15 +123,16 @@ export default function SimSettingsDialog() {
     x.simulation.boundaries = b.every((y) => y === b[0]) ? b[0] : b;
   }, `boundaries${k}`);
   const open = () => bounds().some((b) => b === "MUR" || b.startsWith("PML"));
-  const stats = () => meshStats(bundle());
+  // the draft's own preview, never a run shown in the 3D view
+  const stats = draftMeshStats;
   const designMesh = () => d().mesh.mode === "design";
   const manualMesh = () => d().mesh.mode === "manual";
   // the Classic (old) mesh is offered only to a design that used it when the dialog opened: then it
   // stays in the list while the dialog is open, so Automatic and back works without Cancel
   const openedClassic = d().mesh.mode === "auto" || !d().mesh.mode;
   const offerClassic = () => !manualMesh() && (openedClassic || !designMesh());
-  const autoSettings = () => bundle()?.mesh?.auto?.settings ?? {};
-  const autoNotes = () => bundle()?.mesh?.auto?.notes ?? {};
+  const autoSettings = () => draftPreview()?.mesh?.auto?.settings ?? {};
+  const autoNotes = () => draftPreview()?.mesh?.auto?.notes ?? {};
   const currentAuto = () => meshFreshness() === "current" && autoSettings().mode === "design";
   const autoValue = (key: string, fallback: Expr | string) => currentAuto() ? (autoSettings()[key] ?? fallback) : fallback;
   const override = (key: string) => (d().mesh.overrides as Record<string, Expr | null | undefined> | undefined)?.[key];
@@ -155,8 +156,7 @@ export default function SimSettingsDialog() {
       x.mesh = previousLegacy ?? { mode: "auto", cells_per_wavelength: 20, thin_metal: x.mesh.thin_metal };
     }
   }, "mesh-mode");
-  const excited = () => Math.max(1, (d().ports ?? []).filter((p) => p.excite !== false).length);
-  const est = () => estimateTime(bundle(), engine(), excited());
+  const est = () => draftEstimate(engine());
   const currents = () => d().monitors?.currents ?? [];
   const setCurrents = (v: Expr[]) => edit((x) => {
     const w = x as WithMonitors;

@@ -45,7 +45,8 @@ import type { BooleanOperation } from "./booleanUi";
 import { tryEvaluate } from "./expr";
 import { shown as fmt } from "./displayNumber.ts";
 import { t } from "../i18n";
-import { cellsText, meshStats } from "./meshStats";
+import { cellsText } from "./meshStats";
+import { draftMeshStats } from "./draftMesh";
 import { leaveResultsFor, resultFocus } from "./resultFocus";
 import { activateMainTab, cycleMainTabs, focusActiveMainTab } from "./mainTabsState";
 import { openRibbonResult, ribbonCurrents, ribbonExportReady, ribbonFarfield, ribbonFieldPlanes, ribbonPattern3d, ribbonResult } from "./ribbonResults";
@@ -448,7 +449,7 @@ export function Ribbon() {
   createEffect(on([ribbonTab, ribbonMinimized, simSettingsOpen, saving], () => { if (shell) { fitRibbon(shell); refit(); } }));
   // the Simulation ribbon's mesh readout: after a failed preview it names the numbers as the last
   // successful preview's (or unknown), never as the mesh of the current draft
-  const stats = () => meshFreshness() === "unknown" ? null : meshStats(bundle());
+  const stats = () => meshFreshness() === "unknown" ? null : draftMeshStats();
   const meshReadout = () => {
     const s = stats(), fresh = meshFreshness();
     if (!s) return fresh === "unknown" ? t("ribbon.sim.meshUnknown") : t("ribbon.sim.meshPending");

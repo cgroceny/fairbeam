@@ -10,7 +10,7 @@ import { SERIES_COLORS, traces } from "../compare/series";
 import { compact, num, seconds } from "../lib/format";
 import { api, isTerminal, type Eta, type Phase } from "../runner/api";
 import OptimizeProgress from "../runner/OptimizeProgress";
-import { cancelJob, live, liveEnergy, liveInfo, liveLog, liveProgress, liveStats, stopping } from "../runner/store";
+import { cancelJob, live, liveEnergy, liveInfo, liveLog, liveProgress, liveStats, meshSource, stopping } from "../runner/store";
 import { StatusBadge } from "../runner/status";
 import { designDockTab, designJob, designJobId, designResult, designResultError, dockCancelTarget, failedResultLoad, followInDesigner, retryResultLoad, setDesignDockTab, type DesignDockTab } from "../runner/designRun";
 import { activeRuns, jobName, RunQueue } from "../runner/RunQueue";
@@ -31,7 +31,6 @@ import { RunQualityBadge, RunQualityBanner } from "./RunQualityView";
 import { createEtaPresenter } from "./etaPresentation";
 import { slowHint, watchSpeed } from "./slowRun";
 import { estimateTime } from "./meshStats";
-import { bundle } from "../state";
 import { fmt, t } from "../i18n";
 import "../styles/designer-sim.css";
 
@@ -89,7 +88,7 @@ function RunProgress() {
   // far slower than the pre-run estimate for a while: the machine is probably busy (slowRun.ts)
   const speed = () => liveProgress()?.speed_mcs ?? liveStats().speed_mcells_s;
   const [slowSince, setSlowSince] = createSignal<number | null>(null);
-  const expected = createMemo(() => estimateTime(bundle(), job().engine ?? "cpu")?.mcps);
+  const expected = createMemo(() => estimateTime(meshSource(), job().engine ?? "cpu")?.mcps);
   createEffect(() => {
     const at = now();
     if (done() || job().phase !== "running") return void setSlowSince(null);

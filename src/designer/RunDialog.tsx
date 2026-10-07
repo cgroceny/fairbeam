@@ -7,8 +7,8 @@ import { CircleAlert, Play, X } from "lucide-solid";
 import { useModal } from "../lib/dialog";
 import { engine as storedEngine, health, probeServer, selectModel, serverState, setThreads, submitError, submitErrorDetail, submitting, threads as storedThreads } from "../runner/store";
 import { setRunDialogOpen, startDesignRun, storedPoints } from "../runner/designRun";
-import { bundle } from "../state";
-import { estimateText, estimateTime, meshStats } from "./meshStats";
+import { estimateText } from "./meshStats";
+import { draftEstimate, draftExcitedPorts, draftMeshStats } from "./draftMesh";
 import { PreflightNote } from "./PreflightNote";
 import { addPort, applyFix, checks, conflict, dirty, draft, errorCount, file, focusPath, save, saving } from "./store";
 import { openDesignerOptimize } from "./OptimizeDialog";
@@ -47,13 +47,14 @@ export default function RunDialog() {
   });
 
   const errors = () => checks().filter((c) => c.severity === "error");
-  const excited = () => Math.max(1, (draft.ports ?? []).filter((p) => p.excite !== false).length);
-  const est = () => estimateTime(bundle(), eng(), excited());
+  const excited = draftExcitedPorts;
+  // the draft's own mesh and timestep limit, never a run shown in the 3D view
+  const est = () => draftEstimate(eng());
   const cpu = () => health()?.cpu_count ?? 64;
   const pointsBad = () => !Number.isInteger(points()) || points() < 11 || points() > 20001;
   const threadsBad = () => eng() === "cpu" && thr() !== 0 && (!Number.isInteger(thr()) || thr() < 1 || thr() > cpu());
   // memory / CPU check of this mesh (the server refuses the run above ~90 % of free memory)
-  const cells = () => meshStats(bundle())?.nodes;
+  const cells = () => draftMeshStats()?.nodes;
   // what Auto resolves to for this grid: the server's rule with the cell count the run sends (a big
   // grid gets more threads than the small-grid default health() reports)
   const autoCount = () => autoThreads(cpu(), health()?.physical_cores, cells());

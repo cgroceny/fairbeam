@@ -40,8 +40,16 @@ export const [previewMs, setPreviewMs] = createSignal<number | null>(null);
  * the request in flight and reset with every edit; this keeps saying that the mesh numbers and
  * server checks on screen are from the last successful preview, not from the current draft. */
 export const [previewFailure, setPreviewFailure] = createSignal<string | null>(null);
-/** Forget a preview failure: the document or the shown project was replaced. */
-export const forgetPreviewFailure = () => setPreviewFailure(null);
+/** The latest preview of the designer's draft (the browser-built one, then the server's), kept apart
+ * from the viewer's bundle(): a run's results shown in the designer replace bundle(), not the draft's
+ * mesh. The mesh readouts and the time estimates of the design read this (draftMesh.ts). */
+const [draftPreview, setDraftPreview] = createSignal<Bundle | null>(null);
+export { draftPreview };
+/** The bundle whose mesh describes what the next run simulates: the draft's own preview in the
+ * designer, the shown project (the Run panel's preview of a model) elsewhere. */
+export const meshSource = (): Bundle | null => (appMode() === "design" ? draftPreview() : bundle());
+/** Another document was opened in the designer: forget the last one's preview failure and preview. */
+export const forgetPreviewFailure = () => { setPreviewFailure(null); setDraftPreview(null); };
 /** How the mesh numbers of the shown bundle relate to the current inputs: "current" (a successful
  * server preview of them, or a project/result that is not a preview), "updating" (the server
  * preview of the latest edit is pending), "stale" (the last preview failed: the numbers are from
@@ -565,6 +573,7 @@ function showPreview(b: Bundle): boolean {
   }
   previewIdentity.didOpen(openCount());
   setPreviewActive(true);
+  if (appMode() === "design") setDraftPreview(b);
   return true;
 }
 

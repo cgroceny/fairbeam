@@ -7,14 +7,15 @@
 import { onCleanup, onMount, Show } from "solid-js";
 import { CircleAlert, CircleCheck, Clock, Info, LoaderCircle, LocateFixed, RotateCw, TriangleAlert, X } from "lucide-solid";
 import { num } from "../lib/format";
-import { bundle, viewCursor } from "../state";
+import { viewCursor } from "../state";
 import { isTerminal } from "../runner/api";
 import { health, liveProgress, meshFreshness, previewFailure, previewMs, previewState, recheckServer, serverActivity, serverState } from "../runner/store";
 import { designJob, setDesignDockTab } from "../runner/designRun";
 import { localFrame, plane, resetWcsToGlobal, snap, tool, wcs, wcsIsGlobal, worldToWcs } from "./draw";
 import { shown as fmt } from "./displayNumber.ts";
 import { evaluate } from "./expr";
-import { cellsText, meshStats } from "./meshStats";
+import { cellsText } from "./meshStats";
+import { draftMeshStats } from "./draftMesh";
 import { meshView, toggleMeshView } from "./MeshView";
 import { checks, names, retryPreview } from "./store";
 import { setBottomDockCollapsed } from "./layoutState";
@@ -24,7 +25,7 @@ export default function StatusBar() {
   const c = () => viewCursor();
   const fresh = meshFreshness;
   // no numbers of another project or design once a preview failed without one of this design
-  const stats = () => fresh() === "unknown" ? null : meshStats(bundle());
+  const stats = () => fresh() === "unknown" ? null : draftMeshStats();
   const meshText = () => {
     const s = stats();
     if (!s) return t(fresh() === "unknown" ? "status.mesh.unknown" : "status.mesh.none");

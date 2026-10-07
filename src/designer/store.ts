@@ -5,8 +5,8 @@
 import { batch, createEffect, createMemo, createRoot, createSignal, on } from "solid-js";
 import { reconcile, unwrap } from "solid-js/store";
 import { api, type PcbFile, type PcbOptions } from "../runner/api";
-import { applyModelEntry, forgetPreviewFailure, restoreProject, invalidatePreview, previewActive, previewFailure, previewIsCurrent, previewState, health, modelKey, models, refreshModels, runDesignPreview, selectModel, serverState, setUnsavedDesignCheck, showEmptyDesign, showQuickPreview } from "../runner/store";
-import { bundle, openCount, setCenterView, setHiddenParts } from "../state";
+import { applyModelEntry, draftPreview, forgetPreviewFailure, restoreProject, invalidatePreview, previewActive, previewFailure, previewIsCurrent, previewState, health, modelKey, models, refreshModels, runDesignPreview, selectModel, serverState, setUnsavedDesignCheck, showEmptyDesign, showQuickPreview } from "../runner/store";
+import { openCount, setCenterView, setHiddenParts } from "../state";
 import { quickBundle } from "./geometry";
 import { portFeedEntries } from "../lib/portGroups";
 import { clearBackup, forgetLastDesign, readBackup, readLastDesign, rememberLastDesign, writeBackup } from "./draftBackup";
@@ -142,7 +142,7 @@ export function quickPreview() {
   quickFrame = requestAnimationFrame(() => {
     quickFrame = 0;
     if (appMode() !== "design" || openCount() !== quickOpened || !loaded() || !draft.parts.length) return;
-    const b = quickBundle(unwrap(draft), names().names, bundle());
+    const b = quickBundle(unwrap(draft), names().names, draftPreview());
     if (b) showQuickPreview(b);
   });
 }
@@ -516,7 +516,7 @@ export function selectAddedGeometry(s: Extract<Selection, { type: "part" | "prim
   if (!bounds || !bounds.flat().every(Number.isFinite)) return;
   // Adding before the initial server preview finishes must win over its default model fit.
   if (!previewActive()) {
-    const preview = quickBundle(d, names().names, bundle());
+    const preview = quickBundle(d, names().names, draftPreview());
     if (preview) showQuickPreview(preview);
   }
   setHiddenParts(part.name, false);
@@ -776,7 +776,7 @@ export function focusPath(path: string, options: { frame?: boolean; focus?: bool
     const bounds = frameBounds(s);
     if (bounds) {
       if (!previewActive()) {
-        const preview = quickBundle(unwrap(draft), names().names, bundle());
+        const preview = quickBundle(unwrap(draft), names().names, draftPreview());
         if (preview) showQuickPreview(preview);
       }
       if (s.type === "part" || s.type === "primitive") setHiddenParts(draft.parts[s.i].name, false);
