@@ -38,6 +38,21 @@ fairbeam sweep python/models/inset_patch.py --param inset=6,8,10 --param feed_w=
 | `--excite all\|1,3` | all ports if <= 4, else 1 | Ports driven per point (one run each) for multi-port models |
 | `--verbose` | off | Echo openEMS output |
 
+### RunHistory sweep CSV
+
+In the Run panel, expand a parameter sweep and choose **Compare all**, then **Export CSV**
+or **Copy data**. Both use the same long table, with one row per job, including unfinished and
+failed jobs. The columns are `run_index`, `sequence_index`, `sequence_name`, `status`, the sweep
+parameter keys, `band_lo_ghz`, `band_hi_ghz`, `band_center_ghz`, `band_best_ghz`, `s11_min_db`,
+`dmax_dbi`, and `radiation_efficiency_pct`. Band values describe the first matched band; far-field
+values describe the first far-field frequency. Unavailable values are blank.
+
+`band_center_ghz` is the middle of the band edges, `(band_lo_ghz + band_hi_ghz) / 2`;
+`band_best_ghz` is the frequency of minimum |S11|. Previously, `band_center_ghz` held that minimum.
+Older job stats without both edges leave the center blank while retaining the best-match frequency.
+The RunHistory table labels its minimum-frequency column **Best match**. These CSV columns are
+separate from the CLI study JSON format below, whose `f_center` remains the minimum frequency.
+
 ## `fairbeam converge`
 
 ### A design: mesh density
