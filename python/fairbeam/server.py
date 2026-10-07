@@ -37,7 +37,8 @@ Endpoints (all JSON unless noted)::
     GET  /api/models/{id}/history   last 20 saved versions; .../history/{version} one of them
     POST /api/preview               {design, params?} -> the bundle of an unsaved design and its checks
     POST /api/designs               {id, name?, from? | template? | python?: {source_model, model?} | cst?: {source, filename?} | pcb?: {files, options?}}
-                                    create python/models/<id>.design.json
+                                    create python/models/<id>.design.json; {design, name?, id?}: a design file (fairbeam.design/1)
+                                    as a new design, under a free id from its name when no id is given
     POST /api/import/cst            {source, filename?, name?} a CST-compatible VBA macro (.bas, .mcs, .txt) as a design
                                     (not saved): {design, report, checks}
     POST /api/import/pcb            {files: [{name, content_base64}], options?: {layer_map?, substrate?, thickness?, eps_r?,
@@ -899,16 +900,53 @@ class App:
             return resp["result"].get("checks", [])
         return resp.get("checks") if resp.get("checks") is not None else lint(design)
 
+    def _free_design_id(self, name: str) -> str:
+        """A free model id for a design named ``name`` (an imported design file): the name in lower case with "_"
+        between words, as the Start page derives it, then _2, _3 ... until the id is free. Never a bundled
+        example's id (those are read-only) nor a name Windows reserves for devices."""
+        import unicodedata
+
+        base = unicodedata.normalize("NFKD", name.lower().replace("ı", "i"))
+        base = "".join(c for c in base if not unicodedata.combining(c))
+        base = re.sub(r"_+$", "", re.sub(r"^[^a-z]+", "", re.sub(r"[^a-z0-9]+", "_", base)))[:41]
+        if not modelfiles.ID_RE.match(base or ""):
+            base = "imported_design"
+
+        def free(candidate: str) -> bool:
+            return (modelfiles.ID_RE.match(candidate) is not None and not modelfiles.RESERVED_ID_RE.match(candidate)
+                    and not modelfiles.is_readonly(candidate) and not modelfiles._taken(self.models_dir, candidate))
+
+        if free(base):
+            return base
+        for n in range(2, 1000):
+            candidate = f"{base[:41 - len(str(n)) - 1]}_{n}"
+            if free(candidate):
+                return candidate
+        raise ApiError(409, f"no free file name for {name!r}", fields={"id": "choose another name"})
+
     def create_design(self, body: dict) -> dict:
         from .design import DesignError, template_design
 
-        model_id = modelfiles.check_id(body.get("id"))
         name = body.get("name")
         if name is not None and (not isinstance(name, str) or "\n" in name or not name.strip() or len(name) > 80):
             raise ApiError(422, "invalid name", fields={"name": "a single line of 1–80 characters"})
+        imported = body.get("design")
+        if imported is not None:
+            # a design file (fairbeam.design/1, e.g. Export > Current design JSON) opened or dropped in the app: a new
+            # design under a free id from its name unless the request names one; the design validator checks it
+            if not isinstance(imported, dict) or not isinstance(imported.get("model"), dict):
+                raise ApiError(422, "design must be a design file object", fields={"design": "not a fairbeam.design/1 object"})
+            label = name or imported["model"].get("name") or imported["model"].get("id") or "Imported design"
+            model_id = modelfiles.check_id(body["id"]) if body.get("id") is not None else self._free_design_id(str(label))
+        else:
+            model_id = modelfiles.check_id(body.get("id"))
         origin = body.get("from")
         report = None
-        if body.get("cst") is not None:
+        if imported is not None:
+            design = copy.deepcopy(imported)
+            if name:
+                design["model"]["name"] = name.strip()
+        elif body.get("cst") is not None:
             cst = body["cst"]
             if not isinstance(cst, dict):
                 raise ApiError(422, "cst must be an object with the macro source", fields={"cst": "not an object"})

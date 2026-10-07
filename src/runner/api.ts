@@ -505,7 +505,7 @@ export const api = {
   modelVersion: (id: string, version: string) =>
     call<{ id: string; version: string; source: string; hash: string }>("GET", `/models/${encodeURIComponent(id)}/history/${encodeURIComponent(version)}`),
   createDesign: (body: { id: string; name?: string; from?: string; template?: TemplateKey; python?: PythonDesignSource; cst?: { source: string; filename?: string };
-    pcb?: { files: PcbFile[]; options?: PcbOptions } }) =>
+    pcb?: { files: PcbFile[]; options?: PcbOptions }; design?: Design }) =>
     call<DesignFile & { validation: Validation; import_report?: CstImportReport | PcbImportReport }>("POST", "/designs", body),
   /** PCB artwork (DXF, Gerber, Excellon) read as a design, not saved (python/fairbeam/pcb_import.py): the import report,
    * its layers with their roles and the design checks. A 422 for files without copper carries `data.layers` too. */
