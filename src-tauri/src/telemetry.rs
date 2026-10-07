@@ -29,7 +29,7 @@ pub fn on_app_start(app: &AppHandle) {
         let _g = FILES.lock().unwrap_or_else(|e| e.into_inner());
         let dir = dir(app);
         let Ok(_lock) = core::lock(&dir) else { return };
-        // Remove files produced by the previous implementation, including identifiers in state.
+        // Migrate consent for the install-count payload and remove obsolete counter files.
         let state = State::load(&dir);
         if state.save(&dir).is_err() { return; }
         for name in ["counters-shell.json", "counters-server.json", "counters-shell.json.tmp", "counters-server.json.tmp"] { let _ = fs::remove_file(dir.join(name)); }
@@ -75,8 +75,19 @@ pub fn telemetry_set_consent(app: AppHandle, granted: bool) -> Result<Value, Str
     let dir = dir(&app);
     let _lock = core::lock(&dir)?;
     let mut state = State::load(&dir);
-    state.consent = Some(if granted { "granted" } else { "denied" }.into());
+    state.set_consent(granted)?;
     // Preserve last_sent when toggled: turning Off and On cannot bypass the weekly limit.
+    state.save(&dir)?;
+    Ok(status_json(&state))
+}
+#[tauri::command(async)]
+pub fn telemetry_reset_id(app: AppHandle) -> Result<Value, String> {
+    if !enabled_here() { return Err("Usage statistics are not active in this build".into()); }
+    let _g = FILES.lock().unwrap_or_else(|e| e.into_inner());
+    let dir = dir(&app);
+    let _lock = core::lock(&dir)?;
+    let mut state = State::load(&dir);
+    state.reset_id()?;
     state.save(&dir)?;
     Ok(status_json(&state))
 }
@@ -84,7 +95,13 @@ pub fn telemetry_set_consent(app: AppHandle, granted: bool) -> Result<Value, Str
 pub fn telemetry_preview(app: AppHandle) -> Value {
     let _g = FILES.lock().unwrap_or_else(|e| e.into_inner());
     let state = if enabled_here() { State::load(&dir(&app)) } else { State::default() };
+    let mut report = body(&app);
+    report["install_id"] = json!(state.install_id);
     json!({"status": status_json(&state),
-        "next": if state.active(BUILD_ENABLED, disabled()) && state.due(now()) { body(&app) } else { Value::Null },
-        "example": if !enabled_here() { body(&app) } else { Value::Null }})
+        "next": if state.active(BUILD_ENABLED, disabled()) && state.due(now()) { report } else { Value::Null },
+        "example": if !enabled_here() {
+            let mut example = body(&app);
+            example["install_id"] = json!("00000000-0000-4000-8000-000000000000");
+            example
+        } else { Value::Null }})
 }

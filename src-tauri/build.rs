@@ -33,6 +33,7 @@ fn main() {
         "telemetry_status",
         "telemetry_set_consent",
         "telemetry_preview",
+        "telemetry_reset_id",
         // the viewer preferences imported from the previous app, once
         "take_imported_viewer_prefs",
     ];

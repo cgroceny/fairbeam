@@ -1,4 +1,5 @@
 // Opt-in weekly aggregate counts; accepts legacy reports but discards their extra fields.
+import { randomBytes } from "node:crypto";
 import { createRequire } from "node:module";
 
 const require = createRequire(import.meta.url);
@@ -32,14 +33,16 @@ export function validatePing(body, nowMs) {
   if (!body || typeof body !== "object" || Array.isArray(body)) return fail("not an object");
   const fields = Object.keys(body).sort();
   const legacy = SCHEMA.legacy_schemas.includes(body.schema);
-  const want = [...(legacy ? SCHEMA.legacy_fields : SCHEMA.fields)].sort();
+  const minimal = body.schema === "fairbeam.ping/2";
+  const want = [...(legacy ? SCHEMA.legacy_fields : minimal ? SCHEMA.fields.filter(f => f !== "install_id") : SCHEMA.fields)].sort();
   if (fields.length !== want.length || fields.some((f, i) => f !== want[i])) return fail("unexpected fields");
   const { schema, install_id, app_version, os, arch, gpu_available, day, counters } = body;
   // installed apps of earlier versions keep sending their own schema id; it is accepted, never written
-  if (schema !== SCHEMA.schema && !SCHEMA.legacy_schemas.includes(schema)) return fail("schema");
+  if (schema !== SCHEMA.schema && !minimal && !SCHEMA.legacy_schemas.includes(schema)) return fail("schema");
   if (typeof app_version !== "string" || !VERSION.test(app_version)) return fail("app_version");
   if (!SCHEMA.os.includes(os)) return fail("os");
   if (!SCHEMA.arch.includes(arch)) return fail("arch");
+  if (!minimal && (typeof install_id !== "string" || !UUID_V4.test(install_id))) return fail("install_id");
   if (legacy) {
     if (typeof install_id !== "string" || !UUID_V4.test(install_id)) return fail("install_id");
     if (typeof gpu_available !== "boolean") return fail("gpu_available");
@@ -55,7 +58,7 @@ export function validatePing(body, nowMs) {
       if (!Number.isInteger(v) || v < 0 || v > SCHEMA.max_value) return fail("counters: value");
     }
   }
-  return { ok: true, ping: { schema: SCHEMA.schema, app_version, os, arch } };
+  return { ok: true, ping: { schema: minimal || legacy ? "fairbeam.ping/2" : SCHEMA.schema, app_version, os, arch, ...(!minimal && !legacy ? { install_id } : {}) } };
 }
 
 const json = (status, obj, headers = {}) =>
@@ -101,7 +104,13 @@ export async function handlePing(request, deps) {
   const v = validatePing(body, nowMs);
   if (!v.ok) return json(400, { error: `invalid ping: ${v.error}` }, cors);
   try {
-    await incrementAggregate(deps, isoWeek(utcDay(nowMs)), v.ping);
+    const week = isoWeek(utcDay(nowMs));
+    if (v.ping.install_id) {
+      const count = await countInstall(deps, week, v.ping, nowMs);
+      await incrementAggregate(deps, week, v.ping, count);
+    } else {
+      await incrementAggregate(deps, week, v.ping);
+    }
     return json(202, { ok: true }, cors);
   } catch (e) {
     // Do not log request bodies, headers, addresses or exception details.
@@ -128,12 +137,12 @@ export function weekStart(week) {
 }
 
 /** Update only a tuple's total. No event log, identity, IP address or user agent is stored. */
-export async function incrementAggregate(deps, week, ping) {
+export async function incrementAggregate(deps, week, ping, distinctCount) {
   const { env, fetch: fetchImpl = globalThis.fetch } = deps;
   const repo = env.STATS_REPO ?? "";
   const branch = env.STATS_BRANCH || "main";
   if (!REPO.test(repo)) throw new Error("invalid stats repository");
-  const path = `data/${week}--${ping.app_version}--${ping.os}--${ping.arch}.json`;
+  const path = `data/${week}--${ping.app_version}--${ping.os}--${ping.arch}${distinctCount === undefined ? "" : "--installs"}.json`;
   const api = `https://api.github.com/repos/${repo}/contents/${path}`;
   const headers = {
     authorization: `Bearer ${env.STATS_GITHUB_TOKEN}`,
@@ -153,7 +162,7 @@ export async function incrementAggregate(deps, week, ping) {
       if (!Number.isSafeInteger(count) || count < 0 || count === Number.MAX_SAFE_INTEGER) throw new Error("invalid total");
       sha = file.sha;
     } else if (r.status !== 404) throw new Error("storage read failed");
-    const aggregate = { week, app_version: ping.app_version, os: ping.os, arch: ping.arch, count: count + 1 };
+    const aggregate = { week, app_version: ping.app_version, os: ping.os, arch: ping.arch, count: distinctCount === undefined ? count + 1 : Math.max(count, distinctCount) };
     const put = await fetchImpl(api, {
       method: "PUT", headers: { ...headers, "content-type": "application/json" },
       body: JSON.stringify({ message: `Update usage total ${week}`, content: Buffer.from(JSON.stringify(aggregate) + "\n").toString("base64"), branch, author: identity, committer: identity, ...(sha ? { sha } : {}) }),
@@ -163,4 +172,41 @@ export async function incrementAggregate(deps, week, ping) {
     throw new Error("storage write failed");
   }
   throw new Error("storage contention");
+}
+
+// Redis executes the complete update atomically. Hashes and salt expire at the ISO week boundary;
+// each successful update already has an aggregate, so deletion cannot lose the weekly total.
+export const COUNT_INSTALL_LUA = `
+local salt = redis.call('GET', KEYS[1])
+if not salt then
+  salt = ARGV[1]
+  redis.call('SET', KEYS[1], salt, 'EXAT', ARGV[3])
+end
+local hash = redis.sha1hex(salt .. ARGV[2])
+local first = redis.call('SADD', KEYS[2], hash)
+redis.call('EXPIREAT', KEYS[2], ARGV[3])
+if first == 1 then redis.call('HINCRBY', KEYS[4], 'cumulative_weekly_distinct', 1) end
+local added = redis.call('SADD', KEYS[3], hash)
+redis.call('EXPIREAT', KEYS[3], ARGV[3])
+if added == 1 then redis.call('HINCRBY', KEYS[4], ARGV[4], 1) end
+return tonumber(redis.call('HGET', KEYS[4], ARGV[4]))
+`;
+export async function countInstall(deps, week, ping, nowMs) {
+  const { env, fetch: fetchImpl = globalThis.fetch } = deps;
+  const url = env.KV_REST_API_URL;
+  if (!url || !env.KV_REST_API_TOKEN || !/^https:\/\/[a-z0-9.-]+(?::[0-9]+)?\/?$/i.test(url)) throw new Error('install storage unavailable');
+  const tuple = `${week}--${ping.app_version}--${ping.os}--${ping.arch}`;
+  const expires = Math.floor(Date.parse(weekStart(week)) / 1000) + 7 * 86400;
+  if (expires <= Math.floor(nowMs / 1000)) throw new Error('expired week');
+  const response = await fetchImpl(url, {
+    method: 'POST', headers: { authorization: `Bearer ${env.KV_REST_API_TOKEN}`, 'content-type': 'application/json' },
+    body: JSON.stringify(['EVAL', COUNT_INSTALL_LUA, 4,
+      `fairbeam:{counts}:salt:${week}`, `fairbeam:{counts}:ids:${week}`,
+      `fairbeam:{counts}:ids:${tuple}`, 'fairbeam:{counts}:aggregates',
+      randomBytes(32).toString('hex'), ping.install_id, expires, tuple]),
+  });
+  if (!response.ok) throw new Error('install storage failed');
+  const { result, error } = await response.json();
+  if (error || !Number.isSafeInteger(result) || result < 1) throw new Error('invalid install total');
+  return result;
 }

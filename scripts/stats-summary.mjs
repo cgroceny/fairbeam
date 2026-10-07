@@ -43,7 +43,7 @@ export function parseAggregates(texts) {
     return row;
   }).sort((a, b) => a.week.localeCompare(b.week) || a.app_version.localeCompare(b.app_version));
 }
-const FILE_RE = /^\d{4}-W\d{2}--[a-z0-9.-]+--[a-z]+--[a-z0-9_]+\.json$/;
+const FILE_RE = /^\d{4}-W\d{2}--[a-z0-9.-]+--[a-z]+--[a-z0-9_]+(?:--installs)?\.json$/;
 function gh(args) {
   return execFileSync("gh", args, { encoding: "utf8", stdio: ["ignore", "pipe", "pipe"], maxBuffer: 64 << 20 });
 }
@@ -75,8 +75,8 @@ async function main(argv) {
     texts = names.filter((f) => FILE_RE.test(f.name)).map((f) => gh(["api", `repos/${repo}/contents/data/${f.name}`, "-H", "Accept: application/vnd.github.raw"]));
   }
   const rows = parseAggregates(texts);
-  console.log(table([["week", "version", "OS", "architecture", "reports"], ...rows.map((r) => [r.week, r.app_version, r.os, r.arch, r.count])]));
-  console.log("Report totals are approximate usage counts; no identifier is available to deduplicate requests.");
+  console.log(table([["week", "version", "OS", "architecture", "count"], ...rows.map((r) => [r.week, r.app_version, r.os, r.arch, r.count])]));
+  console.log("Files ending in --installs contain weekly distinct installations; other files contain legacy report totals. Summing weeks is an estimate, not an all-time distinct count.");
 }
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   main(process.argv.slice(2)).catch((e) => { console.error(e.message); process.exitCode = 1; });

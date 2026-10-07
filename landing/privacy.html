@@ -9,7 +9,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="color-scheme" content="light dark">
   <title>Privacy and usage statistics · Fairbeam</title>
-  <meta name="description" content="Usage counts and sign-in are built but OFF in Fairbeam 0.7.0. Network requests, hosting and future optional usage reports.">
+  <meta name="description" content="Optional install counts, privacy controls, network requests and hosting.">
   <link rel="canonical" href="https://fairbeam.org/privacy.html">
   <link rel="icon" href="favicon.svg" type="image/svg+xml">
   <link rel="icon" href="favicon.ico" sizes="48x48">
@@ -86,7 +86,7 @@
 <main tabindex="-1" id="main" class="guide">
 <div class="shell guide-head">
 <h1>Privacy and usage statistics</h1>
-<p class="lede">Usage counts and sign-in are built but OFF in Fairbeam 0.7.0. No usage counts are recorded or sent, and no usage-consent dialog appears.</p>
+<p class="lede">Fairbeam 0.7.2 asks once whether you want to help count installs. Nothing is sent until you allow it. Sign-in remains disabled.</p>
 </div>
 <div class="shell guide-layout">
 <nav class="guide-toc" aria-label="Privacy sections">
@@ -94,7 +94,7 @@
 <li>
 <a href="#summary">Current release</a>
 </li>
-<li><a href="#collected">If usage counts are turned on (not available in this release)</a></li>
+<li><a href="#collected">Optional install counts</a></li>
 <li><a href="#downloads">Downloads and updates</a></li>
 <li><a href="#off">Controls</a></li>
 <li>
@@ -105,22 +105,22 @@
 <article class="guide-body">
 <section aria-labelledby="summary">
 <h2 id="summary">Current release</h2>
-<p>Usage counts and sign-in are built but OFF in Fairbeam 0.7.0. No usage counts are recorded or sent, and no usage-consent dialog appears.</p>
+<p>Fairbeam 0.7.2 asks once whether you want to help count installs. Nothing is sent until you allow it. Sign-in remains disabled.</p>
 <p>Update checks contact GitHub (fairbeam-releases). App and runtime downloads come from GitHub and upstream hosts. This website is hosted on Vercel. These services see your IP address and request data as any web server does; request-log retention is set by the hosting provider.</p>
 <p>Startup update checks can be disabled in General settings. On Windows, the WebView2 component follows Microsoft’s own diagnostic-data settings.</p>
 
 </section>
 <section aria-labelledby="collected">
-<h2 id="collected">If usage counts are turned on (not available in this release)</h2>
-<p>Draft KVKK information notice and GDPR-style privacy notice for a possible future release. This release cannot send usage reports. The maintainer must review this text with a lawyer before enabling usage counts.</p>
+<h2 id="collected">Optional install counts</h2>
+<p>Questions about this notice: ismail@fairbeam.org.</p>
 <p>Controller: İsmail Akdağ. Contact: ismail@fairbeam.org.</p>
-<p>Purpose: estimate installations using each version and operating system to prioritize platform support. Totals count reports, not unique people or verified installations.</p>
-<p>Data and collection: with your explicit consent, the desktop app sends only the report schema, app version, operating system and CPU architecture over HTTPS to fairbeam.org/api/ping, at most once every seven days. No install ID, account, feature counters, designs, files or paths are sent.</p>
-<p>The hosting provider transiently processes your IP address to deliver the request. Fairbeam does not store IP addresses or user agents. Provider infrastructure may keep its own request logs under its policies; this draft does not promise that providers keep no logs.</p>
-<p>Legal basis: explicit consent under KVKK Article 5 and consent under GDPR Article 6(1)(a), where applicable. Sharing is optional and does not affect app functionality. Choose Off in Settings › General › Usage statistics to withdraw at any time. Withdrawal stops future requests without affecting the lawfulness of earlier processing.</p>
-<p>Recipients and processors: Vercel hosts the website and usage API; GitHub hosts releases, updates and the aggregate statistics repository. Only aggregate counts reach the repository. Their roles, contracts and infrastructure logging must be confirmed before activation.</p>
-<p>International transfer: requests are delivered to servers outside Türkiye. This draft proposes explicit consent for the transfer under KVKK Article 9, with information about the risks of transfer without an adequacy decision or appropriate safeguards. The current Article 9 consent exception is limited to incidental transfers; recurring weekly requests may not qualify. Counsel must establish a valid transfer mechanism under KVKK and, where applicable, GDPR Chapter V before activation. No valid mechanism is asserted by this draft.</p>
-<p>Retention: Fairbeam keeps aggregate totals by UTC week, version, operating system and architecture for platform planning, without a scheduled deletion date. No raw event log is created; each storage update is dated to the start of its UTC week, so request times are not kept. Locally, only the consent choice and last request date are stored for usage counting; that date also limits retries after failures.</p>
+<p>Purpose: count distinct installs per ISO week, app version, operating system and CPU architecture to prioritize platform support. Counts are not verified users. The cumulative sum of weekly distinct installs is an estimate, not an exact all-time distinct count.</p>
+<p>Data and collection: only after you choose Allow, the desktop app sends a random install ID, app version, operating system, CPU architecture and report schema over HTTPS to fairbeam.org/api/ping, at most once every seven days. The UUIDv4 is generated locally from randomness, never from hardware, account, paths or network data. Nothing about designs, files, results or the user is sent.</p>
+<p>The hosting provider processes your IP address to deliver the request. Fairbeam does not store IP addresses, user agents or request headers. Providers may keep infrastructure logs under their own policies.</p>
+<p>Legal basis: explicit consent under KVKK Article 5 and consent under GDPR Article 6(1)(a), where applicable. Sharing is optional and does not affect app functionality. Choose Off in Settings › General › Install counts to withdraw at any time. Withdrawal stops future requests without affecting the lawfulness of earlier processing.</p>
+<p>Recipients and processors: Vercel hosts the website and API and connects Redis storage for temporary weekly salted hashes and aggregates. GitHub hosts releases, updates and aggregate snapshots. No install IDs or hashes are written to GitHub.</p>
+<p>International processing: provider servers may be outside Türkiye. Contact ismail@fairbeam.org for questions about processing and transfers.</p>
+<p>Retention: aggregate totals are retained without a scheduled deletion date. Random salts rotate each ISO week (Monday 00:00 UTC). Salted ID hash sets and salts expire at that boundary after counts have been aggregated. No raw event log is created. Locally, the consent choice, random install ID and last attempt date are stored in app settings; failed requests also wait seven days.</p>
 <p>Rights: KVKK Article 11 includes learning about processing, its purpose and recipients, seeking correction or deletion, notification to recipients, objecting to adverse automated decisions and seeking compensation for unlawful processing. GDPR Articles 15–21 provide access, rectification, erasure, restriction, portability and objection where applicable. There are no automated decisions based on usage reports.</p>
 <p>To exercise your rights, write to ismail@fairbeam.org with your request. Do not send designs or post personal information in public issues. Reasonable identity verification may be needed. Totals have no installation identifier, so a particular installation’s contribution cannot be located or removed. You may complain to the Turkish Personal Data Protection Board (Kişisel Verileri Koruma Kurulu) or your EU supervisory authority, subject to applicable procedures.</p>
 </section>
@@ -130,7 +130,7 @@
 </section>
 <section aria-labelledby="off">
 <h2 id="off">Controls</h2>
-<p>Usage counts are off by default and remain disabled in default builds. Only a build compiled with the telemetry feature can ask once for consent. Dismissing that dialog means Off. Nothing is sent while Off; the choice can be changed in Settings. FAIRBEAM_NO_TELEMETRY=1 overrides consent for that process. View what would be sent shows the four report fields, or an example in a disabled build.</p>
+<p>Counting is off until you choose Allow. No thanks or dismissing the dialog saves your answer once. Turn counting off any time in Settings › General › Install counts. Turning it off deletes the local ID; turning it on again creates a new ID. Reset ID beside the switch also creates a new ID. Neither action resets the seven-day sending limit. FAIRBEAM_NO_TELEMETRY=1 overrides consent for that process. View what would be sent shows the report when due.</p>
 </section>
 <section aria-labelledby="website">
 <h2 id="website">The website</h2>
