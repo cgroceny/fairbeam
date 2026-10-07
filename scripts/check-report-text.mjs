@@ -61,6 +61,14 @@ ok(read("src/components/CstImportDialog.tsx").includes('<Show when={gaps().refus
   "partial imports show the prominent warning for refused or missing items");
 ok(read("src/components/CstImportDialog.tsx").includes('role="alert">{t("cstImport.partialGeometry")}'),
   "the incomplete-geometry warning is localized and announced");
+const en = JSON.parse(read("src/i18n/en.json"));
+const tr = JSON.parse(read("src/i18n/tr.json"));
+for (const key of ["home.importCst.meshHex", "home.importCst.meshIgnored"]) {
+  const row = note("info", "MeshSettings", en[key]);
+  eq(noteText(row, "en"), en[key], `${key}: English mesh note`);
+  eq(noteText(row, "tr"), tr[key], `${key}: Turkish mesh note`);
+  eq(noteText({ ...row, message_tr: "server translation" }, "tr"), "server translation", `${key}: server text takes precedence`);
+}
 
 // ---- 2. paths in words
 const design = {

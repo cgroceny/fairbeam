@@ -79,7 +79,7 @@ SUPPORTED = {
                  "ChangeMaterial / ChangeComponent, Transform (translate, rotate by any angle, mirror, "
                  "uniform scale; with copies), WCS (axis-aligned local systems)",
     "simulation": "Solver.FrequencyRange, Solver .SteadyStateLimit, Boundary, Mesh .LinesPerWavelength / "
-                  "MeshSettings StepsPerWaveNear / StepsPerWaveFar, DiscretePort, DiscreteFacePort, "
+                  "hexahedral MeshSettings StepsPerWaveNear / StepsPerWaveFar, DiscretePort, DiscreteFacePort, "
                   "LumpedElement (R, L, C; series or parallel),WaveguidePort (Free coordinates), Monitor (Farfield, H-field / surface "
                   "current)",
 }
@@ -2542,17 +2542,31 @@ class _Importer:
 
     def mesh_settings(self, w: _With):
         ignored = []
+        hexahedral = (w.one("setmeshtype") or "").strip().lower() in ("hex", "hextlm")
+        density_seen = False
         for k, a, _ln in w.calls:
             if k == "set" and len(a) >= 2:
                 what = a[0].value.strip().lower()
-                if what == "stepsperwavenear":
-                    self.cpw = self.val(self.expr(a[1]))
-                elif what == "stepsperwavefar":
-                    self.air_cpw = self.val(self.expr(a[1]))
+                if what in ("stepsperwavenear", "stepsperwavefar"):
+                    density_seen = True
+                    # Only hexahedral settings describe cells per wavelength for FDTD.
+                    if hexahedral:
+                        value = self.val(self.expr(a[1]))
+                        if what == "stepsperwavenear":
+                            self.cpw = value
+                        else:
+                            self.air_cpw = value
                 else:
                     ignored.append(a[0].value)
             elif k not in ("setmeshtype",):
                 ignored.append(f".{w.orig.get(k, k)}")
+        if density_seen:
+            if hexahedral:
+                self.note("info", "MeshSettings: hexahedral StepsPerWaveNear maps to cells per wavelength; "
+                          "StepsPerWaveFar maps to air cells per wavelength only when positive and lower than the near density.")
+            else:
+                self.note("info", "MeshSettings: StepsPerWaveNear and StepsPerWaveFar ignored because the mesh type is not "
+                          "Hex or HexTLM; Fairbeam's automatic FDTD mesh default is retained unless a hexahedral density is provided.")
         if ignored:
             self.note("info", f"MeshSettings: ignored {', '.join(ignored[:12])}{' ...' if len(ignored) > 12 else ''} "
                       "(the design meshes automatically)")

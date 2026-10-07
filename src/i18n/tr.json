@@ -1361,6 +1361,8 @@
   "home.feedback.featureTitle": "GitHub'daki özellik formu (tarayıcınızda açılır)",
   "home.feedback.label": "Geri bildirim gönder:",
   "home.importCst.button": "VBA makrosunu içe aktar…",
+  "home.importCst.meshHex": "MeshSettings: altı yüzlü ağın StepsPerWaveNear değeri dalga boyu başına hücre sayısına aktarılır; StepsPerWaveFar değeri yalnızca pozitif ve yakın bölge yoğunluğundan düşük olduğunda havadaki dalga boyu başına hücre sayısına aktarılır.",
+  "home.importCst.meshIgnored": "MeshSettings: ağ türü Hex veya HexTLM olmadığından StepsPerWaveNear ve StepsPerWaveFar yok sayılır; altı yüzlü ağ yoğunluğu belirtilmedikçe Fairbeam'in otomatik FDTD ağı için varsayılan ayar korunur.",
   "home.importCst.note": "CST uyumlu VBA makrosu veya geçmiş listesi (.bas, .mcs, .txt): şekiller, malzemeler, parametreler ve portlar.",
   "home.importCst.title": "CST uyumlu VBA makrosundan veya geçmiş listesinden (.bas, .mcs, .txt) tasarım oluşturun",
   "home.importPcb.button": "PCB çizimini içe aktar…",

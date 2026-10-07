@@ -1384,6 +1384,8 @@
   "home.feedback.featureTitle": "The feature form on GitHub (opens your browser)",
   "home.feedback.label": "Send feedback:",
   "home.importCst.button": "Import VBA macro…",
+  "home.importCst.meshHex": "MeshSettings: hexahedral StepsPerWaveNear maps to cells per wavelength; StepsPerWaveFar maps to air cells per wavelength only when positive and lower than the near density.",
+  "home.importCst.meshIgnored": "MeshSettings: StepsPerWaveNear and StepsPerWaveFar ignored because the mesh type is not Hex or HexTLM; Fairbeam's automatic FDTD mesh default is retained unless a hexahedral density is provided.",
   "home.importCst.note": "A CST-compatible VBA macro or history list (.bas, .mcs, .txt): shapes, materials, parameters and ports.",
   "home.importCst.title": "Make a design from a CST-compatible VBA macro or history list (.bas, .mcs, .txt)",
   "home.importPcb.button": "Import PCB artwork…",
