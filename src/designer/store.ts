@@ -10,7 +10,7 @@ import { bundle, openCount, setCenterView, setHiddenParts } from "../state";
 import { quickBundle } from "./geometry";
 import { portFeedEntries } from "../lib/portGroups";
 import { clearBackup, forgetLastDesign, readBackup, readLastDesign, rememberLastDesign, writeBackup } from "./draftBackup";
-import type { Axis, Design, DesignCut, DesignParam, DesignPart, DesignPrimitive, DesignTransform, Expr, Selection, Vec3 } from "./types";
+import type { Axis, Design, DesignCut, DesignMaterial, DesignParam, DesignPart, DesignPrimitive, DesignTransform, Expr, Selection, Vec3 } from "./types";
 import { nameMap, namesIn, paramKeyError, paramValues, RESERVED, tryEvaluate } from "./expr";
 import { parameterUses, pathOwner, renameParameter } from "./paramRefs";
 import { openParametersTab, setParameterRanges } from "./dockState";
@@ -30,7 +30,7 @@ import { gapCounts } from "../lib/cstReport";
 import { confirmDraftDiscard } from "../lib/ConfirmDialog";
 import { createdNote, type TemplateKey } from "./templates";
 import { applyPythonScript, replaceDesignContent, type PythonApplyOutcome } from "./pythonApply";
-import { t } from "../i18n/index.ts";
+import { localeTag, t } from "../i18n/index.ts";
 
 export const defaultDesignerSession = createDesignerSession({
   edited: () => { quickPreview(); schedulePreview(); },
@@ -500,7 +500,14 @@ export function newPrimitive(kind: ShapeKind): DesignPrimitive {
   }
 }
 
-const PART_NAMES: Record<ShapeKind, string> = { box: "brick", cylinder: "cylinder", sphere: "sphere", polygon: "polygon", linpoly: "extrusion", cone: "cone", torus: "torus", wire: "wire", polyhedron: "solid" };
+/** The name a new solid with this shape gets: the shape's name in the UI language and the first
+ * free number ("Brick 1", "Kutu 2"), like the shapes the tree lists inside a solid. `taken` are the
+ * names and labels already shown. */
+export function defaultPartName(kind: ShapeKind, taken: Iterable<string> = (draft.parts ?? []).flatMap((p) => [p.name, p.label ?? ""])): string {
+  const used = new Set(taken);
+  const base = t(`props.shape.${kind}`);
+  for (let n = 1; ; n++) if (!used.has(`${base} ${n}`)) return `${base} ${n}`;
+}
 
 /** Reveal an addition once. Selection alone, edits and later server previews never move the camera. */
 export function selectAddedGeometry(s: Extract<Selection, { type: "part" | "primitive" }>) {
@@ -539,17 +546,18 @@ export function selectAddedFeed(s: Extract<Selection, { type: "port" | "resistor
 export function addShape(kind: ShapeKind) {
   // a new solid, in the design's metal (the one used last, else the first, else a new copper)
   const metal = pickShapeMaterial(draft.materials, lastShapeMaterial(file()?.id), "");
+  const name = defaultPartName(kind);
   edit((d) => {
     if (!metal) d.materials.push({ name: unique("copper", d.materials.map((m) => m.name)), kind: "metal" });
     const mat = metal || d.materials[d.materials.length - 1].name;
-    const part: DesignPart = { name: unique(PART_NAMES[kind], d.parts.map((p) => p.name)), material: mat, primitives: [newPrimitive(kind)] };
+    const part: DesignPart = { name, material: mat, primitives: [newPrimitive(kind)] };
     d.parts.push(part);
-  }, "", `Add ${PART_NAMES[kind]}`);
+  }, "", t("history.add", { name }));
   selectAddedGeometry({ type: "primitive", i: draft.parts.length - 1, j: 0 });
 }
 
 export function addPrimitiveToPart(i: number, kind: ShapeKind) {
-  edit((d) => { d.parts[i].primitives.push(newPrimitive(kind)); }, "", t("history.addTo", { what: PART_NAMES[kind], name: draft.parts[i]?.label || draft.parts[i]?.name || t("history.part") }));
+  edit((d) => { d.parts[i].primitives.push(newPrimitive(kind)); }, "", t("history.addTo", { what: t(`props.shape.${kind}`).toLocaleLowerCase(localeTag()), name: draft.parts[i]?.label || draft.parts[i]?.name || t("history.part") }));
   selectAddedGeometry({ type: "primitive", i, j: draft.parts[i].primitives.length - 1 });
 }
 
@@ -908,18 +916,41 @@ export function addParam() {
   focusPath(`params[${draft.params.length - 1}].key`);
 }
 
+/** The frequency a new dielectric's tan δ holds at: "f0" when the design has an f0 parameter inside
+ * its band (as the Checks' "Give tan δ at f0" fix), else none, which is the band centre (openEMS
+ * applies tan δ as a constant conductivity, exact at that frequency only, so the design's own
+ * frequency is the one to give; laminate tan δ changes little with frequency). */
+function newLossFrequency(): Expr | undefined {
+  const n = names().names, f0 = n.f0;
+  if (!(draft.params ?? []).some((p) => p.key === "f0") || f0 === undefined) return undefined;
+  const lo = tryEvaluate(draft.simulation?.f_min, n).value, hi = tryEvaluate(draft.simulation?.f_max, n).value;
+  return lo === undefined || hi === undefined || (f0 >= lo && f0 <= hi) ? "f0" : undefined;
+}
+
+/** A dielectric whose tan δ is given at the design's frequency (newLossFrequency), not at the
+ * frequency a datasheet or a default named. */
+function atDesignFrequency(m: DesignMaterial): DesignMaterial {
+  if (m.kind !== "dielectric") return m;
+  const out = { ...m };
+  const f = newLossFrequency();
+  if (f === undefined) delete out.tan_d_freq; else out.tan_d_freq = f;
+  return out;
+}
+
 export function addMaterial(kind: "metal" | "dielectric") {
   edit((d) => {
     const base = kind === "metal" ? "metal" : "dielectric";
     d.materials.push(kind === "metal" ? { name: unique(base, d.materials.map((m) => m.name)), kind }
-      : { name: unique(base, d.materials.map((m) => m.name)), kind, eps_r: 4.3, tan_d: 0.02, tan_d_freq: 1 });
+      : atDesignFrequency({ name: unique(base, d.materials.map((m) => m.name)), kind, eps_r: 4.3, tan_d: 0.02 }));
   });
   setSelection({ type: "material", i: draft.materials.length - 1 });
 }
 
-/** A copy of a library material's values, under a free name (the design stays self-contained). */
+/** A copy of a library material's values, under a free name (the design stays self-contained); a
+ * dielectric's tan δ is given at the design's frequency instead of the datasheet's. */
 export function addLibraryMaterial(m: LibraryMaterial) {
-  edit((d) => { d.materials.push(designMaterial(m, unique(m.name, d.materials.map((q) => q.name)))); });
+  const material = atDesignFrequency(designMaterial(m, unique(m.name, draft.materials.map((q) => q.name))));
+  edit((d) => { d.materials.push(material); });
   setSelection({ type: "material", i: draft.materials.length - 1 });
 }
 

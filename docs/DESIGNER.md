@@ -311,6 +311,9 @@ field. The new value can itself be an expression of preceding parameters, such a
 
 A **material** is a metal or a dielectric with εr, a loss tangent tan δ and the frequency where
 tan δ holds (the band center if empty). Add one with ribbon Modeling › Materials › Dielectric or Metal.
+A new dielectric (also one added from the library) gives tan δ at `f0` when the design has an `f0`
+parameter inside its band, else at the band center (the frequency left empty), not at a datasheet's
+1 or 10 GHz.
 
 openEMS applies tan δ as a constant conductivity, so the loss is exact at that frequency only and
 scales as f_ref / f elsewhere: a datasheet value at 10 GHz used at 2.45 GHz gives four times the

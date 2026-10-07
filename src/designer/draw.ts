@@ -10,7 +10,7 @@
 import { createMemo, createRoot, createSignal } from "solid-js";
 import type { Axis, DesignPart, DesignPrimitive, DesignTransform, DesignWcs, Expr, Vec3 } from "./types";
 import { unwrap } from "solid-js/store";
-import { draft, edit, file, names, selectAddedGeometry, setMessage } from "./store";
+import { defaultPartName, draft, edit, file, names, selectAddedGeometry, setMessage } from "./store";
 import { lastShapeMaterial, pickShapeMaterial, rememberShapeMaterial } from "./shapeMaterial";
 import { evaluate } from "./expr";
 import { shown as fmt } from "./displayNumber.ts";
@@ -407,13 +407,13 @@ function primitiveFor(t: DrawTool, pts: DrawPoint[]): DesignPrimitive | null {
 
 // ------------------------------------------------------------------ adding shapes
 
-const PART_NAMES: Record<DesignPrimitive["kind"], string> = { box: "brick", cylinder: "cylinder", sphere: "sphere", polygon: "polygon", linpoly: "extrusion", cone: "cone", torus: "torus", wire: "wire", polyhedron: "solid" };
 export const unique = (base: string, taken: string[]) => {
   if (!taken.includes(base)) return base;
   for (let k = 2; ; k++) if (!taken.includes(`${base}${k}`)) return `${base}${k}`;
 };
-/** The name a new part with this shape gets. */
-export const newPartName = (kind: DesignPrimitive["kind"], taken = draft.parts.map((p) => p.name)) => unique(PART_NAMES[kind] ?? kind, taken);
+/** The name a new part with this shape gets: the shape in the UI language with the first free
+ * number ("Brick 1", "Kutu 1"), store.defaultPartName. */
+export const newPartName = (kind: DesignPrimitive["kind"]) => defaultPartName(kind);
 
 /** material value that makes a new metal ("copper") for the new part: the metal used last, else the first metal, else a new copper */
 export const NEW_METAL = "";
@@ -445,7 +445,7 @@ export function insertShape(prim: DesignPrimitive, t: ShapeTarget) {
     }
     rememberShapeMaterial(file()?.id, mat);
     const part: DesignPart = {
-      name: unique(t.name?.trim() || PART_NAMES[prim.kind], d.parts.map((p) => p.name)), material: mat,
+      name: t.name?.trim() ? unique(t.name.trim(), d.parts.map((p) => p.name)) : defaultPartName(prim.kind, d.parts.flatMap((p) => [p.name, p.label ?? ""])), material: mat,
       primitives: [prim], ...(t.transforms?.length ? { transforms: structuredClone(t.transforms) } : {}),
     };
     d.parts.push(part);
