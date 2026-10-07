@@ -194,6 +194,6 @@ ok(/\["u", "v", "w"\]/.test(src('scene/Viewport.tsx')) && /frameBasis/.test(src(
 ok(/labelSprite\(names3\[k\]/.test(src('scene/drawOverlay.ts')), 'the work-plane grid and the WCS arrows are labelled u, v, w');
 ok(/wcsAxisName/.test(src('designer/dialogs/ShapeDialog.tsx')), 'the shape dialogs name their axes u, v, w');
 ok(/axisName\(a\)/.test(src('scene/drawOverlay.ts')), 'the drawing readout and typed-coordinate prompt name the axes u, v');
-ok(/setTool\(null\);\s*const frameInfo/.test(src('designer/draw.ts')), 'a finished shape leaves the drawing mode');
+ok(/startTool\(null\);\s*const frameInfo/.test(src('designer/draw.ts')), 'a finished shape leaves the drawing mode (and drops its points)');
 
 console.log(`check-wcs: ${checks} checks passed`);

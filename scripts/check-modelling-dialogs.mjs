@@ -278,4 +278,63 @@ assert.match(contextMenu.portSummary('custom', { here: 'Patch', target: '', axis
   store.setDraft(structuredClone(design));
 }
 
-console.log('Modelling dialogs: WCS defaults, insert/undo, validation, Transform preview/commit/undo, circle height, feed note and port summary passed.');
+// ---- new solids are named like the tree names shapes: "Brick 1" (the UI language), never "brick"
+{
+  store.setDraft(structuredClone({ ...design, parts: [] }));
+  assert.equal(draw.newPartName('box'), 'Brick 1');
+  assert.equal(draw.newPartName('cylinder'), 'Cylinder 1');
+  draw.insertShape(shapes.defaultPrimitive('box'), { into: -1 });
+  draw.insertShape(shapes.defaultPrimitive('box'), { into: -1 });
+  assert.deepEqual(store.draft.parts.map((p) => p.name), ['Brick 1', 'Brick 2'], 'a shape added without the dialog gets the next free number');
+  store.edit((d) => { d.parts.push({ name: 'patch', label: 'Brick 3', material: 'copper', primitives: [] }); });
+  assert.equal(draw.newPartName('box'), 'Brick 4', 'a label the tree shows is taken too');
+  store.addShape('sphere');
+  assert.equal(store.draft.parts.at(-1).name, 'Sphere 1');
+  const en = JSON.parse(readFileSync(`${root}src/i18n/en.json`, 'utf8')), tr = JSON.parse(readFileSync(`${root}src/i18n/tr.json`, 'utf8'));
+  assert.equal(tr['props.shape.box'], 'Kutu', 'the Turkish default name is Kutu 1 (the same key)');
+  // the dialog's target select is the solid (Component is a folder of solids, docs/i18n-glossary.md)
+  assert.deepEqual([en['shape.solid'], tr['shape.solid'], en['shape.newPart'], tr['shape.newPart']], ['Solid', 'Katı', 'New solid', 'Yeni katı']);
+  assert.ok(!('shape.component' in en), 'the select is not called Component');
+  // grammar: no "Add a extruded polygon"
+  assert.ok(!/\ba \{shape\}/.test(en['props.part.addShape']), 'the add-shape text needs no article');
+  const dialog = readFileSync(`${root}src/designer/dialogs/ShapeDialog.tsx`, 'utf8');
+  assert.ok(/if \(r !== undefined && r <= 0\) out\.push\(t\("shape\.problem\.outerRadius"\)\);\s*else if \(r !== undefined && ri !== undefined/.test(dialog),
+    'an outer radius of 0 is the only message (no inner-radius message as its consequence)');
+  assert.ok(/target\(\)\?\.label \|\| target\(\)\?\.name/.test(dialog), 'adding into a solid shows the name the tree shows');
+  const pane = readFileSync(`${root}src/designer/DesignPane.tsx`, 'utf8');
+  assert.ok(/props\.shape\.inPart", \{ part: draft\.parts\[props\.i\]\.label \|\| draft\.parts\[props\.i\]\.name \}/.test(pane), 'Properties: "Brick 1 in Patch copy", not the internal id');
+  assert.ok(/const detail = \(\) => \(issue\(\) && checkTitle\(issue\(\)!\)\)/.test(pane), 'a field and its check use one casing ("Bilinmeyen ad" in both)');
+  const param = readFileSync(`${root}src/designer/dialogs/NewParamDialog.tsx`, 'utf8');
+  assert.ok(/"min-width": `min\(\$\{t\("newParam\.inlinePlaceholder"\)\.length \+ 3\}ch, 100%\)`/.test(param), 'the inline Create parameter value box fits its placeholder');
+  store.setDraft(structuredClone(design));
+}
+
+// ---- a new dielectric gives tan δ at the design's frequency: f0 inside the band, else the band centre
+{
+  const withF0 = { ...structuredClone(design), params: [{ key: 'f0', default: 2.4 }], simulation: { f_min: 'f0*0.6', f_max: 'f0*1.4', boundaries: 'MUR' } };
+  store.setDraft(structuredClone(withF0));
+  store.addMaterial('dielectric');
+  assert.equal(store.draft.materials.at(-1).tan_d_freq, 'f0', 'Add dielectric: tan δ at f0');
+  // the library's FR4 entry (materials.ts): tan δ 0.02 given at 1 GHz
+  const fr4 = { id: 'fr4', name: 'FR4', label: 'FR4', kind: 'dielectric', eps_r: 4.3, tan_d: 0.02, tan_d_freq: 1, note: '' };
+  store.addLibraryMaterial(fr4);
+  const added = store.draft.materials.at(-1);
+  assert.deepEqual([added.name, added.eps_r, added.tan_d, added.tan_d_freq, added.library], ['FR4', 4.3, 0.02, 'f0', 'fr4'], 'Library › FR4: the values copied, tan δ at f0');
+  store.edit((d) => { d.parts[0].material = 'FR4'; });
+  assert.deepEqual(checks.designChecks(store.draft).filter((c) => c.code === 'tan-d-band'), [], 'a 2.4 GHz FR-4 design has no tan δ warning');
+  store.setDraft(structuredClone({ ...design, params: [] }));
+  store.addMaterial('dielectric');
+  assert.equal('tan_d_freq' in store.draft.materials.at(-1), false, 'no f0: the frequency is left empty, which is the band centre');
+  store.addLibraryMaterial({ ...fr4, tan_d_freq: 10 });
+  assert.equal('tan_d_freq' in store.draft.materials.at(-1), false, 'nor a datasheet 10 GHz');
+  // Properties does not call such a copy "edited since" the library entry
+  const paneSrc = readFileSync(`${root}src/designer/DesignPane.tsx`, 'utf8');
+  assert.ok(/const freqEdited = \(\) => m\(\)\.tan_d_freq !== undefined && m\(\)\.tan_d_freq !== "f0" && m\(\)\.tan_d_freq !== \(e\(\)\.tan_d_freq \?\? undefined\);/.test(paneSrc),
+    'tan δ at f0 or the band centre is not an edit of the library values');
+  store.setDraft(structuredClone({ ...withF0, params: [{ key: 'f0', default: 9 }], simulation: { f_min: 1, f_max: 3, boundaries: 'MUR' } }));
+  store.addMaterial('dielectric');
+  assert.equal('tan_d_freq' in store.draft.materials.at(-1), false, 'f0 outside the band: the band centre');
+  store.setDraft(structuredClone(design));
+}
+
+console.log('Modelling dialogs: WCS defaults, insert/undo, validation, Transform preview/commit/undo, circle height, feed note, port summary, default solid names, dialog wording and new dielectrics passed.');

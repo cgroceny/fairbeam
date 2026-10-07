@@ -1,7 +1,7 @@
 // JSON paths of a design ("params[2].expr", "parts[0].primitives[1].stop[2]", "materials.FR4.tan_d_freq")
 // are how the checks and the server name a field. They stay in the data (the Checks list focuses a
 // field by its path, the parity tests compare them); what the user reads is a place in words:
-// "Parameter W (expression)", "patch › Brick 2 › stop z", "Material FR4 (tan δ frequency)".
+// "Parameter W (expression)", "Patch › Brick 2 › stop z", "Material FR4 (tan δ frequency)".
 import { hasKey, t } from "../i18n/index.ts";
 import type { Design, DesignPrimitive } from "./types.ts";
 
@@ -52,12 +52,14 @@ export function pathText(path: string, design: Partial<Design> | null | undefine
     case "parts": {
       const part = head.index !== undefined ? design?.parts?.[head.index] : undefined;
       if (!part) return arrow(t("checks.place.parts"), rest);
+      // the solid by the name the tree shows (its label), never only its internal name
+      const title = part.label || part.name;
       const [prim, ...more] = rest;
       if (prim?.name === "primitives" && prim.index !== undefined) {
         const pr = part.primitives?.[prim.index];
-        return [part.name, `${pr ? shape(pr) : fieldLabel("primitives")} ${prim.index + 1}`, ...fields(more)].join(" › ");
+        return [title, `${pr ? shape(pr) : fieldLabel("primitives")} ${prim.index + 1}`, ...fields(more)].join(" › ");
       }
-      return arrow(part.name, rest);
+      return arrow(title, rest);
     }
     case "ports": {
       if (head.index === undefined) return paren(t("checks.place.ports"), rest);

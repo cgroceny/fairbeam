@@ -90,7 +90,8 @@ ok(en["checks.msg.expr.unexpectedComma"] === "unexpected ','", "a comma typed in
 const core = read("src/designer/sessionCore.ts");
 ok(/retireMessage\(\["good", "critical"\]\);\s*effects\.edited/.test(core), "an edit retires success and error banners");
 ok(/retireMessage\(\["good", "critical"\]\);\s*effects\.restored/.test(core), "undo and redo retire them too");
-ok(/createEffect\(on\(selection, \(\) => retireMessage\(\["good"\]\)/.test(core), "a selection change retires a success banner");
+ok(/createEffect\(on\(selection, \(\) => retireMessage\(\["good", "warn"\]\)/.test(core), "a selection change retires a note (success or warning)");
+ok(/next\.tone !== "critical" && !next\.sticky\) noteTimer = setTimeout\(/.test(core), "a note clears itself after NOTE_MS unless it is sticky");
 
 // ---- the Parameters dock
 const dock = read("src/designer/ParametersDock.tsx");

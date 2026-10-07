@@ -21,7 +21,7 @@ export async function addBrick(s, { name, material, min, max, into }) {
   await s.click('ribbon.shapes.box');
   await s.wait('.sd');
   const dlg = '.sd';
-  if (into !== undefined) await s.pick(await s.field(await s.T('shape.component'), { within: dlg }), into);
+  if (into !== undefined) await s.pick(await s.field(await s.T('shape.solid'), { within: dlg }), into);
   else await s.fill(await s.field(await s.T('shape.name'), { within: dlg }), name);
   if (material) await s.pick(await s.field(await s.T('shape.material'), { within: dlg }), material);
   for (const [k, axis] of ['X', 'Y', 'Z'].entries()) {

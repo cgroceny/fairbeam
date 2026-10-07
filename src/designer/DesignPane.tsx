@@ -19,7 +19,7 @@ import {
   addCut, addPolygonCut, addRoundCut, removeCut, setColors,
 } from "./store";
 import { type Check, wgCutoffGHz, wgMode } from "./checks";
-import { checkExplain, checkFixLabel, checkMessage, checkTitle } from "./checkText";
+import { checkExplain, checkFixLabel, checkTitle } from "./checkText";
 import { checkAction } from "./checkActions";
 import { resolveColor, themeColor } from "./colors";
 import { pathText } from "./pathText";
@@ -33,6 +33,7 @@ import NumberField from "../components/NumberField";
 import { OptimizationInspector, ParamInspector, RunInspector } from "./PropsExtras";
 import { resultFocus } from "./resultFocus";
 import { isReservedName } from "../lib/legacy";
+import { restoreBooleanPart } from "./booleanUi";
 
 const AXES: Axis[] = ["x", "y", "z"];
 const BOUNDARIES = ["MUR", "PML_8", "PEC", "PMC"];
@@ -100,7 +101,9 @@ export function ExprField(props: {
   const isNumber = () => typeof props.value === "number";
   const id = () => fieldId(props.path);
   const messageId = `${createUniqueId()}-message`;
-  const detail = () => (issue() && checkMessage(issue()!)) ?? (r().error ? (props.optional && (props.value === "" || props.value === undefined) ? "" : checkMessage({ code: "expr", message: r().error! })) : isNumber() ? "" : `= ${fmt(r().value!)}`);
+  // a problem reads as in the Checks list (checkTitle: translated, first word capitalised), so a field
+  // and its check never differ in case ("Unknown name xs" in both)
+  const detail = () => (issue() && checkTitle(issue()!)) ?? (r().error ? (props.optional && (props.value === "" || props.value === undefined) ? "" : checkTitle({ code: "expr", message: r().error! })) : isNumber() ? "" : `= ${fmt(r().value!)}`);
   const describedBy = () => [detail() ? messageId : null, props.describedBy].filter(Boolean).join(" ") || undefined;
   let input!: HTMLInputElement;
   // the text as typed while focused: "-0" stored as the number -0 would render as "0" and eat the sign
@@ -290,8 +293,11 @@ function MaterialInspector(props: { i: number }) {
         onPick={(c) => setColors("materials", [props.i], c)} onReset={() => setColors("materials", [props.i], undefined)} />
       <Show when={MATERIAL_LIBRARY.find((e) => e.id === m().library)}>
         {(e) => {
+          // Add gives tan δ at the design's frequency (f0, or empty: the band centre) instead of the
+          // datasheet's, so those are the library's values too, not an edit
+          const freqEdited = () => m().tan_d_freq !== undefined && m().tan_d_freq !== "f0" && m().tan_d_freq !== (e().tan_d_freq ?? undefined);
           const edited = () => e().kind !== m().kind || (e().kind === "dielectric" &&
-            (m().eps_r !== e().eps_r || m().tan_d !== e().tan_d || (m().tan_d_freq ?? null) !== (e().tan_d_freq ?? null)));
+            (m().eps_r !== e().eps_r || m().tan_d !== e().tan_d || freqEdited()));
           return <p class="note">{t("props.material.fromLibrary")} <b>{libraryLabel(e())}</b>{edited() ? ` ${t("props.material.editedSince")}` : ""}. {libraryNote(e())}</p>;
         }}
       </Show>
@@ -355,7 +361,8 @@ function PartInspector(props: { i: number; j?: number }) {
       </Show>
       <h3 class="dz-h">{t("props.geometry")}</h3>
       <Show when={p().booleanHistory}>{(h) =>
-        <p class="note">{t("props.boolean", { op: hasKey(`props.boolean.op.${h().operation}`) ? t(`props.boolean.op.${h().operation}`) : h().operation, a: h().A.label || h().A.name, b: h().B.label || h().B.name })} {t(h().live ? "props.boolean.live" : "props.boolean.fixed")} {t("props.boolean.restore")}</p>
+        <p class="note">{t("props.boolean", { op: hasKey(`props.boolean.op.${h().operation}`) ? t(`props.boolean.op.${h().operation}`) : h().operation, a: h().A.label || h().A.name, b: h().B.label || h().B.name })} {t(h().live ? "props.boolean.live" : "props.boolean.fixed")}{" "}
+          <button type="button" class="linklike" title={t("props.boolean.restore")} onClick={() => restoreBooleanPart(props.i)}>{t("boolean.restore")}</button></p>
       }</Show>
       <For each={props.j === undefined ? p().primitives.map((_, j) => j) : [props.j]}>
         {(j) => <PrimitiveInspector i={props.i} j={j} editLabel={props.j === undefined} />}
@@ -638,7 +645,7 @@ function PrimitiveInspector(props: { i: number; j: number; editLabel?: boolean }
   });
   return (
     <div class="dz-form">
-      <h3 class="dz-h">{kindLabel(pr())} {props.j + 1} <span class="muted">{t("props.shape.inPart", { part: draft.parts[props.i].name })}</span></h3>
+      <h3 class="dz-h">{kindLabel(pr())} {props.j + 1} <span class="muted">{t("props.shape.inPart", { part: draft.parts[props.i].label || draft.parts[props.i].name })}</span></h3>
       <Show when={props.editLabel}>
         <InspectorTitle label={t("props.shape.label")} value={pr().label} fallback={`${kindLabel(pr())} ${props.j + 1}`} path={`${base()}.label`} onChange={(v) => set((q) => { q.label = v || undefined; }, "label")} />
       </Show>
@@ -1108,7 +1115,15 @@ export function checkPlace(c: Check): string {
   return pathText(c.path, draft, kindLabel);
 }
 
-/** The Checks list: expand an explanation and frame geometry; Edit field moves focus to its input. */
+/** The solid (its index + 1, so that 0 is "none") whose Boolean history holds the field a check
+ * points at ("parts[2].booleanHistory.B.primitives[0].start[0]"), else 0. */
+const booleanOperandOwner = (path: string) => {
+  const m = /^parts\[(\d+)\]\.booleanHistory\./.exec(path);
+  return m && draft.parts[Number(m[1])]?.booleanHistory ? Number(m[1]) + 1 : 0;
+};
+
+/** The Checks list: expand an explanation and frame geometry; Edit field moves focus to its input
+ * (Restore operands for a value kept in a Boolean history). */
 export function ChecksList() {
   const [open, setOpen] = createSignal(true);
   const [expanded, setExpanded] = createSignal<string | null>(null);
@@ -1161,7 +1176,10 @@ export function ChecksList() {
                     <Show when={c.fix}>{(f) => <button class="btn btn-ghost btn-sm" onClick={() => applyFix(f().set)}>{checkFixLabel(c)}</button>}</Show>
                     <Show when={checkAction(c, draft.ports?.length ?? 0)}><button class="btn btn-ghost btn-sm" onClick={() => addPort()}>{t("contextMenu.addPort")}</button></Show>
                     <Show when={spatial()}><button class="btn btn-ghost btn-sm" onClick={show}>{t("props.checks.show3d")}</button></Show>
-                    <button class="btn btn-ghost btn-sm" onClick={() => focusPath(c.path)}>{t("props.checks.editField")}</button>
+                    {/* a value inside a Boolean result's kept operands has no field of its own: the operands are restored to edit it */}
+                    <Show when={booleanOperandOwner(c.path)} keyed fallback={<button class="btn btn-ghost btn-sm" onClick={() => focusPath(c.path)}>{t("props.checks.editField")}</button>}>
+                      {(i) => <button class="btn btn-ghost btn-sm" title={t("props.checks.restoreOperandsTitle")} onClick={() => restoreBooleanPart(i - 1)}>{t("boolean.restore")}</button>}
+                    </Show>
                   </div>
                 </div>
               </li>

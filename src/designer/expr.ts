@@ -122,10 +122,14 @@ export function paramKeyError(key: string): string | null {
 }
 
 export type Tok = { t: "num"; v: number } | { t: "id"; v: string } | { t: "op"; v: string };
+/** A token with where it stands in the source: src.slice(at, end) is its text. */
+export type TokSpan = { tok: Tok; at: number; end: number };
 
-export function tokenize(src: string): Tok[] {
-  const out: Tok[] = [];
+/** The tokens of an expression with their positions (tokenize() without them). */
+export function tokenSpans(src: string): TokSpan[] {
+  const out: TokSpan[] = [];
   let i = 0;
+  const push = (tok: Tok, length: number) => { out.push({ tok, at: i, end: i + length }); i += length; };
   while (i < src.length) {
     const c = src[i];
     if (/[ \t\n\r\f\v]/.test(c)) { i++; continue; } // ASCII whitespace only, as Python
@@ -135,16 +139,41 @@ export function tokenize(src: string): Tok[] {
       if (rest.startsWith("_") || (num[0] === "0" && /^[xXoObB]/.test(rest))) throw new Error("write plain decimal numbers (no 0x.., 0b.., 1_000)");
       if (/^0+[1-9]\d*$/.test(num[0])) throw new Error("leading zeros in a whole number are not allowed (write 7, not 07)");
       // the nearest double (atom() refuses one that overflows, such as 1e999)
-      out.push({ t: "num", v: parseFloat(num[0]) }); i += num[0].length; continue;
+      push({ t: "num", v: parseFloat(num[0]) }, num[0].length); continue;
     }
     const id = /^[A-Za-z_]\w*/.exec(src.slice(i));
-    if (id) { out.push({ t: "id", v: id[0] }); i += id[0].length; continue; }
+    if (id) { push({ t: "id", v: id[0] }, id[0].length); continue; }
     const two = src.slice(i, i + 2);
-    if (two === "**" || two === "//") { out.push({ t: "op", v: two }); i += 2; continue; }
-    if ("+-*/%(),".includes(c)) { out.push({ t: "op", v: c }); i++; continue; }
+    if (two === "**" || two === "//") { push({ t: "op", v: two }, 2); continue; }
+    if ("+-*/%(),".includes(c)) { push({ t: "op", v: c }, 1); continue; }
     throw new Error(`unexpected '${c}'`);
   }
   return out;
+}
+
+export function tokenize(src: string): Tok[] {
+  return tokenSpans(src).map((s) => s.tok);
+}
+
+/** The expression with every use of the name `from` written as `to`: whole name tokens only, so
+ * "fw" in "fw/2 + fw_gap" changes and "fw_gap" stays; function names (followed by "(") and
+ * numbers never change, the rest of the text (spacing, parentheses) is kept as written. An
+ * expression the tokenizer refuses has no tokens to rename and stays as it is. */
+export function renameInExpr(expr: string, from: string, to: string): string {
+  let spans: TokSpan[];
+  try {
+    spans = tokenSpans(expr);
+  } catch {
+    return expr;
+  }
+  let out = "", last = 0;
+  spans.forEach((s, k) => {
+    const next = spans[k + 1]?.tok;
+    if (s.tok.t !== "id" || s.tok.v !== from || (next?.t === "op" && next.v === "(")) return;
+    out += expr.slice(last, s.at) + to;
+    last = s.end;
+  });
+  return last ? out + expr.slice(last) : expr;
 }
 
 const finite = (v: number) => {
