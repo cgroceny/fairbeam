@@ -16,6 +16,7 @@
 import { existsSync, readFileSync, statSync } from "node:fs";
 import { join, posix } from "node:path";
 import { Marked } from "marked";
+import { highlightCode } from "./docs-highlight.mjs";
 import { globToRegExp } from "./lib/tracked-files.mjs";
 
 export const MANIFEST = "landing/docs.json";
@@ -206,7 +207,7 @@ function renderMarkdown(root, source, { published, titles, repo, branch, hidden,
       },
       code({ text, lang }) {
         const language = (lang ?? "").match(/^\S*/)[0];
-        return `<div class="doc-code"><pre><code${language ? ` class="language-${esc(language)}"` : ""}>${esc(text.replace(/\n$/, ""))}</code></pre></div>\n`;
+        return `<div class="doc-code"><pre><code${language ? ` class="language-${esc(language)}"` : ""}>${highlightCode(text.replace(/\n$/, ""), language)}</code></pre></div>\n`;
       },
       image({ href, title: imageTitle, text: alt, inLink, hidden: leftOut }) {
         if (leftOut) return "";
