@@ -7572,7 +7572,7 @@
     "scripts/licenses/exceptions.json": "c99e21b13cc46239456c35603e0b0a423ec6c21ea7fb657305ed78447c089334",
     "scripts/licenses/render.mjs": "4dba0be35aede3efcad2ee37f3c4b0eae6bd9681bb5811c1fd648f360b689579",
     "scripts/licenses/solver-components.json": "3a0b894e5f477c87e364b1205755f2c01bcacb073cff88d25579fadea364a5fe",
-    "scripts/third-party-licenses.mjs": "6917b8d8827989ac8d8292bf050133bec5a82406e83b08774a062ef6e7d5299a",
+    "scripts/third-party-licenses.mjs": "fd66789b5f0f727606f5371a44aeb61e8adfa70093640d76040888aef49cce5d",
     "scripts/third-party-licenses.py": "e154fbb04e5d5a9c3325b2db5ed84c4391fa02cb92e2a618bcd7728586162214",
     "src-tauri/Cargo.lock": "4949bbae321cb3cb77d0553275c4a5104ceabd0d75c512c629bf8195d5d34999",
     "src-tauri/Cargo.toml": "ef52b64b5e2e2c922a6390cccca2d6cc9620141d44a71709930813e340760c0f",

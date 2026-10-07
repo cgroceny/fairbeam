@@ -1,5 +1,5 @@
 // Regenerate release notices from a versioned metadata snapshot; refresh retrieves upstream texts.
-import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
+import { readFileSync, writeFileSync, mkdirSync, readdirSync, statSync } from 'node:fs';
 import { createHash } from 'node:crypto';
 import { execFileSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
@@ -14,7 +14,7 @@ const hash = f => createHash('sha256').update(readFileSync(f)).digest('hex');
 // The rendered module graph changes when the viewer imports a different npm package, not on
 // every source edit. Fingerprint the package specifiers imported by viewer and site sources.
 const lockedPackages = new Set(Object.keys(JSON.parse(readFileSync('package-lock.json')).packages).map(k => k.replace(/^.*node_modules\//, '')));
-const sourceFiles = execFileSync('rg', ['--files', 'src', 'landing', 'public'], {encoding:'utf8'}).trim().split('\n').filter(f => /\.(tsx?|css|html|js)$/.test(f));
+const sourceFiles = ['src', 'landing', 'public'].flatMap(dir => readdirSync(dir, {recursive:true}).map(f => join(dir, f))).filter(f => /\.(tsx?|css|html|js)$/.test(f) && statSync(f).isFile());
 const specifiers = new Set();
 for (const file of sourceFiles) for (const m of readFileSync(file, 'utf8').matchAll(/(?:from|import)\s*\(?\s*['"]([^'"./][^'"]*)['"]/g)) {
   const parts = m[1].split('/');
