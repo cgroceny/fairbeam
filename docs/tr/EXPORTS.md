@@ -32,6 +32,26 @@ Sayı olarak kalanlar pencerede ("Sayı olarak yazılanlar") ve makronun üst yo
 - **PDF raporu.** Paket penceresindeki *Raporu dışa aktar (PDF)* (tasarımcıda ayrıca Son işlem › Rapor ve dışa aktarma › **PDF raporu**) çok sayfalı A4 vektör PDF oluşturur: temel sonuçlarla özet, ölçülü çizim, parametre/çözücü/mesh/çalıştırma tabloları, |S11|, Zin, Smith abağı, her uzak alan frekansı için örüntü sayfası ve yeniden üretme komutu. Sayfalar SVG olarak oluşturulur, `src/drawing/svgpdf.ts` tarafından jsPDF ile çizilir; aynı kod Node'da da çalışır.
 - `npm run check:exports` bunları örnek paketlerde doğrular ve [examples/drawings/](../examples/drawings/) ile [examples/reports/patch-antenna.pdf](../examples/reports/patch-antenna.pdf) çıktılarını yazar.
 
+## Eşleşen bant CSV sütunları
+
+Dışa aktarma paketindeki `data/bands.csv` dosyasında her eşleşen bant için bir satır vardır; sütunlar şu sırayladır:
+
+| Sütun | Anlamı |
+| --- | --- |
+| `f_lo_GHz`, `f_hi_GHz` | GHz cinsinden bant sınırları |
+| `f_center_GHz` | Sınırların ortası, `(f_lo + f_hi) / 2`, GHz cinsinden |
+| `f_best_GHz` | Bant içindeki minimum S11 frekansı, GHz cinsinden |
+| `s11_min_dB` | dB cinsinden minimum S11 |
+| `fractional_bw` | Genişliğin bant ortasına bölümü; yüzde değil, kesir olarak |
+| `bandwidth_MHz` | MHz cinsinden bant genişliği |
+| `edge_lo`, `edge_hi` | O uç simülasyon aralığına değiyorsa `true`, değilse `false` |
+
+Açık bantta `edge_lo=true`, alt ucun bir üst sınır (≤), `edge_hi=true` ise üst ucun bir alt sınır (≥) olduğu anlamına gelir. İki bayraktan biri, tablolarda olduğu gibi bant genişliğini ve bağıl bant genişliğini alt sınır yapar. Yalnızca alt uç açıksa merkez bir üst sınırdır, yalnızca üst uç açıksa bir alt sınırdır; iki uç da açıksa merkezin yönlü bir sınırı yoktur. Tüm frekans ve bant genişliği hücreleri sayısal kalır.
+
+Özet sekmesinin CSV dışa aktarımı ve kopyalanan TSV, bant başına sütunlarında aynı tanımları kullanır: `Band low (GHz)`, `Band high (GHz)`, `Band center (GHz)`, `Band best match (GHz)`, `Band bandwidth (MHz)`, `Band fractional BW`, `Band edge low` ve `Band edge high`. Uç bayrakları sayısal `1` (açık) veya `0` (kapalı) olarak yazılır; eksik bantlar boş hücre bırakır. Birden çok bantta her grup numaralanır (`Band 1 low (GHz)` gibi). Başlıktaki `Bandwidth (%)`, en derin bandın bağıl bant genişliğinin 100 katıdır.
+
+**Uyumluluk:** `f_center_GHz` daha önce minimum |S11| frekansını tutuyordu; bu değere ihtiyaç duyanlar artık `f_best_GHz` sütununu okumalıdır. Paket JSON'ı en iyi uyum için hâlâ `f_center` kullanır ve saklanan `fractional_bw` değeri bu frekansa böler ([BUNDLE.md](BUNDLE.md#results)).
+
 ## Üretim dosyalarını dışa aktarma (önizleme)
 
 Dışa aktarma paketindeki *Üretim dosyaları*, baskı devre tasarımlarına (yama antenler, mikroşerit hat, Wilkinson bölücü, dal hat kuplörü, alçak geçiren filtre, 2×1 ve 4×1 diziler) `fab/` klasörü ekler:

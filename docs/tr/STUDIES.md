@@ -33,6 +33,12 @@ fairbeam sweep python/models/inset_patch.py --param inset=6,8,10 --param feed_w=
 | `--excite all\|1,3` | port sayısı <= 4 ise tümü, aksi halde 1 | Çok portlu modellerde her noktada uyarılan portlar (her biri ayrı çalıştırma) |
 | `--verbose` | kapalı | openEMS çıktısını gösterir |
 
+### RunHistory tarama CSV'si
+
+Çalıştır panelinde bir parametre taramasını genişletin ve **Tümünü karşılaştır**, ardından **CSV olarak dışa aktar** veya **Veriyi kopyala** seçeneğini kullanın. İkisi de aynı uzun tabloyu kullanır; tamamlanmamış ve başarısız işler dahil her iş için bir satır vardır. Sütunlar `run_index`, `sequence_index`, `sequence_name`, `status`, tarama parametre anahtarları, `band_lo_ghz`, `band_hi_ghz`, `band_center_ghz`, `band_best_ghz`, `s11_min_db`, `dmax_dbi` ve `radiation_efficiency_pct` sütunlarıdır. Bant değerleri ilk eşleşen bandı, uzak alan değerleri ilk uzak alan frekansını anlatır. Bulunmayan değerler boş bırakılır.
+
+`band_center_ghz` bant sınırlarının ortasıdır, `(band_lo_ghz + band_hi_ghz) / 2`; `band_best_ghz` ise minimum |S11| frekansıdır. Daha önce `band_center_ghz` bu minimumu tutuyordu. İki sınırı da olmayan eski iş istatistiklerinde merkez boş kalır, en iyi uyum frekansı korunur. RunHistory tablosu, minimum frekans sütununu **En iyi uyum** olarak adlandırır. Bu CSV sütunları, aşağıdaki CLI çalışma JSON biçiminden ayrıdır; o biçimde `f_center` minimum frekans olarak kalır.
+
 ## `fairbeam converge`
 
 ### Tasarım: mesh yoğunluğu

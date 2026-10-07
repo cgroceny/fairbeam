@@ -330,6 +330,8 @@ Hiçbir port uyarılmıyorsa `bands` ve `farfield` boş, `signals` ise `{}` olur
 | `fractional_bw` | number | `(f_hi − f_lo) / f_center` |
 | `edge_lo`, `edge_hi` | boolean | Bant simülasyon aralığının başına/sonuna değer; gerçek sınırı aralık dışındadır |
 
+JSON bant alanları özgün anlamlarını korur. [CSV dışa aktarımında](EXPORTS.md#matched-band-csv-columns) `f_center_GHz` sınırların ortasıdır, `f_best_GHz` JSON'daki `f_center` değeridir ve `fractional_bw` ortaya bölünür; `edge_lo` ve `edge_hi` açık uç bayraklarını korur.
+
 **FarField.** Örüntü frekansları, bantların `f_center` değerleri, yani her banttaki minimum S11 frekanslarıdır (en fazla 4). Bant yoksa minimum S11 frekansı kullanılır. Model kendisi seçebilir (`sim.pattern_freqs`; ör. geniş bantlı horn için bant kenarları ve merkezi). `--pattern` hepsinin yerine geçer.
 
 | Alan | Tür | Açıklama |
