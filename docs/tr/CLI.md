@@ -62,7 +62,7 @@ curl -s -H 'Content-Type: application/json' -d '{}' http://127.0.0.1:5320/api/qu
 
 `FAIRBEAM_ENGINE` başka bir değer seçmedikçe varsayılan motor CPU'dur. Açıkça seçmek için `--engine cpu` kullanın. `--engine gpu`, GPU destekli openEMS derlemesi ve onunla kurulmuş Python ortamı gerektirir. İsteğe bağlı desteklenen kurulumlar [Apple silicon üzerinde Metal](GPU.md#gpu-engine-optional-apple-silicon-nvidia-on-windows) ve [Windows üzerinde CUDA](GPU.md#windows-with-an-nvidia-gpu-cuda) şeklindedir; bu depo Linux GPU kurulum betiği sağlamaz.
 
-macOS'ta CPU motoru, openEMS paketinin varsayılan açık yerel CPU yamalarıyla çalışır (bit düzeyinde aynı sonuçlar, 1,3–1,7 kat hız; [CPU-OPTIMIZATION.md](CPU-OPTIMIZATION.md#macos-shipped-and-on-by-default)). `FAIRBEAM_NATIVE_CPU=0` kapatır. Windows ve Linux etkilenmez.
+macOS'te CPU motoru, openEMS paketinin varsayılan açık yerel CPU yamalarıyla çalışır (bit düzeyinde aynı sonuçlar, 1,3–1,7 kat hız; [CPU-OPTIMIZATION.md](CPU-OPTIMIZATION.md#macos-shipped-and-on-by-default)). `FAIRBEAM_NATIVE_CPU=0` kapatır. Windows ve Linux etkilenmez.
 
 
 ```bash

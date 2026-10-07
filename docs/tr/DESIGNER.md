@@ -438,7 +438,7 @@ Optimizasyon aracı simülasyondan önce tasarımın her adayını denetler. Den
 
 ## Dosyalar
 
-- **Konum**: tasarımlar çalıştırma sunucusunun modeller klasöründe, Python modellerinin yanında kaydedilir. Kaynak kopyasında `python/models/`; masaüstü uygulamasında çalışma klasörünün `models/` alt klasörü (macOS'ta `~/Documents/Fairbeam`, Windows'ta `%USERPROFILE%\Documents\Fairbeam`).
+- **Konum**: tasarımlar çalıştırma sunucusunun modeller klasöründe, Python modellerinin yanında kaydedilir. Kaynak kopyasında `python/models/`; masaüstü uygulamasında çalışma klasörünün `models/` alt klasörü (macOS'te `~/Documents/Fairbeam`, Windows'ta `%USERPROFILE%\Documents\Fairbeam`).
 - **Kaydetme**: her kayıt önceki sürümü `model-history/` içinde tutar. Dosya açıldıktan sonra diskte değiştiyse tasarımcı bildirir; yeniden kaydetmek sizin sürümünüzle üzerine yazar.
 - **Biçim**: `fairbeam.design/1`, tek JSON nesnesi; `python/fairbeam/design.py` başında belgelenmiştir (tüm şekil türleri, dalga kılavuzu portları, dönüşümler, kesimler, bileşenler). Tam ve geçerli sonda beslemeli yama örneği:
 
@@ -542,7 +542,7 @@ Her adım beklenen durumu doğrular ve sayfayı inceler: kapsayıcı dışına t
 ## Bilinen sınırlamalar
 
 - **Horn verimliliği %100 üzerinde.** Piramidal horn (dalga kılavuzu portlu model), %100'ün biraz üstünde ışıma verimliliği bildirir; daha ince mesh'te fazlalık artar. Sebep araştırılmaktadır; %100 üstü sonuçlar kalite kontrol uyarısı taşır.
-- **İmzasız Windows yükleyicisi.** macOS uygulaması imzalı ve noter onaylıdır, çift tıklamayla açılır. Windows yükleyicisinde kod imzası yoktur: SmartScreen ilk çalıştırmada uyarır (Daha fazla bilgi › Yine de çalıştır; [DESKTOP.md](DESKTOP.md)).
+- **İmzasız Windows yükleyicisi.** macOS uygulaması imzalı ve Apple tarafından doğrulanmıştır, çift tıklamayla açılır. Windows yükleyicisinde kod imzası yoktur: SmartScreen ilk çalıştırmada uyarır (Daha fazla bilgi › Yine de çalıştır; [DESKTOP.md](DESKTOP.md)).
 
 ## Geri bildirim
 

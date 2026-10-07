@@ -60,7 +60,7 @@ Tüm sayılar [BENCHMARKS.md](BENCHMARKS.md) sayfasındadır.
 
 Çalıştırma sunucusunun Python ortamındaki openEMS derlemesi GPU motorunu içeriyorsa tasarımcının Çalıştır penceresi ve Çalıştır paneli **Motor** seçicisini (CPU / GPU) gösterir. Genel ayarlar › **Varsayılan motor** başlangıç seçimini belirler (GPU yoksa CPU kullanılır). `/api/health` bu durumda `"engines": ["cpu", "gpu"]` listeler. Windows'ta sunucu `openEMS.exe` dosyasını `OPENEMS_INSTALL_PATH` içinde arar; değişken GPU klasörünü göstermelidir.
 
-**Depodan** (macOS'taki `npm run serve:gpu` karşılığı):
+**Depodan** (macOS'teki `npm run serve:gpu` karşılığı):
 
 1. Yeni bir PowerShell penceresinde yalnızca bu terminal için değişkeni GPU derlemesine ayarlayın: `$env:OPENEMS_INSTALL_PATH = "C:\opt\openEMS-gpu"`.
 2. `python\` klasöründe GPU venv ortamının Python'uyla çalıştırma sunucusunu başlatın:
