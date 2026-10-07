@@ -27,8 +27,9 @@ export function PreflightNote(props: { cells: number | undefined; engine: string
   const queue = () => { const q = health()?.queue; return q ? `${q.running ?? ""}|${q.queued}|${q.external ?? 0}` : ""; };
   const [pre] = createResource(() => ({ e: props.engine, c: props.cells, ok: serverState() === "online", q: queue() }), (s) => (s.ok && s.c ? api.preflight({ cells: s.c, engine: s.e }).catch(() => null) : null));
   // the memory part of an "unknown" answer is said by the app; the server's other remarks follow
+  // (each remark after the app's sentence starts as a sentence: the server writes lower-case clauses)
   const text = (p: Preflight) => p.level !== "unknown" ? p.messages.join(" ")
-    : [unknownText(p, props.cells, props.engine), ...p.messages.slice(1)].join(" ");
+    : [unknownText(p, props.cells, props.engine), ...p.messages.slice(1).map((m) => m.charAt(0).toUpperCase() + m.slice(1))].join(" ");
   return (
     <Show when={pre() && pre()!.level !== "ok"}>
       <p class="note" classList={{ "dz-bad": pre()!.level === "refuse" }} role={pre()!.level === "refuse" ? "alert" : "status"}>
