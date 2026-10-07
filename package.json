@@ -59,7 +59,7 @@
     "check:wording-polish": "node --experimental-strip-types scripts/check-wording-polish.mjs",
     "check:designer-feedback": "node scripts/check-designer-feedback.mjs",
     "check:farfield": "node --experimental-strip-types scripts/check-farfield-quantities.mjs",
-    "check:telemetry": "node scripts/check-telemetry-api.mjs",
+    "check:telemetry": "node scripts/check-telemetry-api.mjs && node scripts/check-telemetry-rust.mjs",
     "check:general-settings": "node --experimental-strip-types scripts/check-general-settings.mjs",
     "check:appearance": "npm run -s check:general-settings && node --experimental-strip-types scripts/check-appearance-presets.mjs && node --experimental-strip-types scripts/check-appearance-events.mjs && node --experimental-strip-types scripts/check-theme-settings-sync.mjs",
     "check:account": "node --experimental-strip-types scripts/check-account.mjs",

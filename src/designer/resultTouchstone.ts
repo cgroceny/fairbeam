@@ -3,7 +3,6 @@ import { touchstoneNPort, touchstoneS1p } from "../export/touchstone.ts";
 import { sMatrix } from "../lib/sparams.ts";
 import { saveDownload, type DownloadResult } from "../lib/download.ts";
 import { resultExportStem } from "../lib/resultExportNames.ts";
-import { countUsage } from "../lib/telemetry.ts";
 import { t } from "../i18n/index.ts";
 
 type Run = { file: string; bundle: Bundle };
@@ -60,10 +59,9 @@ function checkedText(bundle: Bundle, label: string): { text: string; ports: numb
   return { text, ports: matrix.ports };
 }
 
-/** Every Touchstone export of the app; counted for the usage statistics (docs/TELEMETRY.md) once saved. */
+/** Save a validated Touchstone export. */
 export async function exportResultTouchstone(bundle: Bundle, filenameBase: string, runs?: Run[]): Promise<DownloadResult> {
   const result = await writeResultTouchstone(bundle, filenameBase, runs);
-  if (result.status !== "cancelled" && result.status !== "failed") countUsage("feature.touchstone_export");
   return result;
 }
 

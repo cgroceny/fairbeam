@@ -84,7 +84,7 @@ from urllib.parse import parse_qs, urlsplit
 
 from .procutil import WINDOWS, popen_group, release_group
 from ._meta import __version__
-from . import blender_find, blender_job, modelfiles, renders, resources, static, telemetry, usermaterials
+from . import blender_find, blender_job, modelfiles, renders, resources, static, usermaterials
 from .jobs import PACKAGE_ROOT, JobManager, child_env
 
 LOOPBACK_HOSTS = {"127.0.0.1", "localhost", "::1", "[::1]"}
@@ -579,8 +579,6 @@ def backup_scope_for(models_dir: Path) -> str:
 
 
 class App:
-    usage: "telemetry.Counters | None" = None  # usage statistics, see __init__
-
     def __init__(self, *, models_dir: Path, projects_dir: Path, jobs_dir: Path, python: str | None = None,
                  manager: JobManager | None = None, heartbeat_s: float = 15.0, port: int = DEFAULT_PORT,
                  templates_dir: Path | None = None, history_dir: Path | None = None, ui_dir: Path | None = None,
@@ -629,17 +627,6 @@ class App:
                 previous(job)
 
         self.manager.on_finished = chained
-        # usage statistics (docs/TELEMETRY.md): None unless the desktop shell was built with them
-        self.usage = telemetry.from_env()
-        if self.usage is not None:
-            counted = self.manager.on_finished
-
-            def finished_and_counted(job):
-                counted(job)
-                telemetry.job_finished(self.usage, job)
-
-            self.manager.on_finished = finished_and_counted
-            self.manager.on_started = lambda job: telemetry.job_started(self.usage, job)
         self.versions = _versions(self.python)
 
     def close(self):
@@ -1000,8 +987,6 @@ class App:
         out = {**self.design_file(model_id), "validation": self._validate_design(model_id)}
         if report is not None:
             out["import_report"] = report
-            if body.get("pcb") is None:
-                telemetry.count(self.usage, "feature.cst_import")
         return out
 
     @staticmethod
@@ -1308,7 +1293,6 @@ class App:
             checks = self._design_checks(design)
         errs = [c for c in checks if c["severity"] == "error"]
         if errs:
-            telemetry.count(self.usage, f"sim.refused.{telemetry.refusal_category(errs)}")
             fields: dict = {}
             for c in errs:
                 fields.setdefault(c["path"] or "_", c["message"])
@@ -1558,7 +1542,6 @@ class App:
                        "values": item["values"], "axes": sequences[item["sequence_index"]]["axes"],
                        "sequence_index": item["sequence_index"], "sequence_name": item["sequence_name"]})
             jobs.append(job.to_dict())
-        telemetry.count(self.usage, f"sweep.started.{telemetry.sweep_bucket(len(combos))}")
         return {"sweep": {"id": sweep_id, "name": name, "sequences": sequences,
                            "axes": sequences[0]["axes"], "total": len(combos)}, "runs": jobs}
 
@@ -1702,7 +1685,6 @@ class App:
                                   end_criteria_db=st["end_criteria_db"], name=name, label=label, kind="optimize",
                                   optimize={"vary": clean_vary, "goals": clean_goals, "max_evals": max_evals,
                                             "method": method, "excite": excite})
-        telemetry.count(self.usage, f"optimize.started.{method}")
         return job.to_dict()
 
     def job(self, job_id: str):

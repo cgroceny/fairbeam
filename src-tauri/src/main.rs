@@ -954,10 +954,6 @@ fn start(app: AppHandle) {
         .current_dir(&ws.root)
         .stdin(Stdio::null());
         runtime::python_env(&mut cmd, &chosen.python, chosen.runtime.as_deref(), &res);
-        // usage statistics (docs/TELEMETRY.md): only with the telemetry build switch on
-        if let Some(dir) = telemetry::server_dir(&app, chosen.gpu) {
-            cmd.env("FAIRBEAM_TELEMETRY_DIR", dir);
-        }
         if let Some(ui) = &res.ui {
             cmd.arg("--ui").arg(ui);
         }
@@ -1967,7 +1963,7 @@ fn main() {
                 }
             }
         })
-        .invoke_handler(tauri::generate_handler![splash_state, retry, install_runtime, use_managed, set_prefer_gpu, set_gpu_build, choose_python, reveal_download, reveal_design, save_download, get_general_settings, set_update_check_on_start, check_updates_now, set_language, sync_native_menu_availability, open_workspace, pick_workspace_folder, pick_blender_executable, set_workspace_folder, install_gpu_runtime, set_gpu_runtime_enabled, open_external_link, remember_recent_design, telemetry::telemetry_status, telemetry::telemetry_set_consent, telemetry::telemetry_preview, telemetry::telemetry_reset_id, telemetry::telemetry_count, antenlab_import::take_imported_viewer_prefs])
+        .invoke_handler(tauri::generate_handler![splash_state, retry, install_runtime, use_managed, set_prefer_gpu, set_gpu_build, choose_python, reveal_download, reveal_design, save_download, get_general_settings, set_update_check_on_start, check_updates_now, set_language, sync_native_menu_availability, open_workspace, pick_workspace_folder, pick_blender_executable, set_workspace_folder, install_gpu_runtime, set_gpu_runtime_enabled, open_external_link, remember_recent_design, telemetry::telemetry_status, telemetry::telemetry_set_consent, telemetry::telemetry_preview, antenlab_import::take_imported_viewer_prefs])
         .setup(|app| {
             // the menu reads the saved recent designs, so it is built once the path resolver exists
             // (Builder::menu runs before setup and panicked: state() called before manage())
@@ -2016,7 +2012,7 @@ fn main() {
             if fit.maximize {
                 let _ = window.maximize();
             }
-            // counts this start and starts the daily ping; nothing without the telemetry feature
+            // starts the weekly sender; nothing without the telemetry feature
             telemetry::on_app_start(app.handle());
             start(app.handle().clone());
             Ok(())
