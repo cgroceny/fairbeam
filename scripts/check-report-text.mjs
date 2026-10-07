@@ -57,6 +57,11 @@ eq(mergeNotes([older])[0].message_tr, older.message_tr, "merging keeps the Turki
 eq(gapCounts([older]).total, 0, "an info note is no gap of the import");
 ok(/noteText\(n, locale\(\)\)/.test(read("src/components/CstImportDialog.tsx")), "the import dialog shows a row in the page's language");
 
+ok(read("src/components/CstImportDialog.tsx").includes('<Show when={gaps().refused || gaps().missing}>'),
+  "partial imports show the prominent warning for refused or missing items");
+ok(read("src/components/CstImportDialog.tsx").includes('role="alert">{t("cstImport.partialGeometry")}'),
+  "the incomplete-geometry warning is localized and announced");
+
 // ---- 2. paths in words
 const design = {
   params: [{ key: "L", default: 10 }, { key: "W", expr: "2*L" }],
