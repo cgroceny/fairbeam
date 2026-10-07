@@ -1491,6 +1491,7 @@ fn external_url(link: &str) -> Option<&'static str> {
         "docs" => "https://fairbeam.org/guide.html",
         "issues" => "https://github.com/ismailakdag/fairbeam-releases/issues/new/choose",
         "openems" => "https://github.com/thliebig/openEMS",
+        "licenses" => concat!("https://github.com/ismailakdag/fairbeam/blob/v", env!("CARGO_PKG_VERSION"), "/THIRD-PARTY-NOTICES.md"),
         "csxcad" => "https://github.com/thliebig/CSXCAD",
         // what usage statistics would collect (docs/TELEMETRY.md)
         "privacy" => "https://fairbeam.org/privacy.html",

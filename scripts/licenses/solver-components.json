@@ -1,0 +1,273 @@
+{
+  "Boost": {
+    "patterns": [
+      "boost_"
+    ],
+    "license": "BSL-1.0",
+    "source": "https://www.boost.org/",
+    "text": "https://raw.githubusercontent.com/boostorg/boost/master/LICENSE_1_0.txt"
+  },
+  "Brotli": {
+    "patterns": [
+      "brotli"
+    ],
+    "license": "MIT",
+    "source": "https://github.com/google/brotli",
+    "text": "https://raw.githubusercontent.com/google/brotli/master/LICENSE"
+  },
+  "bzip2": {
+    "patterns": [
+      "bz2"
+    ],
+    "license": "bzip2-1.0.6",
+    "source": "https://sourceware.org/bzip2/",
+    "text": "https://raw.githubusercontent.com/libarchive/bzip2/master/COPYING"
+  },
+  "double-conversion": {
+    "patterns": [
+      "double-conversion"
+    ],
+    "license": "BSD-3-Clause",
+    "source": "https://github.com/google/double-conversion",
+    "text": "https://raw.githubusercontent.com/google/double-conversion/master/LICENSE"
+  },
+  "fmt": {
+    "patterns": [
+      "fmt.dll"
+    ],
+    "license": "MIT",
+    "source": "https://github.com/fmtlib/fmt",
+    "text": "https://raw.githubusercontent.com/fmtlib/fmt/master/LICENSE"
+  },
+  "FreeType": {
+    "patterns": [
+      "freetype"
+    ],
+    "license": "FTL OR GPL-2.0-only",
+    "source": "https://gitlab.freedesktop.org/freetype/freetype",
+    "text": "https://raw.githubusercontent.com/freetype/freetype/master/docs/FTL.TXT"
+  },
+  "GLEW": {
+    "patterns": [
+      "glew"
+    ],
+    "license": "BSD-3-Clause AND MIT",
+    "source": "https://github.com/nigels-com/glew",
+    "text": "https://raw.githubusercontent.com/nigels-com/glew/master/LICENSE.txt"
+  },
+  "HarfBuzz": {
+    "patterns": [
+      "harfbuzz"
+    ],
+    "license": "MIT",
+    "source": "https://github.com/harfbuzz/harfbuzz",
+    "text": "https://raw.githubusercontent.com/harfbuzz/harfbuzz/main/COPYING"
+  },
+  "ICU": {
+    "patterns": [
+      "icu"
+    ],
+    "license": "Unicode-3.0",
+    "source": "https://github.com/unicode-org/icu",
+    "text": "https://raw.githubusercontent.com/unicode-org/icu/main/LICENSE"
+  },
+  "libjpeg-turbo": {
+    "patterns": [
+      "jpeg"
+    ],
+    "license": "IJG AND BSD-3-Clause AND Zlib",
+    "source": "https://github.com/libjpeg-turbo/libjpeg-turbo",
+    "text": "https://raw.githubusercontent.com/libjpeg-turbo/libjpeg-turbo/main/LICENSE.md"
+  },
+  "Expat": {
+    "patterns": [
+      "libexpat"
+    ],
+    "license": "MIT",
+    "source": "https://github.com/libexpat/libexpat",
+    "text": "https://raw.githubusercontent.com/libexpat/libexpat/master/expat/COPYING"
+  },
+  "XZ / liblzma": {
+    "patterns": [
+      "liblzma"
+    ],
+    "license": "0BSD AND LGPL-2.1-or-later",
+    "source": "https://github.com/tukaani-project/xz",
+    "text": "https://raw.githubusercontent.com/tukaani-project/xz/master/COPYING"
+  },
+  "libpng": {
+    "patterns": [
+      "libpng"
+    ],
+    "license": "libpng-2.0",
+    "source": "https://github.com/pnggroup/libpng",
+    "text": "https://raw.githubusercontent.com/pnggroup/libpng/libpng16/LICENSE"
+  },
+  "LZ4": {
+    "patterns": [
+      "lz4"
+    ],
+    "license": "BSD-2-Clause",
+    "source": "https://github.com/lz4/lz4",
+    "text": "https://raw.githubusercontent.com/lz4/lz4/dev/lib/LICENSE"
+  },
+  "MD4C": {
+    "patterns": [
+      "md4c"
+    ],
+    "license": "MIT",
+    "source": "https://github.com/mity/md4c",
+    "text": "https://raw.githubusercontent.com/mity/md4c/master/LICENSE.md"
+  },
+  "PCRE2": {
+    "patterns": [
+      "pcre2"
+    ],
+    "license": "BSD-3-Clause",
+    "source": "https://github.com/PCRE2Project/pcre2",
+    "text": "https://raw.githubusercontent.com/PCRE2Project/pcre2/master/LICENCE.md"
+  },
+  "pugixml": {
+    "patterns": [
+      "pugixml"
+    ],
+    "license": "MIT",
+    "source": "https://github.com/zeux/pugixml",
+    "text": "https://raw.githubusercontent.com/zeux/pugixml/master/LICENSE.md"
+  },
+  "Qt": {
+    "patterns": [
+      "Qt6",
+      "qsvgicon",
+      "qdirect2d",
+      "qminimal",
+      "qoffscreen",
+      "qwindows",
+      "qmodernwindowsstyle"
+    ],
+    "license": "LGPL-3.0-only OR GPL-3.0-only OR LicenseRef-Qt-commercial",
+    "source": "https://code.qt.io/cgit/qt/qtbase.git/",
+    "text": "https://raw.githubusercontent.com/qt/qtbase/dev/LICENSES/LGPL-3.0-only.txt"
+  },
+  "SZIP": {
+    "patterns": [
+      "szip"
+    ],
+    "license": null,
+    "source": "https://docs.hdfgroup.org/archive/support/doc_resource/SZIP/",
+    "text": null
+  },
+  "TIFF": {
+    "patterns": [
+      "tiff"
+    ],
+    "license": "libtiff",
+    "source": "https://gitlab.com/libtiff/libtiff",
+    "text": "https://raw.githubusercontent.com/libsdl-org/libtiff/master/LICENSE.md"
+  },
+  "Verdict": {
+    "patterns": [
+      "verdict"
+    ],
+    "license": "BSD-3-Clause",
+    "source": "https://github.com/sandialabs/verdict",
+    "text": "https://raw.githubusercontent.com/sandialabs/verdict/master/LICENSE"
+  },
+  "VTK": {
+    "patterns": [
+      "vtk"
+    ],
+    "license": "BSD-3-Clause AND bundled library terms",
+    "source": "https://gitlab.kitware.com/vtk/vtk",
+    "text": "https://raw.githubusercontent.com/Kitware/VTK/v9.3.1/Copyright.txt"
+  },
+  "zlib": {
+    "patterns": [
+      "z.dll"
+    ],
+    "license": "Zlib",
+    "source": "https://github.com/madler/zlib",
+    "text": "https://raw.githubusercontent.com/madler/zlib/master/LICENSE"
+  },
+  "Zstandard": {
+    "patterns": [
+      "zstd"
+    ],
+    "license": "BSD-3-Clause OR GPL-2.0-only",
+    "source": "https://github.com/facebook/zstd",
+    "text": "https://raw.githubusercontent.com/facebook/zstd/dev/LICENSE"
+  },
+  "Microsoft Visual C++ runtime": {
+    "patterns": [
+      "msvcp",
+      "vcruntime"
+    ],
+    "license": "Microsoft proprietary redistribution terms",
+    "source": "https://learn.microsoft.com/en-us/cpp/windows/redistributing-visual-cpp-files",
+    "text": null
+  },
+  "openEMS": {
+    "patterns": [
+      "openEMS.dll",
+      "nf2ff",
+      "openEMS.exe",
+      "sar_calc"
+    ],
+    "license": "GPL-3.0-or-later",
+    "source": "https://github.com/thliebig/openEMS",
+    "text": "https://raw.githubusercontent.com/thliebig/openEMS/67d378488ee40de815eed00f8aaa808f0a9e3c6d/COPYING"
+  },
+  "CSXCAD": {
+    "patterns": [
+      "CSXCAD.dll"
+    ],
+    "license": "LGPL-3.0-or-later",
+    "source": "https://github.com/thliebig/CSXCAD/tree/dcdb62bcfd1111ee3594ba22d06089b41b380990",
+    "text": "https://raw.githubusercontent.com/thliebig/CSXCAD/dcdb62bcfd1111ee3594ba22d06089b41b380990/COPYING"
+  },
+  "QCSXCAD": {
+    "patterns": [
+      "QCSXCAD"
+    ],
+    "license": "LGPL-3.0-or-later",
+    "source": "https://github.com/thliebig/QCSXCAD/tree/26d7ee13440cff0e5621a6b9d325ae31d118bc2d",
+    "text": "https://raw.githubusercontent.com/thliebig/QCSXCAD/26d7ee13440cff0e5621a6b9d325ae31d118bc2d/COPYING"
+  },
+  "fparser": {
+    "patterns": [
+      "fparser"
+    ],
+    "license": "LGPL-3.0-or-later",
+    "source": "https://github.com/thliebig/fparser/tree/4b9c845b449b520c4b8c5f23c74cd04820084f81",
+    "text": "https://raw.githubusercontent.com/thliebig/fparser/4b9c845b449b520c4b8c5f23c74cd04820084f81/docs/lgpl.txt"
+  },
+  "AppCSXCAD": {
+    "patterns": [
+      "AppCSXCAD.exe"
+    ],
+    "license": "GPL-3.0-or-later",
+    "source": "https://github.com/thliebig/AppCSXCAD/tree/f04d3a7d7cce31c57704f14abe46c66684c15c7d",
+    "text": "https://raw.githubusercontent.com/thliebig/AppCSXCAD/f04d3a7d7cce31c57704f14abe46c66684c15c7d/COPYING"
+  },
+  "HDF5 (static)": {
+    "patterns": [],
+    "static": true,
+    "license": "LicenseRef-HDF5",
+    "source": "https://github.com/HDFGroup/hdf5",
+    "text": "https://raw.githubusercontent.com/HDFGroup/hdf5/develop/LICENSE"
+  },
+  "TinyXML (static)": {
+    "patterns": [],
+    "static": true,
+    "license": "Zlib",
+    "source": "https://sourceforge.net/projects/tinyxml/",
+    "text": null
+  },
+  "CGAL (headers)": {
+    "patterns": [],
+    "static": true,
+    "license": "GPL-3.0-or-later OR LGPL-3.0-or-later OR LicenseRef-CGAL-commercial (per component)",
+    "source": "https://github.com/CGAL/cgal",
+    "text": "https://raw.githubusercontent.com/CGAL/cgal/master/Installation/LICENSE"
+  }
+}

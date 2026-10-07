@@ -16,7 +16,7 @@
 // Each platform may be published from its own machine; entries already in latest.json are kept.
 // The release page gets the full notes; latest.json gets a short plain-text summary (--summary, else
 // the notes' first paragraph without Markdown), because the app shows it in its update dialog.
-import { spawnSync } from "node:child_process";
+import { spawnSync, execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import { copyFileSync, existsSync, mkdtempSync, readFileSync, rmSync, statSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -74,6 +74,8 @@ function updateSummary(notes, releaseUrl, max = 400) {
 const sha256 = path => createHash("sha256").update(readFileSync(path)).digest("hex");
 
 const options = parseArguments(process.argv.slice(2));
+if (options.version !== JSON.parse(readFileSync("package.json", "utf8")).version) throw new Error("Release version must match the third-party notices version in package.json");
+execFileSync(process.execPath, ["scripts/third-party-licenses.mjs", "--check"], { stdio: "inherit" });
 const tag = `v${options.version}`;
 const downloadBase = `https://github.com/${options.repo}/releases/download/${tag}`;
 const stage = mkdtempSync(join(tmpdir(), "fairbeam-release-"));
@@ -101,7 +103,10 @@ try {
     }
   }
 
-  const uploads = [];
+  const notices = "THIRD-PARTY-NOTICES.md";
+  copyFileSync(notices, join(stage, notices));
+  checksums.set(notices, sha256(notices));
+  const uploads = [join(stage, notices)];
   for (const entry of options.assets) {
     const split = entry.indexOf("=");
     const platform = entry.slice(0, split), source = entry.slice(split + 1);

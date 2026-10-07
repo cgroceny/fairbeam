@@ -37,8 +37,9 @@ source is provided at no charge beyond the cost of delivery, if any.
 - **Microsoft WebView2 (Windows)** is separate from the open-source shell libraries. The installer
   includes its bootstrapper; Microsoft runtime and redistribution terms apply.
 
-Runtime components and their licenses and sources are listed in the runtime pack’s `NOTICE.md` and
-[`runtime/pins.json`](runtime/pins.json). This overview is not a complete binary license inventory.
+The generated [third-party inventory and full license texts](THIRD-PARTY-NOTICES.md) accompany
+each release. Runtime pack notices and [`runtime/pins.json`](runtime/pins.json) record the solver
+artifacts and their sources. Reviewed exceptions identify unpinned or separately updated components.
 
 ## Trademarks
 

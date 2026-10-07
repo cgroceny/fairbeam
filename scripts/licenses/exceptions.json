@@ -1,0 +1,7 @@
+{
+  "runtime:Microsoft WebView2@Evergreen": "Microsoft supplies the Evergreen bootstrapper and independently updated runtime under its distribution terms. The installer does not pin a runtime version. See the Microsoft terms and distribution links in this section.",
+  "native:openems Windows Microsoft Visual C++ runtime@14.51.36247.0": "Microsoft runtime DLLs were identified in the pinned archive. Their proprietary redistribution terms apply separately; the upstream pack does not include those terms. Confirm the applicable redistribution license and retain it with the release.",
+  "native:openems Windows SZIP@unrecorded": "The pinned archive contains szip.dll but does not provide its version, source revision, or license text. SZIP and compatible codec implementations have different terms. Confirm the exact implementation and applicable terms with the archive publisher before redistribution.",
+  "native:openems_gpu Windows Microsoft Visual C++ runtime@14.44.35211.0": "Microsoft runtime DLLs were identified in the pinned archive. Their proprietary redistribution terms apply separately; the upstream pack does not include those terms. Confirm the applicable redistribution license and retain it with the release.",
+  "native:openems_gpu Windows SZIP@unrecorded": "The pinned archive contains szip.dll but does not provide its version, source revision, or license text. SZIP and compatible codec implementations have different terms. Confirm the exact implementation and applicable terms with the archive publisher before redistribution."
+}

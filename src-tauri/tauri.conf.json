@@ -44,7 +44,8 @@
       "../runtime/setup-runtime.sh": "runtime/setup-runtime.sh",
       "../runtime/setup-runtime.ps1": "runtime/setup-runtime.ps1",
       "../LICENSE": "LICENSE.txt",
-      "../NOTICE.md": "NOTICE.md"
+      "../NOTICE.md": "NOTICE.md",
+      "../THIRD-PARTY-NOTICES.md": "THIRD-PARTY-NOTICES.md"
     },
     "macOS": {
       "minimumSystemVersion": "13.0",

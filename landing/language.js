@@ -6,6 +6,7 @@
   // Exact source strings keep translations attached to copy while preserving inline markup,
   // equations, links, measured values, version numbers and commands.
   const pairs = [
+    ["Third-party licenses", "Üçüncü taraf lisansları"],
     ["Skip to content", "İçeriğe geçin"],
     ["How it works", "Nasıl çalışır"], ["Examples", "Örnekler"], ["The designer", "Tasarım aracı"],
     ["Features", "Özellikler"], ["Results", "Sonuçlar"], ["Roadmap", "Yol haritası"],
