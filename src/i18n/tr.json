@@ -3778,7 +3778,7 @@
   "usage.showPreview": "Gönderilecekleri gösterin",
   "usage.summary.never": "Kurulum kimliği, özellik sayaçları, tasarımlar veya dosyalar gönderilmez. Barındırma sağlayıcısı isteği iletmek için IP adresinizi işler; Fairbeam IP adreslerini veya kullanıcı aracısı bilgilerini saklamaz. Yalnızca haftalık toplu sayılar saklanır.",
   "usage.summary.off": "İsteğe bağlıdır ve varsayılan olarak kapalıdır. Rızanızı dilediğiniz zaman geri almak için Ayarlar › Genel › Kullanım istatistikleri › Kapalı seçeneğini seçin. Bu işlem gelecekteki istekleri durdurur; önceki toplu sayılar kurulumunuzla ilişkilendirilemez.",
-  "usage.summary.what": "Açık rızanızla platform kullanımını yaklaşık olarak saymak için en fazla yedi günde bir yalnızca uygulama sürümünü, işletim sistemini, işlemci mimarisini ve rapor şemasını gönderin.",
+  "usage.summary.what": "Açık rıza vermeniz hâlinde Fairbeam, platform kullanımını yaklaşık olarak saymak için en fazla yedi günde bir yalnızca uygulama sürümünü, işletim sistemini, işlemci mimarisini ve rapor şemasını gönderir.",
   "usage.summary.where": "Veri sorumlusu: İsmail Akdağ (ismail@fairbeam.org). API Vercel’de barındırılır; toplu sayılar GitHub’da saklanır. İstekler Türkiye dışındaki sunuculara gider. Taslak gizlilik bildirimi, önerilen rızaya dayalı aktarımı ve etkinleştirmeden önce gereken hukuki incelemeyi açıklar.",
   "usage.title": "Kullanım istatistikleri",
   "usage.whatIsCollected": "Neler toplanıyor",
