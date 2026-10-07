@@ -64,7 +64,7 @@ code { font-size: 0.9em; padding: 1px 4px; border-radius: var(--al-radius-sm); b
   font-family: var(--al-font-mono); font-weight: 400; font-size: var(--al-text-lg); letter-spacing: -0.02em;
 }
 .lockup { display: block; height: 22px; width: auto; flex: none; }
-/* pages without the collapsing section menu (guide, privacy): the mark alone on phones, as in the app */
+/* pages without the collapsing section menu: the mark alone on phones, as in the app */
 @media (max-width: 560px) { html:not(.js-site-nav) .lockup { width: 22px; } }
 .mark { width: 20px; height: 20px; fill: none; stroke: var(--al-brand-mark); stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; }
 .site-nav { display: flex; gap: var(--al-space-5); font-size: var(--al-text-md); }
@@ -349,7 +349,7 @@ thead .group th[colspan] { text-align: center; padding-right: 0; padding-left: v
 .dl-notes li { position: relative; padding-left: var(--al-space-4); }
 .dl-notes li::before { content: ""; position: absolute; left: 0; top: 0.75em; width: 6px; height: 1px; background: var(--al-text-3); }
 
-/* ------------------------------------------------------------------ inner pages: features, roadmap, docs */
+/* ------------------------------------------------------------------ inner pages: features, roadmap (the docs pages: docs.css) */
 .page-head { display: grid; gap: var(--al-space-3); padding: var(--al-space-7) 0 var(--al-space-6); }
 .page-head .eyebrow { margin-bottom: 0; }
 .page-layout {
@@ -365,15 +365,6 @@ thead .group th[colspan] { text-align: center; padding-right: 0; padding-left: v
 .example-list > div { display: grid; gap: var(--al-space-1); }
 .example-list dt { font-weight: 600; }
 .example-list dd { color: var(--al-text-2); }
-.doc-cards { list-style: none; padding: 0 0 var(--lp-section); display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--al-space-4); }
-.doc-card {
-  display: grid; gap: var(--al-space-1); align-content: start; height: 100%; padding: var(--al-space-5);
-  border: 1px solid var(--al-border); border-radius: var(--al-radius-lg); background: var(--al-surface); color: var(--al-text); text-decoration: none;
-  transition: border-color var(--al-dur) var(--al-ease);
-}
-.doc-card:hover { border-color: var(--al-action); text-decoration: none; }
-.doc-card-title { font-size: var(--al-text-lg); font-weight: 600; }
-.doc-card-text { font-size: var(--al-text-md); color: var(--al-text-2); }
 
 /* ------------------------------------------------------------------ footer */
 .site-footer { border-top: 1px solid var(--al-border); background: var(--al-surface); }
@@ -399,7 +390,7 @@ thead .group th[colspan] { text-align: center; padding-right: 0; padding-left: v
   .page-layout { grid-template-columns: minmax(0, 1fr); gap: var(--al-space-6); }
 }
 @media (max-width: 720px) {
-  .status-list, .example-list, .doc-cards { grid-template-columns: minmax(0, 1fr); }
+  .status-list, .example-list { grid-template-columns: minmax(0, 1fr); }
   /* the examples become a strip to swipe through */
   .example-strip {
     grid-template-columns: none; grid-auto-flow: column; grid-auto-columns: min(78%, 320px);
@@ -550,8 +541,8 @@ thead .group th[colspan] { text-align: center; padding-right: 0; padding-left: v
   .hero h1 { font-size: 34px; }
 }
 
-/* ------------------------------------------------------------------ guide page (guide.html)
-   A reading page: a sticky contents list beside the text on wide screens, above it on phones. */
+/* ------------------------------------------------------------------ reading page (privacy.html; the contents list also on features.html)
+   A sticky contents list beside the text on wide screens, above it on phones. */
 .guide-head { display: grid; gap: var(--al-space-3); padding: var(--al-space-7) 0 var(--al-space-6); }
 .guide-head .eyebrow { margin-bottom: 0; }
 .guide-layout {
@@ -591,7 +582,6 @@ thead .group th[colspan] { text-align: center; padding-right: 0; padding-left: v
 }
 .guide-table { overflow-x: auto; }
 .guide-table tbody th { white-space: nowrap; }
-.guide-next { display: flex; flex-wrap: wrap; gap: var(--al-space-3); margin-top: var(--al-space-3); }
 .dl-guide { font-size: var(--al-text-md); }
 @media (max-width: 960px) {
   .guide-layout { grid-template-columns: minmax(0, 1fr); gap: var(--al-space-6); }
@@ -599,7 +589,7 @@ thead .group th[colspan] { text-align: center; padding-right: 0; padding-left: v
 }
 @media (max-width: 560px) {
   .guide-head { padding-top: var(--al-space-6); }
-  /* phones: the five sections only, so the contents box stays short */
+  /* phones: the top-level sections only, so the contents box stays short */
   .guide-toc ol ol { display: none; }
   .guide-body li > ul, .guide-body li > ol { padding-left: 1.1em; }
 }

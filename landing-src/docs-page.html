@@ -2,23 +2,24 @@
 <html lang="en">
 <head>
   <!--
-    Placeholder for the documentation section: the main menu's "Docs" links here, and
-    scripts/check-links.mjs needs the target to exist. The published docs replace this page.
+    The page frame of the documentation section (site-dist/docs/): scripts/docs-render.mjs fills in
+    the names in double braces; "main" is the sidebar, the rendered Markdown and the contents list.
+    The header and footer match the other site pages; links are relative to site-dist/docs/.
   -->
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="color-scheme" content="light dark">
-  <title>Documentation · Fairbeam</title>
-  <meta name="description" content="Fairbeam documentation: the getting-started guide for the desktop app, the feature list with validation results, the roadmap and the reference documentation in the source repository.">
-  <meta property="og:title" content="Documentation · Fairbeam">
-  <meta property="og:description" content="The getting-started guide, the feature list, the roadmap and the reference documentation of Fairbeam.">
-  <meta property="og:type" content="website">
-  <meta property="og:url" content="https://fairbeam.org/docs/">
+  <title>{{title}}</title>
+  <meta name="description" content="{{description}}">
+  <meta property="og:title" content="{{title}}">
+  <meta property="og:description" content="{{description}}">
+  <meta property="og:type" content="{{type}}">
+  <meta property="og:url" content="{{url}}">
   <meta property="og:image" content="https://fairbeam.org/media/fairbeam-promo-poster.jpg">
   <meta property="og:image:width" content="1920">
   <meta property="og:image:height" content="1080">
   <meta name="twitter:card" content="summary_large_image">
-  <link rel="canonical" href="https://fairbeam.org/docs/">
+  <link rel="canonical" href="{{url}}">
   <link rel="icon" href="../favicon.svg" type="image/svg+xml">
   <link rel="icon" href="../favicon.ico" sizes="48x48">
   <link rel="icon" href="../favicon-32.png" sizes="32x32" type="image/png">
@@ -28,13 +29,15 @@
   <link rel="stylesheet" href="../tokens.css">
   <link rel="stylesheet" href="../styles.css">
   <link rel="stylesheet" href="../navigation.css">
+  <link rel="stylesheet" href="../docs.css">
   <script>try{var t=localStorage.getItem("fairbeam.theme");if(t==="light"||t==="dark")document.documentElement.setAttribute("data-theme",t)}catch(e){}</script>
   <script src="../language.js" defer></script>
   <script src="../navigation.js" defer></script>
   <script src="../script.js" defer></script>
+  <script src="../docs.js" defer></script>
 </head>
 <body data-page="docs">
-  <a class="skip-link" href="#main">Skip to content</a>
+  <a class="skip-link" href="#doc-content">Skip to content</a>
 
   <header class="site-header">
     <div class="shell header-row">
@@ -48,7 +51,7 @@
       <nav class="site-nav" id="site-nav" aria-label="Main">
         <a href="../features.html">Features</a>
         <a href="../#examples">Examples</a>
-        <a href="./" aria-current="page">Docs</a>
+        <a href="./" aria-current="true">Docs</a>
         <a href="../#download">Download</a>
         <a class="nav-github" href="https://github.com/ismailakdag/fairbeam"><svg viewBox="0 0 16 16" aria-hidden="true" focusable="false"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8Z"/></svg>GitHub</a>
         <a class="button ghost nav-demo" href="../app/">Open the demo</a>
@@ -68,20 +71,8 @@
     </div>
   </header>
 
-  <main tabindex="-1" id="main" class="page">
-    <div class="shell page-head">
-      <p class="eyebrow">Docs</p>
-      <h1>Documentation</h1>
-      <p class="lede">Start with the getting-started guide. The reference documentation is in the docs folder of the source repository.</p>
-    </div>
-    <div class="shell">
-      <ul class="doc-cards">
-        <li><a class="doc-card" href="../guide.html"><span class="doc-card-title">Getting started</span><span class="doc-card-text">Install the app, then design, simulate and read the results of a patch antenna in about five minutes.</span></a></li>
-        <li><a class="doc-card" href="../features.html"><span class="doc-card-title">Features</span><span class="doc-card-text">Every feature, the example projects, validation against analytical results and solver times.</span></a></li>
-        <li><a class="doc-card" href="../roadmap.html"><span class="doc-card-title">Roadmap</span><span class="doc-card-text">What each release added, and the work in development.</span></a></li>
-        <li><a class="doc-card" href="https://github.com/ismailakdag/fairbeam/tree/main/docs"><span class="doc-card-title">Reference on GitHub</span><span class="doc-card-text">The designer, simulation and results, exports, the command line and the file formats.</span></a></li>
-      </ul>
-    </div>
+  <main tabindex="-1" id="main" class="docs-main">
+  {{main}}
   </main>
 
   <footer class="site-footer">
@@ -89,8 +80,8 @@
       <nav class="footer-nav" aria-label="Site links">
         <a href="../features.html">Features</a>
         <a href="../roadmap.html">Roadmap</a>
-        <a href="./" aria-current="page">Docs</a>
-        <a href="../guide.html">Getting started</a>
+        <a href="./">Docs</a>
+        <a href="getting-started.html">Getting started</a>
         <a href="../app/">Demo</a>
         <a href="https://github.com/ismailakdag/fairbeam-releases/releases">Releases</a>
         <a href="https://github.com/ismailakdag/fairbeam">Source code</a>

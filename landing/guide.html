@@ -2,236 +2,25 @@
 <html lang="en">
 <head>
   <!--
-    The public copy of docs/GETTING-STARTED.md, converted by hand. Update both together:
-    scripts/check-links.mjs fails when a heading of the Markdown guide is missing here.
+    The getting-started guide is in the docs section now (docs/getting-started.html, rendered from
+    docs/GETTING-STARTED.md). The app's Help › Getting Started Guide opens this address, so it stays:
+    vercel.json redirects it on fairbeam.org, and this page does the same anywhere else.
   -->
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="color-scheme" content="light dark">
-  <title>Getting started with Fairbeam</title>
-  <meta name="description" content="Install the Fairbeam desktop app, then design, simulate and read the results of a patch antenna in about five minutes: simulation settings, the run, S-parameters with markers, far field, field planes, a mesh convergence check, sweeps, the optimizer, VBA macro import and where your files are.">
-  <meta property="og:title" content="Getting started with Fairbeam">
-  <meta property="og:description" content="Install Fairbeam, then design, simulate and read the results of a patch antenna in about five minutes.">
-  <meta property="og:type" content="article">
-  <meta property="og:url" content="https://fairbeam.org/guide.html">
-  <link rel="canonical" href="https://fairbeam.org/guide.html">
+  <title>Getting started · Fairbeam docs</title>
+  <meta name="robots" content="noindex">
+  <meta http-equiv="refresh" content="0; url=docs/getting-started.html">
+  <link rel="canonical" href="https://fairbeam.org/docs/getting-started.html">
   <link rel="icon" href="favicon.svg" type="image/svg+xml">
-  <link rel="icon" href="favicon.ico" sizes="48x48">
-  <link rel="icon" href="favicon-32.png" sizes="32x32" type="image/png">
-  <link rel="icon" href="favicon-16.png" sizes="16x16" type="image/png">
-  <link rel="apple-touch-icon" href="apple-touch-icon.png">
-  <link rel="preload" href="fonts/ibm-plex-sans-latin-400-normal.woff2" as="font" type="font/woff2" crossorigin>
-  <!-- tokens.css is copied from design-system/tokens.css by scripts/build-site.mjs -->
   <link rel="stylesheet" href="tokens.css">
-  <link rel="stylesheet" href="styles.css">
-  <link rel="stylesheet" href="navigation.css">
-  <script>try{var t=localStorage.getItem("fairbeam.theme");if(t==="light"||t==="dark")document.documentElement.setAttribute("data-theme",t)}catch(e){}</script>
-  <script src="navigation.js" defer></script>
-  <script src="script.js" defer></script>
+  <style>
+    body { margin: 0; padding: var(--al-space-7) var(--al-space-4); background: var(--al-bg); color: var(--al-text); font: 15px/1.6 var(--al-font-sans); }
+    a { color: var(--al-accent-text); }
+  </style>
 </head>
 <body>
-  <a class="skip-link" href="#main">Skip to content</a>
-
-  <header class="site-header">
-    <div class="shell header-row">
-      <a class="wordmark" href="./" aria-label="Fairbeam, home">
-        <svg class="lockup" viewBox="0 0 774 120" preserveAspectRatio="xMinYMid slice" aria-hidden="true" focusable="false"><path fill="#B87333" d="M27 0H93A27 27 0 0 1 120 27V93A27 27 0 0 1 93 120H27A27 27 0 0 1 0 93V27A27 27 0 0 1 27 0Z"/><path fill="#3FD0E0" d="M120 27C116.97 30.09 113.93 32.73 110.9 35.03C104.73 39.71 98.57 43.03 92.4 45.61C84.01 49.12 75.61 51.26 67.21 52.82C56.92 54.73 46.63 55.74 36.35 56.45A10 10 0 1 0 36.35 63.55C46.63 64.26 56.92 65.27 67.21 67.18C75.61 68.74 84.01 70.88 92.4 74.39C98.57 76.97 104.73 80.29 110.9 84.97C113.93 87.27 116.97 89.91 120 93Z"/><g fill="currentColor" transform="translate(168 116.245)"><path d="M11.8 0V-64.52H0V-80H11.8V-91.49Q11.8 -102.07 17.47 -107.74Q23.14 -113.41 33.87 -113.41H47.82V-97.78H31.42V-80H47.82V-64.52H31.42V0ZM128.12 0H117.24Q112.8 0 109.35 -2.07Q105.9 -4.14 104.06 -8.12Q102.68 -10.73 102.38 -13.79H101.46Q99.46 -6.13 93.26 -2.15Q87.05 1.84 78.16 1.84Q65.9 1.84 59.31 -4.67Q52.72 -11.19 52.72 -21.76Q52.72 -30.04 56.78 -35.4Q60.84 -40.77 68.51 -43.52Q76.17 -46.28 86.9 -46.28H100.54V-52.11Q100.54 -58.7 97.01 -62.45Q93.49 -66.21 85.67 -66.21Q78.77 -66.21 74.56 -63.22Q70.34 -60.23 67.43 -56.09L55.79 -66.51Q60.23 -73.41 67.59 -77.62Q74.94 -81.84 87.05 -81.84Q103.14 -81.84 111.65 -74.41Q120.15 -66.97 120.15 -53.33V-15.63H128.12ZM100.54 -34.48H87.97Q80.31 -34.48 76.48 -31.95Q72.64 -29.43 72.64 -24.67V-22.07Q72.64 -17.32 75.86 -14.87Q79.08 -12.41 84.75 -12.41Q89.2 -12.41 92.72 -13.72Q96.25 -15.02 98.39 -17.62Q100.54 -20.23 100.54 -23.91ZM150.8 -91.65Q144.83 -91.65 142.07 -94.48Q139.31 -97.32 139.31 -101.46V-104.52Q139.31 -108.81 142.07 -111.57Q144.83 -114.33 150.8 -114.33Q156.78 -114.33 159.54 -111.57Q162.3 -108.81 162.3 -104.52V-101.46Q162.3 -97.32 159.54 -94.48Q156.78 -91.65 150.8 -91.65ZM141 0V-80H160.61V0ZM199.69 0H180.08V-80H199.69V-63.45H200.46Q201.53 -67.74 204.06 -71.49Q206.59 -75.25 210.96 -77.62Q215.33 -80 221.61 -80H225.9V-61.46H219.77Q213.18 -61.46 208.66 -60.15Q204.14 -58.85 201.92 -56.17Q199.69 -53.49 199.69 -49.04ZM237.24 0V-113.41H256.86V-66.82H257.47Q259.62 -73.72 265.67 -77.78Q271.72 -81.84 279.54 -81.84Q289.81 -81.84 296.7 -76.93Q303.6 -72.03 307.28 -62.76Q310.96 -53.49 310.96 -40.15Q310.96 -26.82 307.28 -17.39Q303.6 -7.97 296.7 -3.07Q289.81 1.84 279.54 1.84Q271.72 1.84 265.75 -2.3Q259.77 -6.44 257.47 -13.33H256.86V0ZM273.26 -14.41Q280.92 -14.41 285.67 -19.54Q290.42 -24.67 290.42 -33.1V-46.9Q290.42 -55.48 285.67 -60.61Q280.92 -65.75 273.26 -65.75Q268.66 -65.75 264.9 -64.14Q261.15 -62.53 259 -59.62Q256.86 -56.7 256.86 -52.87V-27.43Q256.86 -23.3 259 -20.38Q261.15 -17.47 264.9 -15.94Q268.66 -14.41 273.26 -14.41ZM358.47 1.84Q346.67 1.84 338.24 -3.3Q329.81 -8.43 325.29 -17.85Q320.77 -27.28 320.77 -40.15Q320.77 -52.72 325.21 -62.15Q329.66 -71.57 337.93 -76.7Q346.21 -81.84 357.85 -81.84Q370.42 -81.84 378.47 -76.32Q386.51 -70.8 390.42 -61.69Q394.33 -52.57 394.33 -41.53V-35.1H341.15V-33.1Q341.15 -24.52 346.05 -19.16Q350.96 -13.79 360.61 -13.79Q367.82 -13.79 372.57 -16.93Q377.32 -20.08 381 -24.67L391.57 -12.87Q386.67 -6.28 378.16 -2.22Q369.66 1.84 358.47 1.84ZM358.16 -67.13Q352.95 -67.13 349.12 -64.75Q345.29 -62.38 343.22 -58.16Q341.15 -53.95 341.15 -48.43V-47.2H373.95V-48.58Q373.95 -54.25 372.11 -58.31Q370.27 -62.38 366.74 -64.75Q363.22 -67.13 358.16 -67.13ZM478.31 0H467.43Q462.99 0 459.54 -2.07Q456.09 -4.14 454.25 -8.12Q452.87 -10.73 452.57 -13.79H451.65Q449.66 -6.13 443.45 -2.15Q437.24 1.84 428.35 1.84Q416.09 1.84 409.5 -4.67Q402.91 -11.19 402.91 -21.76Q402.91 -30.04 406.97 -35.4Q411.03 -40.77 418.7 -43.52Q426.36 -46.28 437.09 -46.28H450.73V-52.11Q450.73 -58.7 447.2 -62.45Q443.68 -66.21 435.86 -66.21Q428.97 -66.21 424.75 -63.22Q420.54 -60.23 417.62 -56.09L405.98 -66.51Q410.42 -73.41 417.78 -77.62Q425.13 -81.84 437.24 -81.84Q453.33 -81.84 461.84 -74.41Q470.34 -66.97 470.34 -53.33V-15.63H478.31ZM450.73 -34.48H438.16Q430.5 -34.48 426.67 -31.95Q422.84 -29.43 422.84 -24.67V-22.07Q422.84 -17.32 426.05 -14.87Q429.27 -12.41 434.94 -12.41Q439.39 -12.41 442.91 -13.72Q446.44 -15.02 448.58 -17.62Q450.73 -20.23 450.73 -23.91ZM510.8 0H491.19V-80H510.8V-66.67H511.57Q513.87 -72.95 519 -77.39Q524.14 -81.84 533.03 -81.84Q541.3 -81.84 547.36 -77.85Q553.41 -73.87 556.17 -65.75H556.48Q558.62 -72.34 565.06 -77.09Q571.49 -81.84 581 -81.84Q592.64 -81.84 599.08 -73.64Q605.52 -65.44 605.52 -50.57V0H585.9V-48.58Q585.9 -57.16 582.76 -61.46Q579.62 -65.75 573.03 -65.75Q569.2 -65.75 565.75 -64.29Q562.3 -62.84 560.23 -60Q558.16 -57.16 558.16 -52.87V0H538.54V-48.58Q538.54 -57.16 535.33 -61.46Q532.11 -65.75 525.67 -65.75Q521.99 -65.75 518.54 -64.29Q515.1 -62.84 512.95 -60Q510.8 -57.16 510.8 -52.87Z"/></g></svg>
-      </a>
-      <button class="mobile-nav-toggle" type="button" data-mobile-nav-toggle aria-label="Open the menu" title="Open the menu" aria-expanded="false" aria-controls="site-nav">
-        <svg class="icon-menu" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
-        <svg class="icon-close" viewBox="0 0 24 24" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18"/></svg>
-      </button>
-      <nav class="site-nav" id="site-nav" aria-label="Main">
-        <a href="features.html">Features</a>
-        <a href="./#examples">Examples</a>
-        <a href="docs/">Docs</a>
-        <a href="./#download">Download</a>
-        <a class="nav-github" href="https://github.com/ismailakdag/fairbeam"><svg viewBox="0 0 16 16" aria-hidden="true" focusable="false"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8Z"/></svg>GitHub</a>
-        <a class="button ghost nav-demo" href="app/">Open the demo</a>
-      </nav>
-      <div class="header-actions">
-        <a class="button ghost button-sm header-demo" href="app/">Open the demo</a>
-        <button class="icon-button" type="button" id="theme-toggle" aria-label="Theme: system" title="Theme: system (click to change)">
-          <svg viewBox="0 0 24 24" aria-hidden="true" class="icon-system"><rect x="3" y="4" width="18" height="12" rx="2"/><path d="M8 20h8M12 16v4"/></svg>
-          <svg viewBox="0 0 24 24" aria-hidden="true" class="icon-light"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>
-          <svg viewBox="0 0 24 24" aria-hidden="true" class="icon-dark"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z"/></svg>
-        </button>
-      </div>
-    </div>
-  </header>
-
-  <main tabindex="-1" id="main" class="guide">
-    <div class="shell guide-head">
-      <p class="eyebrow">Guide · desktop app</p>
-      <h1>Getting started</h1>
-      <p class="lede">For people trying the Fairbeam desktop app: install it, then design, simulate and read the results of a patch antenna in about five minutes.</p>
-      <p class="fineprint">In the app, Help › Getting Started Guide opens this page.</p>
-    </div>
-
-    <div class="shell guide-layout">
-      <nav class="guide-toc" aria-labelledby="toc-title">
-        <p class="eyebrow" id="toc-title">On this page</p>
-        <ol>
-          <li><a href="#install">Install</a></li>
-          <li><a href="#walkthrough">A five-minute walkthrough</a>
-            <ol>
-              <li><a href="#create">Create a design</a></li>
-              <li><a href="#settings">Simulation settings</a></li>
-              <li><a href="#run">Run</a></li>
-              <li><a href="#results">Results</a></li>
-              <li><a href="#compare">Compare runs</a></li>
-              <li><a href="#mesh">Is the mesh fine enough?</a></li>
-              <li><a href="#sweep">A parameter sweep</a></li>
-              <li><a href="#optimizer">The optimizer</a></li>
-            </ol>
-          </li>
-          <li><a href="#cst">Import a VBA macro</a></li>
-          <li><a href="#files">Where your files are</a></li>
-          <li><a href="#report">Report a problem</a></li>
-        </ol>
-      </nav>
-
-      <article class="guide-body">
-        <section aria-labelledby="install">
-          <h2 id="install">1. Install</h2>
-          <p>Download the installer from the <a href="./#download">download section</a> or the <a href="https://github.com/ismailakdag/fairbeam-releases/releases">releases page</a>.</p>
-          <ul>
-            <li><strong>macOS</strong> (Apple silicon, macOS 27 or newer): open the <code>.dmg</code> and drag Fairbeam to Applications. The app is signed and notarized by Apple, so it opens with a normal double-click.</li>
-            <li><strong>Windows</strong> (10/11, x64): run the <code>-setup.exe</code>. It installs for your user, without an administrator prompt. The installer is not code-signed, so SmartScreen shows “Windows protected your PC”: choose <strong>More info › Run anyway</strong>.</li>
-          </ul>
-          <p><strong>First start.</strong> Fairbeam needs its simulation runtime (Python, openEMS and the Fairbeam package). The setup screen says “Fairbeam needs to install its runtime”: choose <strong>Install the runtime</strong> (the button shows the download size; it takes well under a minute on a fast connection). If you already have an openEMS installation, <strong>Use an existing Python…</strong> points Fairbeam at it instead. The app then opens on the <strong>Start</strong> screen. Later starts skip this step, and newer versions are offered in the app (Help › Check for updates).</p>
-        </section>
-
-        <section aria-labelledby="walkthrough">
-          <h2 id="walkthrough">2. A five-minute walkthrough</h2>
-
-          <h3 id="create">Create a design</h3>
-          <ol>
-            <li>On <strong>Start</strong>, under <strong>New project</strong>, type a name (for example <code>My patch</code>), pick <strong>Patch antenna starter</strong> (“Probe-fed patch over a ground plane”, under Printed) and click <strong>Create and open the designer</strong>. The other starting points are ready-to-run parametric designs: <strong>Empty project</strong> (a band, copper and FR4, no geometry), <strong>Half-wave dipole</strong>, <strong>Quarter-wave monopole</strong> and <strong>Open-ended waveguide</strong> (under Basic antennas), <strong>Printed sleeve dipole</strong> (867 MHz, no ground plane; under Printed) and <strong>Microstrip line (two-port)</strong> (50 Ω on FR-4, for S11 and S21; under Circuits). Each simulates in seconds; this guide follows the patch.</li>
-            <li>The designer opens. Take a look around:
-              <ul>
-                <li>the <strong>ribbon</strong> at the top: Home, Modeling, Transform, Simulation, Optimize, Post-processing;</li>
-                <li>the <strong>navigation tree</strong> on the left: the design, <strong>Parameters</strong> (6: <code>f0</code>, <code>W</code>, <code>L</code>, <code>h</code>, <code>G</code>, <code>feed</code>), <strong>Components</strong> (Substrate, Ground plane, Patch, each with its shape), <strong>Materials</strong>, <strong>Ports</strong> (Port 1, 50 Ω) and <strong>Results</strong> (none yet);</li>
-                <li>the <strong>3D view</strong> in the middle: drag to orbit, scroll to zoom, right- or middle-drag to pan; Iso / Top / Front / Right / Bottom set the camera and the target button (or <kbd>Space</kbd> / <kbd>F</kbd>) fits the model;</li>
-                <li><strong>Properties</strong> on the right: the fields of what you select;</li>
-                <li>the <strong>dock</strong> at the bottom: Checks and Parameters, and later Run (the live progress), Runs (the design’s runs side by side) and Log. The plots of a run open as tabs beside the 3D view.</li>
-              </ul>
-            </li>
-            <li>Click <strong>Patch</strong> in the tree (or on the model) to see its brick: every value can be a number or an expression over the parameters, such as <code>W/2</code>.</li>
-            <li>Right-click a part in the tree or in the 3D view for Hide, Rename, Transform…, Duplicate, Delete, <strong>Add a lumped port</strong>, <strong>Move to component ›</strong> and the Boolean operations. A part moved to a component shows in a folder of the tree; right-click the folder to rename, ungroup or delete it.</li>
-          </ol>
-
-          <h3 id="settings">Simulation settings</h3>
-          <p>Open the <strong>Simulation</strong> tab of the ribbon:</p>
-          <ul>
-            <li><strong>Frequency band</strong>: <code>f min</code> and <code>f max</code> in GHz. The starter uses <code>f0 * 0.6</code> to <code>f0 * 1.3</code>, around its design frequency <code>f0</code> = 2.45 GHz.</li>
-            <li><strong>Boundaries</strong>: the six faces of the simulation box, each open (MUR or PML), an electric wall (PEC) or a magnetic wall (PMC). The patch starter uses MUR on all six.</li>
-            <li><strong>Mesh</strong>: <strong>Cells / λ</strong> sets the automatic mesh density; <strong>Mesh settings</strong> has the details, <strong>Mesh convergence…</strong> checks whether the mesh is fine enough (see below) and <strong>Mesh view</strong> draws the mesh in the 3D view. The status bar shows the cell count and the smallest cell.</li>
-            <li><strong>Ports</strong>: <strong>Lumped</strong>, <strong>Waveguide</strong> and <strong>Resistor</strong> add a port or a load.</li>
-            <li><strong>Monitors</strong>:
-              <ul>
-                <li><strong>Far field</strong>: the radiation pattern, directivity and gain at the listed frequencies (the starter records it at <code>f0</code>).</li>
-                <li><strong>Surface current</strong>: adds surface-current maps on the metal sheets at the frequencies you list.</li>
-                <li><strong>Efficiency</strong>: adds <strong>Efficiency over the band</strong>, the radiation and total efficiency at evenly spaced frequencies from f min to f max (post-processing, no extra solver time).</li>
-                <li><strong>Field plane</strong>: adds an E or H field map on a cut plane through the model (up to four planes, each at one to four frequencies); a new one starts just above the model.</li>
-              </ul>
-              <p>Each of these buttons opens <strong>Simulation settings</strong> at that section; <strong>OK</strong> keeps the changes, <strong>Cancel</strong> restores the settings from before.</p>
-            </li>
-            <li><strong>Solver limits</strong>: the end criterion (−60 dB in the starters; an empty project starts at −50 dB) and the maximum number of timesteps.</li>
-          </ul>
-          <p>The <strong>Checks</strong> tab of the dock lists anything that stops a run; the status bar shows “Checks passed” when there is nothing to fix.</p>
-
-          <h3 id="run">Run</h3>
-          <p>Click <strong>Run</strong> (Simulation tab, or the Run button at the top, or <kbd>Ctrl</kbd>/<kbd>⌘</kbd>+<kbd>Enter</kbd>). The <strong>Run the simulation</strong> dialog shows:</p>
-          <ul>
-            <li><strong>Engine</strong>: <strong>CPU (multi-threaded)</strong> with the number of <strong>Threads</strong> (4 is a good default), or <strong>GPU (Metal or CUDA build)</strong> when the GPU build of openEMS is installed;</li>
-            <li><strong>S-parameter sample points</strong> (801 by default) and an optional <strong>Result name</strong>;</li>
-            <li>a solver time estimate.</li>
-          </ul>
-          <p>Click <strong>Run</strong>. The design is saved first; the progress (timesteps, energy decay) shows in the dock. The starter takes seconds to a minute, depending on the machine.</p>
-
-          <h3 id="results">Results</h3>
-          <p>When the run is done it appears under <strong>Results</strong> in the tree, with its time and engine:</p>
-          <ul>
-            <li><strong>1D Results › S-parameters</strong> opens |S11| as a tab next to the 3D view. Click <strong>Markers</strong> on the plot (or press <kbd>M</kbd>) for <strong>Add marker</strong>, <strong>Previous minimum</strong> / <strong>Next minimum</strong>, <strong>Automatic markers</strong> below a threshold, and a table you can copy.</li>
-            <li><strong>1D Results › Smith chart</strong>, <strong>Impedance</strong>, <strong>VSWR</strong>, and <strong>Efficiency</strong> (the mismatch efficiency over the band, with the radiation and total efficiency from the monitor).</li>
-            <li><strong>Farfields › 3D pattern (f = …)</strong> draws the pattern on the model in the 3D view, with the far-field card beside it: pick <strong>Directivity</strong>, <strong>Gain</strong> or <strong>Realized gain</strong>, and read the maximum, the gain, the realized gain and the radiation and mismatch efficiency. <strong>Farfield (f = …)</strong> opens the pattern cuts as a tab.</li>
-            <li><strong>2D/3D Results › Surface current</strong> (with the monitor) shows the current map on the metal, and a field-plane node such as <strong>E-field (z = … mm, … GHz)</strong> (with the Field plane monitor) draws the E or H map as a heat-map plane in the 3D view, with a color bar in dB or linear; its <strong>2D map</strong> node opens it as a heat map tab with axes, a hover readout and the model's outline, and <strong>Phase</strong> / <strong>Animate</strong> show the phase and the field over one period.</li>
-            <li><strong>Tables</strong> and <strong>Log</strong>.</li>
-          </ul>
-          <p>The <strong>Post-processing</strong> tab of the ribbon opens the same views. Choosing a geometry tab (Home, Modeling, …) or clicking a part takes the pattern off the 3D view and shows the design again.</p>
-
-          <h3 id="compare">Change a parameter and compare runs</h3>
-          <ol>
-            <li>Click <strong>Parameters</strong> in the tree (it opens the Parameters tab of the dock) and change <code>W</code>, the patch width, for example from 32 to 30 mm. The 3D view follows at once.</li>
-            <li><strong>Run</strong> again. Results now lists two runs, the newest first.</li>
-            <li><kbd>Ctrl</kbd>/<kbd>⌘</kbd>-click both runs in the tree (or use <strong>Compare</strong> in the result tab’s toolbar, or click their labels in the dock’s <strong>Runs</strong> tab): the plots draw them together, one color each (up to eight runs).</li>
-          </ol>
-
-          <h3 id="mesh">Is the mesh fine enough?</h3>
-          <p><strong>Simulation › Mesh convergence…</strong> runs the design at finer and finer automatic meshes (15, 20, 30 and 40 cells per wavelength by default) and compares each run with the previous one: the resonance frequency, |S11| at the resonance and, with the far field on, the maximum directivity. Before it starts, the dialog shows the number of cells and a time estimate for every density; <strong>Start</strong> saves the design and queues the first run, and the next one only when the previous is done and the results are still changing. The study stops at the first step whose changes are all below the tolerances and reports <strong>converged at N cells/λ</strong>; <strong>Apply N cells/λ to the design</strong> sets that density (Undo takes it back). The runs appear under Results in one <strong>Mesh convergence</strong> folder, whose <strong>Convergence report</strong> opens the table and plots again. If it reports <strong>not converged</strong>, refine further or check the model.</p>
-
-          <h3 id="sweep">A parameter sweep</h3>
-          <p><strong>Optimize › Parametric sweep</strong> opens <strong>Parameter Sweep</strong>: <strong>Add parameter</strong>, choose it (for example <code>Patch width (x) (W)</code>), then <strong>Evenly spaced values</strong> with <strong>Start</strong>, <strong>Stop</strong> and <strong>Sample count</strong>, or a <strong>Value list</strong>. <strong>Check</strong> shows how many simulations that makes; <strong>Start</strong> saves the design and queues them. The runs appear under Results in one <strong>Sweep</strong> folder; right-click it for <strong>Compare all runs</strong>.</p>
-
-          <h3 id="optimizer">The optimizer</h3>
-          <p><strong>Optimize › Optimizer</strong> opens <strong>Optimize design</strong>:</p>
-          <ul>
-            <li><strong>Vary</strong>: the parameters to change, with a starting value and Min / Max bounds;</li>
-            <li><strong>Goals</strong>: for example <strong>Tune resonance to</strong> 2.45 GHz, <strong>Match at</strong>, <strong>Maximize bandwidth</strong> or <strong>Directivity at least</strong>, each with a weight;</li>
-            <li><strong>Evaluations ≤</strong>, <strong>Threads</strong> and the <strong>Method</strong> (Auto picks the secant method for one parameter tuned to a frequency; Nelder–Mead, Bayesian, CMA-ES and others for more).</li>
-          </ul>
-          <p><strong>Start optimization</strong> runs one simulation per evaluation, with the progress in the dock. The optimization then appears under Results with <strong>Optimization history</strong>, <strong>Open best</strong>, <strong>Save best as a run</strong> and <strong>Apply best parameters to design</strong>.</p>
-        </section>
-
-        <section aria-labelledby="cst">
-          <h2 id="cst">3. Import a VBA macro</h2>
-          <p>On <strong>Start</strong>, <strong>Import VBA macro…</strong> (also Home › Project › Import VBA macro, or File › Import VBA macro… in the desktop app) reads a CST-compatible VBA macro (<code>.bas</code>, <code>.mcs</code>) or a history list saved as text. Before anything is saved it shows a report: what was created, and every command that was skipped or changed, with its line. Name the design and <strong>Create and open</strong> it.</p>
-        </section>
-
-        <section aria-labelledby="files">
-          <h2 id="files">4. Where your files are</h2>
-          <p>Everything lives in the <strong>workspace</strong> folder, <code>Documents/Fairbeam</code> in your home folder (Windows: <code>%USERPROFILE%\Documents\Fairbeam</code>):</p>
-          <div class="guide-table">
-            <table>
-              <thead><tr><th scope="col">Folder</th><th scope="col">Holds</th></tr></thead>
-              <tbody>
-                <tr><th scope="row"><code>models/</code></th><td>your designs (<code>&lt;name&gt;.design.json</code>) and Python models</td></tr>
-                <tr><th scope="row"><code>projects/</code></th><td>the results: one <code>.json</code> bundle per run, plus <code>index.json</code></td></tr>
-                <tr><th scope="row"><code>templates/</code></th><td>model templates</td></tr>
-                <tr><th scope="row"><code>jobs/</code></th><td>the run queue and its history</td></tr>
-                <tr><th scope="row"><code>.sim/</code></th><td>openEMS working data of the runs</td></tr>
-              </tbody>
-            </table>
-          </div>
-          <p>The gear button at the top (<strong>General settings</strong>) shows the <strong>Workspace folder</strong> with an <strong>Open folder</strong> button, the <strong>Language</strong> of the interface (System, English or Türkçe, native menus included) and the <strong>Decimal separator</strong> for numbers shown as text. The examples on the Start screen are copies: <strong>Open as new project…</strong> makes a design of your own from one, and the original stays unchanged.</p>
-        </section>
-
-        <section aria-labelledby="report">
-          <h2 id="report">5. Report a problem</h2>
-          <p>At the bottom of the <strong>Start</strong> screen, <strong>Send feedback: Report a problem</strong> (or <strong>Suggest a feature</strong>) opens the issue form of the public tracker, <a href="https://github.com/ismailakdag/fairbeam-releases/issues">fairbeam-releases/issues</a>, in your browser with the app version and your operating system filled in. The speech-bubble button at the top (<strong>Send feedback</strong>) and Help › Report a Problem… do the same from any screen. Fairbeam sends nothing by itself.</p>
-          <p>Helpful to include: what you did and what you expected, a screenshot (Home › View › <strong>Screenshot</strong> saves a PNG of the 3D view), the design file from <code>models/</code>, and the run’s log (Results › your run › Log).</p>
-          <p class="guide-next"><a class="button" href="./#download">Download Fairbeam</a> <a class="button ghost" href="https://github.com/ismailakdag/fairbeam-releases/issues/new/choose">Report a problem</a></p>
-        </section>
-      </article>
-    </div>
-  </main>
-
-  <footer class="site-footer">
-    <div class="shell footer-row">
-      <nav class="footer-nav" aria-label="Site links">
-        <a href="features.html">Features</a>
-        <a href="roadmap.html">Roadmap</a>
-        <a href="docs/">Docs</a>
-        <a href="guide.html" aria-current="page">Getting started</a>
-        <a href="app/">Demo</a>
-        <a href="https://github.com/ismailakdag/fairbeam-releases/releases">Releases</a>
-        <a href="https://github.com/ismailakdag/fairbeam">Source code</a>
-        <a href="privacy.html">Privacy</a>
-      </nav>
-      <p class="footer-note">Simulations by <a href="https://openems.de" rel="noreferrer">openEMS</a> and CSXCAD. Fairbeam is free software under GPL-3.0-or-later.</p>
-      <p class="footer-credit">by <a href="https://akdag.dev" rel="author">İsmail Akdağ</a></p>
-    </div>
-  </footer>
+  <p>The getting-started guide is at <a href="docs/getting-started.html">docs/getting-started.html</a>.</p>
 </body>
 </html>

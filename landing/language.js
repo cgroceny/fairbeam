@@ -251,13 +251,41 @@
     ["Known limits of the current version are under", "Mevcut sürümün bilinen sınırları için:"],
     [". Ideas and requests are welcome on the", ". Fikir ve isteklerinizi şuraya iletebilirsiniz:"],
     ["public tracker", "herkese açık takip sistemi"],
-    ["Documentation", "Belgeler"],
-    ["Start with the getting-started guide. The reference documentation is in the docs folder of the source repository.", "Başlangıç kılavuzuyla başlayın. Başvuru belgeleri, kaynak deposunun docs klasöründedir."],
-    ["Install the app, then design, simulate and read the results of a patch antenna in about five minutes.", "Uygulamayı kurun; ardından yaklaşık beş dakikada bir yama anteni tasarlayın, benzetin ve sonuçlarını inceleyin."],
+    // the docs section (docs/): its frame, the overview and the sidebar groups; the page text itself
+    // stays in English (data-i18n="off" in scripts/docs-render.mjs)
+    ["Documentation", "Belgeler"], ["Overview", "Genel bakış"], ["Edit on GitHub", "GitHub'da düzenleyin"],
+    ["Previous", "Önceki"], ["Next", "Sonraki"], ["Previous and next page", "Önceki ve sonraki sayfa"],
+    ["Copy", "Kopyala"], ["Copied", "Kopyalandı"],
+    ["Get started", "Başlarken"], ["Results and export", "Sonuçlar ve dışa aktarma"], ["Python and CLI", "Python ve komut satırı"],
+    ["From source", "Kaynaktan kurulum"], ["On this site", "Sitede ayrıca"],
+    ["Guides and reference for the Fairbeam desktop app, its Python models and the command line.", "Fairbeam masaüstü uygulaması, Python modelleri ve komut satırı için kılavuzlar ve başvuru belgeleri."],
     ["Every feature, the example projects, validation against analytical results and solver times.", "Tüm özellikler, örnek projeler, analitik sonuçlara karşı doğrulama ve çözücü süreleri."],
     ["What each release added, and the work in development.", "Her sürümün getirdikleri ve geliştirilmekte olan işler."],
-    ["Reference on GitHub", "GitHub'da başvuru belgeleri"],
-    ["The designer, simulation and results, exports, the command line and the file formats.", "Tasarım aracı, benzetim ve sonuçlar, dışa aktarımlar, komut satırı ve dosya biçimleri."],
+    ["Install the desktop app, then design, simulate and read the results of a patch antenna in about five minutes.", "Masaüstü uygulamasını kurun; ardından yaklaşık beş dakikada bir yama anteni tasarlayın, benzetin ve sonuçlarını inceleyin."],
+    ["The visual workspace: modeling, checks, simulation settings, the mesh, running and reading results, design files, and importing VBA macros and PCB artwork.", "Görsel çalışma alanı: modelleme, denetimler, benzetim ayarları, ağ, çalıştırma ve sonuçları inceleme, tasarım dosyaları, VBA makrosu ve PCB çizimi içe aktarma."],
+    ["Interface presets, accent colors, chart palettes and custom colors under General settings › Appearance.", "Genel ayarlar › Tema ve yazı tipi altındaki arayüz hazır ayarları, vurgu renkleri, grafik paletleri ve özel renkler."],
+    ["Six 867 MHz antennas as designer files, with their parameters, results and how to scale them.", "Tasarım aracı dosyası olarak altı adet 867 MHz anten; parametreleri, sonuçları ve nasıl ölçekleneceği."],
+    ["How the automatic mesh is built from the geometry: options, rules, the mesh report and checks against hand-made meshes.", "Otomatik ağın geometriden nasıl oluşturulduğu: seçenekler, kurallar, ağ raporu ve elle oluşturulmuş ağlarla karşılaştırmalar."],
+    ["The local run server behind the Run panel: run setup, your own materials, optimization and comparing projects.", "Çalıştırma panelinin arkasındaki yerel çalıştırma sunucusu: çalıştırma kurulumu, kendi malzemeleriniz, eniyileme ve projeleri karşılaştırma."],
+    ["Parameter sweeps, mesh convergence studies, the study file format and Touchstone export from the command line.", "Komut satırından parametre taramaları, ağ yakınsama çalışmaları, çalışma dosyası biçimi ve Touchstone dışa aktarımı."],
+    ["Tuning a model or a design towards goals: parameters, goals, algorithms, the output and measured examples.", "Bir modeli veya tasarımı hedeflere göre ayarlama: parametreler, hedefler, algoritmalar, çıktı ve ölçülmüş örnekler."],
+    ["One run per driven port, the S-matrix, and the S-parameter and array views in the viewer.", "Uyarılan her port için bir çalıştırma, S-matrisi ve görüntüleyicideki S-parametresi ve dizi görünümleri."],
+    ["The optional GPU build of openEMS, Metal on Apple silicon and CUDA on Windows, with measured timings.", "openEMS'in isteğe bağlı GPU derlemesi: Apple silicon'da Metal, Windows'ta CUDA; ölçülmüş sürelerle."],
+    ["The excitation, end criterion, S11, bands, far field, efficiency and gain, with notes on accuracy.", "Uyarım, bitiş ölçütü, S11, bantlar, uzak alan, verim ve kazanç; doğruluk notlarıyla."],
+    ["Embedded element patterns, normalization, beam steering and the 2 × 1 and 4 × 1 patch arrays.", "Gömülü eleman örüntüleri, normalleştirme, demet yönlendirme ve 2 × 1 ile 4 × 1 yama dizileri."],
+    ["Screenshots, technical drawings, publication figures, the export package, the PDF report and fabrication files.", "Ekran görüntüleri, teknik çizimler, yayın grafikleri, dışa aktarma paketi, PDF raporu ve üretim dosyaları."],
+    ["The Blender render package and the GLB model: what they contain and how to render them.", "Blender görüntü oluşturma paketi ve GLB modeli: neler içerdikleri ve görüntülerin nasıl oluşturulacağı."],
+    ["Python model files, the included models, non-planar geometry and waveguide ports, the material library and editing models in the app.", "Python model dosyaları, hazır modeller, düzlemsel olmayan geometri ve dalga kılavuzu portları, malzeme kitaplığı ve modelleri uygulamada düzenleme."],
+    ["The fairbeam commands, the CPU and GPU engines, importing existing geometry and the raw simulation data.", "fairbeam komutları, CPU ve GPU motorları, mevcut geometriyi içe aktarma ve ham benzetim verileri."],
+    ["The project bundle, fairbeam.project/1, field by field.", "Proje paketi biçimi fairbeam.project/1, alan alan."],
+    ["Building openEMS and installing Fairbeam from the repository on macOS, a first run and the test suite.", "macOS'ta openEMS'i derleme ve Fairbeam'i depodan kurma, ilk çalıştırma ve test takımı."],
+    ["Running simulations locally on Windows 10 and 11: openEMS, the Python package, the run server and the viewer.", "Windows 10 ve 11'de benzetimleri yerelde çalıştırma: openEMS, Python paketi, çalıştırma sunucusu ve görüntüleyici."],
+    ["The CPU solver, the run server and the viewer in a local browser on Linux, set up from source.", "Linux'ta kaynaktan kurulan CPU çözücüsü, çalıştırma sunucusu ve yerel tarayıcıda görüntüleyici."],
+    ["Results compared with closed-form theory, mesh convergence and the recommended solver settings.", "Kapalı form teoriyle karşılaştırılan sonuçlar, ağ yakınsaması ve önerilen çözücü ayarları."],
+    ["The 14 example projects on reference machines under Windows and macOS: results and solver times.", "14 örnek projenin Windows ve macOS çalışan referans makinelerdeki sonuçları ve çözücü süreleri."],
+    ["openEMS lumped resistors measured at the element, and where an apparent error in a test fixture comes from.", "openEMS yığılmış dirençlerinin eleman üzerinde ölçümü ve bir test düzeneğinde görülen hatanın kaynağı."],
+    ["How Fairbeam uses AI coding assistants, and what the project asks of AI-assisted contributions.", "Fairbeam'in yapay zekâ kodlama asistanlarını nasıl kullandığı ve yapay zekâ destekli katkılardan neler beklendiği."],
+    ["Reporting problems, pull requests and the ground rules for contributions.", "Sorun bildirme, çekme istekleri ve katkıların temel kuralları."],
     // measured values in the features page tables (decimal comma)
     ["Scan θ", "Tarama θ"],
     ["2.13–2.15 dBi", "2,13–2,15 dBi"],
@@ -391,8 +419,7 @@
     ["The Fairbeam roadmap: features available in a release, work in development and planned work, from the project's issues and pull requests.", "Fairbeam yol haritası: bir sürümde kullanılabilen özellikler, geliştirilmekte olan ve planlanan işler; projenin konu kayıtlarından ve çekme isteklerinden."],
     ["Features available in a release, work in development and planned work, from the project's issues and pull requests.", "Bir sürümde kullanılabilen özellikler, geliştirilmekte olan ve planlanan işler; projenin konu kayıtlarından ve çekme isteklerinden."],
     ["Documentation · Fairbeam", "Belgeler · Fairbeam"],
-    ["Fairbeam documentation: the getting-started guide for the desktop app, the feature list with validation results, the roadmap and the reference documentation in the source repository.", "Fairbeam belgeleri: masaüstü uygulaması için başlangıç kılavuzu, doğrulama sonuçlarıyla özellik listesi, yol haritası ve kaynak deposundaki başvuru belgeleri."],
-    ["The getting-started guide, the feature list, the roadmap and the reference documentation of Fairbeam.", "Fairbeam'in başlangıç kılavuzu, özellik listesi, yol haritası ve başvuru belgeleri."],
+    ["Fairbeam documentation: getting started with the desktop app, the designer, simulation, results and exports, Python models and the command line, building from source, and validation.", "Fairbeam belgeleri: masaüstü uygulamasıyla başlangıç, tasarım aracı, benzetim, sonuçlar ve dışa aktarımlar, Python modelleri ve komut satırı, kaynaktan kurulum ve doğrulama."],
   ]);
 
   function normalize(value) { return String(value ?? "").replace(/\s+/gu, " ").trim(); }
@@ -410,7 +437,9 @@
   let language = choice === "system" ? systemLanguage() : choice;
   const textRecords = new WeakMap();
   const attrRecords = new WeakMap();
-  const excluded = (element) => !element || element.closest("script, style, noscript");
+  // Text under data-i18n="off" stays as written (the docs pages are English); the nearest data-i18n
+  // attribute decides, so a control inside such text can follow the site language with data-i18n="on".
+  const excluded = (element) => !element || !!element.closest("script, style, noscript") || element.closest("[data-i18n]")?.getAttribute("data-i18n") === "off";
 
   function translateTextNode(node) {
     if (!(node instanceof Text) || excluded(node.parentElement)) return;

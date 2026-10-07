@@ -1,6 +1,6 @@
 // Fairbeam site: theme toggle (shared with the app through the same localStorage key), the
-// scroll-pinned chapters, the designer views on the home page, the roadmap board and the guide's
-// contents list. No framework, no tracking.
+// scroll-pinned chapters, the designer views on the home page, the roadmap board and the "On this
+// page" contents lists. No framework, no tracking.
 (() => {
   const KEY = "fairbeam.theme";
   const order = { system: "light", light: "dark", dark: "system" };
@@ -208,11 +208,20 @@
     }
   }
 
-  // ---------------------------------------------------------------- guide: the contents list follows the scroll
-  // The link of the section being read (the last heading that has reached the top of the page) gets
-  // aria-current="location"; at the very bottom the last section counts, however short it is.
-  const toc = document.querySelector(".guide-toc");
+  // ---------------------------------------------------------------- "On this page": the contents list follows the scroll
+  // (features page and the docs pages) The link of the section being read (the last heading that has
+  // reached the top of the page) gets aria-current="location"; at the very bottom the last section
+  // counts, however short it is. A contents list that scrolls by itself keeps that link in view.
+  const toc = document.querySelector(".guide-toc, .doc-toc");
   if (toc) {
+    const list = toc.querySelector(".doc-toc-list");
+    const reveal = (a) => {
+      if (!list || list.scrollHeight <= list.clientHeight + 1) return;
+      const box = list.getBoundingClientRect();
+      const r = a.getBoundingClientRect();
+      if (r.top < box.top) list.scrollTop -= box.top - r.top + 8;
+      else if (r.bottom > box.bottom) list.scrollTop += r.bottom - box.bottom + 8;
+    };
     const items = [...toc.querySelectorAll('a[href^="#"]')]
       .map((a) => ({ a, el: document.getElementById(decodeURIComponent(a.getAttribute("href").slice(1))) }))
       .filter((it) => it.el);
@@ -233,6 +242,7 @@
       active?.removeAttribute("aria-current");
       cur?.a.setAttribute("aria-current", "location");
       active = cur?.a ?? null;
+      if (active) reveal(active);
     };
     const queue = () => {
       if (queued) return;

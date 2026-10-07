@@ -2,9 +2,12 @@
 // Build the public static site into site-dist/:
 //   /           the site pages from landing/*: index.html (the home page), features.html,
 //               roadmap.html (its board rendered from landing/roadmap.json by
-//               scripts/roadmap-render.mjs), docs/, guide.html (the public copy of
-//               docs/GETTING-STARTED.md) and privacy.html, with design-system/tokens.css copied
-//               next to them
+//               scripts/roadmap-render.mjs), privacy.html and guide.html (a redirect to
+//               docs/getting-started.html, the address the app's Help menu opens), with
+//               design-system/tokens.css copied next to them
+//   /docs/      the documentation: the Markdown files listed in landing/docs.json rendered to
+//               docs/<slug>.html, plus the overview docs/index.html (scripts/docs-render.mjs, in the
+//               frame of landing-src/docs-page.html); their images under docs/img/
 //   /app/       the viewer in demo mode (vite --mode demo, base /app/, bundled example projects)
 //   /media/     example drawings and figures from examples/drawings/, landing/media/ and the
 //               story data (media/patch-story.json, reduced from public/projects/patch-antenna.json)
@@ -15,6 +18,7 @@ import { cpSync, existsSync, lstatSync, mkdirSync, readdirSync, readFileSync, re
 import { dirname, isAbsolute, join, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { build } from "vite";
+import { renderDocsSite } from "./docs-render.mjs";
 import { renderRoadmap } from "./roadmap-render.mjs";
 
 const root = realpathSync(resolve(dirname(fileURLToPath(import.meta.url)), ".."));
@@ -74,6 +78,11 @@ const FONTS = [
 
 // Validate publication inputs before clearing output or starting the slower build steps.
 const roadmap = renderRoadmap(JSON.parse(readFileSync(join(root, "landing", "roadmap.json"), "utf8")));
+const docs = renderDocsSite(root);
+if (docs.problems.length) {
+  console.error(`build-site: the docs pages have ${docs.problems.length} problem(s):\n  ${docs.problems.join("\n  ")}`);
+  process.exit(1);
+}
 
 resetBuildOutput();
 
@@ -81,7 +90,7 @@ resetBuildOutput();
 await build({ root, mode: "demo", logLevel: "warn", build: { outDir: join(out, "app"), emptyOutDir: true } });
 
 // 2. landing page and the shared tokens (copied, not duplicated)
-cpSync(join(root, "landing"), out, { recursive: true, filter: (src) => !src.endsWith(".md") && !src.endsWith("roadmap.json") });
+cpSync(join(root, "landing"), out, { recursive: true, filter: (src) => !src.endsWith(".md") && !src.endsWith("roadmap.json") && !src.endsWith("docs.json") });
 cpSync(join(root, "design-system", "tokens.css"), join(out, "tokens.css"));
 cpSync(join(root, "public", "favicon.svg"), join(out, "favicon.svg"));
 
@@ -95,6 +104,16 @@ cpSync(join(root, "public", "favicon.svg"), join(out, "favicon.svg"));
     process.exit(1);
   }
   writeFileSync(page, html.replace(slot, () => roadmap));
+}
+
+// 2c. the documentation pages and their images
+for (const f of docs.files) {
+  mkdirSync(dirname(join(out, f.path)), { recursive: true });
+  writeFileSync(join(out, f.path), f.html);
+}
+for (const img of docs.images) {
+  mkdirSync(dirname(join(out, img.to)), { recursive: true });
+  cpSync(join(root, img.from), join(out, img.to));
 }
 
 // 3. media and fonts
@@ -184,7 +203,8 @@ for (const [pkg, f] of FONTS) cpSync(join(root, "node_modules", "@fontsource", p
 
 // 4. sanity checks, size budgets and a size report
 const PAGES = ["index.html", "features.html", "roadmap.html", "docs/index.html", "guide.html", "privacy.html"];
-const must = [...PAGES, "styles.css", "tokens.css", "script.js", "language.js", "navigation.js", "navigation.css", "story/story.js", "media/patch-story.json", "media/array-story.json", "app/index.html", "app/projects/index.json"];
+const DOC_PAGES = docs.files.map((f) => f.path).filter((p) => !PAGES.includes(p));
+const must = [...PAGES, ...DOC_PAGES, "styles.css", "tokens.css", "script.js", "language.js", "navigation.js", "navigation.css", "docs.css", "docs.js", "story/story.js", "media/patch-story.json", "media/array-story.json", "app/index.html", "app/projects/index.json"];
 const missing = must.filter((p) => !existsSync(join(out, p)));
 if (missing.length) {
   console.error(`build-site: missing ${missing.join(", ")}`);
@@ -201,9 +221,11 @@ const bytes = (p) => statSync(join(out, p)).size;
 // Budgets keep the home page short and light: long material belongs on features.html, roadmap.html
 // and the docs. The home page images are the <img> sources and video posters of index.html (the film
 // itself loads only when it is played; it counts towards media). media/ is held below its size before
-// the redesign (8.66 MiB): new pictures replace old ones instead of adding to them.
+// the redesign (8.66 MiB): new pictures replace old ones instead of adding to them. A docs page is as
+// long as its Markdown file (the designer reference is the longest); the docs images are the
+// screenshots the Markdown files show from docs/.
 const MiB = 1024 * 1024;
-const BUDGET = { homeHtml: 32 * 1024, homeImages: 1 * MiB, pageHtml: 128 * 1024, media: 8.65 * MiB };
+const BUDGET = { homeHtml: 32 * 1024, homeImages: 1 * MiB, pageHtml: 128 * 1024, media: 8.65 * MiB, docsPageHtml: 256 * 1024, docsImages: 1 * MiB };
 const home = readFileSync(join(out, "index.html"), "utf8");
 const homeImageFiles = [...new Set([...home.matchAll(/<(?:img|video)\b[^>]*?\s(?:src|poster)="(media\/[^"]+\.(?:jpe?g|png|webp|avif|svg))"/g)].map((m) => m[1]))];
 const usage = {
@@ -211,11 +233,14 @@ const usage = {
   homeImages: homeImageFiles.reduce((n, p) => n + bytes(p), 0),
   pageHtml: Math.max(...PAGES.map(bytes)),
   media: size(join(out, "media")),
+  docsPageHtml: Math.max(...DOC_PAGES.map(bytes)),
+  docsImages: existsSync(join(out, "docs", "img")) ? size(join(out, "docs", "img")) : 0,
 };
 const over = Object.keys(BUDGET).filter((k) => usage[k] > BUDGET[k]);
 const pages = PAGES.reduce((n, p) => n + bytes(p), 0);
-const shared = ["styles.css", "navigation.css", "tokens.css", "script.js", "navigation.js", "language.js", "favicon.svg"].reduce((n, f) => n + bytes(f), 0);
-console.log(`site-dist/ built: pages ${kib(pages)} (home ${kib(usage.homeHtml)} + ${homeImageFiles.length} images ${kib(usage.homeImages)}) + shared css/js ${kib(shared)} + media ${kib(usage.media)} + fonts ${kib(size(join(out, "fonts")))}; app ${kib(size(join(out, "app")))}`);
+const shared = ["styles.css", "navigation.css", "docs.css", "tokens.css", "script.js", "navigation.js", "docs.js", "language.js", "favicon.svg"].reduce((n, f) => n + bytes(f), 0);
+const docPages = DOC_PAGES.reduce((n, p) => n + bytes(p), 0);
+console.log(`site-dist/ built: pages ${kib(pages)} (home ${kib(usage.homeHtml)} + ${homeImageFiles.length} images ${kib(usage.homeImages)}) + ${DOC_PAGES.length} docs pages ${kib(docPages)} (largest ${kib(usage.docsPageHtml)}, images ${kib(usage.docsImages)}) + shared css/js ${kib(shared)} + media ${kib(usage.media)} + fonts ${kib(size(join(out, "fonts")))}; app ${kib(size(join(out, "app")))}`);
 if (over.length) {
   console.error(`build-site: over budget: ${over.map((k) => `${k} ${kib(usage[k])} > ${kib(BUDGET[k])}`).join(", ")}`);
   process.exit(1);

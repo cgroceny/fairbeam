@@ -4,7 +4,7 @@
 .site-nav .nav-github { display: inline-flex; align-items: center; gap: var(--al-space-2); }
 .site-nav .nav-github svg { width: 15px; height: 15px; fill: currentColor; flex: none; }
 .site-nav .nav-demo { display: none; }
-.site-nav a[aria-current="page"] { color: var(--al-text); text-decoration: underline; text-decoration-thickness: 2px; text-underline-offset: 6px; }
+.site-nav a[aria-current="page"], .site-nav a[aria-current="true"] { color: var(--al-text); text-decoration: underline; text-decoration-thickness: 2px; text-underline-offset: 6px; }
 .mobile-nav-toggle { display: none; }
 
 @media (max-width: 960px) {
@@ -58,7 +58,7 @@
     white-space: normal;
   }
   html.js-site-nav .site-header .site-nav:not([hidden]) a:not(.button):hover { background: var(--al-surface-2); text-decoration: none; }
-  html.js-site-nav .site-header .site-nav a[aria-current="page"] { text-underline-offset: 4px; }
+  html.js-site-nav .site-header .site-nav a:is([aria-current="page"], [aria-current="true"]) { text-underline-offset: 4px; }
 }
 /* phones: the demo button moves from the header into the menu */
 @media (max-width: 560px) {

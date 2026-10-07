@@ -13,6 +13,8 @@
   },
   "redirects": [
     { "source": "/app", "destination": "/app/", "permanent": true },
+    { "source": "/docs", "destination": "/docs/", "permanent": true },
+    { "source": "/guide.html", "destination": "/docs/getting-started.html", "permanent": false },
     { "source": "/get-fairbeam", "destination": "/#download", "permanent": false },
     {
       "source": "/:path((?!api/|api$).*)",

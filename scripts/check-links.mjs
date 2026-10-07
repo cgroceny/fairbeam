@@ -1,13 +1,16 @@
 #!/usr/bin/env node
-// Check relative links in README.md, docs/*.md and the site pages in landing/ (index, features,
-// roadmap, docs/, guide, privacy): the target file must exist and a #fragment must name a heading (GitHub slug rules) or an id in the
-// target. External links (http, https, mailto) are not fetched. Links inside fenced or inline code
-// are ignored. Also a cheap drift guard for the public guide: landing/guide.html is a hand-made copy
-// of docs/GETTING-STARTED.md, so every heading of the Markdown guide must be a heading of the page.
+// Check relative links in README.md, docs/*.md, the other Markdown files the site publishes
+// (landing/docs.json), the site pages in landing/ (index, features, roadmap, guide, privacy) and the
+// docs pages as scripts/docs-render.mjs renders them for site-dist/docs/: the target file must exist
+// and a #fragment must name a heading (GitHub slug rules) or an id in the target. The renderer's own
+// problems (a link to a missing file, or to a heading a published page does not have) count as
+// broken links too. External links (http, https, mailto) are not fetched. Links inside fenced or
+// inline code are ignored.
 // Usage: node scripts/check-links.mjs   (part of npm run check:exports)
 import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
 import { dirname, join, relative, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
+import { loadManifest, renderDocsSite } from "./docs-render.mjs";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const external = /^(https?:|mailto:|tel:|data:)/i;
@@ -61,13 +64,23 @@ function htmlLinks(text) {
   return links;
 }
 
-// The landing page is served from site-dist/, which scripts/build-site.mjs assembles from these sources.
+// The docs pages exist only as build output: render them here, as scripts/build-site.mjs does.
+const docs = renderDocsSite(root);
+const rendered = new Map(docs.files.map((f) => [f.path, f.html]));
+const docImages = new Map(docs.images.map((i) => [i.to, join(root, i.from)]));
+/** A link target that is a rendered docs page (it has no file of its own to check). */
+const page = (path) => ({ page: path });
+
+// The site is served from site-dist/, which scripts/build-site.mjs assembles from these sources.
 const SITE = [
   [/^(?:\.\/)?$/, () => join(root, "landing", "index.html")],
   [/^app\/?$/, () => join(root, "index.html")],
   [/^tokens\.css$/, () => join(root, "design-system", "tokens.css")],
   [/^favicon\.svg$/, () => join(root, "public", "favicon.svg")],
   [/^story\/story\.js$/, () => join(root, "landing-src", "story.js")],
+  [/^docs\/?$|^docs\/index\.html$/, () => page("docs/index.html")],
+  [/^docs\/img\/(.+)$/, (m) => docImages.get(m[0]) ?? m[0]],
+  [/^docs\/([^/]+\.html)$/, (m) => (rendered.has(m[0]) ? page(m[0]) : m[0])],
   // landing/media (screenshots) is copied as is; the drawings come from examples/drawings
   [/^media\/(.+)$/, (m) => [join(root, "landing", "media", m[1]), join(root, "examples", "drawings", m[1])].find(existsSync) ?? m[0]],
   [/^fonts\/(.+)$/, (m) => fontTarget(m[1]) ?? m[0]],
@@ -101,25 +114,42 @@ function resolveTarget(from, path) {
   return resolve(dirname(from), decodeURI(path));
 }
 
-const files = [
+const { pages: published } = loadManifest(root);
+const markdown = [
   join(root, "README.md"),
   ...readdirSync(join(root, "docs")).filter((f) => f.endsWith(".md")).map((f) => join(root, "docs", f)),
-  ...["index.html", "features.html", "roadmap.html", "docs/index.html", "guide.html", "privacy.html"].map((p) => join(root, "landing", p)),
+  ...published.map((p) => join(root, p.source)),
+];
+const files = [
+  ...new Set(markdown),
+  ...["index.html", "features.html", "roadmap.html", "guide.html", "privacy.html"].map((p) => join(root, "landing", p)),
+];
+// the rendered docs pages, checked as if they were landing/docs/<page>.html
+const sources = [
+  ...files.map((file) => ({ file, text: readFileSync(file, "utf8") })),
+  ...docs.files.map((f) => ({ file: join(root, "landing", ...f.path.split("/")), text: f.html, label: `site-dist/${f.path}`, self: page(f.path) })),
 ];
 
-const errors = [];
+const errors = docs.problems.map((p) => `${p} (scripts/docs-render.mjs)`);
 let checked = 0;
 const cache = new Map();
-for (const file of files) {
-  const text = readFileSync(file, "utf8");
+for (const { file, text, label, self } of sources) {
   const links = file.endsWith(".md") ? mdLinks(text) : htmlLinks(text);
   for (const [link, line] of links) {
     if (external.test(link) || link.startsWith("/")) continue;
     checked++;
     const [path, frag] = link.split("#", 2);
-    const where = `${relative(root, file)}:${line}`;
-    const target = path ? resolveTarget(file, path) : file;
+    const where = `${label ?? relative(root, file)}:${line}`;
+    const target = path ? resolveTarget(file, path) : (self ?? file);
     if (target === PROVIDED) continue;
+    if (typeof target === "object") {
+      if (!rendered.has(target.page)) { errors.push(`${where}: missing ${link}`); continue; }
+      if (!frag) continue;
+      const key = `rendered:${target.page}`;
+      if (!cache.has(key)) cache.set(key, htmlAnchors(rendered.get(target.page)));
+      if (!cache.get(key).has(decodeURIComponent(frag))) errors.push(`${where}: no anchor #${frag} in site-dist/${target.page}`);
+      continue;
+    }
     if (!existsSync(target)) { errors.push(`${where}: missing ${link}`); continue; }
     if (!frag || statSync(target).isDirectory() || !/\.(md|html)$/.test(target)) continue;
     if (!cache.has(target)) cache.set(target, anchorsOf(target));
@@ -127,25 +157,8 @@ for (const file of files) {
   }
 }
 
-// the public guide keeps the Markdown guide's sections (h1-h3, compared as plain text)
-{
-  const md = readFileSync(join(root, "docs", "GETTING-STARTED.md"), "utf8");
-  const html = readFileSync(join(root, "landing", "guide.html"), "utf8");
-  const plain = (t) => t.replace(/<[^>]+>/g, "").replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">")
-    .replace(/\[([^\]]*)\]\([^)]*\)/g, "$1").replace(/[`*_]/g, "").replace(/\s+/g, " ").trim();
-  const pageHeadings = new Set([...html.matchAll(/<h[1-3][^>]*>([\s\S]*?)<\/h[1-3]>/g)].map((m) => plain(m[1])));
-  let code = false;
-  for (const line of md.split("\n")) {
-    if (/^\s*(```|~~~)/.test(line)) code = !code;
-    const m = !code && /^#{1,3}\s+(.*?)\s*#*\s*$/.exec(line);
-    if (!m) continue;
-    checked++;
-    if (!pageHeadings.has(plain(m[1]))) errors.push(`landing/guide.html: no heading "${plain(m[1])}" (docs/GETTING-STARTED.md has it; update both together)`);
-  }
-}
-
 if (errors.length) {
   console.error(`check-links: ${errors.length} broken of ${checked} relative links\n  ${errors.join("\n  ")}`);
   process.exit(1);
 }
-console.log(`check-links: ${checked} relative links in ${files.length} files OK`);
+console.log(`check-links: ${checked} relative links in ${files.length} files and ${docs.files.length} rendered docs pages OK`);
