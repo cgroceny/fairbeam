@@ -1,6 +1,6 @@
 [package]
 name = "fairbeam"
-version = "0.7.1"
+version = "0.7.2"
 description = "Fairbeam desktop shell: installs the runtime, starts the local run server and shows the viewer"
 edition = "2021"
 license = "GPL-3.0-or-later"
