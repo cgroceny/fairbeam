@@ -20,4 +20,16 @@ assert.equal(JSON.stringify(manual),before,'manual mesh is never replaced');
 const legacy={...structuredClone(base),mesh:{cells_per_wavelength:20,pad:0.25}};
 applyRunProfile(legacy,'quick');assert.equal(legacy.mesh.cells_per_wavelength,10);assert.equal(legacy.mesh.pad,0.25);
 assert.equal(legacy.mesh.mode,undefined,'legacy mesher stays legacy');
+// the presets stop where the solver field's hint and the end-criterion check say they should
+// ("−40 quick, −60 accurate"; docs/RESULTS.md, End criterion)
+import { readFileSync } from 'node:fs';
+const en=JSON.parse(readFileSync(new URL('../src/i18n/en.json',import.meta.url),'utf8'));
+const hinted=(text)=>{const m=/[−-](\d+) quick, [−-](\d+) accurate/.exec(text);assert.ok(m,`no quick/accurate pair in ${text}`);return {quick:-Number(m[1]),accurate:-Number(m[2])};};
+for(const key of ['sim.solver.endHint','checks.msg.end-criterion.above']){
+ const h=hinted(en[key]);
+ assert.equal(RUN_PROFILES.quick.endDb,h.quick,`Quick exploration stops at the ${key} quick value`);
+ assert.equal(RUN_PROFILES.verification.endDb,h.accurate,`Verification stops at the ${key} accurate value`);
+}
+assert.equal(RUN_PROFILES.quick.cpw,10,'Quick exploration keeps 10 cells per wavelength');
+assert.ok(RUN_PROFILES.quick.endDb<=RUN_PROFILES.balanced.endDb&&RUN_PROFILES.balanced.endDb>=RUN_PROFILES.verification.endDb,'criteria get stricter towards verification');
 console.log('run profiles: explicit mesh/criterion changes preserve model, band, boundaries and manual mesh');

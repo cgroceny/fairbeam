@@ -35,7 +35,7 @@ try {
     await page.click("#ss-profile button");
     const applied = await mark();
     assert.equal(JSON.parse(applied.text).mesh.overrides.cells_per_wavelength, 10);
-    assert.equal(JSON.parse(applied.text).simulation.end_criteria_db, -30);
+    assert.equal(JSON.parse(applied.text).simulation.end_criteria_db, -40, "Quick exploration stops at −40 dB, as the solver hint says");
     await page.click(".ss-dialog .dialog-actions button:first-child");
     await page.waitForSelector(".ss-dialog", { hidden: true });
     assert.deepEqual(await mark(), original, `${language}: Cancel restores draft and complete history`);
