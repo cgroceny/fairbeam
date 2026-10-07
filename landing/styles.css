@@ -593,3 +593,13 @@ thead .group th[colspan] { text-align: center; padding-right: 0; padding-left: v
   .guide-toc ol ol { display: none; }
   .guide-body li > ul, .guide-body li > ol { padding-left: 1.1em; }
 }
+
+/* The film right under the header, and the About section. */
+.film-top { padding: var(--al-space-5) 0 var(--al-space-4); background: var(--al-bg); position: relative; z-index: 2; }
+.film-top figure { display: grid; gap: var(--al-space-3); max-width: 1040px; margin: 0 auto; }
+.film-frame { overflow: hidden; border: 1px solid var(--al-border-strong); border-radius: var(--al-radius-lg); background: var(--al-surface-2); }
+.film-frame video { display: block; width: 100%; height: auto; aspect-ratio: 16 / 9; }
+.film-top figcaption { font-size: var(--al-text-sm); color: var(--al-text-2); }
+@media (max-width: 560px) { .film-top { padding-top: var(--al-space-3); } .film-top .shell { padding-inline: 0; } .film-frame { border-radius: 0; border-inline: 0; } .film-top figcaption { padding-inline: var(--al-space-4); } }
+.about-copy { display: grid; gap: var(--al-space-4); }
+.about-copy > * { max-width: 70ch; }

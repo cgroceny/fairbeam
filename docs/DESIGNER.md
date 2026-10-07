@@ -306,8 +306,8 @@ tan δ holds (the band center if empty). Add one with ribbon Modeling › Materi
 openEMS applies tan δ as a constant conductivity, so the loss is exact at that frequency only and
 scales as f_ref / f elsewhere: a datasheet value at 10 GHz used at 2.45 GHz gives four times the
 loss. Give the frequency the design works at (e.g. `f0`); a check warns when it lies outside the
-band. (The patch starter used RO4003C's 0.0027 at 10 GHz until 0.4.3, which gave it 65 % radiation
-efficiency instead of 88 %.)
+band. (A datasheet value taken at 10 GHz and used at 2.45 GHz made the patch starter's radiation
+efficiency 65 % instead of 88 %; the starter now uses a value at its own frequency.)
 
 A metal is a perfect conductor (PEC) unless it has a **Conductivity** (S/m; presets Copper 5.8e7,
 Aluminum 3.5e7, Gold 4.1e7, PEC = empty) in Properties. A lossy metal's sheets become openEMS
@@ -1306,7 +1306,7 @@ python. The checks that a browser cannot do are in [DESKTOP-CHECKLIST.md](DESKTO
 - **Horn efficiency above 100 %.** The pyramidal horn (a waveguide-port model) reports a radiation
   efficiency slightly above 100 %, and the excess grows with a finer mesh. The cause is under
   investigation; results with an efficiency above 100 % carry a QA warning.
-- **Unsigned Windows installer.** The macOS app is signed and notarized (since 0.4.4) and opens with
+- **Unsigned Windows installer.** The macOS app is signed and notarized and opens with
   a double-click, but the Windows installer is not code-signed: SmartScreen warns on the first run
   (More info › Run anyway; [DESKTOP.md](DESKTOP.md)).
 

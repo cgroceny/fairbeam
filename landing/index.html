@@ -67,6 +67,18 @@
   </header>
 
   <main id="main" tabindex="-1">
+    <section class="film-top" id="film" aria-label="Fairbeam in fifty seconds">
+      <div class="shell">
+        <figure>
+          <div class="film-frame">
+            <video controls playsinline preload="metadata" poster="media/fairbeam-promo-poster.jpg" width="1920" height="1080">
+              <source src="media/fairbeam-promo.mp4" type="video/mp4">
+            </video>
+          </div>
+          <figcaption>Fifty seconds of Fairbeam: a microstrip line drawn, a horn that radiates, an array beam steered, and the app on macOS and Windows.</figcaption>
+        </figure>
+      </div>
+    </section>
     <div class="journey" id="journey">
       <div class="stage" aria-hidden="true">
         <canvas id="stage-canvas"></canvas>
@@ -143,7 +155,6 @@
             <button type="button" role="tab" id="sc-tab-model" aria-controls="sc-model" aria-selected="true">Modeling</button>
             <button type="button" role="tab" id="sc-tab-sparams" aria-controls="sc-sparams" aria-selected="false" tabindex="-1">S-parameters</button>
             <button type="button" role="tab" id="sc-tab-pattern" aria-controls="sc-pattern" aria-selected="false" tabindex="-1">Far field</button>
-            <button type="button" role="tab" id="sc-tab-film" aria-controls="sc-film" aria-selected="false" tabindex="-1">Film · 50 s</button>
           </div>
           <figure class="showcase-panel" id="sc-model">
             <div class="showcase-frame">
@@ -165,14 +176,6 @@
                    alt="The patch antenna's 3D directivity pattern at 2.45 GHz over the model, with a card listing Dmax 6.75 dBi, gain, realized gain and the radiation, mismatch and total efficiency.">
             </div>
             <figcaption>The 3D pattern over the model, with directivity, gain and the radiation, mismatch and total efficiency.</figcaption>
-          </figure>
-          <figure class="showcase-panel" id="sc-film">
-            <div class="showcase-frame showcase-film" id="film">
-              <video controls preload="none" playsinline poster="media/fairbeam-promo-poster.jpg" width="1920" height="1080">
-                <source src="media/fairbeam-promo.mp4" type="video/mp4">
-              </video>
-            </div>
-            <figcaption>Fifty seconds of Fairbeam: a microstrip line drawn, a horn that radiates, an array beam steered, and the app on macOS and Windows.</figcaption>
           </figure>
         </div>
       </div>
@@ -275,6 +278,14 @@
         </div>
       </div>
     </section>
+    <section class="section section-about" id="about" aria-labelledby="about-title">
+      <div class="shell about-copy">
+        <h2 id="about-title">About Fairbeam</h2>
+        <p>Fairbeam is an independent open-source project for engineers, researchers and students working with antennas and RF circuits. It brings modeling, openEMS simulation and documented results into one workspace.</p>
+        <p><span>Maintained by</span> <a href="https://akdag.dev" rel="author">İsmail Akdağ</a><span>, with contributions from</span> <a href="https://github.com/cgroceny">Cem Göçen</a> <span>and the open-source community.</span> <a href="https://github.com/ismailakdag/fairbeam#credits">Project credits</a>.</p>
+        <p><span>Contact:</span> <a href="mailto:ismail@fairbeam.org">ismail@fairbeam.org</a> · <a href="https://github.com/ismailakdag/fairbeam-releases/issues/new/choose">Report a problem</a></p>
+      </div>
+    </section>
   </main>
 
   <footer class="site-footer">
@@ -287,6 +298,7 @@
         <a href="app/">Demo</a>
         <a href="https://github.com/ismailakdag/fairbeam-releases/releases">Releases</a>
         <a href="https://github.com/ismailakdag/fairbeam">Source code</a>
+        <a href="#about">About</a>
         <a href="privacy.html">Privacy</a>
       </nav>
       <p class="footer-note">Simulations by <a href="https://openems.de" rel="noreferrer">openEMS</a> and CSXCAD. Fairbeam is free software under GPL-3.0-or-later.</p>

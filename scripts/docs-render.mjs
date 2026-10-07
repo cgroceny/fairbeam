@@ -114,7 +114,7 @@ const keepHtml = (text) => text
  * level-1 heading), the body HTML without it, the h2/h3 headings for the contents list, every id,
  * the cross-page anchors to verify, the images to copy and the problems found.
  */
-function renderMarkdown(root, source, { published, repo, branch, hidden, ignored }) {
+function renderMarkdown(root, source, { published, titles, repo, branch, hidden, ignored }) {
   const text = readFileSync(join(root, source), "utf8");
   const slug = slugger();
   const ids = new Set();
@@ -124,6 +124,7 @@ function renderMarkdown(root, source, { published, repo, branch, hidden, ignored
   const hiddenUsed = new Set();
   const problems = [];
   let title = null;
+  let linkTarget = null;
 
   const ghUrl = (path, dir, frag) => `${repo}/${dir ? "tree" : "blob"}/${branch}/${path.split("/").map(encodeURIComponent).join("/")}${frag}`;
   const rewrite = (href, isImage) => {
@@ -160,6 +161,7 @@ function renderMarkdown(root, source, { published, repo, branch, hidden, ignored
       return to;
     }
     if (published.has(target)) {
+      linkTarget = target;
       if (frag.length > 1) anchors.push({ page: published.get(target), frag: frag.slice(1), href });
       return `${published.get(target)}.html${frag}`;
     }
@@ -171,7 +173,15 @@ function renderMarkdown(root, source, { published, repo, branch, hidden, ignored
     gfm: true,
     walkTokens(token) {
       if (token.type === "link") {
+        linkTarget = null;
         token.href = rewrite(token.href, false);
+        // a link whose text is the file name of a published page shows that page's title instead
+        const only = token.tokens?.length === 1 ? token.tokens[0] : null;
+        const label = only && (only.type === "text" || only.type === "codespan") ? only.text : "";
+        if (linkTarget && /\.md$/i.test(label) && label.split("/").pop().toLowerCase() === linkTarget.split("/").pop().toLowerCase()) {
+          const t = titles.get(linkTarget);
+          token.tokens = [{ type: "text", raw: t, text: t }];
+        }
         for (const child of token.tokens ?? []) if (child.type === "image") child.inLink = true;
       } else if (token.type === "image") {
         const href = rewrite(token.href, true);
@@ -291,7 +301,7 @@ export function renderDocsSite(root) {
   const hidden = new Set((manifest.hideImages ?? []).map((h) => h.path));
 
   const ignored = deployIgnored(root);
-  const rendered = pages.map((page) => ({ page, ...renderMarkdown(root, page.source, { published, repo, branch, hidden, ignored }) }));
+  const rendered = pages.map((page) => ({ page, ...renderMarkdown(root, page.source, { published, titles: new Map(pages.map((p) => [p.source, p.title])), repo, branch, hidden, ignored }) }));
   // every hideImages entry must still leave out an image, so the list stays as short as it can be
   for (const path of hidden) {
     if (!rendered.some((r) => r.hiddenUsed.has(path))) problems.push(`${MANIFEST}: hideImages lists ${path}, which no published page shows`);
