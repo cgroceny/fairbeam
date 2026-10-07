@@ -36,6 +36,11 @@ a:not([class]) { color: var(--al-link); text-underline-offset: 2px; }
   position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
   overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0;
 }
+/* the skip link (Header.tsx): the first Tab stop, visible only while it has the keyboard focus */
+.skip-link { position: fixed; z-index: 60; top: var(--al-space-2); left: var(--al-space-2); padding: var(--al-space-2) var(--al-space-3);
+  background: var(--al-surface); color: var(--al-text); border: 2px solid var(--al-focus); border-radius: var(--al-radius); box-shadow: var(--al-shadow-pop); font-weight: 600; text-decoration: none; }
+.skip-link:not(:focus) { width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
+main:focus { outline: none; }
 
 /* Icons (lucide): one stroke weight everywhere; size is set by the control that holds them. */
 svg.lucide { flex: none; stroke-width: var(--al-icon-stroke); }
@@ -203,7 +208,7 @@ svg.lucide { flex: none; stroke-width: var(--al-icon-stroke); }
 .seg-btn:hover { color: var(--al-text); background: var(--al-track-hover); }
 /* selected: a raised cell with a ring (>= 3:1 against the track and a hovered neighbour), not just a
    slightly darker fill; the inset focus ring below still wins on the focused segment */
-.seg-btn.active, .seg-btn[aria-checked="true"], .seg-btn[aria-pressed="true"] {
+.seg-btn.active, .seg-btn[aria-checked="true"], .seg-btn[aria-pressed="true"], .seg-btn[aria-current="page"] {
   background: var(--al-selected-bg); color: var(--al-text); box-shadow: inset 0 0 0 1px var(--al-selected-ring);
 }
 .seg-btn:focus-visible { box-shadow: inset 0 0 0 2px var(--al-focus); }

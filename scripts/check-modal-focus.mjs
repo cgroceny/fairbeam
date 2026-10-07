@@ -193,7 +193,7 @@ try {
     document.getElementById("modal-focus-fixture-root")?.remove();
   });
   await page.click('.home-examples button.home-item[title="patch-antenna.json"]');
-  const examplesMode = await page.waitForFunction(() => document.querySelector('.mode-switch [role="radio"][aria-checked="true"]')?.textContent.includes("Examples"), { timeout: 10000 }).then(() => true, () => false);
+  const examplesMode = await page.waitForFunction(() => document.querySelector('.mode-switch [aria-current="page"]')?.textContent.includes("Examples"), { timeout: 10000 }).then(() => true, () => false);
   if (!examplesMode) {
     const state = await page.evaluate(async () => {
       const [app, workspace] = await Promise.all([import("/src/state.ts"), import("/src/workspace.ts")]);
@@ -204,7 +204,7 @@ try {
   const viewerMounted = await page.waitForSelector(".workspace .viewport", { timeout: 10000 }).then(() => true, () => false);
   if (!viewerMounted) {
     const state = await page.evaluate(() => ({
-      mode: [...document.querySelectorAll(".mode-switch [role=radio]")].map((el) => [el.textContent.trim(), el.getAttribute("aria-checked")]),
+      mode: [...document.querySelectorAll(".mode-switch button")].map((el) => [el.textContent.trim(), el.getAttribute("aria-current")]),
       hasWorkspace: !!document.querySelector(".workspace"), hasBundleHeader: !!document.querySelector(".header-meta"),
       center: document.querySelector(".center")?.textContent.trim().slice(0, 240),
     }));

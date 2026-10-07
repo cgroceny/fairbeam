@@ -57,7 +57,8 @@ export default function ModelPanel() {
         {(b) => (
           <>
             <section class="section">
-              <h2 class="section-title">{b().model.name}</h2>
+              {/* the one h1 of the Examples screen: the example's name */}
+              <h1 class="section-title">{b().model.name}</h1>
               <p class="section-lede">{b().model.description}</p>
               <Show when={b().model.reference}>
                 <p class="section-ref">{b().model.reference}</p>

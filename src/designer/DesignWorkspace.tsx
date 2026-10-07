@@ -492,6 +492,8 @@ export function Ribbon() {
   };
   return (
     <div class="rb-shell" ref={shell}>
+      {/* the designer's one h1 (screen readers): which design this is */}
+      <h1 class="visually-hidden">{t("ribbon.designHeading", { name: draft.model?.name || file()?.id || "" })}</h1>
       <div class="rb-tabs" aria-label={t("ribbon.tabs.aria")}>
         <div role="tablist" aria-label={t("ribbon.tabs.list")} onKeyDown={onTabKeyDown}>
         <For each={RIBBON_TABS}>{(tab) => (

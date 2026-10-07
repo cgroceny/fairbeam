@@ -12,7 +12,6 @@ import ExamplePicker from "./ExamplePicker";
 import FeedbackLink from "./FeedbackLink";
 import { DEMO } from "../env";
 import { appMode, setAppMode } from "../workspace";
-import { radioGroupKeys } from "../lib/a11y";
 import { dirty as designDirty, draft as designDraft, file as designFile } from "../designer/store";
 import GeneralSettingsDialog from "./GeneralSettings";
 import ContextExportMenu from "./ContextExportMenu";
@@ -30,6 +29,29 @@ const compactText = (v: number | null | undefined) => {
   return decimalComma() ? s.replace(".", ",") : s;
 };
 const dbText = (v: number | null | undefined) => (v === undefined || v === null ? "" : fmt.num(v, 3));
+
+/** Arrow keys in the screen navigation: Left/Up and Right/Down open the previous/next screen
+ * (wrapping, skipping a disabled one), Home/End the first/last; focus follows. */
+function screenNavKeys(e: KeyboardEvent & { currentTarget: HTMLElement }) {
+  const keys = ["ArrowLeft", "ArrowUp", "ArrowRight", "ArrowDown", "Home", "End"];
+  if (!keys.includes(e.key)) return;
+  const items = [...e.currentTarget.querySelectorAll<HTMLButtonElement>("button:not(:disabled)")];
+  if (!items.length) return;
+  const i = items.indexOf(document.activeElement as HTMLButtonElement), n = items.length;
+  const next = e.key === "Home" ? 0 : e.key === "End" ? n - 1 : e.key === "ArrowLeft" || e.key === "ArrowUp" ? (i - 1 + n) % n : (i + 1) % n;
+  e.preventDefault();
+  items[next].click();
+  items[next].focus();
+}
+
+/** The skip link: focus the current screen's <main> (Start, the designer's centre, Examples). */
+function skipToMain(e: MouseEvent) {
+  const main = document.querySelector<HTMLElement>("main");
+  if (!main) return;
+  e.preventDefault();
+  if (!main.hasAttribute("tabindex")) main.tabIndex = -1;
+  main.focus();
+}
 
 export default function Header() {
   const [settingsOpen, setSettingsOpen] = createSignal(false);
@@ -111,19 +133,24 @@ export default function Header() {
   const tabStop = () => (appMode() === "design" && !designFile() ? "home" : appMode());
 
   return (
+    <>
+    {/* the first Tab stop: straight to the current screen's main region (visually hidden until focused) */}
+    <a class="skip-link" href="#main" onClick={skipToMain}>{t("header.skipToWorkspace")}</a>
     <header class="app-header">
       <div class="brand">
         <Lockup />
       </div>
 
       <Show when={!DEMO}>
-        <div class="seg seg-sm mode-switch" role="radiogroup" aria-label={t("header.screen")} onKeyDown={radioGroupKeys}>
-          <button class="seg-btn" role="radio" aria-checked={appMode() === "home"} tabindex={tabStop() === "home" ? 0 : -1} onClick={() => setAppMode("home")}>{t("header.screen.start")}</button>
-          <button class="seg-btn" role="radio" aria-checked={appMode() === "design"} tabindex={tabStop() === "design" ? 0 : -1} disabled={!designFile()} title={designFile() ? t("header.screen.designTitle") : t("header.screen.designDisabled")}
+        {/* page navigation: a nav of buttons, the current screen marked aria-current="page" (not a
+            radio group); one Tab stop, the arrow keys move between the screens and open them */}
+        <nav class="seg seg-sm mode-switch" aria-label={t("header.screen")} onKeyDown={screenNavKeys}>
+          <button class="seg-btn" aria-current={appMode() === "home" ? "page" : undefined} tabindex={tabStop() === "home" ? 0 : -1} onClick={() => setAppMode("home")}>{t("header.screen.start")}</button>
+          <button class="seg-btn" aria-current={appMode() === "design" ? "page" : undefined} tabindex={tabStop() === "design" ? 0 : -1} disabled={!designFile()} title={designFile() ? t("header.screen.designTitle") : t("header.screen.designDisabled")}
             onClick={() => setAppMode("design")}>{t("header.screen.design")}</button>
-          <button class="seg-btn" role="radio" aria-checked={appMode() === "results"} tabindex={tabStop() === "results" ? 0 : -1} onClick={() => { if (!userResults()) void openExamples(); }}
+          <button class="seg-btn" aria-current={appMode() === "results" ? "page" : undefined} tabindex={tabStop() === "results" ? 0 : -1} onClick={() => { if (!userResults()) void openExamples(); }}
             title={t(userResults() ? "header.screen.resultsTitle" : "header.screen.examplesTitle")}>{t(userResults() ? "header.screen.results" : "header.screen.examples")}</button>
-        </div>
+        </nav>
       </Show>
 
       <Show when={appMode() === "design" && designFile()}>
@@ -244,5 +271,6 @@ export default function Header() {
       <GeneralSettingsDialog open={settingsOpen()} close={() => setSettingsOpen(false)} />
       <AboutDialog open={aboutOpen()} close={() => setAboutOpen(false)} />
     </header>
+    </>
   );
 }
