@@ -9,7 +9,8 @@ Vercel builds the site from the public source repository, and only the build out
 
 | On the site (in `site-dist/`) | Not on the site |
 | --- | --- |
-| `landing/` (the home page, `features.html`, `roadmap.html`, `docs/`, `guide.html`, `privacy.html`, CSS and small scripts; the roadmap board is rendered into `roadmap.html` at build time), the scroll story under `/story/`, `tokens.css` copied from `design-system/` | Python package, models, install scripts, tests |
+| `landing/` (the home page, `features.html`, `roadmap.html`, `privacy.html`, CSS and small scripts; the roadmap board is rendered into `roadmap.html` at build time), the scroll story under `/story/`, `tokens.css` copied from `design-system/` | Python package, models, install scripts, tests |
+| The docs under `/docs/`: the Markdown files listed in `landing/docs.json`, rendered at build time by `scripts/docs-render.mjs` (links between them go to their pages, other repository files to GitHub), with an overview page | The other Markdown files of the repository (they stay on GitHub) |
 | The viewer built with `--mode demo` under `/app/` (minified JS/CSS) | `src/` as source code (only the minified bundle ships) |
 | The 14 example projects in `public/projects/` (bundle JSON, listed in `index.json`) | The local run server; the demo never calls `/api` |
 | Four example SVGs from `examples/drawings/`, IBM Plex woff2 files (OFL) | `.sim/`, raw openEMS output, anything git-ignored |
@@ -41,8 +42,10 @@ framing stays allowed, so a site page can embed the demo. The cache rules are:
 - `/media/*`: one day.
 - `/app/projects/*`: one hour.
 
-`/app` redirects to `/app/`. Pushes to branches other than `main` do not deploy (`git.deploymentEnabled`
-in `vercel.json`).
+`/app` redirects to `/app/` and `/docs` to `/docs/`. `/guide.html`, the address the app's Help ›
+Getting Started Guide opens, redirects to `/docs/getting-started.html` (and `landing/guide.html` does
+the same with a meta refresh where the redirect rules do not apply, as in a local preview). Pushes to
+branches other than `main` do not deploy (`git.deploymentEnabled` in `vercel.json`).
 
 The site also has one serverless function, `api/ping.js`, which receives the desktop app's usage
 statistics (see [TELEMETRY.md](TELEMETRY.md)). Vercel deploys every file in `api/` whose name does

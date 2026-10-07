@@ -5,11 +5,14 @@ design, run and read a patch antenna in five minutes. The repository [README](..
 short overview. To contribute, read [CONTRIBUTING.md](../CONTRIBUTING.md) and the
 [AI policy](../AI_POLICY.md).
 
+The user guides and the reference are also published at https://fairbeam.org/docs/ (the list is
+`landing/docs.json`; the pages are built from these files).
+
 ## Using Fairbeam
 
 | Guide | What it covers |
 | --- | --- |
-| [Getting started](GETTING-STARTED.md) | Installing the desktop app (macOS signed and notarized, Windows), a five-minute walkthrough from the patch starter to results, the other starters, mesh convergence, field planes, sweeps and the optimizer, importing a VBA macro, where files live, reporting a problem. The website has a copy: [landing/guide.html](../landing/guide.html) |
+| [Getting started](GETTING-STARTED.md) | Installing the desktop app (macOS signed and notarized, Windows), a five-minute walkthrough from the patch starter to results, the other starters, mesh convergence, field planes, sweeps and the optimizer, importing a VBA macro, where files live, reporting a problem |
 | [Running from source](FROM-SOURCE.md) | Requirements, building openEMS and installing Fairbeam from the repository, first run, the test suite, platform notes |
 | [The designer](DESIGNER.md) | The visual workspace: start screen and starters, the one-row ribbon (Home, Modeling, Transform, Simulation, Optimize, Post-processing), navigation tree and components, modeling, checks, simulation settings, mesh view and mesh convergence, running and results (efficiency, gain patterns, field planes), design files, VBA macro import, known limitations, feedback |
 | [Example designs](../examples/designs/README.md) | Six 867 MHz antennas as designer files (blade, wideband, meander and sleeve dipoles, collinear, Yagi), with parameters, results and how to scale them |
