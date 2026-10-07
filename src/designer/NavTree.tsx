@@ -177,8 +177,7 @@ function Row(props: { row: NavRow; selected: boolean; tabStop: boolean; onActiva
         onDragOver={partDrop?.onDragOver}
         onDragLeave={partDrop?.onDragLeave}
         onDrop={partDrop?.onDrop}
-        onClick={(e) => props.onActivate(r, e)} onContextMenu={(e) => props.onMenu(r, e)}
-        onDblClick={a.kind === "sweep" ? (e) => { e.preventDefault(); openSweepView(a.id); } : undefined}>
+        onClick={(e) => props.onActivate(r, e)} onContextMenu={(e) => props.onMenu(r, e)}>
         <Show when={r.expandable} fallback={<span class="nt-twisty" aria-hidden="true" />}>
           <span class="nt-twisty" aria-hidden="true" onClick={(e) => { e.stopPropagation(); props.onToggle(r); }}>
             {r.expanded ? <ChevronDown size={13} /> : <ChevronRight size={13} />}
@@ -224,6 +223,8 @@ const setOpen = (ids: string[], value: boolean) => setOpenState((m) => {
 /** Selections a click on a run keeps: none of the geometry or parameter kinds, which would hide
  * the run's Properties. */
 const runKeepsSelection = (s: Selection) => s.type === "design" || s.type === "simulation";
+/** two clicks on a sweep folder this close together are a double-click (Compare all) */
+const DOUBLE_CLICK_MS = 500;
 
 export function NavTree() {
   createEffect(on(() => file()?.id, () => setSweepViewId(null), { defer: true }));
@@ -384,6 +385,7 @@ export function NavTree() {
   });
 
   const toggle = (r: NavRow) => { if (r.expandable) setOpen([r.id], !r.expanded); };
+  let lastSweepClick = { id: "", at: 0 };
   const folderIndices = (path: string) => draft.parts.flatMap((p, i) => {
     const component = normComponent(p.component);
     return component === path || component.startsWith(`${path}/`) ? [i] : [];
@@ -408,8 +410,16 @@ export function NavTree() {
         if (!selectRun(a.file, e.ctrlKey || e.metaKey, activeMainResult() ? "main" : "keep")) setNote(t("tree.note.compareFull", { max: MAX_COMPARE })); break;
       // a result node opens (or shows) its main-area tab, as the 1D Results do
       case "result": if (!runKeepsSelection(selection())) setSelection({ type: "design" }); focusResult({ file: a.file, view: a.view, ...(a.f === undefined ? {} : { f: a.f }), ...(a.map === undefined ? {} : { map: a.map }) }, "main"); break;
-      // a sweep folder opens and closes like the other folders; double-click or its menu compares all
-      case "sweep": toggle(r); break;
+      // a sweep folder opens and closes like the other folders; a second click on it right after the
+      // first (a double-click: the first one re-renders the row, so no dblclick event reaches it) or
+      // its menu compares all runs
+      case "sweep": {
+        const at = performance.now();
+        const double = e instanceof MouseEvent && lastSweepClick.id === r.id && at - lastSweepClick.at < DOUBLE_CLICK_MS;
+        lastSweepClick = { id: r.id, at: double ? 0 : at };
+        if (double) openSweepView(a.id); else toggle(r);
+        break;
+      }
       case "convergence": openMeshConvergence(a.id); break;
       case "optimization": {
         const job = optJob(a.jobId);

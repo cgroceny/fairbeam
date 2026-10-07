@@ -217,8 +217,11 @@ export function runRows(entries: readonly ProjectIndexEntry[], model: string, fi
   const days = new Set(runs.map((r) => stamp(r.created)?.[1]).filter(Boolean));
   return runs.map((r) => {
     const point = sweepValues.get(r.file);
+    // the server names a point that changes a parameter after it ("Dip C · k=0.4194"): that name is
+    // kept; the point at the design's own value has the plain name, and gets its value added
+    const name = (r.name ?? "").trim() || r.file.replace(/\.json$/i, "");
     const label = point && Object.keys(point).length
-      ? `${(r.name ?? "").trim() || r.file.replace(/\.json$/i, "")}${SEP}${sweepPointText(point)}`
+      ? (Object.keys(point).every((k) => name.includes(`${k}=`)) ? name : `${name}${SEP}${sweepPointText(point)}`)
       : labels.get(r.file) ?? r.file;
     const m = stamp(r.created);
     // the label may carry the time already (with seconds, or the date) when names repeat

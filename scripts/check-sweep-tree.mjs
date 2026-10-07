@@ -27,7 +27,8 @@ eq(waiting.map(n => [n.id, n.sub]), [["sweep:pending", "2 runs · in progress ·
 // its own in the index, so the name groups would tell it apart by engine and time)
 const { runRows, sweepPointText } = await import("../src/designer/navModel.ts");
 const entries = [
-  { file: "dip-a.json", name: "Dip C", model: "dip_c", created: "2026-10-06T23:39:01+0300", simulated: true, bands: [], cells: 1, engine: "CUDA", params: { k: 0.4194 } },
+  // the server writes a changed parameter into the run's name; the point at the design's value keeps the plain name
+  { file: "dip-a.json", name: "Dip C · k=0.4194", model: "dip_c", created: "2026-10-06T23:39:01+0300", simulated: true, bands: [], cells: 1, engine: "CUDA", params: { k: 0.4194 } },
   { file: "dip-b.json", name: "Dip C", model: "dip_c", created: "2026-10-06T23:39:20+0300", simulated: true, bands: [], cells: 1, engine: "CUDA", params: {} },
   { file: "dip-c.json", name: "Dip C", model: "dip_c", created: "2026-10-06T23:39:40+0300", simulated: true, bands: [], cells: 1, engine: "CUDA", params: { k: 0.5126 } },
   { file: "dip-solo.json", name: "Dip C", model: "dip_c", created: "2026-10-06T22:00:00+0300", simulated: true, bands: [], cells: 1, engine: "CPU", params: {} },
@@ -35,7 +36,7 @@ const entries = [
 const points = new Map([["dip-a.json", { k: 0.41941 }], ["dip-b.json", { k: 0.46597 }], ["dip-c.json", { k: 0.51262 }]]);
 const labelled = Object.fromEntries(runRows(entries, "dip_c", new Map(), points).map((r) => [r.file, r.label]));
 eq(labelled["dip-b.json"], "Dip C · k=0.466", "the middle point is named by its value, not 'CUDA · time'");
-eq([labelled["dip-a.json"], labelled["dip-c.json"]], ["Dip C · k=0.4194", "Dip C · k=0.5126"], "its neighbours too, with four significant digits");
+eq([labelled["dip-a.json"], labelled["dip-c.json"]], ["Dip C · k=0.4194", "Dip C · k=0.5126"], "its neighbours too (a name that already says the value is kept, not doubled)");
 eq(labelled["dip-solo.json"] !== undefined && !labelled["dip-solo.json"].includes("k="), true, "a run outside the sweep keeps its usual label");
 eq(sweepPointText({ w: 12, h: 1.6 }), "w=12, h=1.6", "several axes");
 
@@ -43,8 +44,8 @@ eq(sweepPointText({ w: 12, h: 1.6 }), "w=12, h=1.6", "several axes");
 const { readFileSync } = await import("node:fs");
 const read = (p) => readFileSync(new URL(`../${p}`, import.meta.url), "utf8");
 const tree = read("src/designer/NavTree.tsx");
-eq(/case "sweep": toggle\(r\); break;/.test(tree), true, "a single click on the sweep folder expands or collapses it");
-eq(/onDblClick=\{a\.kind === "sweep" \? \(e\) => \{ e\.preventDefault\(\); openSweepView\(a\.id\); \}/.test(tree), true, "double-click compares all runs");
+eq(/case "sweep": \{[\s\S]*?if \(double\) openSweepView\(a\.id\); else toggle\(r\);/.test(tree), true, "a single click on the sweep folder expands or collapses it, a double-click compares all runs");
+eq(/e instanceof MouseEvent && lastSweepClick\.id === r\.id && at - lastSweepClick\.at < DOUBLE_CLICK_MS/.test(tree), true, "the double-click is two clicks on the same folder (the first re-renders the row)");
 eq(/label:t\("tree\.sweep\.compareAllMenu"\),run:\(\)=>openSweepView\(a\.id\)/.test(tree), true, "the folder's menu offers Compare all runs");
 eq(nodes[1].title.includes("double-click"), true, "the folder's tooltip says how to compare");
 
