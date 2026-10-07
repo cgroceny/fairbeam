@@ -1,7 +1,7 @@
 import { source } from "../state";
 import { isExample } from "../runner/examples";
 import { createSignal, onCleanup, onMount, Show } from "solid-js";
-import { Camera, CircleCheck, Ellipsis, Info, MessageSquare, Monitor, Moon, Package, Settings, Sun, TriangleAlert, Upload, UserRound } from "lucide-solid";
+import { Camera, CircleCheck, Ellipsis, Info, MessageSquare, Monitor, Moon, Package, SaveAll, Settings, Sun, TriangleAlert, Upload, UserRound } from "lucide-solid";
 import { applyTheme, bundle, setPackageOpen, theme, type Theme } from "../state";
 import { compact } from "../lib/format";
 import { openExamples } from "../runner/designRun";
@@ -15,6 +15,8 @@ import { appMode, setAppMode } from "../workspace";
 import { radioGroupKeys } from "../lib/a11y";
 import { dirty as designDirty, draft as designDraft, file as designFile } from "../designer/store";
 import GeneralSettingsDialog from "./GeneralSettings";
+import { canSaveAs, openSaveAs } from "../designer/SaveAsDialog";
+import { SHORTCUTS } from "../designer/shortcuts";
 import ContextExportMenu from "./ContextExportMenu";
 import { captureActiveSurface, screenshotAvailable, screenshotReason } from "../components/exportContext";
 import AboutDialog from "./AboutDialog";
@@ -212,6 +214,12 @@ export default function Header() {
               <button class="menu-item" type="button" role="menuitem" aria-label={t("header.open.aria")} title={t("header.open.title")} onClick={() => runMoreAction(() => fileInput.click())}>
                 <Upload size={14} aria-hidden="true" /> {t("header.open.label")}
               </button>
+              <Show when={!DEMO}>
+                <button class="menu-item" type="button" role="menuitem" disabled={!canSaveAs()}
+                  title={canSaveAs() ? t("header.saveAs.title", { key: SHORTCUTS.saveAs.key }) : t("header.saveAs.disabled")} onClick={() => runMoreAction(openSaveAs)}>
+                  <SaveAll size={14} aria-hidden="true" /> {t("header.saveAs.label")}
+                </button>
+              </Show>
               <span class="menu-sep" role="none" />
               <button class="menu-item" type="button" role="menuitem" disabled={!screenshotAvailable()} title={screenshotAvailable()?t("header.screenshot.title"):screenshotReason()} onClick={() => runMoreAction(() => { void captureActiveSurface(); })}>
                 <Camera size={14} aria-hidden="true" /> {t("header.screenshot.aria")}

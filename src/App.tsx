@@ -12,7 +12,7 @@ import { importReferenceFile } from "./compare/store";
 import Home from "./home/Home";
 import { DesignDock, DesignKeys, DesignSide, DesignTreePanel, DrawHint, Ribbon } from "./designer/DesignWorkspace";
 import { file as designFile, draft as designDraft, removeSelected, canRemove, save as saveDesign, enterDesign, reopenLastDesign, undo as undoDesign, redo as redoDesign } from "./designer/store";
-import SaveAsDialog from "./designer/SaveAsDialog";
+import SaveAsDialog, { canSaveAs, openSaveAs, saveAsOpen, setSaveAsOpen } from "./designer/SaveAsDialog";
 import { MeshViewPanel } from "./designer/MeshView";
 import MainArea from "./designer/MainArea";
 import StatusBar from "./designer/StatusBar";
@@ -96,14 +96,13 @@ export default function App() {
   // own Python model (Start > Python models) still runs in this workspace.
   const resultsRunOpen = () => runOpen() && !DEMO && appMode() === "results" && !currentModel()?.readonly;
   const [menuNotice, setMenuNotice] = createSignal("");
-  const [saveAsOpen, setSaveAsOpen] = createSignal(false);
   let openInput: HTMLInputElement | undefined;
   const menuAction = createMenuActionRouter({
     "file-new": () => setAppMode("home"), "file-open": () => openInput?.click(),
     "file-import-cst": () => { if (DEMO) notice(t("app.notice.cstImportDesktop")); else setCstImportOpen(true); },
     "file-import-pcb": () => { if (DEMO) notice(t("app.notice.pcbImportDesktop")); else setPcbImportOpen(true); },
     "file-save": () => { if (appMode() === "design" && designFile()) void saveDesign(); else window.dispatchEvent(new Event("fairbeam:menu-notice")); },
-    "file-save-as": () => { if (appMode() === "design" && designFile()) setSaveAsOpen(true); },
+    "file-save-as": () => { if (appMode() === "design" && designFile()) openSaveAs(); },
     "export-cst": () => { if (appMode() !== "home" && geometryAvailable()) import("./state").then((s) => s.setExportOpen(true)); },
     "export-package": () => { if (bundle()) import("./state").then((s) => s.setPackageOpen(true)); },
     "export-python": () => { if (appMode() === "design") document.querySelector<HTMLButtonElement>(".rb-btn[data-action='open-python']")?.click(); },
@@ -148,7 +147,7 @@ export default function App() {
     const hasViewport = !!currentBundle && viewportPresent() && (mode === "design" || mode === "results");
     const availability: Record<string, boolean> = {
       "file-save": inDesign,
-      "file-save-as": inDesign,
+      "file-save-as": canSaveAs(),
       "file-close": hasDesign,
       "export-cst": appMode() !== "home" && geometryAvailable(),
       "export-python": inDesign,
@@ -252,7 +251,7 @@ export default function App() {
       <ExampleCopyDialog />
       <Show when={!DEMO && cstImportOpen()}><CstImportDialog /></Show>
       <Show when={!DEMO && pcbImportOpen()}><PcbImportDialog /></Show>
-      <Show when={saveAsOpen() && appMode() === "design" && designFile()}>
+      <Show when={saveAsOpen() && canSaveAs()}>
         <SaveAsDialog source={{ id: designFile()!.id, name: designDraft.model?.name ?? designFile()!.id }} close={() => setSaveAsOpen(false)} />
       </Show>
       <Show when={!DEMO}><CloseProjectHost /></Show>
