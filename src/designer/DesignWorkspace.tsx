@@ -3,7 +3,7 @@
 // the selection on the right, checks and results at the bottom. Helper dialogs set the work plane
 // (WCS) and add transforms. The inspector, fields and checks come from DesignPane.tsx; drawing is
 // src/designer/draw.ts + src/scene/drawOverlay.ts.
-import { createEffect, createSignal, For, type JSX, lazy, on, onCleanup, onMount, Show } from "solid-js";
+import { createEffect, createSignal, For, type JSX, lazy, Match, on, onCleanup, onMount, Show, Switch } from "solid-js";
 import {
   Box, CircleDot, Cone, Cylinder, Eye, EyeOff, FileCode, Globe, Grid3x3, Hexagon, Home, Layers, LayoutGrid, Library,
   Camera, FileText, Radio, Waves, History, Move3d,
@@ -44,7 +44,7 @@ import { selectedVertexTarget, stopVertexEdit, toggleVertexEdit, vertexTarget } 
 import type { BooleanOperation } from "./booleanUi";
 import { tryEvaluate } from "./expr";
 import { shown as fmt } from "./displayNumber.ts";
-import { t } from "../i18n";
+import { fmt as i18nFmt, t } from "../i18n";
 import { cellsText } from "./meshStats";
 import { draftMeshStats } from "./draftMesh";
 import { leaveResultsFor, resultFocus } from "./resultFocus";
@@ -417,9 +417,10 @@ export function Ribbon() {
     const eff = (draft as typeof draft & { monitors?: { efficiency?: { points?: number } } }).monitors?.efficiency;
     return eff ? eff.points ?? EFFICIENCY_POINTS_DEFAULT : undefined;
   };
+  // five significant digits in the language's notation (99.931 / 99,931), like the mesh numbers beside it
   const wavelength = (v: Expr) => {
     const f = tryEvaluate(v, names().names).value;
-    return f && f > 0 ? `${Number((299.792458 / f).toPrecision(5))}` : "—";
+    return f && f > 0 ? fmt(Number((299.792458 / f).toPrecision(5))) : "—";
   };
   // one row at every width: re-fit when the centre column resizes, the tab changes or the ribbon
   // is expanded again (fitRibbon only touches data attributes, never Solid-owned content)
@@ -462,6 +463,10 @@ export function Ribbon() {
     stale: "ribbon.sim.meshTitle.stale",
     unknown: "ribbon.sim.meshTitle.unknown",
   } as const)[meshFreshness()]);
+  /** the Frequency group's tooltip: the wavelength range and the draft's mesh */
+  const frequencyReadout = () => t("ribbon.sim.frequencyTitle", {
+    min: wavelength(draft.simulation.f_max), max: wavelength(draft.simulation.f_min), meshTitle: meshReadoutTitle(), mesh: meshReadout(),
+  });
   const boundariesText = () => {
     const raw = draft.simulation.boundaries;
     const values = Array.isArray(raw) ? raw : String(raw).split(/[\s,]+/).filter(Boolean);
@@ -581,16 +586,18 @@ export function Ribbon() {
             onClick={() => openSimSettings("freq")} />
         </RGroup>
         {/* inline fields: only while the ribbon has room to spare (the Frequency band and Mesh
-            settings dialogs hold the same values) */}
+            settings dialogs hold the same values). The wavelength and mesh readout is the group's
+            tooltip (and its accessible description): a third line made this tab 7 px taller than the
+            others, so the 3D view jumped when switching tabs; the status bar shows the mesh too. */}
         <RGroup label={t("ribbon.sim.frequency")} icon={Waves} class="rb-extra">
-          <div class="rb-frequency">
+          <div class="rb-frequency" title={frequencyReadout()}>
             <Show when={!simSettingsOpen()}>
               <div class="rb-field-pair">
                 <RibbonField label={t("ribbon.sim.fMin")} unit="GHz" value={draft.simulation.f_min} path="simulation.f_min" onChange={(v) => edit((d) => { d.simulation.f_min = v; }, "fmin")} />
                 <RibbonField label={t("ribbon.sim.fMax")} unit="GHz" value={draft.simulation.f_max} path="simulation.f_max" onChange={(v) => edit((d) => { d.simulation.f_max = v; }, "fmax")} />
               </div>
             </Show>
-            <span class="rb-info mono" title={t("ribbon.sim.wavelengthTitle", { meshTitle: meshReadoutTitle(), mesh: meshReadout() })}>λ {wavelength(draft.simulation.f_max)}–{wavelength(draft.simulation.f_min)} mm · <span class="rb-mesh-readout" data-fresh={meshFreshness()}>{meshReadout()}</span></span>
+            <span class="visually-hidden rb-mesh-readout" data-fresh={meshFreshness()}>{frequencyReadout()}</span>
           </div>
         </RGroup>
         <RGroup label={t("ribbon.sim.boundaries")} icon={SquareDashed}>
@@ -600,9 +607,25 @@ export function Ribbon() {
             onClick={() => openSimSettings("bounds")} />
         </RGroup>
         <RGroup label={t("ribbon.sim.mesh")} icon={ScanLine}>
+          {/* the Classic mesh's density as a field; the other modes say what the mesh is, so the
+              block is never empty (in the folded group's drop-down too) */}
           <div class="rb-mesh-fields rb-extra">
-            <Show when={!simSettingsOpen() && (draft.mesh.mode === "auto" || !draft.mesh.mode)}>
-              <RibbonField label={t("ribbon.sim.cellsPerWavelength")} value={draft.mesh.cells_per_wavelength ?? 20} path="mesh.cells_per_wavelength" onChange={(v) => edit((d) => { d.mesh.cells_per_wavelength = v; }, "cpw")} />
+            <Show when={!simSettingsOpen()}>
+              <Switch>
+                <Match when={draft.mesh.mode === "auto" || !draft.mesh.mode}>
+                  <RibbonField label={t("ribbon.sim.cellsPerWavelength")} value={draft.mesh.cells_per_wavelength ?? 20} path="mesh.cells_per_wavelength" onChange={(v) => edit((d) => { d.mesh.cells_per_wavelength = v; }, "cpw")} />
+                </Match>
+                <Match when={draft.mesh.mode === "manual"}>
+                  <span class="rb-info rb-mesh-line" title={t("sim.mesh.manualNote")}>{t("ribbon.sim.meshManualLines", {
+                    x: draft.mesh.lines?.x?.length ?? 0, y: draft.mesh.lines?.y?.length ?? 0, z: draft.mesh.lines?.z?.length ?? 0,
+                  })}</span>
+                </Match>
+                <Match when={draft.mesh.mode === "design"}>
+                  <span class="rb-info rb-mesh-line">{draft.mesh.overrides?.cells_per_wavelength !== undefined && draft.mesh.overrides?.cells_per_wavelength !== null
+                    ? t("ribbon.sim.meshAutoCpw", { cpw: valueText(draft.mesh.overrides.cells_per_wavelength) })
+                    : t("sim.mesh.mode.design")}</span>
+                </Match>
+              </Switch>
             </Show>
           </div>
           <RButton icon={SlidersVertical} label={t("ribbon.sim.meshSettings")}
@@ -639,7 +662,7 @@ export function Ribbon() {
         <RGroup label={t("ribbon.sim.solver")} icon={Settings2}>
           <RButton icon={Timer} label={t("ribbon.sim.solverLimits")}
             issue={issueFor("simulation.end_criteria_db", "simulation.max_timesteps")}
-            title={issueTitle(t("ribbon.sim.solverLimitsTitle", { db: draft.simulation.end_criteria_db ?? -60, steps: draft.simulation.max_timesteps ?? 60000 }), issueFor("simulation.end_criteria_db", "simulation.max_timesteps"))}
+            title={issueTitle(t("ribbon.sim.solverLimitsTitle", { db: fmt(draft.simulation.end_criteria_db ?? -60), steps: draft.simulation.max_timesteps ? i18nFmt.int(draft.simulation.max_timesteps) : t("sim.solver.maxStepsAuto") }), issueFor("simulation.end_criteria_db", "simulation.max_timesteps"))}
             onClick={() => openSimSettings("solver")} />
         </RGroup>
         <RGroup label={t("ribbon.sim.run")} icon={Play}>

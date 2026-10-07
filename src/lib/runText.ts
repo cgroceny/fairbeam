@@ -2,10 +2,12 @@
 // so Markdown and PDF exports keep their existing US English wording and decimal points.
 import type { FarField, RunStats } from "../types";
 import { fmt, locale, t } from "../i18n/index.ts";
-import { convergenceText, efficiencyWarning, energyText, finalEnergy, losslessNote, type FinalEnergy, type RunLimits } from "./run.ts";
+import { convergenceText, efficiencyWarning, finalEnergy, losslessNote, type FinalEnergy, type RunLimits } from "./run.ts";
 
+/** The final energy as the interface shows it, in every language: the typographic minus (U+2212) and
+ * grouped timesteps through fmt, as the rest of the run summary ("≤ −50.0 dB", not the reports'
+ * "≤ -50.0 dB"). */
 export function energyTextUi(value: FinalEnergy): string {
-  if (locale() === "en") return energyText(value);
   if (value.db === null) return t("runText.energy.unknown");
   const energy = fmt.fixed(value.db, 1);
   if (value.timestep !== null) {
@@ -16,7 +18,8 @@ export function energyTextUi(value: FinalEnergy): string {
 }
 
 export function convergenceTextUi(run: RunStats, criterionDb: number, limits: RunLimits = {}): string {
-  if (locale() === "en") return convergenceText(run, criterionDb, limits);
+  // the reports' English sentence, with the interface's minus sign before its numbers
+  if (locale() === "en") return convergenceText(run, criterionDb, limits).replace(/-(?=\d)/g, "−");
   const value = finalEnergy(run, criterionDb);
   const energy = energyTextUi(value);
   const criterion = fmt.fixed(criterionDb, 0);

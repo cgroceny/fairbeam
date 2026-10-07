@@ -93,4 +93,28 @@ assert.match(bar, /class="sb-item sb-btn sb-fixed sb-server"/, "the server item 
 assert.match(css, /\.rdk-run \{[^}]*min-height: fit-content;/, "the live panel is as tall as its fields");
 console.log("run numbers: live panel, progress and status bar passed");
 
+// ---- the Simulation ribbon and the run texts: one number format
+const { setLanguage } = await import("../src/i18n/index.ts");
+const { shown } = await import("../src/designer/displayNumber.ts");
+const { energyTextUi, convergenceTextUi } = await import("../src/lib/runText.ts");
+setLanguage("tr");
+assert.equal(`${shown(Number((299.792458 / 3).toPrecision(5)))}–${shown(Number((299.792458 / 1).toPrecision(5)))}`, "99,931–299,79", "the λ readout in Turkish notation");
+setLanguage("en");
+assert.equal(energyTextUi({ db: -50, bound: true, timestep: null }), "≤ −50.0 dB", "the run card's energy takes the typographic minus in English too");
+assert.equal(energyTextUi({ db: -65.94, bound: false, timestep: 10842 }), "−65.9 dB at timestep 10,842");
+assert.doesNotMatch(convergenceTextUi({ converged: false, final_energy_db: -22.1, timesteps: 5000, energy_trace: [{ timestep: 4800, db: -22.1 }] }, -50), /-\d/, "no hyphen-minus before a number in the English summary");
+const ws = read("src/designer/DesignWorkspace.tsx");
+assert.match(ws, /return f && f > 0 \? fmt\(Number\(\(299\.792458 \/ f\)\.toPrecision\(5\)\)\) : "—";/, "the λ readout uses the locale formatter");
+assert.match(ws, /solverLimitsTitle", \{ db: fmt\(draft\.simulation\.end_criteria_db \?\? -60\), steps: draft\.simulation\.max_timesteps \? i18nFmt\.int\(/,
+  "the Solver limits tooltip: minus sign and grouped timesteps (automatic when unset)");
+assert.match(ws, /<div class="rb-frequency" title=\{frequencyReadout\(\)\}>/, "the λ and mesh readout is the Frequency group's tooltip");
+assert.doesNotMatch(ws, /<span class="rb-info mono" title=/, "no third line under the frequency fields (the Simulation tab kept the ribbon's height)");
+assert.match(ws, /t\("ribbon\.sim\.meshManualLines", \{/, "the Mesh group names a manual mesh instead of an empty block");
+const sim = read("src/designer/SimSettingsDialog.tsx");
+assert.match(sim, /onKeyDown=\{onEnter\}/, "Enter in a field commits and closes the Simulation settings");
+assert.match(sim, /t\("sim\.profile\.applied"/, "Apply setup confirms");
+assert.match(sim, /title=\{runProfileSupported\(d\(\)\) \? undefined : t\("sim\.profile\.manual"\)\}/, "a disabled Apply says why");
+console.log("run numbers: ribbon, settings dialog and run texts passed");
+
+
 

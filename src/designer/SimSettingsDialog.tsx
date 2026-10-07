@@ -111,10 +111,23 @@ export default function SimSettingsDialog() {
   const close = () => setSimSettingsOpen(false);
   const cancel = () => { rollbackTo(opened); close(); };
   useModal(() => box, cancel);
+  // Enter in a field commits it and closes the dialog, like OK (the Brick and Run dialogs confirm on
+  // Enter too); not in a select, a text area, a button or a check box, nor when the field used the key
+  // itself (an expression field offering to create a parameter)
+  const onEnter = (e: KeyboardEvent) => {
+    if (e.key !== "Enter" || e.defaultPrevented || e.isComposing || e.shiftKey || e.altKey || e.ctrlKey || e.metaKey) return;
+    const el = e.target;
+    if (!(el instanceof HTMLInputElement) || ["checkbox", "radio", "button", "submit", "reset", "range", "file", "color"].includes(el.type)) return;
+    e.preventDefault();
+    el.blur(); // a field that commits on change or blur does so now
+    close();
+  };
 
   const [face, setFace] = createSignal(4);
   const [section, setSection] = createSignal<string>("freq");
   const [profile, setProfile] = createSignal<RunProfile>("balanced");
+  /** the setup last applied in this dialog, confirmed below the button */
+  const [applied, setApplied] = createSignal<RunProfile | null>(null);
   const bounds = () => (typeof d().simulation.boundaries === "string" ? Array(6).fill(d().simulation.boundaries) : (d().simulation.boundaries as string[]));
   const setBound = (k: number | "all", v: string) => edit((x) => {
     if (k === "all") { x.simulation.boundaries = v; return; }
@@ -257,7 +270,7 @@ export default function SimSettingsDialog() {
 
   return (
     <div class="scrim" onPointerDown={(e) => e.target === e.currentTarget && cancel()}>
-      <div class="dialog ss-dialog" role="dialog" aria-modal="true" aria-labelledby="ss-title" ref={box} tabindex={-1}>
+      <div class="dialog ss-dialog" role="dialog" aria-modal="true" aria-labelledby="ss-title" ref={box} tabindex={-1} onKeyDown={onEnter}>
         <div class="dialog-head">
           <div>
             <h2 id="ss-title">{t("sim.title")}</h2>
@@ -283,18 +296,26 @@ export default function SimSettingsDialog() {
                 <label class="field">
                   <span class="dz-label">{t("sim.profile.choice")}</span>
                   <select class="rp-select dz-input" value={profile()} disabled={!runProfileSupported(d())}
-                    onChange={(e) => setProfile(e.currentTarget.value as RunProfile)}>
+                    title={runProfileSupported(d()) ? undefined : t("sim.profile.manual")}
+                    onChange={(e) => { setProfile(e.currentTarget.value as RunProfile); setApplied(null); }}>
                     <For each={Object.keys(RUN_PROFILES) as RunProfile[]}>{(key) => <option value={key}>{t(`sim.profile.${key}`)}</option>}</For>
                   </select>
                 </label>
+                {/* a manual mesh is never replaced: the button says why it is off */}
                 <button class="btn btn-ghost" type="button" disabled={!runProfileSupported(d())}
-                  onClick={() => edit((x) => { applyRunProfile(x, profile()); }, "run-profile")}>
+                  title={runProfileSupported(d()) ? undefined : t("sim.profile.manual")}
+                  onClick={() => { const p = profile(); edit((x) => { applyRunProfile(x, p); }, "run-profile"); setApplied(p); }}>
                   {t("sim.profile.apply")}
                 </button>
               </div>
               <p class="note">{runProfileSupported(d())
-                ? t("sim.profile.summary", { cpw: RUN_PROFILES[profile()].cpw, endDb: RUN_PROFILES[profile()].endDb })
+                ? t("sim.profile.summary", { cpw: RUN_PROFILES[profile()].cpw, endDb: fmt.int(RUN_PROFILES[profile()].endDb) })
                 : t("sim.profile.manual")}</p>
+              <Show when={applied()}>{(p) => (
+                <p class="status-block status-good ss-applied" role="status">
+                  {t("sim.profile.applied", { name: t(`sim.profile.${p()}`), cpw: RUN_PROFILES[p()].cpw, endDb: fmt.int(RUN_PROFILES[p()].endDb) })}
+                </p>
+              )}</Show>
             </section>
             <section id="ss-freq" class="stack">
               <h3>{t("sim.freq.title")}</h3>
