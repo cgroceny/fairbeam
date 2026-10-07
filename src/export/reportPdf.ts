@@ -14,7 +14,7 @@ import type { RefBundle } from "../import/reference.ts";
 import { fit, wrap } from "../drawing/metrics.ts";
 import { esc, FONT, group, line, n, rect, text } from "../drawing/svg.ts";
 import { svgPagesToPdf, type PdfFonts } from "../drawing/pdfdoc.ts";
-import { modelPath, reproduceCommand } from "./report.ts";
+import { engineText, meshText, reproduceCommand, reproduceNote, simulated, type ModelFileRef } from "./report.ts";
 import { APP_VERSION, bundleWriter } from "../lib/appVersion.ts";
 
 const W = 210;
@@ -38,6 +38,10 @@ export interface ReportOptions {
   arrayWeights?: Map<number, Weight> | null;
   /** imported reference data to compare with */
   reference?: RefBundle | null;
+  /** the paths of the package the report goes into (its "Files and formats" list); a report on its own has none */
+  files?: readonly string[];
+  /** the workspace file the bundle was run from (the reproduce command runs it) */
+  model?: ModelFileRef | null;
 }
 
 const f3 = (hz: number) => (hz / 1e9).toFixed(3);
@@ -61,6 +65,9 @@ type Align = "l" | "r";
 class Doc {
   pages: string[][] = [];
   y = TOP;
+  /** the left edge and the width text is set in: the page margins, inset inside a box */
+  ml = ML;
+  cw = CW;
   b: Bundle;
   opt: ReportOptions;
   constructor(b: Bundle, opt: ReportOptions) {
@@ -94,10 +101,10 @@ class Doc {
     this.y += 9;
   }
   para(t: string, fs = FS, color = "#000") {
-    const lines = wrap(minus(t), fs, CW);
+    const lines = wrap(minus(t), fs, this.cw);
     for (const l of lines) {
       this.ensure(fs * 1.45);
-      this.page.push(text(ML, this.y + fs, l, { "font-size": fs, fill: color }));
+      this.page.push(text(this.ml, this.y + fs, l, { "font-size": fs, fill: color }));
       this.y += fs * 1.45;
     }
     this.y += fs * 0.5;
@@ -105,17 +112,17 @@ class Doc {
   /** Two-column key/value list. */
   kv(rows: [string, string][], keyW = 46) {
     for (const [k, v] of rows) {
-      const lines = wrap(minus(v), FS_S, CW - keyW);
+      const lines = wrap(minus(v), FS_S, this.cw - keyW);
       const h = Math.max(1, lines.length) * FS_S * 1.45 + 0.8;
       this.ensure(h);
-      this.page.push(text(ML, this.y + FS_S, k, { "font-size": FS_S, fill: "#444" }));
-      lines.forEach((l, i) => this.page.push(text(ML + keyW, this.y + FS_S + i * FS_S * 1.45, l, { "font-size": FS_S })));
+      this.page.push(text(this.ml, this.y + FS_S, k, { "font-size": FS_S, fill: "#444" }));
+      lines.forEach((l, i) => this.page.push(text(this.ml + keyW, this.y + FS_S + i * FS_S * 1.45, l, { "font-size": FS_S })));
       this.y += h;
     }
     this.y += 2;
   }
   /** Table with header; widths are fractions of the content width. Breaks across pages. */
-  table(head: string[], rows: string[][], widths: number[], align: Align[] = [], x0 = ML, width = CW) {
+  table(head: string[], rows: string[][], widths: number[], align: Align[] = [], x0 = this.ml, width = this.cw) {
     const rh = FS_S * 1.75;
     const ws = widths.map((w) => (w / widths.reduce((a, c) => a + c, 0)) * width);
     const cell = (s: string, i: number, y: number, bold = false) => {
@@ -175,13 +182,16 @@ class Doc {
     }
     this.y += 4;
   }
-  box(draw: () => void) {
+  /** A shaded box within the text margins; its content is inset by `pad` on each side. */
+  box(draw: () => void, pad = 3) {
     const y0 = this.y;
     const page = this.page;
-    this.y += 3;
-    draw();
-    page.splice(0, 0, rect(ML - 3, y0, CW + 6, this.y - y0, { fill: "#f4f4f4", stroke: "#000", "stroke-width": 0.25 }));
-    this.y += 3;
+    this.y += pad;
+    this.ml = ML + pad;
+    this.cw = CW - 2 * pad;
+    try { draw(); } finally { this.ml = ML; this.cw = CW; }
+    page.splice(0, 0, rect(ML, y0, CW, this.y - y0, { fill: "#f4f4f4", stroke: "#000", "stroke-width": 0.25 }));
+    this.y += pad;
   }
   render(): string[] {
     const b = this.b;
@@ -208,6 +218,29 @@ class Doc {
   }
 }
 
+/** The "Files and formats" rows for the paths of a package: one row per kind of file it holds, nothing it lacks. */
+export function fileFormats(paths: readonly string[]): [string, string][] {
+  const has = (re: RegExp) => paths.some((p) => re.test(p));
+  const rows: [string, string][] = [];
+  if (has(/^project\.json$/)) rows.push(["project.json", "The complete Fairbeam bundle (schema fairbeam.project/1): geometry, mesh, solver setup, run statistics and all results."]);
+  if (has(/^data\/s11\.s1p$/)) rows.push(["data/s11.s1p", "Touchstone v1, option line “# GHz S RI R <port impedance>”: frequency in GHz, Re and Im of S11. Most RF tools read it directly, so it can be overlaid on other S11 results."]);
+  if (has(/^data\/sparams\.s\d+p$/)) rows.push(["data/sparams.sNp", "Touchstone S-matrix of every port."]);
+  if (has(/^data\/.*\.csv$/)) rows.push(["data/*.csv", "Sweep (f, |S11| dB, S11, VSWR, Zin), matched bands, far-field summary, directivity over θ and φ (long format) and port time signals."]);
+  const dr = has(/^drawings\//), fi = has(/^figures\//);
+  if (dr || fi) {
+    rows.push([[dr ? "drawings/" : "", fi ? "figures/" : ""].filter(Boolean).join(", "),
+      dr && fi ? "Black-and-white vector drawings and publication figures (SVG; the A3 drawing also as PDF)."
+        : dr ? "Black-and-white vector drawings (SVG; the A3 drawing also as PDF)." : "Black-and-white publication figures (SVG)."]);
+  }
+  if (has(/^cst\/.*\.bas$/)) rows.push(["cst/*.bas", "CST-compatible VBA macro that rebuilds the model."]);
+  if (has(/^cst\/.*\.stl$/)) rows.push(["cst/*.stl", "Polyhedra of the model as STL files; the macro imports them, so keep them next to the .bas."]);
+  if (has(/^fab\//)) rows.push(["fab/", "Fabrication files: Gerber X2 copper and outline, Excellon drill, DXF per layer and a README with the stack-up."]);
+  if (has(/^images\//)) rows.push(["images/", "PNG of the 3D view."]);
+  if (has(/^comparison\//)) rows.push(["comparison/", "Comparison with the imported reference data: metrics, notes, overlay figures and the reference files."]);
+  if (has(/^README\.md$/)) rows.push(["README.md", "This report as text, with the list of every file."]);
+  return rows;
+}
+
 /** The report as A4 SVG pages. */
 export function reportPages(bundle: Bundle, opt: ReportOptions): string[] {
   const b = withoutVoids(bundle);
@@ -222,7 +255,7 @@ export function reportPages(bundle: Bundle, opt: ReportOptions): string[] {
   if (b.model.reference) d.para(`Reference: ${b.model.reference}`, FS_S, "#333");
   d.space(2);
   d.kv([
-    ["Simulated", b.created],
+    ["Simulated", simulated(b) ? b.created : "Geometry only: not simulated"],
     ["Report generated", opt.generated],
     ["Generator", [bundleWriter(b), b.generator.python && b.generator.python !== "?" ? `Python ${b.generator.python}` : null].filter(Boolean).join(", ") || "—"],
     ["Solver", `${b.solver.engine}${b.generator.openems ? ` ${b.generator.openems}` : ""} — ${b.solver.method}`],
@@ -230,17 +263,17 @@ export function reportPages(bundle: Bundle, opt: ReportOptions): string[] {
     ["Host", run ? `${run.host.os} ${run.host.machine}${run.host.cpu ? `, ${run.host.cpu}` : ""}` : "—"],
   ]);
   d.box(() => {
-    d.page.push(text(ML, d.y + 4, "Key results", { "font-size": 4, "font-weight": 600 }));
+    d.page.push(text(d.ml, d.y + 4, "Key results", { "font-size": 4, "font-weight": 600 }));
     d.y += 7;
     if (!r) {
-      d.para("Geometry only: this bundle was not simulated.");
+      d.para("Geometry only: not simulated.");
       return;
     }
     const conv = run
       ? `${run.converged ? "✓ " : ""}${convergenceText(run, b.solver.end_criteria_db, { maxTimesteps: b.solver.max_timesteps, minCell: b.mesh.min_cell }).replace(/-(?=\d)/g, "−").replace(/\.$/, "")}, ${fx(run.solver_time_s, 1)} s solver time.`
       : "No run statistics.";
     d.para(conv, FS_S);
-    d.page.push(text(ML, d.y + FS_S, "Matched bands (|S11| < −10 dB)", { "font-size": FS_S, "font-weight": 600 }));
+    d.page.push(text(d.ml, d.y + FS_S, "Matched bands (|S11| < −10 dB)", { "font-size": FS_S, "font-weight": 600 }));
     d.y += FS_S * 1.8;
     if (r.bands.length)
       d.table(
@@ -249,7 +282,7 @@ export function reportPages(bundle: Bundle, opt: ReportOptions): string[] {
         [1, 1.5, 1.1, 1.1, 1], ["r", "r", "r", "r", "r"],
       );
     else d.para("No band reaches −10 dB.", FS_S);
-    d.page.push(text(ML, d.y + FS_S, "Far field", { "font-size": FS_S, "font-weight": 600 }));
+    d.page.push(text(d.ml, d.y + FS_S, "Far field", { "font-size": FS_S, "font-weight": 600 }));
     d.y += FS_S * 1.8;
     if (r.farfield.length)
       d.table(
@@ -305,18 +338,19 @@ export function reportPages(bundle: Bundle, opt: ReportOptions): string[] {
   );
   d.h2("Solver, mesh and run");
   const ex = b.solver.excitation;
+  const mesh = meshText(b);
   d.kv([
     ["Method", b.solver.method],
     ["Excitation", `${ex.type}${ex.dc_free ? " (DC-free)" : ""}, ${f3(ex.f_min)} – ${f3(ex.f_max)} GHz`],
     ["Boundaries", Object.entries(b.solver.boundaries).map(([k, v]) => `${k} ${v}`).join(", ")],
     ["End criterion", `${b.solver.end_criteria_db} dB, at most ${b.solver.max_timesteps} timesteps`],
-    ["Mesh", `${b.mesh.cells.join(" × ")} = ${b.mesh.total_cells.toLocaleString("en-US")} cells, cell size ${fx(b.mesh.min_cell, 4)} – ${fx(b.mesh.max_cell, 3)} mm`],
-    ["Domain", `(${b.domain.min.join(", ")}) to (${b.domain.max.join(", ")}) mm`],
+    ["Mesh", mesh.size === "—" ? mesh.cells : `${mesh.cells} cells, cell size ${mesh.size}`],
+    ["Domain", mesh.domain],
     ...(run
       ? ([
           ["Converged", run.converged ? `yes, final energy ${energyText(finalEnergy(run, b.solver.end_criteria_db)).replace(/-(?=\d)/g, "−")}` : `no${run.hit_timestep_limit ? " (timestep limit)" : ""}`],
           ["Timesteps", String(run.timesteps ?? "—")],
-          ["Solver time", `${fx(run.solver_time_s, 2)} s (wall ${fx(run.wall_time_s, 2)} s), ${fx(run.speed_mcells_s, 1)} MCells/s, threads ${run.threads || "all"}`],
+          ["Solver time", `${fx(run.solver_time_s, 2)} s (wall ${fx(run.wall_time_s, 2)} s), ${fx(run.speed_mcells_s, 1)} MCells/s, ${engineText(b)}`],
         ] as [string, string][])
       : []),
   ]);
@@ -438,22 +472,19 @@ export function reportPages(bundle: Bundle, opt: ReportOptions): string[] {
   d.newPage();
   d.h2("Reproduce");
   d.para("Run the same model with the fairbeam command (openEMS installed, see the Fairbeam README):", FS);
-  const cmd = reproduceCommand(b);
+  const cmd = reproduceCommand(b, opt.model);
   const cl = wrap(cmd, FS_S, CW - 6);
   const y0 = d.y;
   d.page.push(rect(ML, y0, CW, cl.length * FS_S * 1.5 + 3, { fill: "#f0f0f0", stroke: "none" }));
   cl.forEach((l, i) => d.page.push(text(ML + 3, y0 + 2 + FS_S + i * FS_S * 1.5, l, { "font-size": FS_S })));
   d.y += cl.length * FS_S * 1.5 + 6;
-  d.para(`Assumes the built-in model layout (${modelPath(b)}: model id with "-" replaced by "_"); for a custom model pass its path. Only parameters that differ from the defaults are listed.`, FS_S, "#333");
-  d.h2("Files and formats");
-  d.kv([
-    ["project.json", "The complete fairbeam bundle (schema fairbeam.project/1): geometry, mesh, solver setup, run statistics and all results."],
-    ["data/s11.s1p", "Touchstone v1, option line “# GHz S RI R 50”: frequency in GHz, Re and Im of S11. Most RF tools read it directly, so it can be overlaid on other S11 results."],
-    ["data/*.csv", "Sweep (f, |S11| dB, S11, VSWR, Zin), matched bands, far-field summary, directivity over θ and φ (long format) and port time signals."],
-    ["drawings/, figures/", "Black-and-white vector drawings and publication figures (SVG; the A3 drawing also as PDF)."],
-    ["cst/*.bas", "CST-compatible VBA macro that rebuilds the model."],
-    ["cst/*.stl", "Polyhedra of the model as STL files; the macro imports them, so keep them next to the .bas."],
-  ], 34);
+  d.para(reproduceNote(b, opt.model).replace(/`/g, ""), FS_S, "#333");
+  // the files of the package this report goes into, from its own entries (a report saved on its own has none)
+  const formats = fileFormats(opt.files ?? []);
+  if (formats.length) {
+    d.h2("Files and formats");
+    d.kv(formats, 34);
+  }
   d.h2("Notes");
   d.para("openEMS uses a staircase (Yee) FDTD mesh: slanted edges snap to mesh lines and zero-thickness sheets sit on grid planes. Expect resonances to differ by a few percent from conformal solvers unless the mesh is fine on metal edges; check mesh convergence before trusting a number.", FS_S);
   return d.render();

@@ -8,6 +8,7 @@ import { svgPagesToPdf, type PdfFonts } from "./pdfdoc.ts";
 import type { Bundle } from "../types";
 import type { Weight } from "../lib/array";
 import type { RefBundle } from "../import/reference";
+import type { ModelFileRef } from "../export/report.ts";
 import { saveDownload } from "../lib/download.ts";
 
 let fontCache: Promise<{ regular: Uint8Array; semibold: Uint8Array }> | null = null;
@@ -37,12 +38,14 @@ export async function svgToPdf(svg: string, title: string): Promise<Uint8Array> 
   return svgPagesToPdf([svg], await fonts(), { title });
 }
 
-/** The one-file A4 PDF report for a bundle (src/export/reportPdf.ts). */
-export async function reportPdfFor(b: Bundle, now: Date = new Date(), arrayWeights?: Map<number, Weight> | null, reference?: RefBundle | null): Promise<Uint8Array> {
+/** The one-file A4 PDF report for a bundle (src/export/reportPdf.ts). `files`: the paths of the package it goes into
+ * (its "Files and formats" list); `model`: the workspace file the reproduce command runs. */
+export async function reportPdfFor(b: Bundle, now: Date = new Date(), arrayWeights?: Map<number, Weight> | null, reference?: RefBundle | null,
+  extra: { files?: readonly string[]; model?: ModelFileRef | null } = {}): Promise<Uint8Array> {
   const { reportPdf } = await import("../export/reportPdf.ts");
   const p = (x: number) => String(x).padStart(2, "0");
   const date = `${now.getFullYear()}-${p(now.getMonth() + 1)}-${p(now.getDate())}`;
-  return reportPdf(b, await fonts(), { generated: `${date} ${p(now.getHours())}:${p(now.getMinutes())}`, date, arrayWeights, reference });
+  return reportPdf(b, await fonts(), { generated: `${date} ${p(now.getHours())}:${p(now.getMinutes())}`, date, arrayWeights, reference, ...extra });
 }
 
 /** PNG of an SVG at `dpi` (capped to ~24 Mpx), white background. */

@@ -4,6 +4,7 @@ import { withoutVoids } from "../lib/voidParts.ts";
 import type { Bundle } from "../types";
 import { efficiencyWarning, energyText, finalEnergy } from "../lib/run.ts";
 import { APP_VERSION } from "../lib/appVersion.ts";
+import { designStem } from "../lib/exportNames.ts";
 
 const f3 = (hz: number) => (hz / 1e9).toFixed(3);
 const fx = (v: number | null | undefined, d = 2) => (v === null || v === undefined || !Number.isFinite(v) ? "—" : v.toFixed(d));
@@ -16,13 +17,38 @@ const table = (head: string[], rows: (string | number)[][], align?: ("l" | "r")[
   ].join("\n");
 
 const shellArg = (s: string) => (/^[A-Za-z0-9._,+\-=/]+$/.test(s) ? s : `'${s.replace(/'/g, "'\\''")}'`);
+const r3 = (v: number) => Number(v.toFixed(3));
 
-/** Model file of the built-in models: python/models/<id with "-" replaced by "_">.py (an assumption for custom models). */
-export const modelPath = (b: Bundle) => `python/models/${b.model.id.replace(/-/g, "_")}.py`;
+/** The file in the workspace's models folder that a bundle was run from: a design (<id>.design.json) or a Python
+ * model (<id>.py), as the run server lists it (GET /api/models). */
+export interface ModelFileRef {
+  file: string;
+  kind: "design" | "python";
+}
 
-/** Reconstruct the `fairbeam run` command: non-default parameters, plus --points/--pattern when not default. */
-export function reproduceCommand(b: Bundle): string {
-  const args = ["fairbeam", "run", modelPath(b)];
+/** Whether a bundle was simulated: a geometry preview (or a bundle without a run) has nothing to reproduce. */
+export const simulated = (b: Pick<Bundle, "run" | "results">) => !!(b.run || b.results);
+
+/** The engine a run used (read back from the openEMS log; an older bundle names the one it asked for). */
+export const runEngine = (b: Pick<Bundle, "run">): "cpu" | "gpu" | null => b.run?.engine ?? b.run?.engine_requested ?? (b.run ? "cpu" : null);
+
+/** The run's engine and threads as one phrase: a GPU run has no thread count of its own. */
+export function engineText(b: Pick<Bundle, "run">): string {
+  if (!b.run) return "—";
+  return runEngine(b) === "gpu" ? "GPU engine" : `CPU, threads ${b.run.threads || "all"}`;
+}
+
+/** The model file the command runs, in the workspace's models folder: the file the server listed, else the design
+ * stem (src/lib/exportNames.ts) with the extension of its kind (a Python model when unknown). */
+export function modelPath(b: Bundle, model?: ModelFileRef | null): string {
+  return `<workspace>/models/${model?.file ?? `${designStem(b.model.id)}.py`}`;
+}
+
+/** Reconstruct the `fairbeam run` command: the model file, non-default parameters, the engine (and the CPU threads),
+ * plus --points/--pattern/--fields when a Python model's run needed them (a design file holds its own monitors). */
+export function reproduceCommand(b: Bundle, model?: ModelFileRef | null): string {
+  const args = ["fairbeam", "run", shellArg(modelPath(b, model))];
+  const design = model?.kind === "design";
   for (const p of b.model.params) if (p.value !== p.default) args.push("--set", shellArg(`${p.key}=${p.value}`));
   const r = b.results;
   if (r) {
@@ -31,17 +57,40 @@ export function reproduceCommand(b: Bundle): string {
     // one pattern per driven port shares a frequency: name each frequency once
     const ff = [...new Set(r.farfield.map((x) => Math.round(x.f / 1e6)))];
     const sameAsBands = centres.length > 0 && centres.length === ff.length && centres.every((c, i) => c === ff[i]);
-    if (!sameAsBands && ff.length && r.bands.length) args.push("--pattern", `"${ff.map((m) => m / 1000).join(",")}"`);
+    if (!design && !sameAsBands && ff.length && r.bands.length) args.push("--pattern", `"${ff.map((m) => m / 1000).join(",")}"`);
   }
-  // surface-current maps are only written on request
-  if (b.fields?.planes?.length) args.push("--fields");
-  if (b.run?.threads) args.push("--threads", String(b.run.threads));
+  // surface-current maps are only written on request (a design's monitors ask for them in the file)
+  if (!design && b.fields?.planes?.length) args.push("--fields");
+  if (runEngine(b) === "gpu") args.push("--engine", "gpu");
+  else if (b.run?.threads) args.push("--threads", String(b.run.threads));
   return args.join(" ");
+}
+
+/** What the reproduce command assumes, in one sentence after it. */
+export function reproduceNote(b: Bundle, model?: ModelFileRef | null): string {
+  const where = model?.kind === "design"
+    ? "the design file in the models folder of your Fairbeam workspace (`<workspace>`)"
+    : model ? "the model file in the models folder of your Fairbeam workspace (`<workspace>`)"
+      : `the model file in the models folder of your Fairbeam workspace (\`<workspace>\`); pass the path of the model or design file if it is named differently than \`${designStem(b.model.id)}.py\``;
+  return `Runs ${where}. Only parameters that differ from the defaults are listed; \`project.json\` holds the full setup.`;
+}
+
+/** The mesh in one line ("—" for a geometry preview, which is meshed when it runs). */
+export function meshText(b: Bundle): { cells: string; size: string; domain: string } {
+  const m = b.mesh;
+  const meshed = Array.isArray(m.cells) && m.cells.length === 3 && m.total_cells > 0;
+  return {
+    cells: meshed ? `${m.cells.join(" × ")} = ${m.total_cells.toLocaleString("en-US")}` : "not meshed yet (the mesh is made when the design runs)",
+    size: meshed ? `${fx(m.min_cell, 4)} – ${fx(m.max_cell, 3)} mm` : "—",
+    domain: `(${b.domain.min.map(r3).join(", ")}) to (${b.domain.max.map(r3).join(", ")}) mm`,
+  };
 }
 
 export interface ReportOptions {
   exported: string;
   files: { path: string; description: string }[];
+  /** the workspace file the bundle was run from (the reproduce command runs it) */
+  model?: ModelFileRef | null;
 }
 
 export function readmeReport(bundle: Bundle, opt: ReportOptions): string {
@@ -49,7 +98,7 @@ export function readmeReport(bundle: Bundle, opt: ReportOptions): string {
   const out: string[] = [];
   const push = (...l: string[]) => out.push(...l);
   push(`# ${b.name}`, "");
-  push(`Export package generated by **Fairbeam ${APP_VERSION}** on ${opt.exported}. The simulation ran on ${b.created}.`, "");
+  push(`Export package generated by **Fairbeam ${APP_VERSION}** on ${opt.exported}. ${simulated(b) ? `The simulation ran on ${b.created}.` : "Geometry only: not simulated."}`, "");
   push(`- **Model:** \`${b.model.id}\` — ${b.model.name}`);
   push(`- **Description:** ${b.model.description}`);
   if (b.model.reference) push(`- **Reference:** ${b.model.reference}`);
@@ -95,9 +144,10 @@ export function readmeReport(bundle: Bundle, opt: ReportOptions): string {
   push(`- **End criterion:** ${b.solver.end_criteria_db} dB field energy, at most ${b.solver.max_timesteps} timesteps`, "");
 
   push("## Mesh", "");
-  push(`- **Cells:** ${b.mesh.cells.join(" × ")} = ${b.mesh.total_cells.toLocaleString("en-US")}`);
-  push(`- **Cell size:** ${fx(b.mesh.min_cell, 4)} – ${fx(b.mesh.max_cell, 3)} mm`);
-  push(`- **Domain:** (${b.domain.min.join(", ")}) to (${b.domain.max.join(", ")}) mm`, "");
+  const mesh = meshText(b);
+  push(`- **Cells:** ${mesh.cells}`);
+  push(`- **Cell size:** ${mesh.size}`);
+  push(`- **Domain:** ${mesh.domain}`, "");
 
   push("## Run", "");
   if (b.run) {
@@ -106,9 +156,9 @@ export function readmeReport(bundle: Bundle, opt: ReportOptions): string {
     push(`- **Converged:** ${r.converged ? "yes" : "no"}${r.hit_timestep_limit ? " (stopped at the timestep limit)" : ""}${e.db !== null ? `, ${r.converged ? "final" : "last logged"} energy ${energyText(e)}` : ""}`);
     push(`- **Timesteps:** ${r.timesteps ?? "—"}`);
     push(`- **Solver time:** ${fx(r.solver_time_s, 2)} s (wall ${fx(r.wall_time_s, 2)} s)`);
-    push(`- **Throughput:** ${fx(r.speed_mcells_s, 1)} MCells/s, threads ${r.threads || "all"}`);
+    push(`- **Throughput:** ${fx(r.speed_mcells_s, 1)} MCells/s, ${engineText(b)}`);
     push(`- **Host:** ${r.host.os} ${r.host.machine}${r.host.cpu ? `, ${r.host.cpu}` : ""}`, "");
-  } else push("Geometry only: this bundle was not simulated.", "");
+  } else push("Geometry only: not simulated.", "");
 
   push("## Results", "");
   const res = b.results;
@@ -145,16 +195,15 @@ export function readmeReport(bundle: Bundle, opt: ReportOptions): string {
       );
     }
     push("Gain = efficiency · Dmax; realized gain = gain · (1 − |S11|²); radiation efficiency = P_rad / P_acc.", "");
-  } else push("No results (geometry only).", "");
+  } else push("No results: not simulated.", "");
 
+  // the files of this package, from its own entries
   push("## Files", "");
   push(table(["File", "Contents"], opt.files.map((f) => [`\`${f.path}\``, f.description])), "");
-  push("Touchstone: `data/s11.s1p` is Touchstone v1 (`# GHz S RI R 50`): frequency in GHz, then Re and Im of S11. Most RF tools read it directly, so it can be overlaid on other S11 results.", "");
+  if (opt.files.some((f) => f.path === "data/s11.s1p"))
+    push("Touchstone: `data/s11.s1p` is Touchstone v1 (`# GHz S RI R <port impedance>`): frequency in GHz, then Re and Im of S11. Most RF tools read it directly, so it can be overlaid on other S11 results.", "");
   push("## Reproduce", "");
-  push("```bash", reproduceCommand(b), "```", "");
-  push(
-    `Assumes the built-in model layout: the model file is \`${modelPath(b)}\` (model id with "-" replaced by "_"). For a custom model, pass its path instead. Only parameters that differ from the defaults are listed; \`project.json\` holds the full setup.`,
-    "",
-  );
+  push("```bash", reproduceCommand(b, opt.model), "```", "");
+  push(reproduceNote(b, opt.model), "");
   return out.join("\n");
 }

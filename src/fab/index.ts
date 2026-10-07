@@ -91,7 +91,7 @@ export function fabReadme(b: Bundle, m: FabModel, files: FabFile[], created: str
   const [x0, y0, x1, y1] = m.board;
   const L: string[] = [];
   const h = (t: string) => L.push("", t, "-".repeat(t.length));
-  L.push(`Fabrication files (preview): ${b.name}`, `Model ${b.model.id}, exported ${created} by Fairbeam ${FAB_VERSION}`);
+  L.push(`Fabrication files: ${b.name} (a preview feature of Fairbeam)`, `Model ${b.model.id}, exported ${created} by Fairbeam ${FAB_VERSION}`);
   L.push("", "READ THIS FIRST", "These files are generated from the simulation model. The simulation treats copper as a", "zero-thickness perfect conductor. Clearances, minimum track/gap, tolerances, the connector", "footprint and the stack-up must be checked by you against your fab's rules. Open every", "file in a Gerber viewer (e.g. KiCad GerbView) before ordering. No solder mask, silkscreen", "or paste layers are generated.");
   h("Board");
   L.push(`Outline:       ${r3(x1 - x0)} x ${r3(y1 - y0)} mm (x ${r3(x0)} … ${r3(x1)}, y ${r3(y0)} … ${r3(y1)}; model coordinates, mm)`);

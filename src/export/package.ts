@@ -6,7 +6,7 @@ import { strToU8, zipSync } from "fflate";
 import type { Bundle } from "../types";
 import { cstMacro, DEFAULT_CST_OPTIONS } from "./cst.ts";
 import { arrayWeightsCsv, bandsCsv, farfieldCsv, patternCsv, signalsCsv, sparamsCsv, sweepCsv } from "./csv.ts";
-import { readmeReport } from "./report.ts";
+import { readmeReport, type ModelFileRef } from "./report.ts";
 import * as touchstone from "./touchstone.ts";
 import { touchstoneS1p } from "./touchstone.ts";
 import { sweep } from "../lib/rf.ts";
@@ -81,6 +81,8 @@ export interface PackageExtras {
   arrayWeights?: Map<number, Weight> | null;
   /** imported reference data (Touchstone / CSV) to compare with */
   reference?: RefBundle | null;
+  /** the workspace file the bundle was run from: the README's reproduce command runs it */
+  model?: ModelFileRef | null;
 }
 
 export interface PackageFile {
@@ -183,7 +185,7 @@ export function packageFiles(b: Bundle, include: Record<PackageGroup, boolean>, 
   if (include.image) add("images/view_iso.png", "3D view as shown in the viewer", extras.isoPng);
   if (include.readme) {
     const index = [{ path: "README.md", description: "This report" }, ...files.map(({ path, description }) => ({ path, description }))];
-    files.unshift({ path: "README.md", description: "This report", data: readmeReport(b, { exported: localTime(now), files: index }) });
+    files.unshift({ path: "README.md", description: "This report", data: readmeReport(b, { exported: localTime(now), files: index, model: extras.model }) });
   }
   return files;
 }
