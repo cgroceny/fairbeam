@@ -253,8 +253,9 @@ class Checks(unittest.TestCase):
                 {"kind": "box", "start": [-20.5, 19.5, 4.5], "stop": [-19.5, 20.5, 5.5], "priority": 3}]})
         c = self.lint(edit)
         self.assertEqual(keys(c), ["warning|part-hidden|parts[4]", "warning|part-hidden|parts[6]"])
-        # core is hidden inside the substrate (same priority 0), pip inside ball (10 >= 3)
-        self.assertIn("'substrate'", c[0]["message"])
+        # core is hidden inside the substrate (same priority 0), pip inside ball (10 >= 3); a solid is
+        # named by its label, as the designer shows it
+        self.assertIn("'Substrate'", c[0]["message"])
         self.assertIn("'ball'", c[1]["message"])
 
     def test_polygon_problems(self):
@@ -1190,6 +1191,19 @@ class HiddenParts(unittest.TestCase):
         self.assertEqual([x["message"].split(",")[0] for x in lint(overlaid_arrays(99, (5, 10, 10)), {})], [
             "'array0' lies completely inside 'array1'", "'array1' lies completely inside 'array2'",
             "'array2' lies completely inside 'array1'"])
+
+    def test_message_names_solids_by_their_label(self):
+        # a duplicated patch: the designer shows "Patch" and "Patch copy", never the internal "patch2"
+        d = blank_design("dup", "Duplicate")
+        patch = next(p for p in d["parts"] if p["name"] == "patch")
+        d["parts"].append({**copy.deepcopy(patch), "name": "patch2", "label": "Patch copy"})
+        hidden = [c for c in lint(d, {}) if c["code"] == "part-hidden"]
+        self.assertEqual([c["message"].split(",")[0] for c in hidden],
+                         ["'Patch' lies completely inside 'Patch copy'", "'Patch copy' lies completely inside 'Patch'"])
+        # without a label the name is what the designer shows
+        del d["parts"][-1]["label"]
+        self.assertEqual([c["message"].split(",")[0] for c in lint(d, {}) if c["code"] == "part-hidden"],
+                         ["'Patch' lies completely inside 'patch2'", "'patch2' lies completely inside 'Patch'"])
 
     def test_random_arrays_as_the_full_scan(self):
         rng = random.Random(105)
