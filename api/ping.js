@@ -1,4 +1,4 @@
-// Disabled unless STATS_GITHUB_TOKEN and a stats repository are configured.
+// Disabled unless a Redis REST store is connected (Vercel integration: KV_REST_API_URL and KV_REST_API_TOKEN).
 import { handlePing } from "./_ping-core.js";
 
 const deps = () => ({ env: process.env, fetch: globalThis.fetch, now: Date.now });

@@ -1963,7 +1963,7 @@ fn main() {
                 }
             }
         })
-        .invoke_handler(tauri::generate_handler![splash_state, retry, install_runtime, use_managed, set_prefer_gpu, set_gpu_build, choose_python, reveal_download, reveal_design, save_download, get_general_settings, set_update_check_on_start, check_updates_now, set_language, sync_native_menu_availability, open_workspace, pick_workspace_folder, pick_blender_executable, set_workspace_folder, install_gpu_runtime, set_gpu_runtime_enabled, open_external_link, remember_recent_design, telemetry::telemetry_status, telemetry::telemetry_set_consent, telemetry::telemetry_preview, antenlab_import::take_imported_viewer_prefs])
+        .invoke_handler(tauri::generate_handler![splash_state, retry, install_runtime, use_managed, set_prefer_gpu, set_gpu_build, choose_python, reveal_download, reveal_design, save_download, get_general_settings, set_update_check_on_start, check_updates_now, set_language, sync_native_menu_availability, open_workspace, pick_workspace_folder, pick_blender_executable, set_workspace_folder, install_gpu_runtime, set_gpu_runtime_enabled, open_external_link, remember_recent_design, telemetry::telemetry_status, telemetry::telemetry_set_consent, telemetry::telemetry_preview, telemetry::telemetry_reset_id, antenlab_import::take_imported_viewer_prefs])
         .setup(|app| {
             // the menu reads the saved recent designs, so it is built once the path resolver exists
             // (Builder::menu runs before setup and panicked: state() called before manage())

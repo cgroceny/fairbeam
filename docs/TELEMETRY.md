@@ -1,110 +1,41 @@
-# Usage and download counts
+# Install and download counts
 
-Usage counting remains OFF in default builds (`default = []` in Cargo.toml). This change prepares an opt-in implementation; it does not enable collection. Review the draft legal notices with a lawyer and verify processor arrangements before activation.
+Release builds enable the Cargo `telemetry` feature by default; debug builds (`cargo run`, `tauri dev`) never ask and never send. Collection remains off until the user chooses **Allow** in the first-start “Help count Fairbeam installs?” dialog. **No thanks** or dismissal records denial. The answer is stored; the dialog does not return after an answer. Existing consent for a different report schema requires a new answer. Browser/demo usage sends nothing. Sign-in remains disabled.
+
+## Report and local controls
+
+```json
+{"schema":"fairbeam.ping/3","install_id":"1b4e28ba-2fa1-4d3b-a3f5-ef19b5a7633b","app_version":"0.7.2","os":"macos","arch":"aarch64"}
+```
+
+Only these fields are sent to `https://fairbeam.org/api/ping`. The install ID exists solely to count distinct installs. It is a UUIDv4 generated locally using OS randomness on the first Allow, never from hardware, user names, paths or network data. Nothing about designs, files, results or the user is sent.
+
+Settings › General › Install counts allows withdrawal at any time. Turning counting off deletes the local ID; turning it on again generates a new one. **Reset ID**, beside the switch, generates a new ID while counting is on. Neither action resets the sending schedule. `FAIRBEAM_NO_TELEMETRY=1` overrides consent for that process. Builds using `--no-default-features` have no telemetry HTTP client and do not read or write telemetry settings.
+
+The app's local telemetry `state.json` contains `consent`, `consent_schema`, `install_id` and `last_sent` (Unix seconds of the last attempted request). A request is attempted at most once every seven elapsed days while the app is open. The date is saved before transmission; failures also wait seven days and cause no user-facing error. Clock rollback delays sending. Consent changes, ID resets and sending share a process mutex and an empty OS-locked `state.lock` file (Rust 1.89 or later). After withdrawal completes, no pending sender can start a request. HTTP redirects are disabled. View what would be sent displays the actual report when due; disabled builds show only a format example.
+
+## Storage and retention
+
+Counts are kept in a Redis database that Vercel connects to the project through its Marketplace integration (Upstash Redis). The integration adds the environment variables `KV_REST_API_URL` and `KV_REST_API_TOKEN` (or `UPSTASH_REDIS_REST_URL` and `UPSTASH_REDIS_REST_TOKEN`) to the project by itself, so no token is typed or committed. Without them `/api/ping` answers 503 and does nothing; the app ignores that silently. The setup steps are in [DEPLOY.md](DEPLOY.md#usage-counts-redis). The free tier is enough: a ping is two Redis calls, and only a few keys exist (one salt, one global set and one set per version/OS/architecture for the current week, plus the aggregate hash); the sets hold one 64-character hash per install.
+
+The API does not log payloads, IP addresses, user agents, request headers or exception details. Providers process network requests under their own policies and may retain infrastructure logs. Provider servers may be outside Türkiye. Questions: ismail@fairbeam.org.
+
+How an install is counted, per ping:
+
+1. An atomic Redis script returns the random 256-bit salt of the current UTC ISO week and creates it on the first request of the week. The salt has an absolute expiry at the next Monday 00:00 UTC.
+2. The API computes HMAC-SHA-256 of the install ID with that salt. The install ID itself is never sent to Redis, stored or logged; only the hash reaches the database.
+3. A second atomic script adds the hash to a weekly set and to a per-version/OS/architecture weekly set, both with the same absolute expiry. The first time a hash enters a set the matching aggregate is incremented in the same script, so the total survives when the hashes expire.
+
+The salt changes every week and is deleted together with the hashes, so after the week ends nothing on the server links a hash to the same install in another week. There is no end-of-week job and no raw event log. Configure Redis persistence/backups so expired temporary keys are not retained in historical backups.
+
+Only aggregates remain after expiry: per ISO week, version, OS and architecture distinct-install totals in the hash `fairbeam:{counts}:aggregates`, whose field `cumulative_weekly_distinct` is incremented once per ID per week across all tuples. **Exact all-time distinct counting is not feasible with weekly salt rotation and deletion of identifiers.** This cumulative weekly sum is an estimate; a returning install contributes again in another week. ID resets and fabricated reports can inflate counts. These are not verified user counts. Aggregates have no scheduled deletion date. Read them with `node scripts/stats-summary.mjs --redis --no-releases` (after `vercel env pull`, or paste the variables into the shell) or in the database's data browser in the Vercel dashboard.
+
+Reports in the schemas of earlier versions are validated and acknowledged, but nothing from them is stored. The API validates body size, content type, exact fields and values; failures return 503 without logging request details.
 
 ## Download counts
 
-Run `node scripts/stats-summary.mjs --releases-only`. Public GitHub REST data from `ismailakdag/fairbeam-releases` needs no token or login; all release pages are read. The script sums asset `download_count` per version and platform, showing update metadata, signatures/checksums and other assets separately. Installer and update assets are combined within a platform. Downloads are requests, not unique people or installs; retries and updates can increase totals. This requires no app change or opt-in usage reports.
-
-## Minimal report and consent
-
-```json
-{"schema":"fairbeam.ping/2","app_version":"0.7.0","os":"macos","arch":"aarch64"}
-```
-
-Only these four fields are sent. There is no install ID, GPU flag, client date, feature counter or Python counting hook. In an enabled desktop build, the dialog asks once; No or dismissing it records denial. Until consent is granted, nothing is sent. Settings › General › Usage statistics can withdraw or grant consent at any time. `FAIRBEAM_NO_TELEMETRY=1` overrides consent. Browser/demo usage sends nothing.
-
-The local telemetry `state.json` contains only `consent` and `last_sent` (Unix seconds, the last request date). A request is attempted at most once per seven elapsed days while the app is open. The date is saved before transmission; failures also wait seven days. Clock rollback delays sending. Toggling consent does not reset the date. An empty `state.lock` file holds an OS lock (Rust 1.89 or later); it stores no report data. Sending and consent changes share this lock across app processes and a process mutex, so no request can start after withdrawal completes. HTTP redirects are disabled. The compiled-out build has no telemetry HTTP client and does not read or write telemetry state. Enabled builds discard previous identifiers and counter files and require fresh consent for the new report.
-
-## API and retention
-
-`api/ping.js` is disabled without `STATS_GITHUB_TOKEN`. Set `STATS_REPO=owner/repository` (prefer a restricted repository) and optionally `STATS_BRANCH` (default `main`). Scope the token to that repository's Contents write access. No salt is used. No payload, IP address, user agent or exception details are logged by the handler. Provider infrastructure logging is separate and must be reviewed before deployment; do not claim providers retain no logs.
-
-The handler validates size, content type, fields and values. Old schemas remain accepted for compatibility, but their identifier, GPU flag, date and counters are discarded before storage. They contribute one report to the receiving week's total, so older clients may inflate totals. The only persisted records are `data/YYYY-Www--version--os--arch.json`, containing `week`, `app_version`, `os`, `arch`, `count`. GitHub SHA conflicts are retried; storage errors return 503. Each update is a commit dated to the start of its UTC week (`weekStart`), so the history holds the same totals and no request time, IP address or identity. Fairbeam creates no raw event log. Aggregates are retained without a scheduled deletion date.
-
-Without identifiers, the API cannot deduplicate retries, enforce a per-install rate limit or measure unique installations. The weekly restriction is local, and the public API can receive fabricated reports. Use totals only as approximate platform usage. Restrict repository access; if any previous raw logs exist, remove them and their history/backups before activation under a reviewed retention process.
-
-Read aggregates with `node scripts/stats-summary.mjs --dir /path/to/stats/data --no-releases`, or `node scripts/stats-summary.mjs --gh --repo owner/repository --no-releases` (private repository access needs gh authentication). Historical raw `.jsonl` logs are not read.
+`node scripts/stats-summary.mjs --releases-only` reads public GitHub release asset totals without a token. Download counts are requests, not unique people or installs; retries and updates can increase them. This requires no app opt-in.
 
 ## Verification
 
-`npm run check:telemetry` tests API validation and aggregate storage, release totals and pagination, and the Rust scheduling core in a temporary crate without building the desktop app. For the consent and Settings flows, run `FAIRBEAM_USAGE_URL=http://127.0.0.1:5353 node scripts/check-telemetry-ui.mjs` against an existing dev server. It uses a fake native bridge and saves English/Turkish screenshots to `/tmp`.
-
-## Draft notices for legal review
-
-The English and Turkish notices below match the optional usage section on [the privacy page](https://fairbeam.org/privacy.html#collected). This is draft text for the maintainer to review with a lawyer, not an assertion of compliance. In particular, recurring weekly overseas requests need a valid transfer mechanism; the current KVKK Article 9 consent exception for incidental transfers may not apply.
-
-### English
-
-If usage counts are turned on (not available in this release)
-
-Draft KVKK information notice and GDPR-style privacy notice for a possible future release. This release cannot send usage reports. The maintainer must review this text with a lawyer before enabling usage counts.
-
-Controller: İsmail Akdağ. Contact: ismail@fairbeam.org.
-
-Purpose: estimate installations using each version and operating system to prioritize platform support. Totals count reports, not unique people or verified installations.
-
-Data and collection: with your explicit consent, the desktop app sends only the report schema, app version, operating system and CPU architecture over HTTPS to fairbeam.org/api/ping, at most once every seven days. No install ID, account, feature counters, designs, files or paths are sent.
-
-The hosting provider transiently processes your IP address to deliver the request. Fairbeam does not store IP addresses or user agents. Provider infrastructure may keep its own request logs under its policies; this draft does not promise that providers keep no logs.
-
-Legal basis: explicit consent under KVKK Article 5 and consent under GDPR Article 6(1)(a), where applicable. Sharing is optional and does not affect app functionality. Choose Off in Settings › General › Usage statistics to withdraw at any time. Withdrawal stops future requests without affecting the lawfulness of earlier processing.
-
-Recipients and processors: Vercel hosts the website and usage API; GitHub hosts releases, updates and the aggregate statistics repository. Only aggregate counts reach the repository. Their roles, contracts and infrastructure logging must be confirmed before activation.
-
-International transfer: requests are delivered to servers outside Türkiye. This draft proposes explicit consent for the transfer under KVKK Article 9, with information about the risks of transfer without an adequacy decision or appropriate safeguards. The current Article 9 consent exception is limited to incidental transfers; recurring weekly requests may not qualify. Counsel must establish a valid transfer mechanism under KVKK and, where applicable, GDPR Chapter V before activation. No valid mechanism is asserted by this draft.
-
-Retention: Fairbeam keeps aggregate totals by UTC week, version, operating system and architecture for platform planning, without a scheduled deletion date. No raw event log is created; each storage update is dated to the start of its UTC week, so request times are not kept. Locally, only the consent choice and last request date are stored for usage counting; that date also limits retries after failures.
-
-Rights: KVKK Article 11 includes learning about processing, its purpose and recipients, seeking correction or deletion, notification to recipients, objecting to adverse automated decisions and seeking compensation for unlawful processing. GDPR Articles 15–21 provide access, rectification, erasure, restriction, portability and objection where applicable. There are no automated decisions based on usage reports.
-
-To exercise your rights, write to ismail@fairbeam.org with your request. Do not send designs or post personal information in public issues. Reasonable identity verification may be needed. Totals have no installation identifier, so a particular installation’s contribution cannot be located or removed. You may complain to the Turkish Personal Data Protection Board (Kişisel Verileri Koruma Kurulu) or your EU supervisory authority, subject to applicable procedures.
-
-### Türkçe — taslak aydınlatma metni
-
-Kullanım sayımı açılırsa (bu sürümde kullanılamaz)
-
-Olası gelecek bir sürüm için taslak KVKK aydınlatma metni ve GDPR kapsamında gizlilik bildirimi. Bu sürüm kullanım raporu gönderemez. Kullanım sayımı etkinleştirilmeden önce proje sorumlusu bu metni bir avukatla incelemelidir.
-
-Veri sorumlusu: İsmail Akdağ. İletişim: ismail@fairbeam.org.
-
-Amaç: platform desteğine öncelik vermek için her sürümün ve işletim sisteminin kullanıldığı kurulumları yaklaşık olarak saymak. Toplamlar, tekil kişileri veya doğrulanmış kurulumları değil, raporları sayar.
-
-Veriler ve toplama yöntemi: açık rızanızla masaüstü uygulaması HTTPS üzerinden fairbeam.org/api/ping adresine en fazla yedi günde bir yalnızca rapor şemasını, uygulama sürümünü, işletim sistemini ve işlemci mimarisini gönderir. Kurulum kimliği, hesap, özellik sayaçları, tasarımlar, dosyalar veya yollar gönderilmez.
-
-Barındırma sağlayıcısı isteği iletmek için IP adresinizi geçici olarak işler. Fairbeam IP adreslerini veya kullanıcı aracısı bilgilerini saklamaz. Sağlayıcı altyapısı kendi politikaları kapsamında istek günlükleri tutabilir; bu taslak sağlayıcıların hiç günlük tutmadığını taahhüt etmez.
-
-Hukuki sebep: KVKK’nın 5. maddesi uyarınca açık rıza ve uygulanabildiği ölçüde GDPR’nin 6(1)(a) maddesi uyarınca rıza. Paylaşım isteğe bağlıdır ve uygulamanın işlevlerini etkilemez. Rızanızı dilediğiniz zaman geri almak için Ayarlar › Genel › Kullanım istatistikleri bölümünde Kapalı seçeneğini seçin. Rızanın geri alınması önceki işlemenin hukuka uygunluğunu etkilemeden gelecekteki istekleri durdurur.
-
-Alıcılar ve veri işleyenler: Vercel web sitesini ve kullanım API’sini; GitHub sürümleri, güncellemeleri ve toplu istatistik deposunu barındırır. Depoya yalnızca toplu sayılar ulaşır. Tarafların rolleri, sözleşmeleri ve altyapı günlükleri etkinleştirmeden önce doğrulanmalıdır.
-
-Yurt dışına aktarım: istekler Türkiye dışındaki sunuculara iletilir. Bu taslak, yeterlilik kararı veya uygun güvenceler olmadan aktarımın riskleri hakkında bilgilendirmeyle KVKK’nın 9. maddesi kapsamında aktarım için açık rıza alınmasını önerir. Güncel 9. maddedeki rıza istisnası arızi aktarımlarla sınırlıdır; haftalık tekrarlanan istekler bu kapsama girmeyebilir. Etkinleştirmeden önce bir avukat KVKK ve uygulanabildiği ölçüde GDPR’nin V. Bölümü kapsamında geçerli bir aktarım mekanizması belirlemelidir. Bu taslak geçerli bir mekanizma bulunduğunu ileri sürmez.
-
-Saklama: Fairbeam platform planlaması için UTC haftası, sürüm, işletim sistemi ve mimariye göre toplu sayıları belirlenmiş bir silme tarihi olmadan saklar. Ham olay günlüğü oluşturulmaz; depodaki her güncelleme ilgili UTC haftasının başlangıcıyla tarihlendiğinden istek zamanları saklanmaz. Kullanım sayımı için yerelde yalnızca rıza tercihi ve son istek tarihi saklanır; bu tarih başarısız isteklerden sonraki yeniden denemeleri de sınırlar.
-
-Haklar: KVKK’nın 11. maddesi kapsamında işleme, amaç ve alıcılar hakkında bilgi edinme, düzeltme veya silme isteme, alıcılara bildirim, aleyhinize otomatik kararlara itiraz ve hukuka aykırı işleme nedeniyle zararınızın giderilmesini talep etme hakları bulunur. GDPR’nin 15–21. maddeleri, uygulanabildiği ölçüde erişim, düzeltme, silme, kısıtlama, taşınabilirlik ve itiraz hakları sağlar. Kullanım raporlarına dayalı otomatik karar alınmaz.
-
-Haklarınızı kullanmak için talebinizi ismail@fairbeam.org adresine iletin. Tasarım göndermeyin veya herkese açık konularda kişisel bilgi paylaşmayın. Makul bir kimlik doğrulaması gerekebilir. Toplamlarda kurulum kimliği bulunmadığından belirli bir kurulumun katkısı bulunamaz veya çıkarılamaz. Geçerli usuller kapsamında Kişisel Verileri Koruma Kuruluna veya AB’deki denetim makamınıza şikâyette bulunabilirsiniz.
-
-### Short consent copy (English / Türkçe)
-
-With your explicit consent, Fairbeam sends only the app version, operating system, CPU architecture and report schema, at most once every seven days, to estimate platform usage.
-
-Açık rıza vermeniz hâlinde Fairbeam, platform kullanımını yaklaşık olarak saymak için en fazla yedi günde bir yalnızca uygulama sürümünü, işletim sistemini, işlemci mimarisini ve rapor şemasını gönderir.
-
-No install ID, feature counters, designs or files. The hosting provider processes your IP address to deliver the request; Fairbeam stores neither IP addresses nor user agents. Only weekly aggregate totals are retained.
-
-Kurulum kimliği, özellik sayaçları, tasarımlar veya dosyalar gönderilmez. Barındırma sağlayıcısı isteği iletmek için IP adresinizi işler; Fairbeam IP adreslerini veya kullanıcı aracısı bilgilerini saklamaz. Yalnızca haftalık toplu sayılar saklanır.
-
-Controller: İsmail Akdağ (ismail@fairbeam.org). Vercel hosts the API; GitHub stores aggregates. Requests go to servers outside Türkiye. The draft privacy notice describes the proposed consent-based transfer and the legal review needed before activation.
-
-Veri sorumlusu: İsmail Akdağ (ismail@fairbeam.org). API Vercel’de barındırılır; toplu sayılar GitHub’da saklanır. İstekler Türkiye dışındaki sunuculara gider. Taslak gizlilik bildirimi, önerilen rızaya dayalı aktarımı ve etkinleştirmeden önce gereken hukuki incelemeyi açıklar.
-
-Optional and off by default. Withdraw consent at any time in Settings › General › Usage statistics › Off. This stops future requests; earlier aggregate totals cannot be linked to your installation.
-
-İsteğe bağlıdır ve varsayılan olarak kapalıdır. Rızanızı dilediğiniz zaman geri almak için Ayarlar › Genel › Kullanım istatistikleri › Kapalı seçeneğini seçin. Bu işlem gelecekteki istekleri durdurur; önceki toplu sayılar kurulumunuzla ilişkilendirilemez.
-
-### Review sources
-
-- [KVKK law, including Articles 5, 9 and 11](https://www.kvkk.gov.tr/Icerik/6649/Personal-Data-Protection-Law).
-- [GDPR regulation, including Articles 6 and 15–21 and Chapter V](https://eur-lex.europa.eu/eli/reg/2016/679/oj/eng).
+`npm run check:telemetry` checks payload validation, the Redis commands (which must contain no install ID, address or header), deduplication contracts, consent gating, weekly scheduling, random ID generation/regeneration, release totals and pagination without production requests. Rust core tests run in a temporary crate with `--features telemetry`, without building the desktop app. `FAIRBEAM_USAGE_URL=http://127.0.0.1:5354 node scripts/check-telemetry-ui.mjs` checks English/Turkish consent and Settings flows with a fake native bridge and screenshots in `/tmp`. For the real Redis script, set `FAIRBEAM_REDIS_SERVER` and `FAIRBEAM_REDIS_CLI` to local Redis binaries and run `node scripts/check-telemetry-redis.mjs`. It uses a disposable Unix-socket instance with persistence off and verifies the salt script, deduplication, tuple isolation, salt rotation and expiry without contacting production. Public English and Turkish notices are on [the privacy page](https://fairbeam.org/privacy.html).

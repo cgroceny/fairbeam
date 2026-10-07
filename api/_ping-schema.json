@@ -1,12 +1,13 @@
 {
-  "$comment": "Minimal usage report. Legacy fields are validated but never persisted.",
-  "schema": "fairbeam.ping/2",
+  "$comment": "Opt-in install report. Earlier reports remain approximate report totals.",
+  "schema": "fairbeam.ping/3",
   "legacy_schemas": [
     "fairbeam.ping/1",
     "antenlab.ping/1"
   ],
   "fields": [
     "schema",
+    "install_id",
     "app_version",
     "os",
     "arch"

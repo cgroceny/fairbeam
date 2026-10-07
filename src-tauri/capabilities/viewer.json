@@ -31,6 +31,7 @@
     "allow-telemetry-status",
     "allow-telemetry-set-consent",
     "allow-telemetry-preview",
+    "allow-telemetry-reset-id",
     "allow-take-imported-viewer-prefs"
   ]
 }

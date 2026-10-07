@@ -1,5 +1,5 @@
 // Optional browser check against an existing dev server; no real usage request or simulation.
-// FAIRBEAM_USAGE_URL=http://127.0.0.1:5353 node scripts/check-telemetry-ui.mjs
+// FAIRBEAM_USAGE_URL=http://127.0.0.1:5354 node scripts/check-telemetry-ui.mjs
 import assert from "node:assert/strict";
 import puppeteer from "puppeteer-core";
 import { readFileSync } from "node:fs";
@@ -28,9 +28,10 @@ try {
             sessionStorage.setItem("usage-choice", JSON.stringify(state));
             return { ...state };
           }
+          if (command === "telemetry_reset_id") { window.usageTest.resets = (window.usageTest.resets || 0) + 1; return { ...state }; }
           if (command === "get_general_settings") return { language: lang };
           if (command === "telemetry_preview") return { status: { ...state }, next: state.active ? {
-            schema: "fairbeam.ping/2", app_version: "0.7.0", os: "linux", arch: "x86_64",
+            schema: "fairbeam.ping/3", install_id: "1b4e28ba-2fa1-4d3b-a3f5-ef19b5a7633b", app_version: "0.7.0", os: "linux", arch: "x86_64",
           } : null };
           return null;
         } };
@@ -54,7 +55,7 @@ try {
       }
       await page.click(`.app-header button[aria-label='${text["settings.title"]}']`);
       await page.waitForSelector(".us-section");
-      assert.equal(await page.$eval(".us-choice label:last-child input", el => el.disabled), !enabled);
+      assert.equal(await page.$eval(".us-choice label:nth-of-type(2) input", el => el.disabled), !enabled);
       if (enabled) {
         const radios = await page.$$(".us-choice input");
         await radios[1].click();
@@ -62,16 +63,28 @@ try {
         await page.evaluate(label => [...document.querySelectorAll(".us-actions button")].find(b => b.textContent === label).click(), text["usage.showPreview"]);
         await page.waitForSelector(".us-json");
         assert.deepEqual(JSON.parse(await page.$eval(".us-json", el => el.textContent)), {
-          schema: "fairbeam.ping/2", app_version: "0.7.0", os: "linux", arch: "x86_64",
+          schema: "fairbeam.ping/3", install_id: "1b4e28ba-2fa1-4d3b-a3f5-ef19b5a7633b", app_version: "0.7.0", os: "linux", arch: "x86_64",
         });
+        await page.evaluate(label => [...document.querySelectorAll(".us-choice button")].find(b => b.textContent === label).click(), text["usage.resetId"]);
+        await page.waitForFunction(() => window.usageTest.resets === 1);
         await radios[0].click();
         await page.waitForFunction(() => !window.usageTest.status.active);
-        assert.ok(!await page.evaluate(() => window.usageTest.calls.some(c => /telemetry_count|telemetry_reset_id/.test(c.command))));
+        assert.ok(!await page.evaluate(() => window.usageTest.calls.some(c => /telemetry_count/.test(c.command))));
         await page.$eval(".us-section", el => el.scrollIntoView({ block: "start" }));
         await page.screenshot({ path: `/tmp/fairbeam-usage-settings-${lang}.png` });
       }
+      if (enabled) {
+        await page.evaluate(() => sessionStorage.removeItem("usage-choice"));
+        await page.reload({ waitUntil: "networkidle0" });
+        await page.waitForSelector("#usp-title");
+        await page.evaluate(label => [...document.querySelectorAll(".dialog button")].find(b => b.textContent === label).click(), text["usage.prompt.yes"]);
+        await page.waitForSelector("#usp-title", { hidden: true });
+        assert.equal(await page.evaluate(() => window.usageTest.status.consent), "granted");
+        await page.reload({ waitUntil: "networkidle0" });
+        assert.equal(await page.$("#usp-title"), null, "Allow is stored too");
+      }
       await page.close();
     }
-    console.log(`Usage UI ${lang}: disabled build, dismissal once, privacy link, consent, withdrawal and four-field preview passed.`);
+    console.log(`Usage UI ${lang}: disabled build, dismissal once, privacy link, consent, withdrawal, reset and five-field preview passed.`);
   }
 } finally { await browser.close(); }

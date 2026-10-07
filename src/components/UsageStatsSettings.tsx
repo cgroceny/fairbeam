@@ -1,6 +1,6 @@
 // Opt-in usage counts and an exact payload preview.
 import { createSignal, onMount, Show } from "solid-js";
-import { openPrivacyPage, setUsageConsent, USAGE_SUMMARY, usagePreview, usageStatus, type UsagePreview, type UsageStatus } from "../lib/telemetry";
+import { openPrivacyPage, resetUsageId, setUsageConsent, USAGE_SUMMARY, usagePreview, usageStatus, type UsagePreview, type UsageStatus } from "../lib/telemetry";
 import { t } from "../i18n";
 import "../styles/usage-stats.css";
 
@@ -30,6 +30,10 @@ export default function UsageStatsSettings() {
       <div class="us-choice" role="radiogroup" aria-labelledby="us-title">
         <label class="gs-check"><input type="radio" name="usage-stats" checked={status()!.consent !== "granted"} disabled={!usable() || busy()} onChange={() => void choose(false)} /> {t("usage.off")}</label>
         <label class="gs-check"><input type="radio" name="usage-stats" checked={status()!.consent === "granted"} disabled={!usable() || busy()} onChange={() => void choose(true)} /> {t("usage.on")}</label>
+        <button class="btn btn-ghost btn-sm" disabled={!usable() || !status()?.active || busy()} onClick={() => void run("usage.error.saveChoice", async () => {
+          setStatus(await resetUsageId());
+          if (preview()) setPreview(await usagePreview());
+        })}>{t("usage.resetId")}</button>
       </div>
       <p class="note">{USAGE_SUMMARY.what}</p>
       <p class="note">{USAGE_SUMMARY.never} {USAGE_SUMMARY.where} {USAGE_SUMMARY.off}</p>

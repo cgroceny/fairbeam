@@ -29,6 +29,7 @@ export interface UsageStatus {
 /** The exact JSON of a ping (the shell builds it; the viewer only shows it). */
 export type UsagePing = {
   schema: string;
+  install_id: string;
   app_version: string;
   os: string;
   arch: string;
@@ -61,6 +62,13 @@ export async function setUsageConsent(granted: boolean): Promise<UsageStatus> {
   const n = native();
   if (!n) throw new Error(t("usage.error.desktopOnly"));
   status = await n.invoke<UsageStatus>("telemetry_set_consent", { granted });
+  return status;
+}
+
+export async function resetUsageId(): Promise<UsageStatus> {
+  const n = native();
+  if (!n) throw new Error(t("usage.error.desktopOnly"));
+  status = await n.invoke<UsageStatus>("telemetry_reset_id");
   return status;
 }
 

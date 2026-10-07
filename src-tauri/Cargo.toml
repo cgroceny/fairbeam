@@ -34,11 +34,11 @@ tempfile = "3"
 libc = "0.2"
 
 [features]
-default = []
+default = ["telemetry"]
 # sign in with GitHub or Google (docs/ACCOUNTS.md); off: no account code, commands or network
 accounts = ["dep:keyring", "dep:reqwest", "dep:rustls", "dep:sha2", "dep:base64", "dep:getrandom", "dep:url", "dep:tokio"]
-# usage statistics (docs/TELEMETRY.md): OFF. Without this feature nothing is counted or sent.
-telemetry = ["dep:reqwest", "dep:rustls"]
+# Opt-in install counts (docs/TELEMETRY.md). Without this feature nothing is sent.
+telemetry = ["dep:reqwest", "dep:rustls", "dep:getrandom"]
 
 [dev-dependencies]
 # the account module's core (PKCE, parsers, flows against a fake HTTP layer) is unit-tested without the feature

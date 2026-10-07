@@ -47,10 +47,11 @@ Getting Started Guide opens, redirects to `/docs/getting-started.html` (and `lan
 the same with a meta refresh where the redirect rules do not apply, as in a local preview). Pushes to
 branches other than `main` do not deploy (`git.deploymentEnabled` in `vercel.json`).
 
-The site also has one serverless function, `api/ping.js`, which receives the desktop app's usage
-statistics (see [TELEMETRY.md](TELEMETRY.md)). Vercel deploys every file in `api/` whose name does
+The site also has one serverless function, `api/ping.js`, which receives the desktop app's opt-in
+install counts (see [TELEMETRY.md](TELEMETRY.md)). Vercel deploys every file in `api/` whose name does
 not start with `_`. `vercel.json` `functions` bundles `api/_ping-schema.json` with the function. The
-function is disabled: without the `STATS_GITHUB_TOKEN` environment variable it
+function stays disabled until a Redis database is connected (see [Usage counts](#usage-counts-redis)):
+without the `KV_REST_API_URL` and `KV_REST_API_TOKEN` environment variables it
 answers 503 and does nothing. The static build ignores `api/`.
 
 ## Check locally before deploying
@@ -86,6 +87,19 @@ project or another domain.
    The TLS certificate is issued automatically once DNS resolves.
 7. **Automatic deploys.** Pushes to `main` then redeploy automatically. To publish only by hand, turn
    off automatic deploys under *Settings → Git*.
+
+## Usage counts (Redis)
+
+One-time setup in the Vercel dashboard. Nobody types or copies a token: the integration adds the
+environment variables to the project itself.
+
+1. Open the project in the Vercel dashboard and go to the *Storage* tab (or *Marketplace*).
+2. Choose *Create Database* (or *Add Integration*), pick **Upstash** and then **Redis**, and accept the free plan. Give it a name such as `fairbeam-counts` and pick a region.
+3. Connect it to the Fairbeam project for the *Production* environment (previews do not need it). Leave the environment variable prefix at its default, `KV`.
+4. Redeploy production once (*Deployments* → the latest one → *Redeploy*), because environment variables only reach new deployments.
+5. Check that it is connected: `curl -i -X POST https://fairbeam.org/api/ping -H 'content-type: application/json' -d '{}'`. The answer `400 invalid ping` means the database is connected; `503` means it is not. The request stores nothing.
+
+The free plan is enough for a few thousand installs a week (check the current limits on the plan page). To read the counts, either open the database's data browser from the Vercel dashboard and look at the hash `fairbeam:{counts}:aggregates`, or run `vercel env pull` and then `node scripts/stats-summary.mjs --redis --no-releases`. To switch counting off on the server, disconnect the database from the project (the API answers 503 again) or delete it.
 
 ## Domains
 
