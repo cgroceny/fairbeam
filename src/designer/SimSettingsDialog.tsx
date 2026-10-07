@@ -126,6 +126,10 @@ export default function SimSettingsDialog() {
   const stats = () => meshStats(bundle());
   const designMesh = () => d().mesh.mode === "design";
   const manualMesh = () => d().mesh.mode === "manual";
+  // the Classic (old) mesh is offered only to a design that used it when the dialog opened: then it
+  // stays in the list while the dialog is open, so Automatic and back works without Cancel
+  const openedClassic = d().mesh.mode === "auto" || !d().mesh.mode;
+  const offerClassic = () => !manualMesh() && (openedClassic || !designMesh());
   const autoSettings = () => bundle()?.mesh?.auto?.settings ?? {};
   const autoNotes = () => bundle()?.mesh?.auto?.notes ?? {};
   const currentAuto = () => meshFreshness() === "current" && autoSettings().mode === "design";
@@ -386,8 +390,8 @@ export default function SimSettingsDialog() {
                 >
                   <Show when={manualMesh()}><option value="manual">{t("sim.mesh.mode.manual")}</option></Show>
                   <option value="design">{t("sim.mesh.mode.design")}</option>
-                  {/* the old automatic mesh is only offered to a design that already uses it */}
-                  <Show when={!manualMesh() && !designMesh()}><option value="auto">{t("sim.mesh.mode.auto")}</option></Show>
+                  {/* the old automatic mesh is only offered to a design that used it when the dialog opened */}
+                  <Show when={offerClassic()}><option value="auto">{t("sim.mesh.mode.auto")}</option></Show>
                 </select>
               </label>
               <Show when={manualMesh()}>

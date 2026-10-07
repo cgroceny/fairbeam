@@ -2944,8 +2944,6 @@
   "settings.language.system": "Sistem",
   "settings.layoutReset": "Yerleşim sıfırlandı.",
   "settings.mesh": "Yeni tasarımda mesh",
-  "settings.mesh.auto": "Klasik (eski)",
-  "settings.mesh.legacy": "Otomatik (önerilen)",
   "settings.nextStart": "Fairbeam bir sonraki açılışında geçerli olur.",
   "settings.openFolder": "Klasörü aç",
   "settings.resetLayout": "Tasarımcı yerleşimini sıfırla",

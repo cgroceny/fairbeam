@@ -3002,8 +3002,6 @@
   "settings.language.system": "System",
   "settings.layoutReset": "Layout reset.",
   "settings.mesh": "New design mesh",
-  "settings.mesh.auto": "Classic (old)",
-  "settings.mesh.legacy": "Automatic (recommended)",
   "settings.nextStart": "Takes effect the next time Fairbeam starts.",
   "settings.openFolder": "Open folder",
   "settings.resetLayout": "Reset designer layout",

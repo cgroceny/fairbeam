@@ -299,10 +299,11 @@ export async function createDesign(body: { id: string; name?: string; from?: str
   setLoading(true);
   try {
     const res = await api.createDesign(body);
-    // The newer design-aware auto mesh is `design`; `auto` is the legacy mesh editor.
-    // Apply this only to newly created designs, then persist it in the created file. An imported
-    // CST macro or PCB artwork keeps the mesh the import chose (an fairbeam export restores its original mesh).
-    const preferredMesh = readGeneralSettings().meshMode === "auto" ? "design" : "auto";
+    // General settings › New design mesh names the mesh mode itself: `design` is the design-aware
+    // Automatic (recommended) mesh, `auto` the Classic (old) mesh editor. Apply it only to newly
+    // created designs, then persist it in the created file. An imported CST macro or PCB artwork
+    // keeps the mesh the import chose (a Fairbeam export restores its original mesh).
+    const preferredMesh = readGeneralSettings().meshMode;
     const { from, python, cst, pcb } = body;
     const meshChanged = !from && !python && !cst && !pcb && !!res.design.mesh && res.design.mesh.mode !== "manual" && res.design.mesh.mode !== preferredMesh;
     if (meshChanged) {
