@@ -33,5 +33,13 @@ assert.equal(compared[2].dash, undefined, "Re remains solid in run B");
 assert.equal(compared[1].dash, "6 4", "Im is dashed in run A");
 assert.equal(compared[3].dash, "6 4", "Im is dashed in run B");
 assert.equal(plotQuantities([{ ...input[0], id: "2,2", label: "S22" }], "db")[0].kind, "reflection", "any diagonal Sij is a reflection trace");
+// compared runs: the bars go around the quantity only, the run follows ("|S11| · E", not "|S11 · E|")
+const runs = plotQuantities([{ ...input[0], label: "S11", suffix: "E" }, { ...input[0], id: "S11b", label: "S11", suffix: "A" }], "db_phase");
+assert.deepEqual(runs[0].series.map((s) => s.label), ["|S11| · E", "|S11| · A"]);
+assert.deepEqual(runs[1].series.map((s) => s.label), ["∠S11 · E", "∠S11 · A"]);
+// one quantity plotted: the axis title names it (a lone trace has no legend); several: the generic title
+assert.deepEqual(runs.map((g) => g.yLabel), ["|S11| (dB)", "∠S11 (°)"]);
+assert.equal(plotQuantities(input, "db")[0].yLabel, "Magnitude (dB)", "S11 and S21: the generic title");
+assert.equal(plotQuantities([input[0]], "mag_phase")[0].yLabel, "|S11|");
 assert.equal(plotQuantities(input, "plot", "phase")[0].key, "phase", "As plotted follows the legacy phase switch");
 console.log("plot quantities: analytic complex values, format order, nonfinite gaps and comparison strokes OK");

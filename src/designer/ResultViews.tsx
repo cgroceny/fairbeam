@@ -8,8 +8,9 @@ import { powerWaveReflection } from "../lib/powerWaves";
 // by its short run label (A, B, ...); the dock's Runs tab (RunDock.tsx) lists what the labels stand for.
 import { createEffect, createMemo, createRoot, createSignal, For, Match, onCleanup, onMount, Show, Switch } from "solid-js";
 import { Portal } from "solid-js/web";
-import { Check, Copy, Download, GitCompareArrows, Globe, TriangleAlert, X } from "lucide-solid";
+import { Check, Copy, FileChartLine, FileSpreadsheet, GitCompareArrows, Globe, TriangleAlert, X } from "lucide-solid";
 import LineChart, { type PointSeries, type Series } from "../charts/LineChart";
+import StackedCharts from "../charts/StackedCharts";
 import { useSize } from "../charts/useSize";
 import { plotQuantities } from "../charts/plotQuantities";
 import PolarChart from "../charts/PolarChart";
@@ -45,6 +46,7 @@ import FieldMapView from "./FieldMapView";
 import { ResultSummary } from "./RunSummaryView";
 import { fmt, t } from "../i18n";
 import "../styles/designer-sim.css";
+import "../styles/result-views.css";
 
 const COLORS = SERIES_COLORS;
 
@@ -85,8 +87,8 @@ function ResultSParams(props: { b: Bundle; format: ResultDataFormat }) {
     const c = cmp();
     if (c && (mp() || c.some((t) => sMatrix(t.bundle)?.get(1, 1)))) return compareSParamQuantities(c, mp() ? designSParams.selectedPairs() : [[1, 1]], props.format, designSParams.mode());
     if (c) {
-      const inputs = c.flatMap((t, i) => { const m = sMatrix(t.bundle), v = m?.get(1, 1); return m && v ? [{ id: `cmp-${i}-1,1`, label: `S11 · ${t.label}`, color: SERIES_COLORS[i], x: m.f.map(f => f / 1e9), re: v.re, im: v.im }] : []; });
-      return plotQuantities(inputs, props.format, "db");
+      const inputs = c.flatMap((t, i) => { const m = sMatrix(t.bundle), v = m?.get(1, 1); return m && v ? [{ id: `cmp-${i}-1,1`, label: "S11", suffix: t.label, color: SERIES_COLORS[i], x: m.f.map(f => f / 1e9), re: v.re, im: v.im }] : []; });
+      return plotQuantities(inputs, props.format, designSParams.mode());
     }
     const m = S();
     const inputs = mp() && m ? designSParams.selectedPairs().flatMap((p, k) => {
@@ -95,9 +97,8 @@ function ResultSParams(props: { b: Bundle; format: ResultDataFormat }) {
       }) : [];
     if (inputs.length) return plotQuantities(inputs, props.format, designSParams.mode());
     const s = sw();
-    return s && (props.format === "plot" || props.format === "db") ? [{ key: "db", title: t("chart.q.magnitudeDb"), yLabel: t("chart.q.magnitudeDb"), kind: "reflection" as const, series: [{ id: "s11", label: "|S11|", color: COLORS[0], x: s.f.map((f) => f / 1e9), y: s.s11Db }] }] : [];
+    return s && (props.format === "plot" || props.format === "db") ? [{ key: "db", title: t("chart.q.magnitudeDb"), yLabel: "|S11| (dB)", kind: "reflection" as const, series: [{ id: "s11", label: "|S11|", color: COLORS[0], x: s.f.map((f) => f / 1e9), y: s.s11Db }] }] : [];
   });
-  const yMin = (ss: Series[]) => Math.min(-30, Math.floor(Math.min(...ss.flatMap((s) => s.y.filter(Number.isFinite)), 0) / 5) * 5);
   const bands = () => props.b.results?.bands ?? [];
   const extra = (i: number) => {
     const s = sw();
@@ -106,14 +107,14 @@ function ResultSParams(props: { b: Bundle; format: ResultDataFormat }) {
     const k = nearestIndex(s.f.map((f) => f / 1e9), x);
     return [{ label: "Zin", value: `${num(s.zRe[k], 1)} ${s.zIm[k] >= 0 ? "+" : "−"} j${num(Math.abs(s.zIm[k]), 1)} Ω` }];
   };
+  const what = () => t(mp() ? (cmp() ? "results.aria.pickedSParamsCompared" : "results.aria.pickedSParams") : (cmp() ? "results.aria.inputReflectionCompared" : "results.aria.inputReflection"));
   return (
     <div class="rdk-split">
       <Show when={groups().some((g) => g.series.length)} fallback={<div class="panel-empty">{t("sparams.chooseOne")}</div>}>
-        <div style={{ height: "100%", display: "flex", "flex-direction": "column", "min-height": "0" }}>{groups().map((g) => <div style={{ height: `${100 / groups().length}%`, "min-height": "0" }}><LineChart ariaLabel={t("results.aria.vsFrequency", { title: g.title, what: t(mp() ? (cmp() ? "results.aria.pickedSParamsCompared" : "results.aria.pickedSParams") : (cmp() ? "results.aria.inputReflectionCompared" : "results.aria.inputReflection")) })}
-          inspection={{ key: `designer:${designResult()?.file ?? ""}:reflection:${g.key}`, kind: g.kind }}
-          series={g.series} {...ghzAxis} yLabel={g.yLabel} yDomain={g.key === "db" ? [yMin(g.series), 0] : g.key === "phase" ? [-180, 180] : undefined}
-          hlines={g.kind === "reflection" ? [{ y: -10, label: "−10 dB" }] : g.key === "phase" ? [{ y: 0, label: "" }] : []}
-          bands={cmp() || g.key !== "db" ? [] : bands().map((b) => ({ x0: b.f_lo / 1e9, x1: b.f_hi / 1e9 }))} yFormat={(v) => v.toFixed(1)} extra={g.key === "db" ? extra : undefined} /></div>)}</div>
+        {/* one pane per quantity of the data format; the panes share the Markers button and the markers */}
+        <StackedCharts groups={groups()} inspectionChart={`designer:${designResult()?.file ?? ""}:reflection`}
+          ariaLabel={(g) => t("results.aria.vsFrequency", { title: g.title, what: what() })}
+          pane={(g) => (g.key === "db" ? { bands: cmp() ? [] : bands().map((b) => ({ x0: b.f_lo / 1e9, x1: b.f_hi / 1e9 })), extra } : {})} />
       </Show>
       <Show when={!cmp()} fallback={<div class="rdk-side"><SpTools show={mp()} format={props.format} /></div>}>
         <div class="rdk-side"><SpTools show={mp()} format={props.format} /><dl class="kv">
@@ -170,7 +171,7 @@ function ResultImpedance(props: { b: Bundle }) {
     <Show when={sw()} fallback={<div class="panel-empty">{t("results.noPortResult")}</div>}>
       <div class="rdk-split">
         <LineChart ariaLabel={cmp() ? t(zPart() === "re" ? "results.aria.zReCompared" : "results.aria.zImCompared") : t("results.aria.impedance")}
-          inspection={{ key: `designer:${designResult()?.file ?? ""}:impedance:${zPart()}`, kind: "other" }}
+          inspection={{ key: `designer:${designResult()?.file ?? ""}:impedance:${zPart()}`, chart: `designer:${designResult()?.file ?? ""}:impedance`, kind: "other" }}
           series={series()} {...ghzAxis} yLabel={cmp() ? `${zPart() === "re" ? "Re" : "Im"} Zin (Ω)` : "Zin (Ω)"} yFormat={(v) => v.toFixed(1)}
           hlines={cmp() && zPart() === "im" ? [{ y: 0, label: "" }] : [{ y: sw()!.zRef, label: t("results.impedance.referenceLine", { z: num(sw()!.zRef, sw()!.zRef >= 100 ? 0 : 1) }) }, { y: 0, label: "" }]} />
         <Show when={cmp()} fallback={<div class="rdk-side"><dl class="kv"><dt>{t("results.impedance.reference")}</dt><dd class="mono">{num(sw()!.zRef, 1)} Ω</dd></dl><Show when={matching()}>{(m) => <><h3>{t("feed.complexReference")}</h3><dl class="kv"><dt>Zref</dt><dd class="mono">{m().ref.real} + j({m().ref.imag}) Ω</dd><dt>f</dt><dd class="mono">{num(m().f / 1e9, 4)} GHz</dd><dt>|Γ|</dt><dd class="mono">{num(m().magnitude, 4)}</dd><dt>{t("feed.transfer")}</dt><dd class="mono">{num(m().transfer * 100, 2)} %</dd></dl><p class="note">{t("feed.referenceNote")}</p></>}</Show></div>}>
@@ -299,14 +300,30 @@ function ResultEfficiency(props: { b: Bundle }) {
   const band = () => data().find((d) => d.band)?.band ?? null;
   const pointCount = () => new Set(data().flatMap((d) => d.points.map((p) => p.f))).size;
   const overUnity = () => data().reduce((n, d) => n + (d.band?.warnings ?? 0) + d.points.filter((p) => p.warning).length, 0);
+  const unreliable = () => data().reduce((n, d) => n + (d.band?.unreliable.f.length ?? 0), 0);
   /** the exporter's notes on the band-wide efficiency (results.efficiency[].qa_warnings) */
   const qaNotes = () => [...new Set(data().flatMap((d) => d.band?.qa ?? []))];
-  const fmt = (eta: number | null) => (eta === null ? "—" : db() ? `${minusSign(num(toDb(eta), 2))} dB` : t("format.percent", { value: num(eta * 100, 1) }));
+  const effText = (eta: number | null) => (eta === null ? "—" : db() ? withUnit(minusSign(num(toDb(eta), 2)), "dB") : t("format.percent", { value: num(eta * 100, 1) }));
+  /** the worst value above 100 % (band and far-field points) and where */
+  const worst = createMemo(() => {
+    let best: { eta: number; f: number } | null = null;
+    for (const d of data()) {
+      d.band?.rad.forEach((eta, i) => { if (eta > 1 && (!best || eta > best.eta)) best = { eta, f: d.band!.f[i] }; });
+      for (const p of d.points) if (p.warning && p.rad !== null && (!best || p.rad > best.eta)) best = { eta: p.rad, f: p.f };
+    }
+    return best as { eta: number; f: number } | null;
+  });
+  /** the card's one line: what is wrong (values above 100 %, unreliable values), or nothing */
+  const issueLine = () => [
+    overUnity() && worst() ? t("efficiency.overUnityLine", { count: overUnity(), eta: num(worst()!.eta * 100, 1), f: ghzText(worst()!.f / 1e9) }) : "",
+    unreliable() ? t("efficiency.unreliableLine", { count: unreliable() }) : "",
+  ].filter(Boolean).join(" · ");
+  const basicNote = () => (band() ? t("efficiency.noteBand", { count: band()!.f.length }) : t("efficiency.noteFarfieldOnly", { n: pointCount() || t("efficiency.none") }));
   return (
     <Show when={data().some((d) => d.mismatch)} fallback={<div class="panel-empty">{t("results.noPortResult")}</div>}>
       <div class="rdk-split">
         <LineChart ariaLabel={cmp() ? t("efficiency.ariaCompared") : t("efficiency.aria")}
-          inspection={{ key: `designer:${designResult()?.file ?? ""}:efficiency:${efficiencyUnit()}`, kind: "other" }}
+          inspection={{ key: `designer:${designResult()?.file ?? ""}:efficiency:${efficiencyUnit()}`, chart: `designer:${designResult()?.file ?? ""}:efficiency`, kind: "other" }}
           series={plot().series} points={plot().points} {...ghzAxis} yLabel={db() ? t("efficiency.axisDb") : t("efficiency.axisPct")} yDomain={yDomain()}
           yFormat={(v) => v.toFixed(db() ? 2 : 1)}
           hlines={db() ? [{ y: 0, label: "0 dB" }, { y: toDb(0.9), label: "|S11| = −10 dB" }] : [{ y: 100, label: t("format.percent", { value: 100 }) }, { y: 90, label: "|S11| = −10 dB" }]} />
@@ -323,26 +340,27 @@ function ResultEfficiency(props: { b: Bundle }) {
                     <dt class="rdk-kv-head">{freqText(p.f)}{portTag(d)}</dt><dd />
                     <dt>{t("efficiency.radiation")}</dt>
                     <dd class="mono" classList={{ "cell-warn": !!p.warning }} title={p.warning ?? undefined}>
-                      {fmt(p.rad)}<Show when={p.warning}> <TriangleAlert size={12} aria-label={t("efficiency.overUnityShort")} /></Show>
+                      {effText(p.rad)}<Show when={p.warning}> <TriangleAlert size={12} aria-label={t("efficiency.overUnityShort")} /></Show>
                     </dd>
-                    <dt>{t("efficiency.mismatch")}</dt><dd class="mono">{fmt(p.mismatch)}</dd>
-                    <dt>{t("efficiency.total")}</dt><dd class="mono" classList={{ "cell-warn": !!p.warning }}>{fmt(p.total)}</dd>
+                    <dt>{t("efficiency.mismatch")}</dt><dd class="mono">{effText(p.mismatch)}</dd>
+                    <dt>{t("efficiency.total")}</dt><dd class="mono" classList={{ "cell-warn": !!p.warning }}>{effText(p.total)}</dd>
                   </>
                 )}</For>
               </dl>
             )}</For>
           </Show>
-          <p class="rdk-note" role="note">
-            <Show when={band()} fallback={<>{t("efficiency.noteFarfieldOnly", { n: pointCount() || t("efficiency.none") })}</>}>
-              {t("efficiency.noteBand", { count: band()!.f.length })}
-            </Show>
-            {" "}{t("efficiency.noteTotal")}
-            <Show when={cmp()}> {t("efficiency.noteCompared")}</Show>
-          </p>
-          <For each={qaNotes()}>{(note) => <p class="rdk-note cell-warn" role="note"><TriangleAlert size={12} aria-hidden="true" /> {note}</p>}</For>
-          <Show when={overUnity()}>
-            <p class="rdk-note cell-warn" role="note"><TriangleAlert size={12} aria-hidden="true" /> {t("efficiency.overUnityNote", { count: overUnity() })}</p>
+          {/* one line (the warning when there is one, else what the curves are) and the rest under Details */}
+          <Show when={issueLine()} fallback={<p class="rdk-note" role="note">{basicNote()}</p>}>
+            <p class="rdk-note cell-warn" role="note"><TriangleAlert size={12} aria-hidden="true" /> {issueLine()}</p>
           </Show>
+          <details class="rdk-details">
+            <summary>{t("efficiency.details")}</summary>
+            <Show when={issueLine()}><p class="rdk-note">{basicNote()}</p></Show>
+            <p class="rdk-note">{t("efficiency.noteTotal")}<Show when={cmp()}> {t("efficiency.noteCompared")}</Show></p>
+            <Show when={overUnity()}><p class="rdk-note">{t("efficiency.overUnityNote", { count: overUnity() })}</p></Show>
+            <Show when={unreliable()}><p class="rdk-note">{t("efficiency.unreliableNote", { count: unreliable() })}</p></Show>
+            <For each={qaNotes()}>{(note) => <p class="rdk-note">{note}</p>}</For>
+          </details>
         </div>
       </div>
     </Show>
@@ -628,6 +646,8 @@ export function ResultToolbar(props: { view: MainResultView }) {
     return others ? `${name} +${others}` : name;
   };
   const farfields = () => designResult()?.bundle.results?.farfield ?? [];
+  // the Touchstone file of the shown run: .s1p, .s2p, …
+  const touchstoneExt = () => `.s${Math.max(1, sMatrix(designResult()?.bundle)?.ports.length ?? 1)}p`;
   return (
     <div class="dw-result-bar" classList={{ "is-narrow": barSize().w > 0 && barSize().w < 1000 }} ref={bar} role="toolbar" aria-label={t("results.toolbar.aria", { tab: MAIN_TAB_LABELS[props.view] })}>
       <span class="dock-hint rdk-shown" title={designResult()?.file}>{shown()}</span>
@@ -691,16 +711,19 @@ export function ResultToolbar(props: { view: MainResultView }) {
         </button>
       </Show>
       <Show when={props.view !== "summary" && props.view !== "fieldmap"}>
-      <select class="btn btn-ghost btn-sm" aria-label={t("results.toolbar.formatAria")} value={resultDataFormat()} onChange={(event) => writeResultDataFormat(event.currentTarget.value as ResultDataFormat)}>
+      <select class="btn btn-ghost btn-sm result-format" aria-label={t("results.toolbar.formatAria")} value={resultDataFormat()} onChange={(event) => writeResultDataFormat(event.currentTarget.value as ResultDataFormat)}>
         <option value="plot">{t("results.format.plot")}</option><option value="db">dB</option><option value="db_phase">{t("results.format.dbPhase")}</option><option value="re_im">Re/Im</option><option value="mag_phase">{t("results.format.magPhase")}</option><option value="all">{t("results.format.all")}</option>
       </select>
       </Show>
       <button class="btn btn-ghost btn-sm rdk-copy" classList={{ copied: copied() }} onClick={() => void copyData()} title={t("results.toolbar.copyDataTitle")} aria-live="polite">
         <Show when={copied()} fallback={<><Copy size={14} aria-hidden="true" /> {t("results.toolbar.copyData")}</>}><Check size={14} aria-hidden="true" /> {t("results.toolbar.copied")}</Show>
       </button>
-      <button class="btn btn-ghost btn-sm" onClick={exportData} title={t("results.toolbar.csvTitle")}><Download size={14} aria-hidden="true" /> CSV</button>
+      {/* CSV and Touchstone: their own icons and a short label that stays when the bar folds to icons */}
+      <button class="btn btn-ghost btn-sm" onClick={exportData} title={t("results.toolbar.csvTitle")} aria-label={t("results.toolbar.csvTitle")}><FileSpreadsheet size={14} aria-hidden="true" /> <span class="btn-short">CSV</span></button>
       <Show when={designResult()?.bundle.results && props.view !== "summary"}>
-        <button class="btn btn-ghost btn-sm" onClick={exportTouchstone} title={t("results.toolbar.touchstoneTitle")}><Download size={14} aria-hidden="true" /> Touchstone</button>
+        <button class="btn btn-ghost btn-sm" onClick={exportTouchstone} title={t("results.toolbar.touchstoneTitle")} aria-label={t("results.toolbar.touchstoneTitle")}>
+          <FileChartLine size={14} aria-hidden="true" /> <span class="btn-short">{touchstoneExt()}</span>
+        </button>
       </Show>
       <Show when={dataAction()}>
         {/* Neutral feedback; failures use the warning icon and colour. */}

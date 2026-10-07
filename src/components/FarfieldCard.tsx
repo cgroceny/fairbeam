@@ -16,6 +16,7 @@ import { patternQuantity, setPatternQuantity } from "../lib/patternQuantityStore
 import { PATTERN_RANGE_DB } from "../scene/patternRange";
 import type { Bundle, FarField } from "../types";
 import { t } from "../i18n";
+import "../styles/farfield-card.css";
 
 const [collapsed, setCollapsed] = createSignal(false);
 
@@ -106,13 +107,14 @@ export default function FarfieldCard(props: { bundle: Bundle; ff: FarField; entr
           <Show when={fallback()}><p class="ff-card-note" role="note">{fallback()}</p></Show>
         </div>
       </Show>
-      <div class="colorbar-body">
+      {/* a short view folds the scale: the caption goes into the ramp's tooltip and the unit onto the top tick */}
+      <div class="colorbar-body" title={`${t("farfield.scaleUnit", { range: PATTERN_RANGE_DB })}${q() === "rhcp" || q() === "lhcp" ? ` · ${t("farfield.topIsDmax")}` : ""}`}>
         <div class="colorbar-ramp" aria-hidden="true" />
         <div class="colorbar-ticks colorbar-ticks-round">
-          <For each={roundTicks()}>{(k) => <span style={{ "--f": k.f }}>{minus(num(k.v, 0))}</span>}</For>
+          <For each={roundTicks()}>{(k, i) => <span style={{ "--f": k.f }}>{minus(num(k.v, 0))}<Show when={i() === roundTicks().length - 1}><span class="ff-tick-unit"> dBi</span></Show></span>}</For>
         </div>
       </div>
-      <div class="colorbar-unit">{t("farfield.scaleUnit", { range: PATTERN_RANGE_DB })}<Show when={q() === "rhcp" || q() === "lhcp"}> · {t("farfield.topIsDmax")}</Show></div>
+      <div class="colorbar-unit ff-scale-unit">{t("farfield.scaleUnit", { range: PATTERN_RANGE_DB })}<Show when={q() === "rhcp" || q() === "lhcp"}> · {t("farfield.topIsDmax")}</Show></div>
       <Show when={!collapsed()}>
         <dl class="kv ff-card-kv" id={bodyId}>
           <dt>Dmax</dt><dd class="mono">{dbi(s().dmaxDbi)}</dd>

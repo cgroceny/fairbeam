@@ -34,6 +34,7 @@ import { estimateTime } from "./meshStats";
 import { bundle } from "../state";
 import { fmt, t } from "../i18n";
 import "../styles/designer-sim.css";
+import "../styles/result-views.css";
 
 // labels are i18n keys
 const PHASES: { id: Phase; label: string }[] = [

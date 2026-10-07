@@ -491,7 +491,7 @@ assert.ok(metrics.size >= 10, "the example bundles were read");
 }
 
 // ---- number formats: a parameter column has one number of decimals (the most precise value's, at most
-// four) in the UI language's separator
+// four) in the UI language's separator; the run letter sits on the text baseline
 {
   assert.equal(columnDecimals([0.466, 0.4194, 0.5126]), 4, "the sweep of k: four decimals for every row");
   assert.equal(columnDecimals([2, 3, 4]), 0, "integers");
@@ -503,6 +503,9 @@ assert.ok(metrics.size >= 10, "the example bundles were read");
   const dock = read("src/designer/RunDock.tsx"), view = read("src/designer/RunSummaryView.tsx");
   assert.ok(/columnDecimals\(rows\(\)\.map\(\(r\) => paramValue\(r\.bundle, p\.key\)\)\)/.test(dock) && /fmt\.fixed\(v, paramDigits\(\)\.get\(key\) \?\? 0\)/.test(dock), "Runs table: the parameter cells");
   assert.ok(/columnDecimals\(rows\(\)\.map\(\(r\) => paramValue\(r\.bundle, p\.key\)\)\)/.test(view), "Summary: the parameter cells");
+  assert.ok(/<RunQualityBadge compact q=\{bundleQuality\(row\.bundle\)\} \/>/.test(view), "Summary: the badge is an icon next to the name");
+  const css = read("src/styles/run-summary.css");
+  assert.ok(/\.rs-compare :is\(th, td\):last-child \{ padding-right/.test(css), "Summary: the last column keeps its padding");
 }
 
 console.log("check-run-summary: ok");

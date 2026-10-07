@@ -1030,6 +1030,7 @@
   "editor.savedNoBuild": "Kaydedildi, ancak model oluşturulamıyor",
   "editor.savedNoLoad": "Kaydedildi, ancak model yüklenemiyor",
   "efficiency.aria": "Frekansa göre uyumsuzluk verimliliği ve uzak alan frekanslarındaki ışıma ve toplam verimlilik",
+  "efficiency.details": "Ayrıntılar",
   "efficiency.ariaCompared": "Frekansa göre karşılaştırılan her çalıştırmanın uyumsuzluk verimliliği ve uzak alan frekanslarındaki toplam verimlilik",
   "efficiency.axisDb": "Verimlilik (dB)",
   "efficiency.axisPct": "Verimlilik (%)",
@@ -1045,11 +1046,20 @@
   "efficiency.overUnityNote": {
     "other": "%100'ün üzerinde {count} değer: pasif bir anten için fiziksel değil (ışınan ve kabul edilen güç ayrı sayısal ölçümlerdir), bu yüzden kazanç ve toplam verimlilik orada olduğundan yüksek görünür."
   },
+  "efficiency.overUnityLine": {
+    "other": "%100'ün üzerinde {count} değer (en yüksek: {f} GHz'de %{eta})"
+  },
   "efficiency.overUnityShort": "%100'ün üzerinde: fiziksel değil",
   "efficiency.radiation": "Işıma",
   "efficiency.radiationUnreliable": "Işıma, güvenilmez",
   "efficiency.total": "Toplam",
   "efficiency.unit": "Verimlilik birimi",
+  "efficiency.unreliableLine": {
+    "other": "{count} değer güvenilmez"
+  },
+  "efficiency.unreliableNote": {
+    "other": "Bant boyunca ışıma verimliliğinin {count} değeri güvenilmez: port orada az güç kabul ediyor ve çalıştırma, alanlar yeterince sönümlenmeden durdu. Bu değerler eğrilerin dışında bırakılır ve halkalı noktalar olarak çizilir; daha düşük bir durdurma ölçütü bandın daha büyük kısmını güvenilir kılar."
+  },
   "efficiency.unreliableWhy": "güvenilmez: port burada gelen gücün çalıştırmanın durdurma ölçütü için çok azını kabul ediyor (nota bakın)",
   "exampleCopy.carried": "Aktarılanlar:",
   "exampleCopy.carried.body": "şekiller ve ölçüleri, malzemeler (aynı metaller tek malzemeyi paylaşır), portlar, bant, sınırlar, örneğin mesh çizgileri ve parametreleri. Bir parametrenin doğrusal formülü olan ölçü ifade olur; böylece kopya o parametreyle taranabilir ve optimize edilebilir.",
@@ -2331,6 +2341,8 @@
   "quality.banner.otherUncoupled": "{run} çalıştırmasının portu antene bağlı görünmüyor:",
   "quality.banner.suspicious": "Bu sonuçları kontrol edin: bazı değerler fiziksel görünmüyor.",
   "quality.banner.uncoupled": "Port antene bağlı görünmüyor: neredeyse hiç güç kabul edilmiyor ya da ışınmıyor.",
+  "quality.details.hide": "Nedenleri gizle",
+  "quality.details.show": "Nedenleri göster",
   "quality.reason.efficiency": "Işıma verimliliği {f} GHz'de %{eta}, yani %100'ün üzerinde; kazanç olduğundan yüksek çıkar. Neyin değişeceği için verimlilik notuna bakın.",
   "quality.reason.s11": "|S11| {f} GHz'de {db} dB'ye çıkıyor (port {port}); pasif bir anten için bu mümkün değil. Mesh'i sıklaştırın, sınırları modelden uzaklaştırın ya da durdurma ölçütünü düşürün ve yeniden çalıştırın.",
   "quality.reason.timestepLimit": "Zaman adımı sınırına ulaşıldığında alan enerjisi durdurma ölçütüne inmemişti. En fazla zaman adımını artırın ya da durdurma ölçütünü gevşetin ve yeniden çalıştırın.",

@@ -1046,6 +1046,7 @@
   "editor.savedNoBuild": "Saved, but the model does not build",
   "editor.savedNoLoad": "Saved, but the model does not load",
   "efficiency.aria": "Mismatch efficiency versus frequency, with the radiation and total efficiency at the far-field frequencies",
+  "efficiency.details": "Details",
   "efficiency.ariaCompared": "Mismatch efficiency of each compared run versus frequency, with the total efficiency at the far-field frequencies",
   "efficiency.axisDb": "Efficiency (dB)",
   "efficiency.axisPct": "Efficiency (%)",
@@ -1063,11 +1064,23 @@
     "one": "{count} value above 100 %: unphysical for a passive antenna (the radiated and accepted powers are separate numerical measurements), so gain and total efficiency are overestimated there.",
     "other": "{count} values above 100 %: unphysical for a passive antenna (the radiated and accepted powers are separate numerical measurements), so gain and total efficiency are overestimated there."
   },
+  "efficiency.overUnityLine": {
+    "one": "{count} value above 100 % (the worst: {eta} % at {f} GHz)",
+    "other": "{count} values above 100 % (the worst: {eta} % at {f} GHz)"
+  },
   "efficiency.overUnityShort": "above 100 %: unphysical",
   "efficiency.radiation": "Radiation",
   "efficiency.radiationUnreliable": "Radiation, unreliable",
   "efficiency.total": "Total",
   "efficiency.unit": "Efficiency unit",
+  "efficiency.unreliableLine": {
+    "one": "{count} value unreliable",
+    "other": "{count} values unreliable"
+  },
+  "efficiency.unreliableNote": {
+    "one": "{count} value of the band-wide radiation efficiency is unreliable: the port accepts little power there and the run stopped before the fields had decayed enough. It is left out of the curves and drawn as a ringed point; a lower end criterion makes more of the band reliable.",
+    "other": "{count} values of the band-wide radiation efficiency are unreliable: the port accepts little power there and the run stopped before the fields had decayed enough. They are left out of the curves and drawn as ringed points; a lower end criterion makes more of the band reliable."
+  },
   "efficiency.unreliableWhy": "unreliable: the port accepts too little of the incident power here for the run's end criterion (see the note)",
   "exampleCopy.carried": "Carried over:",
   "exampleCopy.carried.body": "shapes and their dimensions, materials (identical metals share one), ports, band, boundaries, the example's mesh lines and its parameters. A dimension that is a linear formula of a parameter becomes an expression, so the copy can be swept and optimized by that parameter.",
@@ -2377,6 +2390,8 @@
   "quality.banner.otherUncoupled": "The port of run {run} does not seem to be coupled:",
   "quality.banner.suspicious": "Check these results: some values look unphysical.",
   "quality.banner.uncoupled": "The port does not seem to be coupled to the antenna: almost nothing is accepted or radiated.",
+  "quality.details.hide": "Hide the reasons",
+  "quality.details.show": "Show the reasons",
   "quality.reason.efficiency": "Radiation efficiency is {eta} % at {f} GHz, above 100 %, so gain is overestimated. See the efficiency note for what to change.",
   "quality.reason.s11": "|S11| reaches {db} dB at {f} GHz (port {port}), which a passive antenna cannot do. Refine the mesh, move the boundaries away from the model, or lower the end criterion, and run again.",
   "quality.reason.timestepLimit": "The field energy had not fallen to the end criterion when the timestep limit was reached. Raise max timesteps, or relax the end criterion, and run again.",

@@ -231,9 +231,10 @@ function RunsCompare(props: { runs: { file: string; bundle: Bundle }[] }) {
             <tr>
               <th scope="row" class="rs-letter">{row.letter}</th>
               <td class="rs-name" title={row.name}>
+                {/* the badge is an icon (its words in its title and for screen readers): the name keeps the width */}
                 <div class="rs-name-in">
-                  <span>{row.name}</span>
-                  <RunQualityBadge q={bundleQuality(row.bundle)} />
+                  <span class="rs-name-text">{row.name}</span>
+                  <RunQualityBadge compact q={bundleQuality(row.bundle)} />
                 </div>
               </td>
               <For each={columns()}>{(p) => <td class="num">{paramText(row.bundle, p.key)}</td>}</For>

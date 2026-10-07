@@ -1,8 +1,8 @@
 // The run quality verdict (src/lib/runQuality.ts) in the designer: an amber banner over a run's result
 // tabs and the Run tab, and the small badge in the navigation tree and the Runs table. A run that did
 // not converge (or shows unphysical numbers) must not look like a good result.
-import { createMemo, For, Show } from "solid-js";
-import { TriangleAlert } from "lucide-solid";
+import { createMemo, createSignal, For, Show } from "solid-js";
+import { ChevronDown, ChevronUp, TriangleAlert } from "lucide-solid";
 import { ghzText } from "../lib/format";
 import { matchHint, POOR_MATCH_DB, type QualityReason, type RunQuality } from "../lib/runQuality";
 import { openSimSettings, setDesignDockTab } from "../runner/designRun";
@@ -10,6 +10,9 @@ import type { Bundle } from "../types";
 import { fmt, t } from "../i18n";
 import { bundleQuality, comparedRuns, runShortLabel, showView } from "./runResults";
 import "../styles/run-quality.css";
+
+/** The banner's reasons are shown (folded away with its chevron, for the session). */
+const [reasonsShown, setReasonsShown] = createSignal(true);
 
 /** The verdict when it is a concern (not converged, or suspicious); null for a clean run. */
 export const concern = (q: RunQuality | null | undefined): RunQuality | null => (q && q.verdict !== "converged" ? q : null);
@@ -94,16 +97,23 @@ export function RunQualityBanner(props: { file?: string; b: Bundle }) {
           <Show when={own()}>{(q) => (
             <>
               <strong>{t(verdictHeadline(q()))}</strong>
-              <Reasons q={q()} />
+              <Show when={reasonsShown()}><Reasons q={q()} /></Show>
             </>
           )}</Show>
           <For each={others()}>{(o) => (
             <>
               <strong>{t(verdictHeadline(o.q, true), { run: runShortLabel(o.file) })}</strong>
-              <Reasons q={o.q} />
+              <Show when={reasonsShown()}><Reasons q={o.q} /></Show>
             </>
           )}</For>
         </div>
+        {/* the reasons can be folded away (a short window keeps more of the plot); the choice holds for
+            every run's banner of the session */}
+        <button type="button" class="icon-btn icon-btn-sm rq-fold" aria-expanded={reasonsShown()}
+          aria-label={t(reasonsShown() ? "quality.details.hide" : "quality.details.show")} title={t(reasonsShown() ? "quality.details.hide" : "quality.details.show")}
+          onClick={() => setReasonsShown((v) => !v)}>
+          <Show when={reasonsShown()} fallback={<ChevronDown size={14} aria-hidden="true" />}><ChevronUp size={14} aria-hidden="true" /></Show>
+        </button>
       </div>
     </Show>
     </>
