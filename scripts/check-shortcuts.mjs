@@ -10,6 +10,7 @@ import { fileURLToPath } from "node:url";
 import { matchesShortcut, shortcutTable } from "../src/designer/shortcuts.ts";
 import { commandModifier, modifierShortcut } from "../src/lib/shortcut.ts";
 import { listKeyTarget } from "../src/lib/tabKeys.ts";
+import { viewportChangeCloses } from "../src/lib/menuDismiss.ts";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const read = (p) => readFileSync(join(root, p), "utf8").replaceAll("\r\n", "\n");
@@ -129,6 +130,23 @@ check(runAt > 0 && runAt < treeKeys.indexOf('if (e.key === "Enter" || e.key === 
 
 // ---- labels come from the table (ContextMenu) so the Mac reads ⌫
 check(/SHORTCUTS\.delete\.key/.test(read("src/designer/ContextMenu.tsx")), "the context menu shows the platform Delete label");
+
+// ---- the context menu closes on a window resize or an outside scroll, without throwing
+{
+  // a minimal DOM stand-in: Node, a menu with one child, and the window (not a Node)
+  const hadNode = "Node" in globalThis, oldNode = globalThis.Node;
+  globalThis.Node = class Node { constructor(parent = null) { this.parent = parent; } contains(n) { for (let x = n; x; x = x.parent) if (x === this) return true; return false; } };
+  const page = new globalThis.Node(), menuEl = new globalThis.Node(page), item = new globalThis.Node(menuEl), win = {};
+  try {
+    eq(viewportChangeCloses(menuEl, { type: "resize", target: win }), true, "a window resize closes the menu (its target is not a Node)");
+    eq(viewportChangeCloses(menuEl, { type: "scroll", target: page }), true, "a page scroll closes the menu");
+    eq(viewportChangeCloses(menuEl, { type: "scroll", target: win }), true, "a scroll targeting the window closes the menu");
+    eq(viewportChangeCloses(menuEl, { type: "scroll", target: item }), false, "a list scrolling inside the menu keeps it open");
+  } finally { if (hadNode) globalThis.Node = oldNode; else delete globalThis.Node; }
+  const contextSrc = read("src/designer/ContextMenu.tsx");
+  check(/const viewport = \(e: Event\) => \{ if \(viewportChangeCloses\(menu, e\)\) closeContext\(false\); \};/.test(contextSrc), "the context menu's resize/scroll handler uses viewportChangeCloses");
+  check(!/addEventListener\("(resize|scroll)", away/.test(contextSrc), "the pointer handler (which casts its target to a Node) is not used for resize or scroll");
+}
 
 // ---- Transform has one consistent entry point from the shortcut, ribbon and context menu
 const ribbon = read("src/designer/transformRibbon.ts");
