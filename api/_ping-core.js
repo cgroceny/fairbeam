@@ -119,6 +119,14 @@ export function isoWeek(day) {
   return `${year}-W${String(week).padStart(2, "0")}`;
 }
 
+/** Monday 00:00 UTC of an ISO week ("2026-W41"), so storage commits carry no request time. */
+export function weekStart(week) {
+  const [year, w] = week.split("-W").map(Number);
+  const jan4 = Date.UTC(year, 0, 4);
+  const monday = jan4 - ((new Date(jan4).getUTCDay() + 6) % 7) * DAY_MS;
+  return new Date(monday + (w - 1) * 7 * DAY_MS).toISOString().replace(".000Z", "Z");
+}
+
 /** Update only a tuple's total. No event log, identity, IP address or user agent is stored. */
 export async function incrementAggregate(deps, week, ping) {
   const { env, fetch: fetchImpl = globalThis.fetch } = deps;
@@ -133,6 +141,8 @@ export async function incrementAggregate(deps, week, ping) {
     "x-github-api-version": "2022-11-28",
     "user-agent": "fairbeam-ping",
   };
+  // The commit is dated to the start of the week: the history holds no per-request time.
+  const identity = { name: "Fairbeam usage totals", email: "ismail@fairbeam.org", date: weekStart(week) };
   for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
     const r = await fetchImpl(`${api}?ref=${encodeURIComponent(branch)}`, { headers });
     let sha, count = 0;
@@ -146,7 +156,7 @@ export async function incrementAggregate(deps, week, ping) {
     const aggregate = { week, app_version: ping.app_version, os: ping.os, arch: ping.arch, count: count + 1 };
     const put = await fetchImpl(api, {
       method: "PUT", headers: { ...headers, "content-type": "application/json" },
-      body: JSON.stringify({ message: `Update usage total ${week}`, content: Buffer.from(JSON.stringify(aggregate) + "\n").toString("base64"), branch, ...(sha ? { sha } : {}) }),
+      body: JSON.stringify({ message: `Update usage total ${week}`, content: Buffer.from(JSON.stringify(aggregate) + "\n").toString("base64"), branch, author: identity, committer: identity, ...(sha ? { sha } : {}) }),
     });
     if (put.status === 200 || put.status === 201) return;
     if (put.status === 409 || put.status === 422) continue;

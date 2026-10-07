@@ -1,7 +1,7 @@
 // Minimal API and release statistics checks, with fake storage and no network.
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
-import { handlePing, validatePing, isoWeek, SCHEMA } from "../api/_ping-core.js";
+import { handlePing, validatePing, isoWeek, weekStart, SCHEMA } from "../api/_ping-core.js";
 import { assetKind, summarizeReleases, fetchReleases, parseAggregates } from "./stats-summary.mjs";
 const ENV = { STATS_GITHUB_TOKEN: "test-token", STATS_REPO: "example/stats" };
 const NOW = Date.parse("2026-10-07T12:00:00Z");
@@ -16,6 +16,8 @@ function storage({ conflict = false, fail = false } = {}) {
     if (fail) return new Response(null, { status: 500 });
     if (opts.method !== "PUT") return record ? Response.json({ sha: String(sha), content: Buffer.from(JSON.stringify(record)).toString("base64") }) : new Response(null, { status: 404 });
     const body = JSON.parse(opts.body);
+    assert.equal(body.committer.date, weekStart(JSON.parse(Buffer.from(body.content, "base64").toString()).week));
+    assert.deepEqual(body.author, body.committer);
     const next = JSON.parse(Buffer.from(body.content, "base64").toString());
     if (conflict) { conflict = false; record = { ...next, count: 10 }; sha++; return new Response(null, { status: 409 }); }
     assert.equal(body.sha, sha ? String(sha) : undefined);
@@ -56,6 +58,9 @@ assert.equal((await call(request(), storage({ fail: true }))).status, 503);
 assert.equal((await call(request(), storage(), { ...ENV, STATS_REPO: "../bad" })).status, 503);
 assert.equal(isoWeek("2021-01-01"), "2020-W53");
 assert.equal(isoWeek("2024-12-30"), "2025-W01");
+assert.equal(weekStart("2026-W41"), "2026-10-05T00:00:00Z");
+assert.equal(weekStart("2020-W53"), "2020-12-28T00:00:00Z");
+assert.equal(weekStart("2025-W01"), "2024-12-30T00:00:00Z");
 assert.deepEqual(parseAggregates([JSON.stringify(s.record)]), [s.record]);
 assert.throws(() => parseAggregates(['{"id":"private","count":1}']));
 assert.deepEqual(summarizeReleases([{ tag_name: "v1", assets: [

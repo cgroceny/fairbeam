@@ -20,7 +20,7 @@ The local telemetry `state.json` contains only `consent` and `last_sent` (Unix s
 
 `api/ping.js` is disabled without `STATS_GITHUB_TOKEN`. Set `STATS_REPO=owner/repository` (prefer a restricted repository) and optionally `STATS_BRANCH` (default `main`). Scope the token to that repository's Contents write access. No salt is used. No payload, IP address, user agent or exception details are logged by the handler. Provider infrastructure logging is separate and must be reviewed before deployment; do not claim providers retain no logs.
 
-The handler validates size, content type, fields and values. Old schemas remain accepted for compatibility, but their identifier, GPU flag, date and counters are discarded before storage. They contribute one report to the receiving week's total, so older clients may inflate totals. The only persisted records are `data/YYYY-Www--version--os--arch.json`, containing `week`, `app_version`, `os`, `arch`, `count`. GitHub SHA conflicts are retried; storage errors return 503. Git history contains aggregate totals only. Fairbeam creates no raw event log. Aggregates are retained without a scheduled deletion date.
+The handler validates size, content type, fields and values. Old schemas remain accepted for compatibility, but their identifier, GPU flag, date and counters are discarded before storage. They contribute one report to the receiving week's total, so older clients may inflate totals. The only persisted records are `data/YYYY-Www--version--os--arch.json`, containing `week`, `app_version`, `os`, `arch`, `count`. GitHub SHA conflicts are retried; storage errors return 503. Each update is a commit dated to the start of its UTC week (`weekStart`), so the history holds the same totals and no request time, IP address or identity. Fairbeam creates no raw event log. Aggregates are retained without a scheduled deletion date.
 
 Without identifiers, the API cannot deduplicate retries, enforce a per-install rate limit or measure unique installations. The weekly restriction is local, and the public API can receive fabricated reports. Use totals only as approximate platform usage. Restrict repository access; if any previous raw logs exist, remove them and their history/backups before activation under a reviewed retention process.
 
@@ -36,9 +36,9 @@ The English and Turkish notices below match the optional usage section on [the p
 
 ### English
 
-If you turn on usage counts
+If usage counts are turned on (not available in this release)
 
-Draft KVKK information notice and GDPR-style privacy notice. The maintainer must review this text with a lawyer before enabling usage counts.
+Draft KVKK information notice and GDPR-style privacy notice for a possible future release. This release cannot send usage reports. The maintainer must review this text with a lawyer before enabling usage counts.
 
 Controller: İsmail Akdağ. Contact: ismail@fairbeam.org.
 
@@ -54,17 +54,17 @@ Recipients and processors: Vercel hosts the website and usage API; GitHub hosts 
 
 International transfer: requests are delivered to servers outside Türkiye. This draft proposes explicit consent for the transfer under KVKK Article 9, with information about the risks of transfer without an adequacy decision or appropriate safeguards. The current Article 9 consent exception is limited to incidental transfers; recurring weekly requests may not qualify. Counsel must establish a valid transfer mechanism under KVKK and, where applicable, GDPR Chapter V before activation. No valid mechanism is asserted by this draft.
 
-Retention: Fairbeam keeps aggregate totals by UTC week, version, operating system and architecture for platform planning, without a scheduled deletion date. No raw event log is created. Locally, only the consent choice and last request date are stored for usage counting; that date also limits retries after failures.
+Retention: Fairbeam keeps aggregate totals by UTC week, version, operating system and architecture for platform planning, without a scheduled deletion date. No raw event log is created; each storage update is dated to the start of its UTC week, so request times are not kept. Locally, only the consent choice and last request date are stored for usage counting; that date also limits retries after failures.
 
 Rights: KVKK Article 11 includes learning about processing, its purpose and recipients, seeking correction or deletion, notification to recipients, objecting to adverse automated decisions and seeking compensation for unlawful processing. GDPR Articles 15–21 provide access, rectification, erasure, restriction, portability and objection where applicable. There are no automated decisions based on usage reports.
 
-To exercise your rights, write to ismail@fairbeam.org with your request. Do not send designs or post personal information in public issues. Reasonable identity verification may be needed. Totals have no installation identifier, so a particular installation’s contribution cannot be located or removed. You may complain to the KVKK Kurulu or your EU supervisory authority, subject to applicable procedures.
+To exercise your rights, write to ismail@fairbeam.org with your request. Do not send designs or post personal information in public issues. Reasonable identity verification may be needed. Totals have no installation identifier, so a particular installation’s contribution cannot be located or removed. You may complain to the Turkish Personal Data Protection Board (Kişisel Verileri Koruma Kurulu) or your EU supervisory authority, subject to applicable procedures.
 
 ### Türkçe — taslak aydınlatma metni
 
-Kullanım sayımını açarsanız
+Kullanım sayımı açılırsa (bu sürümde kullanılamaz)
 
-Taslak KVKK aydınlatma metni ve GDPR kapsamında gizlilik bildirimi. Kullanım sayımı etkinleştirilmeden önce proje sorumlusu bu metni bir avukatla incelemelidir.
+Olası gelecek bir sürüm için taslak KVKK aydınlatma metni ve GDPR kapsamında gizlilik bildirimi. Bu sürüm kullanım raporu gönderemez. Kullanım sayımı etkinleştirilmeden önce proje sorumlusu bu metni bir avukatla incelemelidir.
 
 Veri sorumlusu: İsmail Akdağ. İletişim: ismail@fairbeam.org.
 
@@ -80,17 +80,17 @@ Alıcılar ve veri işleyenler: Vercel web sitesini ve kullanım API’sini; Git
 
 Yurt dışına aktarım: istekler Türkiye dışındaki sunuculara iletilir. Bu taslak, yeterlilik kararı veya uygun güvenceler olmadan aktarımın riskleri hakkında bilgilendirmeyle KVKK’nın 9. maddesi kapsamında aktarım için açık rıza alınmasını önerir. Güncel 9. maddedeki rıza istisnası arızi aktarımlarla sınırlıdır; haftalık tekrarlanan istekler bu kapsama girmeyebilir. Etkinleştirmeden önce bir avukat KVKK ve uygulanabildiği ölçüde GDPR’nin V. Bölümü kapsamında geçerli bir aktarım mekanizması belirlemelidir. Bu taslak geçerli bir mekanizma bulunduğunu ileri sürmez.
 
-Saklama: Fairbeam platform planlaması için UTC haftası, sürüm, işletim sistemi ve mimariye göre toplu sayıları belirlenmiş bir silme tarihi olmadan saklar. Ham olay günlüğü oluşturulmaz. Kullanım sayımı için yerelde yalnızca rıza tercihi ve son istek tarihi saklanır; bu tarih başarısız isteklerden sonraki yeniden denemeleri de sınırlar.
+Saklama: Fairbeam platform planlaması için UTC haftası, sürüm, işletim sistemi ve mimariye göre toplu sayıları belirlenmiş bir silme tarihi olmadan saklar. Ham olay günlüğü oluşturulmaz; depodaki her güncelleme ilgili UTC haftasının başlangıcıyla tarihlendiğinden istek zamanları saklanmaz. Kullanım sayımı için yerelde yalnızca rıza tercihi ve son istek tarihi saklanır; bu tarih başarısız isteklerden sonraki yeniden denemeleri de sınırlar.
 
 Haklar: KVKK’nın 11. maddesi kapsamında işleme, amaç ve alıcılar hakkında bilgi edinme, düzeltme veya silme isteme, alıcılara bildirim, aleyhinize otomatik kararlara itiraz ve hukuka aykırı işleme nedeniyle zararınızın giderilmesini talep etme hakları bulunur. GDPR’nin 15–21. maddeleri, uygulanabildiği ölçüde erişim, düzeltme, silme, kısıtlama, taşınabilirlik ve itiraz hakları sağlar. Kullanım raporlarına dayalı otomatik karar alınmaz.
 
-Haklarınızı kullanmak için talebinizi ismail@fairbeam.org adresine iletin. Tasarım göndermeyin veya herkese açık konularda kişisel bilgi paylaşmayın. Makul bir kimlik doğrulaması gerekebilir. Toplamlarda kurulum kimliği bulunmadığından belirli bir kurulumun katkısı bulunamaz veya çıkarılamaz. Geçerli usuller kapsamında KVKK Kuruluna veya AB’deki denetim makamınıza şikâyette bulunabilirsiniz.
+Haklarınızı kullanmak için talebinizi ismail@fairbeam.org adresine iletin. Tasarım göndermeyin veya herkese açık konularda kişisel bilgi paylaşmayın. Makul bir kimlik doğrulaması gerekebilir. Toplamlarda kurulum kimliği bulunmadığından belirli bir kurulumun katkısı bulunamaz veya çıkarılamaz. Geçerli usuller kapsamında Kişisel Verileri Koruma Kuruluna veya AB’deki denetim makamınıza şikâyette bulunabilirsiniz.
 
 ### Short consent copy (English / Türkçe)
 
-With your explicit consent, send only the app version, operating system, CPU architecture and report schema at most once every seven days to estimate platform usage.
+With your explicit consent, Fairbeam sends only the app version, operating system, CPU architecture and report schema, at most once every seven days, to estimate platform usage.
 
-Açık rızanızla platform kullanımını yaklaşık olarak saymak için en fazla yedi günde bir yalnızca uygulama sürümünü, işletim sistemini, işlemci mimarisini ve rapor şemasını gönderin.
+Açık rıza vermeniz hâlinde Fairbeam, platform kullanımını yaklaşık olarak saymak için en fazla yedi günde bir yalnızca uygulama sürümünü, işletim sistemini, işlemci mimarisini ve rapor şemasını gönderir.
 
 No install ID, feature counters, designs or files. The hosting provider processes your IP address to deliver the request; Fairbeam stores neither IP addresses nor user agents. Only weekly aggregate totals are retained.
 
