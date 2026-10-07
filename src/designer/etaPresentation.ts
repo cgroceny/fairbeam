@@ -1,33 +1,39 @@
 import type { Eta } from "../runner/api";
+import { decayEstablished } from "../runner/liveRun.ts";
 
-/** Keep the display envelope tied to real recent solver projections. These are presentation bounds,
- * not confidence limits: keep at most four observations, clip stale low/high projections to half or
- * twice the current raw projection, and always include the newest raw projection (especially when it
- * gets worse). The raw ETA remains available in the run detail. */
-const HISTORY_SIZE = 4;
-const MIN_RANGE_FACTOR = 0.5;
-const MAX_RANGE_FACTOR = 2;
-/** Ease downwards by 35%, but cap its lag at the smaller of 15% or 3 seconds. */
-const DECREASE_BLEND = 0.35;
-const MAX_LAG_FACTOR = 0.15;
-const MAX_LAG_SECONDS = 3;
+/** How the dock's Run tab presents the solver's remaining-time projection.
+ *
+ * - Nothing until the forecast can mean something: at least three energy readings of the current port
+ *   and the energy at least 10 dB below its peak (runner/liveRun.ts decayEstablished). During the
+ *   excitation pulse and the start of the decay a straight-line fit jumps from minutes to seconds.
+ * - Then a range of finishing times that may only narrow: each new projection tightens the range around
+ *   itself. A projection outside the range (the decay changed its pace) starts a new range, so the range
+ *   always holds the solver's newest projection. The raw values stay in the run detail.
+ *
+ * The bounds are presentation bounds around the projection, not confidence limits: wider for a
+ * low-confidence fit than for a high-confidence one. */
+const SPREAD: Record<string, [number, number]> = { high: [0.85, 1.25], medium: [0.7, 1.5], low: [0.5, 2] };
 
 export interface EtaPresentationInput {
   jobId: string;
   port?: number | null;
   eta: Eta | null | undefined;
+  /** the field energy readings of the current port (store.ts liveEnergy) */
+  energy?: readonly { ts: number; db: number }[];
+  /** wall clock, s (defaults to now) */
+  now?: number;
 }
 
 export interface EtaPresentation {
-  state: "waiting" | "early" | "range" | "timestep-bound" | "converged";
+  state: "waiting" | "range" | "timestep-bound" | "converged";
+  /** while waiting: for the first energy readings, or for the energy to fall far enough */
+  waitingFor?: "samples" | "decay";
   basis?: Eta["basis"];
   confidence?: Eta["confidence"];
   points?: number;
   /** Raw whole-job estimate when available, otherwise the current-port estimate. */
   rawSeconds?: number;
-  /** A smoothed display value; never lower than the raw value when the solver projection worsens. */
-  displaySeconds?: number;
-  /** A bounded envelope of recent projections, not a statistical confidence interval. */
+  /** remaining time, the narrowing range of finishing times as seen now */
   rangeSeconds?: [number, number];
   /** Raw time to the active port's configured timestep limit. */
   limitSeconds?: number;
@@ -41,18 +47,14 @@ export interface EtaPresentation {
   remainingTimesteps?: number;
 }
 
-type Projection = { timestep: number | null; seconds: number };
-
-/** One presenter per live run. Forecast smoothing and range history reset with the job, excited
- * port, estimate basis, or switch between a port ETA and a whole-job ETA. */
+/** One presenter per live run. The range resets with the job, the excited port, the estimate basis,
+ * or a switch between a port ETA and a whole-job ETA. */
 export function createEtaPresenter() {
   let identity = "";
-  let previousTimestep: number | null = null;
-  let previousRaw: number | null = null;
-  let smoothed: number | null = null;
-  let history: Projection[] = [];
+  let range: [number, number] | null = null;
+  let previous: string | null = null;
 
-  return ({ jobId, port = null, eta }: EtaPresentationInput): EtaPresentation => {
+  return ({ jobId, port = null, eta, energy, now = Date.now() / 1000 }: EtaPresentationInput): EtaPresentation => {
     const basis = eta?.basis;
     const jobSeconds = finiteNonnegative(eta?.job_eta_s);
     const portSeconds = finiteNonnegative(eta?.eta_s);
@@ -60,36 +62,17 @@ export function createEtaPresenter() {
     const nextIdentity = `${jobId}|${port ?? "-"}|${basis ?? "unknown"}|${source}`;
     if (identity !== nextIdentity) {
       identity = nextIdentity;
-      previousTimestep = null;
-      previousRaw = null;
-      smoothed = null;
-      history = [];
+      range = null;
+      previous = null;
     }
-
     const rawSeconds = jobSeconds ?? portSeconds ?? undefined;
     const timestep = finiteNonnegative(eta?.timestep);
-    if (rawSeconds !== undefined && (timestep !== previousTimestep || rawSeconds !== previousRaw)) {
-      if (smoothed === null || rawSeconds >= smoothed || (previousRaw !== null && rawSeconds > previousRaw)) {
-        // A slower/worsening projection is shown immediately; smoothing never conceals it.
-        smoothed = rawSeconds;
-      } else {
-        const blended = smoothed + (rawSeconds - smoothed) * DECREASE_BLEND;
-        const maxLag = Math.min(MAX_LAG_SECONDS, rawSeconds * MAX_LAG_FACTOR);
-        smoothed = Math.max(rawSeconds, Math.min(blended, rawSeconds + maxLag));
-      }
-      history.push({ timestep, seconds: rawSeconds });
-      if (history.length > HISTORY_SIZE) history = history.slice(-HISTORY_SIZE);
-      previousTimestep = timestep;
-      previousRaw = rawSeconds;
-    }
-
     const base: EtaPresentation = {
       state: "waiting",
       basis,
       confidence: eta?.confidence,
       points: eta?.points,
       rawSeconds,
-      displaySeconds: smoothed ?? rawSeconds,
       limitSeconds: finiteNonnegative(eta?.limit_s) ?? undefined,
       portSeconds: portSeconds ?? undefined,
       jobSeconds: jobSeconds ?? undefined,
@@ -101,17 +84,21 @@ export function createEtaPresenter() {
 
     if (basis === "converged") return { ...base, state: "converged" };
     if (basis === "timestep-limit") return { ...base, state: "timestep-bound" };
-    if (rawSeconds === undefined) return base;
+    if (rawSeconds === undefined) return { ...base, waitingFor: "samples" };
+    // energy readings the caller did not pass count as established (a server forecast alone)
+    if (energy && !decayEstablished(energy)) return { ...base, waitingFor: energy.length < 2 ? "samples" : "decay" };
 
-    // Two samples produce a rough point estimate. Wait for at least three before showing a range.
-    if ((eta?.points ?? 0) < 3 || history.length < 3 || (eta?.confidence !== "medium" && eta?.confidence !== "high")) {
-      return { ...base, state: "early" };
+    // a new projection (another timestep or value) moves the range; the same one only ages it
+    const key = `${timestep ?? "-"}|${rawSeconds}`;
+    if (key !== previous) {
+      previous = key;
+      const [lo, hi] = SPREAD[eta?.confidence ?? ""] ?? SPREAD.low;
+      const finish = now + rawSeconds;
+      const around: [number, number] = [now + rawSeconds * lo, now + rawSeconds * hi];
+      if (!range || finish < range[0] || finish > range[1]) range = around;
+      else range = [Math.max(range[0], Math.min(around[0], finish)), Math.min(range[1], Math.max(around[1], finish))];
     }
-
-    const observed = history.map((p) => p.seconds);
-    if (smoothed !== null) observed.push(smoothed);
-    const lower = Math.max(rawSeconds * MIN_RANGE_FACTOR, Math.min(rawSeconds, ...observed));
-    const upper = Math.max(rawSeconds, Math.min(rawSeconds * MAX_RANGE_FACTOR, Math.max(...observed)));
+    const lower = Math.max(0, range![0] - now), upper = Math.max(lower, range![1] - now);
     return { ...base, state: "range", rangeSeconds: [lower, upper] };
   };
 }

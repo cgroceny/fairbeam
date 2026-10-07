@@ -9,7 +9,7 @@ import { cancelSweep, historyItems, sweepLongCsv, summaryRows, type SummaryRow, 
 import { saveDownload } from "../lib/download";
 import { useModal } from "../lib/dialog";
 import SweepSummaryMulti, { isMultiPortGroup } from "./SweepSummaryMulti";
-import { ClearQueueButton, QueueButton } from "./RunQueue";
+import { ClearQueueButton, engineThreadsText, QueueButton } from "./RunQueue";
 import { t } from "../i18n";
 
 type StatusFilter = "all" | "active" | "done" | "failed" | "stopped";
@@ -100,7 +100,7 @@ function JobRow(props: { job: Job; inSweep?: boolean }) {
             <span class="rp-hrow-sub mono">
               {ago(j().created)}
               <Show when={j().duration_s !== null && isTerminal(j().status)}> · {seconds(j().duration_s)}</Show>
-              {" · "}{t("runHistory.threadsShort", { n: j().threads })}
+              {" · "}{engineThreadsText(j().engine, j().info?.threads ?? j().threads, true)}
             </span>
           </span>
         </button>

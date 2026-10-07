@@ -13,7 +13,7 @@ import OptimizeProgress from "../runner/OptimizeProgress";
 import { cancelJob, live, liveEnergy, liveInfo, liveLog, liveProgress, liveStats, meshSource, stopping } from "../runner/store";
 import { StatusBadge } from "../runner/status";
 import { designDockTab, designJob, designJobId, designResult, designResultError, dockCancelTarget, failedResultLoad, followInDesigner, retryResultLoad, setDesignDockTab, type DesignDockTab } from "../runner/designRun";
-import { activeRuns, jobName, RunQueue } from "../runner/RunQueue";
+import { activeRuns, engineThreadsText, jobName, RunQueue } from "../runner/RunQueue";
 import type { Bundle } from "../types";
 import { ChecksList } from "./DesignPane";
 import ParametersDock from "./ParametersDock";
@@ -29,6 +29,7 @@ import { differingParams, differs, madeLabels } from "./resultTabs";
 import type { RunMetrics } from "./runSummary";
 import { RunQualityBadge, RunQualityBanner } from "./RunQualityView";
 import { createEtaPresenter } from "./etaPresentation";
+import { ETA_MIN_DECAY_DB, pulseNote as livePulseNote, runFraction } from "../runner/liveRun";
 import { slowHint, watchSpeed } from "./slowRun";
 import { estimateTime } from "./meshStats";
 import { fmt, t } from "../i18n";
@@ -67,23 +68,18 @@ function RunProgress() {
     return i >= 0 ? i : job().phase === "done" ? PHASES.length : -1;
   };
   const endDb = () => liveInfo().end_criteria_db ?? job().end_criteria_db ?? -40;
-  /** Why the energy line is flat at the start: the excitation pulse is still running (the energy only
-   * starts to fall once it ends), or it would not end before the limit at all. */
+  /** Why the energy line is flat at the start (runner/liveRun.ts): gone once the solver is past the
+   * pulse or has finished, also when the run ended between two progress lines. */
   const pulseNote = () => {
-    const end = liveInfo().pulse_steps, limit = liveInfo().max_timesteps;
-    if (!end) return null;
-    if (limit && end >= limit) return t("progress.pulse.overLimit", { pulse: fmt.int(end), limit: fmt.int(limit) });
-    const ts = liveProgress()?.timestep ?? 0;
-    return ts < end ? t("progress.pulse.running", { n: fmt.int(end), left: fmt.int(end - ts) }) : null;
+    const note = livePulseNote(liveInfo(), liveProgress(), liveStats(), job().phase, job().status);
+    if (!note) return null;
+    return note.kind === "overLimit" ? t("progress.pulse.overLimit", { pulse: fmt.int(note.pulse), limit: fmt.int(note.limit) })
+      : t("progress.pulse.running", { n: fmt.int(note.end), left: fmt.int(note.left) });
   };
-  const fraction = () => {
-    if (job().status === "done") return 1;
-    const p = liveProgress();
-    return Math.max(0, Math.min(1, p?.energy_fraction ?? p?.timestep_fraction ?? 0));
-  };
+  const fraction = () => runFraction(job(), liveProgress(), liveInfo());
   const eta = createMemo(() => {
     const p = liveProgress();
-    return presentEta({ jobId: designJobId() ?? job().id, port: p?.port ?? liveInfo().port_run, eta: p?.eta ?? undefined });
+    return presentEta({ jobId: designJobId() ?? job().id, port: p?.port ?? liveInfo().port_run, eta: p?.eta ?? undefined, energy: liveEnergy() });
   });
   // far slower than the pre-run estimate for a while: the machine is probably busy (slowRun.ts)
   const speed = () => liveProgress()?.speed_mcs ?? liveStats().speed_mcells_s;
@@ -134,7 +130,6 @@ function RunProgress() {
     if (stage) return stage;
     const value = eta();
     if (value.state === "waiting") return t("runDock.eta.waiting");
-    if (value.state === "early") return t("runDock.eta.approx", { time: seconds(value.rawSeconds) });
     if (value.state === "range" && value.rangeSeconds) return t("runDock.eta.range", {
       from: seconds(value.rangeSeconds[0]), to: seconds(value.rangeSeconds[1]),
     });
@@ -151,10 +146,7 @@ function RunProgress() {
     const stage = etaStage();
     if (stage) return "";
     const value = eta();
-    if (value.state === "waiting") return t("runDock.eta.waitingNote");
-    if (value.state === "early") return t((liveInfo().port_total ?? 1) > 1 ? "runDock.eta.earlyPortNote" : "runDock.eta.earlyNote", {
-      count: value.points ?? 0, basis: etaBasis(value), confidence: etaConfidence(value),
-    });
+    if (value.state === "waiting") return t(value.waitingFor === "decay" ? "runDock.eta.decayNote" : "runDock.eta.waitingNote", { db: ETA_MIN_DECAY_DB });
     if (value.state === "range") return value.jobSeconds !== undefined
       ? t("runDock.eta.jobRangeNote", { count: value.portsRemaining ?? 0, basis: etaBasis(value), confidence: etaConfidence(value) })
       : t((liveInfo().port_total ?? 1) > 1 ? "runDock.eta.portOnlyNote" : "runDock.eta.rangeNote", {
@@ -166,7 +158,12 @@ function RunProgress() {
     }
     return t("runDock.eta.reachedNote");
   };
-  const etaHasSeparateLimit = () => solverPhase() && eta().limitSeconds !== undefined && eta().state !== "timestep-bound";
+  // the time to the timestep limit only when it comes before the forecast end: then the limit can cut
+  // the run short (a far-off limit next to a short forecast is noise)
+  const etaHasSeparateLimit = () => {
+    const e = eta();
+    return solverPhase() && e.limitSeconds !== undefined && e.state === "range" && !!e.rangeSeconds && e.limitSeconds < e.rangeSeconds[1];
+  };
   // after the run, a bound (the energy fell below the criterion after the last logged sample)
   // replaces a missing or stale live sample
   const energy = () => {
@@ -174,9 +171,12 @@ function RunProgress() {
     if (done() && st.final_energy_db === undefined && st.final_energy_bound_db !== undefined) return `≤ ${num(st.final_energy_bound_db, 1)}`;
     return num(liveProgress()?.energy_db ?? st.final_energy_db, 1);
   };
+  // the end criterion as text: one minus sign (U+2212) with the energy beside it
+  const endText = () => fmt.int(endDb());
+  // a line needs two readings: one reading would draw a lone dot with no trend
   const series = createMemo<Series[]>(() => {
     const pts = liveEnergy();
-    if (!pts.length) return [];
+    if (pts.length < 2) return [];
     const last = pts[pts.length - 1].ts;
     const x = [0, ...pts.map((p) => p.ts), last * 1.15 + 1];
     const y = [NaN, ...pts.map((p) => p.db), NaN];
@@ -195,10 +195,10 @@ function RunProgress() {
         <div class="cluster-sm rdk-run-head">
           <StatusBadge status={job().status} />
           <span class="mono">{job().label ?? job().model_id ?? job().model}</span>
-          <span class="muted">· {job().engine ?? "cpu"}{job().engine === "gpu" ? "" : `, ${t("runDock.threads", { count: liveInfo().threads ?? job().threads })}`}</span>
+          <span class="muted">· {engineThreadsText(job().engine, liveInfo().threads ?? job().threads)}</span>
           <Show when={!done()}>
             <button class="btn btn-ghost btn-sm rdk-push" onClick={() => void cancelJob(job().id)} disabled={stopping().has(job().id)} title={t("runDock.stop.title")}>
-              <Square size={13} aria-hidden="true" /> {stopping().has(job().id) ? t("runQueue.stopping") : t("common.cancel")}
+              <Square size={13} aria-hidden="true" /> {stopping().has(job().id) ? t("runQueue.stopping") : t("runDock.stopRun")}
             </button>
           </Show>
         </div>
@@ -230,7 +230,7 @@ function RunProgress() {
         <dl class="rdk-stats">
           <div><dt>{t("runDock.stat.timestep")}</dt><dd class="mono">{(() => { const n = liveProgress()?.timestep ?? liveStats().timesteps; return n === undefined || n === null ? "—" : fmt.int(n); })()}<Show when={liveInfo().max_timesteps}><span class="muted"> / {fmt.int(liveInfo().max_timesteps!)}</span></Show></dd></div>
           <div><dt>{t("runDock.stat.speed")}</dt><dd class="mono">{num(liveProgress()?.speed_mcs ?? liveStats().speed_mcells_s, 0)} MC/s</dd></div>
-          <div><dt>{t("runDock.stat.energy")}</dt><dd class="mono">{energy()} / {endDb()} dB</dd></div>
+          <div><dt>{t("runDock.stat.energy")}</dt><dd class="mono">{energy()} / {endText()} dB</dd></div>
           <div><dt>{t("runDock.stat.elapsed")}</dt><dd class="mono">{seconds(elapsed())}</dd></div>
           <Show when={!done()}>
             <div class="rdk-eta-stat">
@@ -274,12 +274,12 @@ function RunProgress() {
         </Show>
       </div>
       <div class="rdk-run-chart">
-        <Show when={series().length} fallback={<div class="panel-empty">{done()
-          ? t("runDock.energy.noSample")
-          : t("runDock.energy.waiting")}</div>}>
+        <Show when={series().length} fallback={<div class="panel-empty">{!done()
+          ? t("runDock.energy.waiting")
+          : liveEnergy().length ? t("progress.oneSampleDone") : t("runDock.energy.noSample")}</div>}>
           <LineChart ariaLabel={t("runDock.energy.chart")} series={series()} xLabel={t("runDock.stat.timestep")} yLabel={t("runDock.energy.axis")}
             yDomain={[Math.floor(Math.min(endDb() - 10, ...liveEnergy().map((p) => p.db)) / 10) * 10, 0]}
-            hlines={[{ y: endDb(), label: t("runDock.energy.end", { db: endDb() }) }]} xFormat={(v) => compact(v)} yFormat={(v) => v.toFixed(0)} />
+            hlines={[{ y: endDb(), label: t("runDock.energy.end", { db: endText() }) }]} xFormat={(v) => compact(v)} yFormat={(v) => fmt.fixed(v, 0)} />
         </Show>
       </div>
     </div>
@@ -467,7 +467,7 @@ export default function RunDock() {
             )}</For>
           </div>
           <div class="dock-tools">
-            {/* the Run tab has its own Cancel beside the job's name: one button per view, not two (unless the
+            {/* the Run tab has its own Stop run beside the job's name: one button per view, not two (unless the
                 dock is collapsed). It stops the run the dock shows, else the run the window follows, else the
                 server's running run, whoever started it (#8); a run that is not the dock's is named on it */}
             <Show when={stopTarget() && (designDockTab() !== "run" || bottomDockCollapsed() || stopTarget() !== designJob())}>
@@ -475,7 +475,7 @@ export default function RunDock() {
                 disabled={stopping().has(stopTarget()!.id)}
                 title={stopTarget() === designJob() ? t("runDock.stop.title") : t("dock.stopRun.title", { name: jobName(stopTarget()!) })}>
                 <Square size={13} aria-hidden="true" /> {stopping().has(stopTarget()!.id) ? t("runQueue.stopping")
-                  : stopTarget() === designJob() ? t("dock.cancelRun")
+                  : stopTarget() === designJob() ? t("runDock.stopRun")
                     : <span class="dock-stop-name">{t("dock.stopOther", { name: jobName(stopTarget()!) })}</span>}
               </button>
             </Show>
