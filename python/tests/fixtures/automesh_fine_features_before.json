@@ -1,0 +1,305 @@
+{
+  "revision": "3c5606519e8117ff19e218156fef9c8d33d8e344",
+  "method": "In-process model builds only; no solver runs. Native automatic settings are retained; manual-only models are remeshed with auto_mesh(keep_existing=False). Dipole and patch select mesh=auto. All other parameters use defaults.",
+  "examples": {
+    "branchline-coupler": {
+      "source": "python/models/branchline_coupler.py",
+      "overrides": {},
+      "mode": "native automatic",
+      "cells": [
+        51,
+        53,
+        30
+      ],
+      "total_cells": 81090,
+      "min_cell": 0.14417,
+      "max_neighbour_ratio": 1.405
+    },
+    "dipole": {
+      "source": "python/models/dipole.py",
+      "overrides": {
+        "mesh": "auto"
+      },
+      "mode": "native automatic",
+      "cells": [
+        60,
+        58,
+        69
+      ],
+      "total_cells": 240120,
+      "min_cell": 0.16667,
+      "max_neighbour_ratio": 1.405
+    },
+    "helix-axial": {
+      "source": "python/models/helix_axial.py",
+      "overrides": {},
+      "mode": "native automatic",
+      "cells": [
+        90,
+        90,
+        168
+      ],
+      "total_cells": 1360800,
+      "min_cell": 1.33449,
+      "max_neighbour_ratio": 1.398
+    },
+    "inset-patch": {
+      "source": "python/models/inset_patch.py",
+      "overrides": {},
+      "mode": "automatic from geometry at defaults",
+      "cells": [
+        63,
+        78,
+        49
+      ],
+      "total_cells": 240786,
+      "min_cell": 0.31144,
+      "max_neighbour_ratio": 1.39
+    },
+    "lowpass-stepped": {
+      "source": "python/models/lowpass_stepped.py",
+      "overrides": {},
+      "mode": "native automatic",
+      "cells": [
+        70,
+        50,
+        38
+      ],
+      "total_cells": 133000,
+      "min_cell": 0.07811,
+      "max_neighbour_ratio": 1.393
+    },
+    "microstrip-line": {
+      "source": "python/models/microstrip_line.py",
+      "overrides": {},
+      "mode": "automatic from geometry at defaults",
+      "cells": [
+        152,
+        146,
+        140
+      ],
+      "total_cells": 3106880,
+      "min_cell": 0.13797,
+      "max_neighbour_ratio": 1.424
+    },
+    "minkowski-patch": {
+      "source": "python/models/minkowski_patch.py",
+      "overrides": {},
+      "mode": "automatic from geometry at defaults",
+      "cells": [
+        63,
+        60,
+        38
+      ],
+      "total_cells": 143640,
+      "min_cell": 0.32354,
+      "max_neighbour_ratio": 1.381
+    },
+    "patch-antenna": {
+      "source": "python/models/patch_antenna.py",
+      "overrides": {
+        "mesh": "auto"
+      },
+      "mode": "native automatic",
+      "cells": [
+        60,
+        58,
+        48
+      ],
+      "total_cells": 167040,
+      "min_cell": 0.33969,
+      "max_neighbour_ratio": 1.395
+    },
+    "patch-array-2x1": {
+      "source": "python/models/patch_array_2x1.py",
+      "overrides": {},
+      "mode": "automatic from geometry at defaults",
+      "cells": [
+        48,
+        71,
+        34
+      ],
+      "total_cells": 115872,
+      "min_cell": 0.33967,
+      "max_neighbour_ratio": 1.395
+    },
+    "patch-array-4x1": {
+      "source": "python/models/patch_array_4x1.py",
+      "overrides": {},
+      "mode": "native automatic",
+      "cells": [
+        64,
+        141,
+        50
+      ],
+      "total_cells": 451200,
+      "min_cell": 0.33963,
+      "max_neighbour_ratio": 1.395
+    },
+    "pyramidal-horn": {
+      "source": "python/models/pyramidal_horn.py",
+      "overrides": {},
+      "mode": "native automatic",
+      "cells": [
+        122,
+        104,
+        87
+      ],
+      "total_cells": 1103856,
+      "min_cell": 0.20819,
+      "max_neighbour_ratio": 1.404
+    },
+    "sierpinski-monopole--iterations-0": {
+      "source": "python/models/sierpinski_monopole.py",
+      "overrides": {
+        "iterations": "0"
+      },
+      "mode": "automatic from geometry at defaults",
+      "cells": [
+        287,
+        174,
+        194
+      ],
+      "total_cells": 9687972,
+      "min_cell": 0.18543,
+      "max_neighbour_ratio": 1.438
+    },
+    "sierpinski-monopole--iterations-3": {
+      "source": "python/models/sierpinski_monopole.py",
+      "overrides": {
+        "iterations": "3"
+      },
+      "mode": "automatic from geometry at defaults",
+      "cells": [
+        584,
+        196,
+        248
+      ],
+      "total_cells": 28387072,
+      "min_cell": 0.03289,
+      "max_neighbour_ratio": 1.572
+    },
+    "wilkinson-divider": {
+      "source": "python/models/wilkinson_divider.py",
+      "overrides": {},
+      "mode": "automatic from geometry at defaults",
+      "cells": [
+        107,
+        114,
+        62
+      ],
+      "total_cells": 756276,
+      "min_cell": 0.13046,
+      "max_neighbour_ratio": 1.438
+    },
+    "blade-867": {
+      "source": "examples/designs/blade_867.design.json",
+      "overrides": {},
+      "mode": "native automatic",
+      "cells": [
+        65,
+        42,
+        50
+      ],
+      "total_cells": 136500,
+      "min_cell": 1.40492,
+      "max_neighbour_ratio": 2.2
+    },
+    "collinear-867": {
+      "source": "examples/designs/collinear_867.design.json",
+      "overrides": {},
+      "mode": "native automatic",
+      "cells": [
+        128,
+        83,
+        331
+      ],
+      "total_cells": 3516544,
+      "min_cell": 0.08953,
+      "max_neighbour_ratio": 1.467
+    },
+    "meander-dipole-867": {
+      "source": "examples/designs/meander_dipole_867.design.json",
+      "overrides": {},
+      "mode": "native automatic",
+      "cells": [
+        94,
+        53,
+        196
+      ],
+      "total_cells": 976472,
+      "min_cell": 0.25599,
+      "max_neighbour_ratio": 1.444
+    },
+    "sleeve-dipole-867": {
+      "source": "examples/designs/sleeve_dipole_867.design.json",
+      "overrides": {},
+      "mode": "native automatic",
+      "cells": [
+        82,
+        60,
+        90
+      ],
+      "total_cells": 442800,
+      "min_cell": 0.26078,
+      "max_neighbour_ratio": 1.422
+    },
+    "ux-inset-patch-2-4-ghz": {
+      "source": "examples/designs/ux_inset_patch_24.design.json",
+      "overrides": {},
+      "mode": "native automatic",
+      "cells": [
+        68,
+        55,
+        33
+      ],
+      "total_cells": 123420,
+      "min_cell": 0.4,
+      "max_neighbour_ratio": 1.4
+    },
+    "wideband-dipole-867": {
+      "source": "examples/designs/wideband_dipole_867.design.json",
+      "overrides": {},
+      "mode": "native automatic",
+      "cells": [
+        92,
+        61,
+        148
+      ],
+      "total_cells": 830576,
+      "min_cell": 0.4,
+      "max_neighbour_ratio": 1.482
+    },
+    "yagi-867": {
+      "source": "examples/designs/yagi_867.design.json",
+      "overrides": {},
+      "mode": "native automatic",
+      "cells": [
+        148,
+        46,
+        105
+      ],
+      "total_cells": 714840,
+      "min_cell": 0.36511,
+      "max_neighbour_ratio": 1.403
+    }
+  },
+  "blade": {
+    "cells": [
+      106,
+      28,
+      72
+    ],
+    "total_cells": 213696,
+    "min_cell_mm": 0.19635,
+    "max_neighbour_ratio": 1.4,
+    "notch_cells_across": [
+      1.0,
+      1.0,
+      1.0
+    ],
+    "feed_cells_across": 1.0,
+    "strip_cells_across": 0.12023,
+    "strip_midpoint_components": 9
+  }
+}

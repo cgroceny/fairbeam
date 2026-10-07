@@ -135,6 +135,9 @@ EXPLANATIONS = {
     "mesh-cells": "A large mesh needs more memory and time and may exceed the server's cell limit. Reduce cells per wavelength, lower the maximum frequency, or simplify fine details while checking accuracy.",
     "mesh-warning": "The automatic mesher found geometry or spacing that may make the grid costly or inaccurate. Review the detail in this message and adjust the nearby geometry or mesh settings before running again.",
     "mesh-feature": "This feature falls between mesh lines and may disappear from the simulated geometry. Thicken it, model thin metal as a sheet, or refine the mesh until it is resolved.",
+    "mesh-fine-feature": "A narrow gap, notch or strip has fewer cells across its width than the automatic mesh requires. Refine the local mesh or simplify the feature, then rebuild the preview and inspect its resolution and total cell count before running.",
+    "mesh-fine-refinement": "The preview compares the automatic mesh before and after local refinement of narrow features. Fine cells extend across each Cartesian mesh plane, so review the total cell count and the remaining resolution warnings before running.",
+    "mesh-fine-limit": "Resolving the detected fine features would exceed the configured cell limit, so the preview retains the baseline mesh. Simplify the fine geometry or reduce the simulation domain, then rebuild the preview and resolve its feature warnings before running.",
     "mesh-lines": "Manual mesh lines need at least two finite, strictly increasing coordinates on each axis. Correct the line list or switch to automatic mesh.",
     "mesh-lines-parity": "The built mesh differs from the manual line list. Rebuild the preview and check that no line was omitted or changed.",
     "air-pad": "The open boundaries absorb the outgoing wave only if they stand far enough from the structure; with the air padding this small the reflections from them, and the box the far field is computed on, come too near the antenna. Use about a quarter wavelength at f min, which the automatic padding gives when the field is left empty.",
@@ -1398,6 +1401,28 @@ class _Lint:
                           + (f"; {hint}" if hint else ""))
         for w in (mesh.get("auto") or {}).get("warnings") or []:
             self.warn("mesh", "mesh-warning", f"automatic mesh: {w}")
+        impact = (mesh.get("auto") or {}).get("fine_feature_refinement") or {}
+        limit = impact.get("cell_limit")
+        if impact.get("skipped_cell_limit") and _num(limit) and math.isfinite(limit) and limit > 0:
+            self.warn("mesh", "mesh-fine-limit",
+                      f"local fine-feature refinement exceeds the {limit:,.0f} cell limit; unresolved features remain")
+        baseline, refined = impact.get("baseline_cells"), impact.get("total_cells")
+        if (all(_num(v) and math.isfinite(v) and v > 0 for v in (baseline, refined))
+                and refined > baseline):
+            self.info("mesh", "mesh-fine-refinement",
+                      f"local fine-feature refinement adds {refined - baseline:,.0f} cells "
+                      f"({baseline:,.0f} → {refined:,.0f}; {refined / baseline:.3g}×)")
+        for feature in (mesh.get("auto") or {}).get("fine_features") or []:
+            if not isinstance(feature, dict):
+                continue
+            width, cells, required = (feature.get(k) for k in ("width", "cells_across", "required_cells"))
+            if (not all(_num(v) and math.isfinite(v) for v in (width, cells, required))
+                    or width <= 0 or required <= 0):
+                continue
+            if feature.get("resolved") is False or cells < required * (1 - 1e-6):
+                self.warn("mesh", "mesh-fine-feature",
+                          f"a fine feature {width:.3g} mm wide has {cells:.3g} cells across; "
+                          f"at least {required:g} are required")
         self._excitation(mesh, parts)
         self._ringdown(mesh, parts)
         lines = [mesh.get(a) for a in "xyz"]
