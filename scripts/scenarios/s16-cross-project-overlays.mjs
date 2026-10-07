@@ -122,7 +122,7 @@ export default {
     await s.page.click(`input[data-compare-overlay="${foreignFile}"]`);await s.wait('[data-compare-state="error"]');
     await capture('error');
     assert.equal(await s.ev((_,m)=>m.e.screenshotAvailable(),null,{e:'/src/components/exportContext.ts'}),false,'failed selections disable screenshots');
-    const downloads=await s.page.evaluate(()=>window.__overlayDownloads.length);await s.page.click('.dw-result-bar button[title="'+await s.T('results.toolbar.csvTitle')+'"]');await s.wait('.rdk-action-feedback.is-problem');assert.equal(await s.page.evaluate(()=>window.__overlayDownloads.length),downloads,'CSV failure produces no partial comparison');
+    const downloads=await s.page.evaluate(()=>window.__overlayDownloads.length);await s.page.click('.dw-result-bar button[title="'+await s.T('results.toolbar.csvTitle')+'"]');await s.wait('.toast-error');assert.equal(await s.page.evaluate(()=>window.__overlayDownloads.length),downloads,'CSV failure produces no partial comparison');
     await s.gone('#rdk-compare-popover');await openCompare();
     assert.deepEqual(await compared(),[]);assert.ok((await s.text('#rdk-compare-popover')).includes(await s.T('results.compare.failed')));
     status=200;const invalidReply=s.page.waitForResponse(response=>response.url().endsWith('/projects/'+foreignFile));await s.click('results.compare.retry',{within:'#rdk-compare-popover'});await(await invalidReply).buffer();await s.wait('[data-compare-state="error"]');

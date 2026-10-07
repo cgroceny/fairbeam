@@ -2467,7 +2467,6 @@
   "results.toolbar.csvTitle": "Export result data as CSV",
   "results.toolbar.exportFailed": "Could not export result data",
   "results.toolbar.formatAria": "Result data format",
-  "results.toolbar.savedTo": "Saved to {path}",
   "results.toolbar.show3d": "Show in 3D",
   "results.toolbar.show3dTitle": "Show this far field as a 3D pattern in the 3D view (the tree's 3D pattern entry; its × turns it off)",
   "results.toolbar.showInFolder": "Show in folder",

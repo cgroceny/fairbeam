@@ -2420,7 +2420,6 @@
   "results.toolbar.csvTitle": "Sonuç verisini CSV olarak dışa aktar",
   "results.toolbar.exportFailed": "Sonuç verisi dışa aktarılamadı",
   "results.toolbar.formatAria": "Sonuç veri biçimi",
-  "results.toolbar.savedTo": "Kaydedildi: {path}",
   "results.toolbar.show3d": "3B'de göster",
   "results.toolbar.show3dTitle": "Bu uzak alanı 3B görünümde 3B örüntü olarak göster (ağaçtaki 3B örüntü girdisi; × ile kapanır)",
   "results.toolbar.showInFolder": "Klasörde göster",

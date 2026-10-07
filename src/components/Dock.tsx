@@ -30,7 +30,8 @@ import { copyResultData, exportResultCsv, resultDataTable, type ResultDataOption
 import { resultDataFormat, tableFormat, writeResultDataFormat, type ResultDataFormat } from "../designer/resultDataPreference";
 import { exportResultTouchstone } from "../designer/resultTouchstone";
 import type { ResultView } from "../designer/resultFocus";
-import { downloadMessage, revealDownloadedFile, type DownloadResult } from "../lib/download";
+import type { DownloadResult } from "../lib/download";
+import { downloadToast } from "../lib/toast";
 import { exportNotice, registerSurfaceExports } from "../components/exportContext";
 import { saveVisibleFigure, visibleFigureSvgs } from "../components/visibleFigure";
 import { t } from "../i18n";
@@ -97,25 +98,13 @@ export default function Dock() {
   let dockEl: HTMLElement | undefined;
   const dockSize = useSize(() => dockEl);
   const [showTable, setShowTable] = createSignal(false);
-  const [dataAction, setDataAction] = createSignal("");
-  // a saved file: Show in folder beside the status
-  const [savedPath, setSavedPath] = createSignal<string | null>(null);
-  // the Copy data button itself says "Copied" for a moment; failures go to the status line
+  // the Copy data button itself says "Copied" for a moment; failures and downloads are toasts
+  // (lib/toast.ts): one message per action, shown once and outside the layout
   const [copied, setCopied] = createSignal(false);
-  let actionTimer: ReturnType<typeof setTimeout> | undefined;
   let copiedTimer: ReturnType<typeof setTimeout> | undefined;
-  // a saved file's "Saved to … · Show in folder" stays long enough to click
-  const reportAction = (message: string, ms = 5000, path: string | null = null) => {
-    if (actionTimer) clearTimeout(actionTimer);
-    exportNotice(message);
-    setDataAction(message); setSavedPath(path);
-    actionTimer = setTimeout(() => { setDataAction(""); setSavedPath(null); }, ms);
-  };
-  const reportSaved = (result: DownloadResult) => {
-    if (result.status === "saved" && result.path) reportAction(t("results.toolbar.savedTo", { path: result.path }), 30_000, result.path);
-    else reportAction(downloadMessage(result));
-  };
-  onCleanup(() => { if (actionTimer) clearTimeout(actionTimer); if (copiedTimer) clearTimeout(copiedTimer); });
+  const reportProblem = (message: string) => exportNotice(message, { tone: "error" });
+  const reportSaved = (result: DownloadResult) => { downloadToast(result); };
+  onCleanup(() => { if (copiedTimer) clearTimeout(copiedTimer); });
   const resultView = (): ResultView | null => {
     switch (dockTab()) {
       case "reflection": return "sparams";
@@ -140,7 +129,7 @@ export default function Dock() {
     const view = resultView();
     if (!b || !view) return;
     void copyResultData(b, view, storedFF()?.f, selectedDataRuns(), dataOptions()).then((result) => {
-      if (!result.ok) { reportAction(t("results.toolbar.copyFailed", { error: result.message })); return; }
+      if (!result.ok) { reportProblem(t("results.toolbar.copyFailed", { error: result.message })); return; }
       if (copiedTimer) clearTimeout(copiedTimer);
       setCopied(true);
       copiedTimer = setTimeout(() => setCopied(false), 1600);
@@ -153,7 +142,7 @@ export default function Dock() {
       const filename = examplesCsvFilename(b, view);
       try {
         reportSaved(await exportResultCsv(b, view, filename, storedFF()?.f, selectedDataRuns(), dataOptions()));
-      } catch (error) { reportAction(t("dock.results.downloadFailed", { error: String(error) })); }
+      } catch (error) { reportProblem(t("dock.results.downloadFailed", { error: String(error) })); }
     }
   };
   const exportTouchstone = async () => {
@@ -162,7 +151,7 @@ export default function Dock() {
     const base = (source().replace(/\\/g, "/").split("/").pop() || b.name || "result").replace(/\.json$/i, "");
     try {
       reportSaved(await exportResultTouchstone(b, base, selectedDataRuns()));
-    } catch (error) { reportAction(t("results.toolbar.touchstoneFailed", { error: String(error) })); }
+    } catch (error) { reportProblem(t("results.toolbar.touchstoneFailed", { error: String(error) })); }
   };
   onMount(()=> {
     const ready=()=>!!bundle()?.results;
@@ -409,7 +398,6 @@ export default function Dock() {
 
   return (
     <section class="dock" classList={{ "dock-narrow": dockSize().w > 0 && dockSize().w < 1160 }} ref={dockEl} aria-label={t("dock.results.aria")} tabIndex={0} onKeyDown={onResultKey}>
-      <span class="visually-hidden" role="status">{dataAction()}</span>
       <DockResizeHandle />
       <div class="dock-bar">
         <div class="tabs" role="tablist" aria-label={t("dock.results.views")} onKeyDown={onTabKey}>
@@ -486,15 +474,6 @@ export default function Dock() {
               <Show when={copied()} fallback={<><Copy size={14} aria-hidden="true" /> {t("results.toolbar.copyData")}</>}><Check size={14} aria-hidden="true" /> {t("results.toolbar.copied")}</Show>
             </button>
             <button class="btn btn-ghost btn-sm" onClick={exportData} title={t("results.toolbar.csvTitle")}><Download size={14} aria-hidden="true" /> CSV</button>
-          </Show>
-          <Show when={dataAction()}>
-            <span class="dock-data-status" role="status" aria-live="polite">
-              {dataAction()}
-              <Show when={savedPath()}>{(path) => (
-                <button class="dock-reveal" onClick={() => void revealDownloadedFile(path())
-                  .catch((error) => reportAction(t("results.toolbar.showInFolderFailed", { error: String(error) })))}>{t("results.toolbar.showInFolder")}</button>
-              )}</Show>
-            </span>
           </Show>
           <Show when={bundle()?.results}>
             <button class="btn btn-ghost btn-sm" onClick={exportTouchstone} title={t("results.toolbar.touchstoneTitle")}><Download size={14} aria-hidden="true" /> Touchstone</button>
