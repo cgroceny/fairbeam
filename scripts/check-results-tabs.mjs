@@ -107,7 +107,7 @@ eq(madeLabels([undefined, "bad"]), ["—", "—"], "no timestamp: a dash");
 
 // ---- wiring: tree, dock, ribbon, keys, markers and the shortcut sheet
 const tree = read("src/designer/NavTree.tsx");
-check(/case "result": focusResult\(\{[^\n]*\}, "main"\)/.test(tree), "a tree result node opens its main-area tab");
+check(/case "result":[^\n]*focusResult\(\{[^\n]*\}, "main"\)/.test(tree), "a tree result node opens its main-area tab");
 check(/case "select": focusResult\(null\); activateMainTab\("3d"\)/.test(tree), "a geometry node brings the 3D tab to the front");
 const focus = read("src/designer/resultFocus.ts");
 const routed = [];

@@ -9,6 +9,7 @@ import type { Band, Bundle, ProjectIndexEntry } from "../types";
 import { efficiencyData, farfieldSummary } from "../lib/farfieldQuantity.ts";
 import { nearestIndex, sweep } from "../lib/rf.ts";
 import { indexQuality, runQuality, type RunQuality } from "../lib/runQuality.ts";
+import { ghzDigits } from "../lib/ghzDigits.ts";
 import { differingParams, madeLabels } from "./resultTabs.ts";
 import { t } from "../i18n/index.ts";
 
@@ -141,7 +142,7 @@ export function metricsLine(m: RunMetrics | null, fixed: (v: number, digits: num
   if (!m) return "";
   const parts: string[] = [];
   if (m.noResonance) parts.push(t("summary.noResonance"));
-  else if (m.f0 !== null) parts.push(`${fixed(m.f0 / 1e9, 3)} GHz`);
+  else if (m.f0 !== null) parts.push(`${fixed(m.f0 / 1e9, ghzDigits(m.f0 / 1e9))} GHz`);
   if (m.s11MinDb !== null) parts.push(`${fixed(m.s11MinDb, 1).replace(/^-/, "−")} dB`);
   if (m.farfield) parts.push(`${fixed(m.farfield.dmaxDbi, 1)} dBi`);
   return parts.join(" · ");

@@ -13,6 +13,7 @@ import { bundleMetrics, deepestBand, deltaLabel, deltaText, indexMetrics, metric
 import { activeResultDataTable, resultDataCsv, resultDataTable } from "../src/designer/resultData.ts";
 import { isMainResultView, MAIN_RESULT_VIEWS, MAIN_TAB_LABELS } from "../src/designer/resultTabs.ts";
 import { runChildren } from "../src/designer/navModel.ts";
+import { columnDecimals } from "../src/lib/format.ts";
 import { fmt, setDecimalChoice } from "../src/i18n/index.ts";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
@@ -434,6 +435,21 @@ assert.ok(metrics.size >= 10, "the example bundles were read");
   // the tree lists it under Tables, before the sweep table
   const tables = runChildren("r.json", null).find((k) => k.id === "grp:r.json:tables");
   assert.deepEqual(tables.children.map((k) => k.action.view), ["summary", "table"], "Tables: Summary, then the S-parameter table");
+}
+
+// ---- number formats: a parameter column has one number of decimals (the most precise value's, at most
+// four) in the UI language's separator
+{
+  assert.equal(columnDecimals([0.466, 0.4194, 0.5126]), 4, "the sweep of k: four decimals for every row");
+  assert.equal(columnDecimals([2, 3, 4]), 0, "integers");
+  assert.equal(columnDecimals([1.5, 2.25, "x", null]), 2, "non-numbers are ignored");
+  assert.equal(columnDecimals([0.123456]), 4, "at most four");
+  setDecimalChoice("comma");
+  assert.deepEqual([0.466, 0.4194].map((v) => fmt.fixed(v, columnDecimals([0.466, 0.4194]))), ["0,4660", "0,4194"], "Turkish: a decimal comma in the parameter cells");
+  setDecimalChoice("language");
+  const dock = read("src/designer/RunDock.tsx"), view = read("src/designer/RunSummaryView.tsx");
+  assert.ok(/columnDecimals\(rows\(\)\.map\(\(r\) => paramValue\(r\.bundle, p\.key\)\)\)/.test(dock) && /fmt\.fixed\(v, paramDigits\(\)\.get\(key\) \?\? 0\)/.test(dock), "Runs table: the parameter cells");
+  assert.ok(/columnDecimals\(rows\(\)\.map\(\(r\) => paramValue\(r\.bundle, p\.key\)\)\)/.test(view), "Summary: the parameter cells");
 }
 
 console.log("check-run-summary: ok");

@@ -75,4 +75,22 @@ assert.ok(resonances.length >= 1);
 assert.ok(resonances.some(r => Math.abs(r.x - bundle.results.bands[0].f_center) <= 5e6));
 assert.ok(resonances.some(r => Math.abs(r.low - bundle.results.bands[0].f_lo) <= 5e6 && Math.abs(r.high - bundle.results.bands[0].f_hi) <= 5e6));
 
+// ---- one format for a frequency read off a chart: four significant digits in GHz, from one helper (the
+// readouts, the marker table, the S11 tooltip, the Smith tooltip and labels, the tree's monitor nodes)
+{
+  const { ghzDigits, ghzPlain, freqText } = await import('../src/lib/format.ts');
+  assert.deepEqual([2.4036, 11.1634, 0.86704, 123.45].map(ghzPlain), ['2.404', '11.16', '0.8670', '123.5']);
+  assert.equal(ghzDigits(-0.2196), 4, 'a difference of frequencies');
+  assert.equal(freqText(2.4e9), '2.400 GHz');
+  const chart = readFileSync(new URL('../src/charts/LineChart.tsx', import.meta.url), 'utf8');
+  assert.ok(/const txPlain = \(v: number\) => \(xUnit\(\) === "GHz" \? ghzPlain\(v\)/.test(chart), 'tooltips and the table: the frequency format on a GHz axis');
+  assert.ok(/const fxCellPlain = \(v: number\) => minus\(txPlain\(v\)\);/.test(chart), 'the marker table uses the same');
+  const smith = readFileSync(new URL('../src/charts/SmithChart.tsx', import.meta.url), 'utf8');
+  assert.ok(/<div class="tip-head">\{freqText\(props\.f\[hover\(\)!\]\)\}<\/div>/.test(smith), 'the Smith tooltip');
+  const views = readFileSync(new URL('../src/designer/ResultViews.tsx', import.meta.url), 'utf8');
+  assert.ok(/label: freqText\(f\.f\)/.test(views), 'the Smith chart\'s far-field labels');
+  const dock = readFileSync(new URL('../src/components/Dock.tsx', import.meta.url), 'utf8');
+  assert.ok(/label: ghzText\(f \/ 1e9\)/.test(dock) && /label: freqText\(f\)/.test(dock), 'the Examples markers and Smith labels');
+}
+
 console.log('Marker mathematics checks passed.');

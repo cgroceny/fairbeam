@@ -1,6 +1,7 @@
 import { createMemo, createSignal, For, type JSX, onCleanup, Show } from "solid-js";
 import { useSize } from "./useSize";
 import { declutter, localDecimal, minus } from "./labels";
+import { freqText } from "../lib/format";
 import { t } from "../i18n";
 
 interface Props {
@@ -186,7 +187,7 @@ export default function SmithChart(props: Props) {
       </svg>
       <Show when={hover() !== null}>
         <div class="chart-tip" style={sideLegend() ? { right: "12px", top: "8px" } : { left: "12px", top: `${hasLegend() ? legend().h + 16 : 8}px` }}>
-          <div class="tip-head">{localDecimal((props.f[hover()!] / 1e9).toFixed(3))} GHz</div>
+          <div class="tip-head">{freqText(props.f[hover()!])}</div>
           <div class="tip-row"><span class="tip-val">{localDecimal(props.zRe[hover()!].toFixed(1))} {props.zIm[hover()!] >= 0 ? "+" : "−"} j{localDecimal(Math.abs(props.zIm[hover()!]).toFixed(1))} Ω</span><span class="tip-lbl">Zin</span></div>
           <div class="tip-row"><span class="tip-val">{localDecimal(minus((20 * Math.log10(Math.hypot(props.re[hover()!], props.im[hover()!]))).toFixed(2)))} dB</span><span class="tip-lbl">|{props.quantity ?? "S11"}|</span></div>
         </div>

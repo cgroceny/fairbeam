@@ -1,7 +1,7 @@
 import { For, Show } from "solid-js";
 import { CircleCheck, TriangleAlert } from "lucide-solid";
 import { bundle, farfieldIndex, setDockTab, setFarfieldIndex, setLayers } from "../state";
-import { BOUNDARY_LABEL, compact, GHz, num, seconds, timeUnit } from "../lib/format";
+import { BOUNDARY_LABEL, compact, GHz, ghzText, num, seconds, timeUnit } from "../lib/format";
 import { convergenceTextUi, efficiencyIssue, efficiencyWarningUi } from "../lib/runText";
 import ComparisonCard from "./ComparisonCard";
 import MeasuredTimes from "./MeasuredTimes";
@@ -76,7 +76,7 @@ export default function SpecPanel() {
                               <Show when={res()!.farfield.some((f) => f.port)}>
                                 <td class="mono">{ff.port ? `P${ff.port}` : "—"}</td>
                               </Show>
-                              <td class="num">{num(ff.f / 1e9, 3)}</td>
+                              <td class="num">{ghzText(ff.f / 1e9)}</td>
                               <td class="num">{num(ff.dmax_dbi, 2)}</td>
                               <td class="num">{ff.gain_dbi !== undefined ? num(ff.gain_dbi, 2) : "—"}</td>
                               <td class="num" classList={{ "cell-warn": !!efficiencyIssue(ff) }} title={efficiencyWarningUi(ff) ?? undefined}>

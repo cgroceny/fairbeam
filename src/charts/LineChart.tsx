@@ -4,6 +4,7 @@ import { useSize } from "./useSize";
 import { declutter, type LabelBox, localDecimal, minus, MONO_ADVANCE, SANS_ADVANCE } from "./labels";
 import { findResonances, globalExtrema, isReflectionTrace, nearestFiniteSample, nextMinimum, pickTraceSample } from "./markerMath";
 import { initialMarkerMode, toggleMarkerMode } from "./markerMode";
+import { ghzPlain } from "../lib/format";
 import { t, tEn } from "../i18n";
 import NumberField from "../components/NumberField";
 
@@ -195,8 +196,9 @@ export default function LineChart(props: Props) {
   // axis ticks use step-aware precision (0, −10, −20 rather than 0.0, −10.0); tooltips use x/yFormat
   const fx = (v: number) => localDecimal(minus(tickLabel(v, (xTicks()[1] ?? 1) - (xTicks()[0] ?? 0))));
   const fy = (v: number) => localDecimal(minus(tickLabel(v, (yTicks()[1] ?? 1) - (yTicks()[0] ?? 0))));
-  // plain: with the decimal point (the copied marker table); tx/ty: as shown
-  const txPlain = (v: number) => (props.xFormat ? props.xFormat(v) : v.toFixed(4));
+  // plain: with the decimal point (the copied marker table); tx/ty: as shown. A frequency in GHz has one
+  // format everywhere it is read off a chart (four significant digits: lib/format.ts ghzPlain)
+  const txPlain = (v: number) => (xUnit() === "GHz" ? ghzPlain(v) : props.xFormat ? props.xFormat(v) : v.toFixed(4));
   const tyPlain = (v: number) => minus((props.yFormat ?? ((n: number) => n.toFixed(2)))(v));
   const tx = (v: number) => localDecimal(txPlain(v));
   const ty = (v: number) => localDecimal(tyPlain(v));
@@ -280,10 +282,11 @@ export default function LineChart(props: Props) {
     saveMarks(userMarks().filter(m => m.id !== id));
     if (selectedId() === id) setSelectedId(null);
   };
-  // table/TSV cells: frequencies to 0.1 MHz on GHz axes (bandwidth edges need more than the
-  // 10 MHz tooltip precision); an open-ended band shows its known bound and a lower-bound %
-  const fxCellPlain = (v: number) => (xUnit() === "GHz" ? minus(v.toFixed(4)) : txPlain(v));
+  // table/TSV cells: the frequency format of the readouts and tooltips (four significant digits in GHz);
+  // an open-ended band shows its known bound and a lower-bound %
+  const fxCellPlain = (v: number) => minus(txPlain(v));
   const fxCell = (v: number) => localDecimal(fxCellPlain(v));
+  const withUnit = (v: string, unit: string) => (unit ? `${v} ${unit}` : v);
   // plain: the copied table (English, decimal point, like Copy data); else as shown
   const cells = (r: any, plain = false): string[] => {
     const tr = plain ? tEn : t, X = plain ? fxCellPlain : fxCell, Y = plain ? tyPlain : ty, D = plain ? (s: string) => s : localDecimal;
@@ -293,7 +296,8 @@ export default function LineChart(props: Props) {
       r.low === undefined ? "" : `${r.edgeLow ? "≤ " : ""}${X(r.low)}`,
       r.high === undefined ? "" : `${r.edgeHigh ? "≥ " : ""}${X(r.high)}`,
       r.percent === undefined || !Number.isFinite(r.percent) ? "" : `${r.edgeLow || r.edgeHigh ? "≥ " : ""}${D(r.percent.toFixed(2))}%`,
-      flags || (r.marker === "Δ" ? tr("chart.deltaCell", { df: X(r.f), dv: Y(r.value) }) : ""),
+      // the difference of the two user markers, with the axes' units: "Δf −0.2196 GHz · Δ 9.7 dB"
+      flags || (r.marker === "Δ" ? tr("chart.deltaCell", { df: withUnit(X(r.f), xUnit()), dv: withUnit(Y(r.value), yUnit()) }) : ""),
     ];
   };
   const unitSuffix = (u: string) => (u ? ` (${u})` : "");

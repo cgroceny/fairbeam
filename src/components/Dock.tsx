@@ -10,11 +10,11 @@ import { radioGroupKeys } from "../lib/a11y";
 import { bundle, dockTab, farfieldIndex, setDockTab, setFarfieldIndex, setLayers, source, type DockTab } from "../state";
 import { sMatrix } from "../lib/sparams";
 import { nearestIndex, patternCut, sweep } from "../lib/rf";
-import { num } from "../lib/format";
+import { freqText, ghzText, num, withUnit } from "../lib/format";
 import { efficiencyIssue, efficiencyWarningUi } from "../lib/runText";
-import { effectiveQuantity, farfieldSummary, QUANTITY_LABEL, quantityGrid, quantityMax, toDb } from "../lib/farfieldQuantity";
+import { effectiveQuantity, farfieldSummary, QUANTITY_LABEL, quantityGrid, quantityMax } from "../lib/farfieldQuantity";
 import { patternQuantity } from "../lib/patternQuantityStore";
-import { PatternQuantitySelect } from "./FarfieldCard";
+import { PatternQuantitySelect, totalEffText } from "./FarfieldCard";
 import type { Signals } from "../types";
 import ComparePicker from "../compare/ComparePicker";
 import { compareBundles, comparing, cutPhi, pinned, setCutPhi, setZPart, zPart } from "../compare/store";
@@ -217,9 +217,10 @@ export default function Dock() {
     });
     return [...seen].map(([f, i]) => ({ f, index: i }));
   });
-  const markers = () => ffMarks().map(({ f, index }) => ({ x: f / 1e9, label: `${num(f / 1e9, 2)}`, active: storedFF()?.f === f, index }));
+  // far-field frequencies in the frequency format of every chart readout (2.400, 8.000)
+  const markers = () => ffMarks().map(({ f, index }) => ({ x: f / 1e9, label: ghzText(f / 1e9), active: storedFF()?.f === f, index }));
   const selectMarker = (k: number) => selectFF(ffMarks()[k]?.index ?? 0);
-  const smithMarks = () => ffMarks().map(({ f }) => ({ f, label: `${num(f / 1e9, 2)} GHz` }));
+  const smithMarks = () => ffMarks().map(({ f }) => ({ f, label: freqText(f) }));
   const bands = () => (bundle()?.results?.bands ?? []).map((b) => ({ x0: b.f_lo / 1e9, x1: b.f_hi / 1e9 }));
   const selectFF = (i: number) => {
     setFarfieldIndex(i);
@@ -435,13 +436,13 @@ export default function Dock() {
           <Show when={(dockTab() === "pattern" || dockTab() === "reflection" || dockTab() === "array") && ffs().length}>
             <div class="freq-chips" role="radiogroup" aria-label={t("farfield.frequency")} onKeyDown={radioGroupKeys}>
               {/* one frequency with a pattern per driven port: name the frequency once, chips are ports */}
-              <span class="dock-hint">{t("dock.results.farField")}<Show when={oneFreqPorts()}> {num(ffs()[0].f / 1e9, 3)} GHz</Show></span>
+              <span class="dock-hint">{t("dock.results.farField")}<Show when={oneFreqPorts()}> {freqText(ffs()[0].f)}</Show></span>
               <For each={ffs()}>
                 {(f, i) => (
                   <button role="radio" aria-checked={farfieldIndex() === i()} class="chip-btn" classList={{ active: farfieldIndex() === i() }} onClick={() => selectFF(i())}
                     title={f.port ? t("dock.results.embeddedTitle", { port: f.port }) : undefined}>
                     <Show when={oneFreqPorts()} fallback={<>
-                      {num(f.f / 1e9, 3)} GHz
+                      {freqText(f.f)}
                       {/* multi-port runs store one pattern per driven port at the same frequency */}
                       <Show when={f.port && ffs().some((g, j) => j !== i() && g.f === f.f)}> · P{f.port}</Show>
                     </>}>P{f.port}</Show>
@@ -612,20 +613,20 @@ export default function Dock() {
                       <Show
                         when={arrayMode() && steeredFarField() && storedFF()}
                         fallback={<>
-                          <dt>{t("results.pattern.frequency")}</dt><dd class="mono">{num(ff()!.f / 1e9, 3)} GHz</dd>
-                          <dt>Dmax</dt><dd class="mono">{num(ff()!.dmax_dbi, 2)} dBi</dd>
-                          <dt>{t("farfield.quantity.gain")}</dt><dd class="mono">{ff()!.gain_dbi !== undefined ? `${num(ff()!.gain_dbi, 2)} dBi` : "—"}</dd>
-                          <dt>{t("farfield.quantity.realized")}</dt><dd class="mono">{ff()!.realized_gain_dbi !== undefined ? `${num(ff()!.realized_gain_dbi, 2)} dBi` : "—"}</dd>
+                          <dt>{t("results.pattern.frequency")}</dt><dd class="mono">{freqText(ff()!.f)}</dd>
+                          <dt>Dmax</dt><dd class="mono">{withUnit(num(ff()!.dmax_dbi, 2), "dBi")}</dd>
+                          <dt>{t("farfield.quantity.gain")}</dt><dd class="mono">{ff()!.gain_dbi !== undefined ? withUnit(num(ff()!.gain_dbi, 2), "dBi") : "—"}</dd>
+                          <dt>{t("farfield.quantity.realized")}</dt><dd class="mono">{ff()!.realized_gain_dbi !== undefined ? withUnit(num(ff()!.realized_gain_dbi, 2), "dBi") : "—"}</dd>
                           <dt>{t("farfield.radEff")}</dt>
                           <dd class="mono" classList={{ "cell-warn": !!efficiencyIssue(ff()!) }} title={efficiencyWarningUi(ff()!) ?? undefined}>
                             {ff()!.rad_efficiency !== null ? t("format.percent", { value: num(ff()!.rad_efficiency! * 100, 1) }) : "—"}
                             <Show when={efficiencyIssue(ff()!)}> <TriangleAlert size={12} aria-label={t("farfield.overUnity")} /></Show>
                           </dd>
                           <dt title={t("farfield.totalTitlePort")}>{t("farfield.total")}</dt>
-                          <dd class="mono kv-nowrap">{ffSummary()?.totalEff != null ? `${t("format.percent", { value: num(ffSummary()!.totalEff! * 100, 1) })} · ${num(toDb(ffSummary()!.totalEff!), 2).replace(/^-/, "\u2212")} dB` : "—"}</dd>
+                          <dd class="mono">{ffSummary()?.totalEff != null ? totalEffText(ffSummary()!.totalEff!) : "—"}</dd>
                         </>}
                       >
-                        <dt>{t("results.pattern.frequency")}</dt><dd class="mono">{num(storedFF()!.f / 1e9, 3)} GHz</dd>
+                        <dt>{t("results.pattern.frequency")}</dt><dd class="mono">{freqText(storedFF()!.f)}</dd>
                         <dt>{t("dock.results.arrayDmax")}</dt><dd class="mono">{num(steeredFarField()!.dmax_dbi, 2)} dBi</dd>
                         <dt>{t("dock.results.elementDmax", { port: storedFF()!.port ?? "?" })}</dt><dd class="mono">{num(storedFF()!.dmax_dbi, 2)} dBi</dd>
                         <dt>{t("dock.results.elementGain")}</dt><dd class="mono">{storedFF()!.gain_dbi !== undefined ? `${num(storedFF()!.gain_dbi, 2)} dBi` : "—"}</dd>

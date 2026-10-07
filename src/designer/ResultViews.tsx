@@ -19,13 +19,13 @@ import { compareCuts, compareLines, compareSParamQuantities, compareTable, SERIE
 import { createSParamSelection, SParamSmithCompare, SParamTools } from "../components/SParamView";
 import { cutPhi, setCutPhi, setZPart, zPart } from "../compare/store";
 import { radioGroupKeys } from "../lib/a11y";
-import { num } from "../lib/format";
+import { freqText, ghzText, num, withUnit } from "../lib/format";
 import { nearestIndex, patternCut, sweep } from "../lib/rf";
 import { pairLabel, sMatrix } from "../lib/sparams";
 import { efficiencyIssue, efficiencyWarningUi } from "../lib/runText";
 import { efficiencyData, effectiveQuantity, farfieldSummary, QUANTITY_LABEL, quantityGrid, quantityMax, toDb, type PortEfficiency } from "../lib/farfieldQuantity";
 import { efficiencyUnit, patternQuantity, setEfficiencyUnit } from "../lib/patternQuantityStore";
-import { lobeText, PatternQuantitySelect, quantityFallbackNote } from "../components/FarfieldCard";
+import { lobeText, PatternQuantitySelect, quantityFallbackNote, totalEffText } from "../components/FarfieldCard";
 import { downloadMessage, revealDownloadedFile, type DownloadResult } from "../lib/download";
 import { isTerminal } from "../runner/api";
 import { clearDesignResult, designJob, designResult } from "../runner/designRun";
@@ -67,8 +67,9 @@ function useCompare(b: () => Bundle) {
   });
 }
 
-const minusSign = (s: string) => s.replace(/^-/, "\u2212");
-const ghzAxis = { get xLabel() { return t("chart.frequencyGHz"); }, xFormat: (v: number) => v.toFixed(2) };
+const minusSign = (s: string) => s.replace(/^-/, "−");
+// a frequency axis in GHz: the tooltips and the marker table use the frequency format (LineChart)
+const ghzAxis = { get xLabel() { return t("chart.frequencyGHz"); } };
 const finite = (v: number) => (Number.isFinite(v) ? v : NaN);
 
 function ResultSParams(props: { b: Bundle; format: ResultDataFormat }) {
@@ -202,7 +203,7 @@ function ResultVswr(props: { b: Bundle }) {
         <Show when={!cmp()}>
           <div class="rdk-side">
             <dl class="kv">
-              <dt>{t("results.vswr.lowest")}</dt><dd class="mono">{best() && Number.isFinite(best()!.v) ? t("results.vswr.at", { v: num(best()!.v, 2), f: num(best()!.f / 1e9, 3) }) : "—"}</dd>
+              <dt>{t("results.vswr.lowest")}</dt><dd class="mono">{best() && Number.isFinite(best()!.v) ? t("results.vswr.at", { v: num(best()!.v, 2), f: ghzText(best()!.f / 1e9) }) : "—"}</dd>
               <dt>{t("results.vswr.scale")}</dt><dd>{t("results.vswr.scaleRange")}</dd>
             </dl>
           </div>
@@ -217,7 +218,7 @@ function ResultSmith(props: { b: Bundle }) {
   const cmp = useCompare(() => props.b);
   // two or more ports: the port picked beside the chart (S_pp of every compared run)
   const mp = () => (sMatrix(props.b)?.ports.length ?? 0) >= 2;
-  const marks = () => (props.b.results?.farfield ?? []).map((f) => ({ f: f.f, label: `${num(f.f / 1e9, 2)} GHz` }));
+  const marks = () => (props.b.results?.farfield ?? []).map((f) => ({ f: f.f, label: freqText(f.f) }));
   const overlays = () => (cmp() ?? []).slice(1).map((t, i) => ({ label: t.label, color: COLORS[i + 1], re: t.sweep.s11Re, im: t.sweep.s11Im }));
   return (
     <Show when={sw()} fallback={<div class="panel-empty">{t("results.noPortResult")}</div>}>
@@ -311,7 +312,7 @@ function ResultEfficiency(props: { b: Bundle }) {
               <dl class="kv">
                 <For each={d.points}>{(p) => (
                   <>
-                    <dt class="rdk-kv-head">{num(p.f / 1e9, 3)} GHz{portTag(d)}</dt><dd />
+                    <dt class="rdk-kv-head">{freqText(p.f)}{portTag(d)}</dt><dd />
                     <dt>{t("efficiency.radiation")}</dt>
                     <dd class="mono" classList={{ "cell-warn": !!p.warning }} title={p.warning ?? undefined}>
                       {fmt(p.rad)}<Show when={p.warning}> <TriangleAlert size={12} aria-label={t("efficiency.overUnityShort")} /></Show>
@@ -347,7 +348,7 @@ function FreqChips(props: { label: string; freqs: number[]; active: number | und
       <div class="freq-chips" role="radiogroup" aria-label={props.label} onKeyDown={radioGroupKeys}>
         <For each={props.freqs}>{(f) => (
           <button role="radio" aria-checked={props.active === f} class="chip-btn" classList={{ active: props.active === f }} onClick={() => showView("pattern", f, "main")}>
-            {num(f / 1e9, 3)}
+            {ghzText(f / 1e9)}
           </button>
         )}</For>
       </div>
@@ -397,14 +398,14 @@ function ResultPattern(props: { b: Bundle }) {
             </div>
           </Show>
           <dl class="kv">
-            <dt>{t("results.pattern.frequency")}</dt><dd class="mono">{num(ff()!.f / 1e9, 3)} GHz</dd>
-            <dt>Dmax</dt><dd class="mono">{num(ff()!.dmax_dbi, 2)} dBi</dd>
-            <dt>{t("farfield.quantity.gain")}</dt><dd class="mono">{ff()!.gain_dbi !== undefined ? `${num(ff()!.gain_dbi, 2)} dBi` : "—"}</dd>
-            <dt>{t("farfield.quantity.realized")}</dt><dd class="mono">{ff()!.realized_gain_dbi !== undefined ? `${num(ff()!.realized_gain_dbi, 2)} dBi` : "—"}</dd>
+            <dt>{t("results.pattern.frequency")}</dt><dd class="mono">{freqText(ff()!.f)}</dd>
+            <dt>Dmax</dt><dd class="mono">{withUnit(num(ff()!.dmax_dbi, 2), "dBi")}</dd>
+            <dt>{t("farfield.quantity.gain")}</dt><dd class="mono">{ff()!.gain_dbi !== undefined ? withUnit(num(ff()!.gain_dbi, 2), "dBi") : "—"}</dd>
+            <dt>{t("farfield.quantity.realized")}</dt><dd class="mono">{ff()!.realized_gain_dbi !== undefined ? withUnit(num(ff()!.realized_gain_dbi, 2), "dBi") : "—"}</dd>
             <dt>{t("farfield.radEff")}</dt>
             <dd class="mono" classList={{ "cell-warn": !!efficiencyIssue(ff()!) }} title={efficiencyWarningUi(ff()!) ?? undefined}>{ff()!.rad_efficiency !== null ? t("format.percent", { value: num(ff()!.rad_efficiency! * 100, 1) }) : "—"}</dd>
             <dt title={t("farfield.totalTitlePort")}>{t("farfield.total")}</dt>
-            <dd class="mono kv-nowrap">{summary()?.totalEff != null ? `${t("format.percent", { value: num(summary()!.totalEff! * 100, 1) })} · ${minusSign(num(toDb(summary()!.totalEff!), 2))} dB` : "—"}</dd>
+            <dd class="mono">{summary()?.totalEff != null ? totalEffText(summary()!.totalEff!) : "—"}</dd>
             <dt title={t("farfield.lobeTitle")}>{t("farfield.mainLobe")}</dt><dd class="mono">{summary() ? lobeText(summary()!.peak) : "—"}</dd>
             <Show when={new Set(ffs().map((f) => f.port)).size > 1}><dt>{t("farfield.drivenPort")}</dt><dd class="mono">P{summary()?.port ?? "?"}</dd></Show>
             <dt>θ = 0°</dt><dd>+z</dd>

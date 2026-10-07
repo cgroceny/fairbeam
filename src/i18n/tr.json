@@ -196,7 +196,7 @@
   "chart.col.marker": "İşaretçi",
   "chart.col.trace": "Eğri",
   "chart.col.value": "Değer",
-  "chart.deltaCell": "Δf {df} · Δdeğer {dv}",
+  "chart.deltaCell": "Δf {df} · Δ {dv}",
   "chart.dip": "Çukur",
   "chart.flag.openAbove": "son örneğin üstünde açık",
   "chart.flag.openBelow": "ilk örneğin altında açık",

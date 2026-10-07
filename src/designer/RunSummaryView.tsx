@@ -9,7 +9,7 @@
 // and the reference are summaryMode.ts, and the Δ view adds Δ columns to Copy data and CSV.
 import { createMemo, For, type JSX, Show } from "solid-js";
 import { CircleCheck } from "lucide-solid";
-import { compact, num, seconds } from "../lib/format";
+import { columnDecimals, compact, ghzText, num, seconds } from "../lib/format";
 import { efficiencyWarningUi } from "../lib/runText";
 import { farfieldSummary } from "../lib/farfieldQuantity";
 import { designResult } from "../runner/designRun";
@@ -25,7 +25,8 @@ import "../styles/run-summary.css";
 
 // a minus sign, not a hyphen, on negative dB values
 const signed = (v: number | null | undefined, digits: number) => num(v, digits).replace(/^-/, "−");
-const ghz = (hz: number | null | undefined) => (hz == null ? "—" : num(hz / 1e9, 3));
+// a frequency as every result view prints it: GHz with four significant digits (2.404, 11.16)
+const ghz = (hz: number | null | undefined) => (hz == null ? "—" : ghzText(hz / 1e9));
 const mhz = (hz: number | null | undefined) => (hz == null ? "—" : num(hz / 1e6, 0));
 const percent = (v: number | null | undefined, digits = 1) => (v == null ? "—" : num(v * 100, digits));
 
@@ -173,9 +174,12 @@ function RunsCompare(props: { runs: { file: string; bundle: Bundle }[] }) {
   // is the newest run in focus); the differences of every other run from it, computed once per row
   const refIdx = createMemo(() => referenceIndex(rows(), summaryReference()));
   const deltas = createMemo(() => rows().map((r, i) => (i === refIdx() ? null : metricDeltas(rows()[refIdx()].m, r.m))));
+  // a parameter column with one number of decimals (the most precise value's, at most 4), as in the Runs table
+  const paramValue = (b: Bundle, key: string) => b.model.params.find((p) => p.key === key)?.value;
+  const paramDigits = createMemo(() => new Map(columns().map((p) => [p.key, columnDecimals(rows().map((r) => paramValue(r.bundle, p.key)))])));
   const paramText = (b: Bundle, key: string) => {
-    const v = b.model.params.find((p) => p.key === key)?.value;
-    return v === undefined ? "—" : typeof v === "number" ? fmt.num(v, 6) : String(v);
+    const v = paramValue(b, key);
+    return v === undefined ? "—" : typeof v === "number" ? fmt.fixed(v, paramDigits().get(key) ?? 0) : String(v);
   };
   const ref = () => rows()[refIdx()].letter;
   const modes: SummaryMode[] = ["values", "delta"];

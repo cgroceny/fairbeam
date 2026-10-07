@@ -7,7 +7,7 @@
 import { createMemo, createSignal, For, Show } from "solid-js";
 import { ChevronDown, ChevronUp, TriangleAlert } from "lucide-solid";
 import { radioGroupKeys } from "../lib/a11y";
-import { num } from "../lib/format";
+import { ghzText, num, withUnit } from "../lib/format";
 import { efficiencyIssue, efficiencyWarningUi } from "../lib/runText";
 import {
   effectiveQuantity, farfieldSummary, PATTERN_QUANTITIES, QUANTITY_LABEL, quantityAvailability, quantityMax, toDb, type PatternQuantity,
@@ -24,6 +24,10 @@ const minus = (s: string) => s.replace(/^-/, "−");
 /** θ, φ of the maximum; at a pole φ names no direction, so the axis is given instead. */
 export const lobeText = (p: { theta: number; phi: number }) =>
   p.theta < 0.5 ? "θ 0° (+z)" : p.theta > 179.5 ? "θ 180° (−z)" : `θ ${num(p.theta, 0)}° · φ ${num(p.phi, 0)}°`;
+/** The total efficiency as a percentage and in dB, each with its unit kept on its line ("75.5 % · −1.22 dB"). */
+export const totalEffText = (eff: number) => `${t("format.percent", { value: num(eff * 100, 1) })} · ${withUnit(minus(num(toDb(eff), 2)), "dB")}`;
+/** A value with its unit kept together ("2.15 dBi"), or "—". */
+const dbi = (v: number | null | undefined) => (v === null || v === undefined || !Number.isFinite(v) ? "—" : withUnit(num(v, 2), "dBi"));
 
 /** The quantity picker (a native select: keyboard and screen readers for free); options a far field
  * cannot show are disabled with the reason as their tooltip. */
@@ -77,7 +81,7 @@ export default function FarfieldCard(props: { bundle: Bundle; ff: FarField; entr
   return (
     <div class="colorbar ff-card" role="group" aria-label={t("farfield.cardAria", { quantity: QUANTITY_LABEL[q()] })}>
       <div class="ff-card-head">
-        <div class="colorbar-title">{QUANTITY_LABEL[q()]} · {num(props.ff.f / 1e9, 3)} GHz<Show when={props.arrayPattern} fallback={<Show when={multiPort() && s().port != null}> · P{s().port}</Show>}> · {t("farfield.arrayTag")}</Show></div>
+        <div class="colorbar-title">{QUANTITY_LABEL[q()]} · {ghzText(props.ff.f / 1e9)} GHz<Show when={props.arrayPattern} fallback={<Show when={multiPort() && s().port != null}> · P{s().port}</Show>}> · {t("farfield.arrayTag")}</Show></div>
         <button type="button" class="icon-btn icon-btn-sm" aria-expanded={!collapsed()} aria-controls={bodyId}
           aria-label={collapsed() ? t("farfield.showValues") : t("farfield.hideValues")}
           title={collapsed() ? t("farfield.showValues") : t("farfield.hideValuesTitle")}
@@ -94,7 +98,7 @@ export default function FarfieldCard(props: { bundle: Bundle; ff: FarField; entr
                 <button type="button" role="radio" class="chip-btn" aria-checked={props.active === i()} classList={{ active: props.active === i() }}
                   tabindex={props.active === i() ? 0 : -1}
                   title={multiPort() && f.port ? t("farfield.portDriven", { port: f.port }) : undefined} onClick={() => props.onSelect(i())}>
-                  {num(f.f / 1e9, 3)}<Show when={f.port && samePorts(f, i())}> · P{f.port}</Show>
+                  {ghzText(f.f / 1e9)}<Show when={f.port && samePorts(f, i())}> · P{f.port}</Show>
                 </button>
               )}</For>
             </div>
@@ -111,10 +115,10 @@ export default function FarfieldCard(props: { bundle: Bundle; ff: FarField; entr
       <div class="colorbar-unit">{t("farfield.scaleUnit", { range: PATTERN_RANGE_DB })}<Show when={q() === "rhcp" || q() === "lhcp"}> · {t("farfield.topIsDmax")}</Show></div>
       <Show when={!collapsed()}>
         <dl class="kv ff-card-kv" id={bodyId}>
-          <dt>Dmax</dt><dd class="mono">{num(s().dmaxDbi, 2)} dBi</dd>
+          <dt>Dmax</dt><dd class="mono">{dbi(s().dmaxDbi)}</dd>
           <Show when={!props.arrayPattern} fallback={<><dt>{t("farfield.pattern")}</dt><dd>{t("farfield.arrayAllFed")}</dd></>}>
-          <dt>{t("farfield.quantity.gain")}</dt><dd class="mono">{s().gainDbi !== null ? `${num(s().gainDbi, 2)} dBi` : "—"}</dd>
-          <dt>{t("farfield.quantity.realized")}</dt><dd class="mono">{s().realizedDbi !== null ? `${num(s().realizedDbi, 2)} dBi` : "—"}</dd>
+          <dt>{t("farfield.quantity.gain")}</dt><dd class="mono">{dbi(s().gainDbi)}</dd>
+          <dt>{t("farfield.quantity.realized")}</dt><dd class="mono">{dbi(s().realizedDbi)}</dd>
           <dt>{t("farfield.radEff")}</dt>
           <dd class="mono" classList={{ "cell-warn": !!warn() }} title={note() ?? undefined}>
             {pct(s().radEff)}<Show when={warn()}> <TriangleAlert size={12} aria-label={t("farfield.overUnity")} /></Show>
@@ -122,7 +126,7 @@ export default function FarfieldCard(props: { bundle: Bundle; ff: FarField; entr
           <dt title={t("farfield.mismatchTitle")}>{t("farfield.mismatch")}</dt><dd class="mono">{pct(s().mismatchEff)}</dd>
           <dt title={t("farfield.totalTitle")}>{t("farfield.total")}</dt>
           <dd class="mono" classList={{ "cell-warn": !!warn() }}>
-            {s().totalEff !== null ? `${t("format.percent", { value: num(s().totalEff! * 100, 1) })} · ${minus(num(toDb(s().totalEff!), 2))} dB` : "—"}
+            {s().totalEff !== null ? totalEffText(s().totalEff!) : "—"}
           </dd>
           </Show>
           <dt title={t("farfield.lobeTitle")}>{t("farfield.mainLobe")}</dt><dd class="mono">{lobeText(s().peak)}</dd>

@@ -3,6 +3,7 @@
 // not converge (or shows unphysical numbers) must not look like a good result.
 import { createMemo, For, Show } from "solid-js";
 import { TriangleAlert } from "lucide-solid";
+import { ghzText } from "../lib/format";
 import { matchHint, POOR_MATCH_DB, type QualityReason, type RunQuality } from "../lib/runQuality";
 import { openSimSettings, setDesignDockTab } from "../runner/designRun";
 import type { Bundle } from "../types";
@@ -13,7 +14,7 @@ import "../styles/run-quality.css";
 /** The verdict when it is a concern (not converged, or suspicious); null for a clean run. */
 export const concern = (q: RunQuality | null | undefined): RunQuality | null => (q && q.verdict !== "converged" ? q : null);
 
-const ghz = (f: number) => fmt.num(f / 1e9, 3);
+const ghz = (f: number) => ghzText(f / 1e9);
 
 /** One reason worded, with the settings or view that fixes it. */
 function reasonText(r: QualityReason, notConverged = false): { text: string; action: { label: string; run: () => void } } {
