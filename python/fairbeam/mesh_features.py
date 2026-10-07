@@ -63,20 +63,40 @@ def detect_features(metals, max_width=None):
             length = float(np.linalg.norm(d))
             if length > 1e-9:
                 edges.append((i, p, q, d / length))
-        outlines.append((shape_index, shape, n, u, v, edges))
+        # Vectorized bounds reject distant edges before parallel/overlap tests.
+        edge_lo = np.array([np.minimum(e[1], e[2]) for e in edges]).reshape(-1, 2)
+        edge_hi = np.array([np.maximum(e[1], e[2]) for e in edges]).reshape(-1, 2)
+        outlines.append((shape_index, shape, n, u, v, edges, edge_lo, edge_hi))
 
+    metal_lo = np.array([m.lo for m in metals]).reshape(-1, 3)
+    metal_hi = np.array([m.hi for m in metals]).reshape(-1, 3)
+    outline_lo = np.array([entry[1].lo for entry in outlines]).reshape(-1, 3)
+    outline_hi = np.array([entry[1].hi for entry in outlines]).reshape(-1, 3)
+    outline_normals = np.array([entry[2] for entry in outlines])
     features = []
-    for oi, (si, shape, n, u, v, edges) in enumerate(outlines):
-        for sj, other, nn, _, _, other_edges in outlines[oi:]:
+    for oi, (si, shape, n, u, v, edges, _, _) in enumerate(outlines):
+        nearby_outlines = ((outline_normals == n) &
+                           (np.abs(outline_lo[:, n] - shape.lo[n]) <= 1e-9) &
+                           (np.abs(outline_hi[:, n] - shape.hi[n]) <= 1e-9))
+        if max_width is not None:
+            nearby_outlines &= (np.all(outline_hi >= shape.lo - max_width, axis=1) &
+                                np.all(outline_lo <= shape.hi + max_width, axis=1))
+        nearby_outlines[:oi] = False
+        for other_index in np.flatnonzero(nearby_outlines):
+            sj, other, nn, _, _, other_edges, other_lo, other_hi = outlines[other_index]
             same = si == sj
             if same and shape.kind == "box":
                 continue
-            if nn != n or not np.allclose([shape.lo[n], shape.hi[n]],
-                                           [other.lo[n], other.hi[n]], rtol=0, atol=1e-9):
-                continue
             for ei, p, q, tangent in edges:
                 perpendicular = np.array([-tangent[1], tangent[0]])
-                for ej, r, s, other_tangent in other_edges:
+                if max_width is None:
+                    nearby = range(len(other_edges))
+                else:
+                    low_box, high_box = np.minimum(p, q) - max_width, np.maximum(p, q) + max_width
+                    nearby = np.flatnonzero(np.all(other_hi >= low_box, axis=1) &
+                                            np.all(other_lo <= high_box, axis=1))
+                for index in nearby:
+                    ej, r, s, other_tangent = other_edges[index]
                     if same and ej <= ei:
                         continue
                     # Consistent outline winding: only opposite-facing edges.
@@ -111,10 +131,13 @@ def detect_features(metals, max_width=None):
                     # Check both the region between the edges and their metal sides.
                     # Other outlines can bridge a notch or fill an apparent gap.
                     valid = True
-                    relevant = [m for m in metals if m.lo[n] - 1e-9 <= z <= m.hi[n] + 1e-9]
+                    def occupied_at(point):
+                        hits = np.flatnonzero(np.all(metal_lo <= point + 1e-9, axis=1) &
+                                              np.all(metal_hi >= point - 1e-9, axis=1))
+                        return any(metals[i].contains(point, tol=1e-9) for i in hits)
                     for t in (low + (high - low) * f for f in (0.15, 0.5, 0.85)):
                         for fraction in (0.2, 0.5, 0.8):
-                            occupied = any(m.contains(point(t, fraction), tol=1e-9) for m in relevant)
+                            occupied = occupied_at(point(t, fraction))
                             if occupied != is_metal:
                                 valid = False
                                 break
@@ -124,12 +147,10 @@ def detect_features(metals, max_width=None):
                         # even when the strip is much thinner than a drawing unit.
                         epsilon = min(0.1, max(min(1e-3, 1e-4 / width), 4e-9 / width))
                         metal_fractions = (epsilon, 1 - epsilon) if is_metal else (-epsilon, 1 + epsilon)
-                        if not all(any(m.contains(point(t, f), tol=1e-9) for m in relevant)
-                                   for f in metal_fractions):
+                        if not all(occupied_at(point(t, f)) for f in metal_fractions):
                             valid = False
                             break
-                        if is_metal and any(m.contains(point(t, f), tol=1e-9)
-                                            for f in (-epsilon, 1 + epsilon) for m in relevant):
+                        if is_metal and any(occupied_at(point(t, f)) for f in (-epsilon, 1 + epsilon)):
                             valid = False  # the candidate edge is buried in another conductor
                             break
                     if not valid:

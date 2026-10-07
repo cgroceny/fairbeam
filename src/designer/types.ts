@@ -169,10 +169,12 @@ export interface Design {
   ports: DesignPort[];
   resistors: DesignResistor[];
   mesh: {
+    /** Missing in saved designs means off; new designs explicitly enable refinement. */
+    refine_features?: boolean;
     /** Missing/auto keeps the legacy editor and server auto-mesh behavior. */
     mode?: "auto" | "design" | "manual";
     lines?: Record<Axis, Expr[]>;
-    automatic?: { mode?: "auto" | "design"; overrides?: Partial<Record<"cells_per_wavelength" | "edge_rule" | "air_cells_per_wavelength" | "max_ratio" | "pad" | "dielectric_cells", Expr | null | "thirds" | "edge">> };
+    automatic?: { mode?: "auto" | "design"; refine_features?: boolean; overrides?: Partial<Record<"cells_per_wavelength" | "edge_rule" | "air_cells_per_wavelength" | "max_ratio" | "pad" | "dielectric_cells", Expr | null | "thirds" | "edge">> };
     overrides?: Partial<Record<"cells_per_wavelength" | "edge_rule" | "air_cells_per_wavelength" | "max_ratio" | "pad" | "dielectric_cells", Expr | null | "thirds" | "edge">>;
     cells_per_wavelength?: Expr; pad?: Expr | null;
     edge_rule?: "thirds" | "edge"; max_ratio?: Expr; air_cells_per_wavelength?: Expr | null;

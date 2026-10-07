@@ -413,7 +413,8 @@ def _tip_width(m, a, local_res):
 def generate(sim, f_max: float | None = None, cells_per_wavelength: float = 20, edge_rule: str = "thirds",
              max_ratio: float = 1.4, min_cell: float | None = None, dielectric_cells: int = 4,
              pad: float | None = None, metal_cells: int = 6, edge_res: float | None = None,
-             keep_existing: bool = True, air_cells_per_wavelength: float | None = None) -> dict:
+             keep_existing: bool = True, air_cells_per_wavelength: float | None = None,
+             refine_features: bool = True) -> dict:
     """Mesh ``sim`` (an :class:`fairbeam.Simulation`) and return a report dict.
 
     Lengths are in drawing units (``sim.unit`` metres). ``f_max`` defaults to the simulation's.
@@ -745,10 +746,11 @@ def generate(sim, f_max: float | None = None, cells_per_wavelength: float = 20, 
             if len(ex):
                 L.add(a, ex, PRIO_HARD, "user line")
     # ---- 4. merge, fill and grade -----------------------------------------------------------------
-    bases = []
+    required = []
     for a in range(3):
         fixed = [(c, p, t) for c, p, t in L.fixed[a] if dom_lo[a] - 1e-9 <= c <= dom_hi[a] + 1e-9]
         req = _resolve(fixed, min_cell, warnings, a)
+        required.append(req)
         opt = sorted((c, min(h, res_min)) for c, h in L.optional[a] if dom_lo[a] < c < dom_hi[a])
         # optional lines survive if they are more than 0.4 of their intended cell from a fixed line,
         # and more than half of it from the previous kept one (fills of neighbouring features
@@ -764,52 +766,60 @@ def generate(sim, f_max: float | None = None, cells_per_wavelength: float = 20, 
             kept.append(c)
             last_h = h
         base = np.unique(np.r_[req, kept])
-        bases.append(base)
         grid.SetLines("xyz"[a], fill(base, lambda t, a=a: _cap_array(t, a, diel, res_air, res_feature), max_ratio))
     settings = {
         "f_max": f_max, "cells_per_wavelength": cells_per_wavelength, "edge_rule": edge_rule,
         "max_ratio": max_ratio, "dielectric_cells": dielectric_cells, "metal_cells": metal_cells,
+        "refine_features": refine_features,
         "pad": pads if len(set(pads)) > 1 else pad_air, "min_cell": min_cell, "edge_res": edge_res}
     if air_cells_per_wavelength is not None:
         settings["air_cells_per_wavelength"] = air_cells_per_wavelength
     # Measure the original grid first. Features already resolved keep exactly the
     # same mesh, and this also gives the cell-count impact without a solver run.
     from .mesh_refinement import (collect_features, measure_features, refinement_caps, cap_sizes,
-                                  refinement_cell_lower_bound)
-    features = collect_features(metals, feeds + list(getattr(sim, "lumped_elements", [])), 2 * res_feature)
+                                  refinement_cell_lower_bound, refine_axis)
+    features = (collect_features(metals, feeds + list(getattr(sim, "lumped_elements", [])), 2 * res_feature)
+                if refine_features else [])
     baseline_lines = [np.asarray(grid.GetLines(a), float) for a in range(3)]
     before = measure_features(features, baseline_lines)
     unresolved = [f for f in before if not f["resolved"]]
     baseline_cells = int(np.prod([len(x) - 1 for x in baseline_lines]))
     cell_limit = int(float(os.environ.get("FAIRBEAM_MAX_CELLS", 40e6)))
     skipped_cell_limit, required_lower_bound = False, baseline_cells
-    if unresolved:
-        # Leave headroom for discretizing the continuous grading field.
-        grading_ratio = 1 + 0.9 * (max_ratio - 1)
-        caps = refinement_caps(unresolved, requested_min_cell)
+    dropped = []
+    candidates = list(unresolved) if refine_features else []
+    grading_ratio = 1 + 0.9 * (max_ratio - 1)
+
+    def estimated_cost(feature):
+        # Largest Cartesian footprint first, including the small sheet-normal
+        # cells. This orders removals without allocating each candidate mesh.
+        caps = refinement_caps([feature], requested_min_cell)
+        return refinement_cell_lower_bound(caps, (dom_lo, dom_hi))
+
+    candidates.sort(key=estimated_cost)
+    while candidates:
+        caps = refinement_caps(candidates, requested_min_cell)
         required_lower_bound = refinement_cell_lower_bound(caps, (dom_lo, dom_hi))
         try:
             if required_lower_bound > cell_limit:
                 raise OverflowError("fine-feature refinement exceeds cell limit")
+            refined_lines = list(baseline_lines)
             for a in range(3):
                 if not caps[a]:
                     continue
                 base_cap = lambda t, a=a: _cap_array(t, a, diel, res_air, res_feature)
                 refined_cap = lambda t, a=a, base_cap=base_cap: cap_sizes(t, base_cap, caps[a], grading_ratio)
-                # fill preserves every base line. The other axes therefore have
-                # at least this many cells even before their refinement pass.
-                other_cells = math.prod(len(bases[b]) - 1 for b in range(3) if b != a)
-                refined = fill(bases[a], refined_cap, grading_ratio, monotone=True,
-                               max_cells=cell_limit // max(1, other_cells))
-                grid.SetLines(a, refined)
-            if math.prod(len(grid.GetLines(a)) - 1 for a in range(3)) > cell_limit:
+                other_cells = math.prod(len(refined_lines[b]) - 1 for b in range(3) if b != a)
+                refined_lines[a] = refine_axis(baseline_lines[a], required[a], refined_cap, grading_ratio,
+                                              cell_limit // max(1, other_cells))
+            if math.prod(len(lines) - 1 for lines in refined_lines) > cell_limit:
                 raise OverflowError("fine-feature refinement exceeds cell limit")
-        except OverflowError:
-            # Keep a usable preview and report every unresolved feature. Never
-            # silently substitute a partially refined grid that appears resolved.
-            skipped_cell_limit = True
-            for a, lines in enumerate(baseline_lines):
+            for a, lines in enumerate(refined_lines):
                 grid.SetLines(a, lines)
+            break
+        except OverflowError:
+            skipped_cell_limit = True
+            dropped.append(candidates.pop())
     report = mesh_report(sim, res_air, res_min, min_cell, warnings, settings)
     report["fine_features"] = measure_features(features, [grid.GetLines(a) for a in range(3)])
     report["fine_feature_refinement"] = {
@@ -818,13 +828,15 @@ def generate(sim, f_max: float | None = None, cells_per_wavelength: float = 20, 
         "ratio": report["total_cells"] / baseline_cells,
         "cell_limit": cell_limit, "required_cells_lower_bound": required_lower_bound,
         "skipped_cell_limit": skipped_cell_limit,
+        "enabled": refine_features, "dropped_features": len(dropped),
+        "retained_features": len(candidates),
     }
     sim.mesh_report = report
     return report
 
 
 def fill(lines, cap, ratio: float, samples: int = 400, monotone: bool = False,
-         max_cells: int | None = None) -> np.ndarray:
+         max_cells: int | None = None, boundary_cells=None) -> np.ndarray:
     """Fill the gaps between sorted ``lines`` with smoothly graded cells.
 
     A size field s(x) = min_j (h_j + (ratio - 1) |x - x_j|), capped by ``cap(x)``, is built from
@@ -834,8 +846,10 @@ def fill(lines, cap, ratio: float, samples: int = 400, monotone: bool = False,
     that integral, so cells follow the size field and land exactly on the given lines.
     ``cap(x)`` takes an array of positions and returns the largest allowed cell there.
     ``monotone`` uses endpoint-dense quadrature and keeps the smallest realized
-    boundary sizes until refinement propagates through long chains of fixed lines.
-    The default retains existing grids. ``max_cells`` guards line allocations.
+    boundary sizes within a local refill window. Optional cover lines must not be
+    treated as fixed constraints during that refill. ``boundary_cells`` sets the
+    neighboring cell sizes just outside the window. The default retains existing
+    grids. ``max_cells`` guards line allocations.
     """
     x = np.unique(np.asarray(lines, float))
     if len(x) < 2:
@@ -843,6 +857,8 @@ def fill(lines, cap, ratio: float, samples: int = 400, monotone: bool = False,
     w = np.diff(x)
     cx = np.asarray(cap(x), float)
     h = np.minimum(cx, np.minimum(np.r_[np.inf, w], np.r_[w, np.inf]))
+    if boundary_cells is not None:
+        h[[0, -1]] = np.minimum(h[[0, -1]], boundary_cells)
     g = 0.85 * (ratio - 1.0)   # discretising the size field overshoots slightly; stay below ratio
     # every gap at once: row i holds the samples of gap i (the per-gap numpy calls were the cost of
     # meshing detailed geometry); each row gets the arithmetic the gap got on its own

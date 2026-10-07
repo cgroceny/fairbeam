@@ -2735,8 +2735,8 @@ class _Importer:
             over = dict(out)
             over.setdefault("air_cells_per_wavelength", out["cells_per_wavelength"])
             over["dielectric_cells"] = int(dc)
-            return {"mode": "design", "overrides": over}
-        return {"mode": "auto", **out}
+            return {"mode": "design", "overrides": over, "refine_features": m.get("refine_features", False)}
+        return {"mode": "auto", **out, "refine_features": m.get("refine_features", False)}
 
     # ---- the design
 
@@ -2839,7 +2839,7 @@ class _Importer:
             extra = (f", {len(pt.get('transforms', []))} transform(s)" if pt.get("transforms") else "") + \
                     (f", Boolean {pt['booleanHistory']['operation']}" if pt.get("booleanHistory") else "")
             self.made("part", pt["name"], f"{len(prims)} x {'/'.join(kinds)} in {pt['material']}{extra}")
-        mesh = {"mode": "auto", "cells_per_wavelength": DEFAULT_CPW}
+        mesh = {"mode": "auto", "cells_per_wavelength": DEFAULT_CPW, "refine_features": True}
         restored = self._meta_mesh() if self.meta_mesh and not self.cpw else None
         lines = self._meta_lines() if self.meta_lines and not self.cpw else None
         self.exact_lines = _lines_on_ports(lines, self.ports + self.resistors) if lines else None

@@ -326,7 +326,7 @@ def fill_full_scan(lines, cap, ratio, samples=400):
     return np.array(out)
 
 
-def fill_per_gap(lines, cap, ratio, samples=400, monotone=False, max_cells=None):
+def fill_per_gap(lines, cap, ratio, samples=400, monotone=False, max_cells=None, boundary_cells=None):
     """fill() as it was before the gaps of a pass were computed together and unchanged gaps were
     reused: one gap at a time, every pass (the reference for FastPathTest and test_design)."""
     x = np.unique(np.asarray(lines, float))
@@ -335,6 +335,8 @@ def fill_per_gap(lines, cap, ratio, samples=400, monotone=False, max_cells=None)
     w = np.diff(x)
     cx = np.asarray(cap(x), float)
     h = np.minimum(cx, np.minimum(np.r_[np.inf, w], np.r_[w, np.inf]))
+    if boundary_cells is not None:
+        h[[0, -1]] = np.minimum(h[[0, -1]], boundary_cells)
     g = 0.85 * (ratio - 1.0)
     fraction = (1 - np.cos(np.linspace(0, np.pi, samples))) / 2
     ts = [(x[i] + w[i] * fraction if monotone else np.linspace(x[i], x[i + 1], samples))
@@ -590,7 +592,7 @@ class SheetNormalCellsTest(unittest.TestCase):
 
     def test_cells_next_to_a_blade_are_half_the_local_cell(self):
         sim = self.blade_sim()
-        sim.auto_mesh()
+        sim.auto_mesh(refine_features=False)
         y = lines(sim, "y")
         res = C0 / 1.05e9 * 1e3 / 20
         self.assertTrue(near(y, 0.0))

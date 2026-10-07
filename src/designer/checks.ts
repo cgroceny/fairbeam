@@ -608,6 +608,8 @@ export function designChecks(d: Design): Check[] {
       AXES.forEach((axis, k) => { const lines = resolved[axis]; if (lines && Number.isFinite(coords[k]) && !lines.some((line) => Math.abs(line-coords[k]) <= 1e-6)) error(`${w}.${end}[${k}]`, "expr", `port ${end} coordinate must lie on a manual ${axis} mesh line (within 1e-6 mm)`); });
     }});
   }
+  if (rawMesh.refine_features !== undefined && typeof rawMesh.refine_features !== "boolean")
+    error("mesh.refine_features", "expr", "refine features must be true or false");
   const mesh = rawMesh.mode === "manual" ? {} : rawMesh.mode === "design" ? { ...rawMesh.overrides } : rawMesh;
   const cpw = rawMesh.mode === "design" && mesh.cells_per_wavelength == null ? null : ev("mesh.cells_per_wavelength", mesh.cells_per_wavelength ?? 20);
   if (cpw !== null && cpw <= 0) error("mesh.cells_per_wavelength", "cells-per-wavelength", "cells per wavelength must be > 0");

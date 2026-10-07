@@ -797,11 +797,11 @@ def _convert_example(source_path: Path, model_id: str, name: str,
         settings = auto.get("settings", {})
         cpw = settings.get("cells_per_wavelength", 20)
         mesh = {"mode": "auto", "cells_per_wavelength": cpw}
-        for key in ("pad", "edge_rule", "max_ratio", "air_cells_per_wavelength"):
+        for key in ("pad", "edge_rule", "max_ratio", "air_cells_per_wavelength", "refine_features"):
             if settings.get(key) is not None:
                 mesh[key] = settings[key]
     else:
-        mesh = {"mode": "auto", "cells_per_wavelength": 20}
+        mesh = {"mode": "auto", "cells_per_wavelength": 20, "refine_features": True}
     source_name = origin or source_path.name
     notes = [_note("source", f"Converted from the bundled example {source_name} ({source_path.name}).",
                    example=source_name, file=source_path.name),
@@ -902,7 +902,8 @@ def _convert_example(source_path: Path, model_id: str, name: str,
                         target_candidates.append(candidate)
         best = None
         for candidate in target_candidates:
-            mesh.clear(); mesh.update({"mode": "design", "overrides": candidate})
+            mesh.clear(); mesh.update({"mode": "design", "overrides": candidate,
+                                      "refine_features": base.get("refine_features", False)})
             try:
                 built = build_design(design, values)
                 count = _cells(built)
@@ -915,7 +916,8 @@ def _convert_example(source_path: Path, model_id: str, name: str,
                 best = (score, count, candidate)
         if best is None:
             raise ExampleConversionError("no valid Design automatic mesh candidate could be built")
-        fitted_mesh = {"mode": "design", "overrides": best[2]}
+        fitted_mesh = {"mode": "design", "overrides": best[2],
+                       "refine_features": base.get("refine_features", False)}
         mesh.clear(); mesh.update(fitted_mesh)
         fitted = build_design(design, values)
         fitted_cells = _cells(fitted)

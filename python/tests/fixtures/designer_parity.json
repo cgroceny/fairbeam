@@ -322,6 +322,7 @@
      "set": {"ports[0].group": {"connection":"series","members":[{"start":["feed+2",0,0],"stop":["feed+2",0,"h"],"direction":"z","polarity":-1}]}}}
   ],
   "cases": [
+    {"name": "feature refinement requires a boolean", "set": {"mesh.refine_features": "true"}, "expect": ["error|expr|mesh.refine_features"]},
     {"name":"group members are checked like physical ports","set":{"ports[0].group":{"connection":"parallel","members":[{"start":["feed+2",0,0],"stop":["feed+2",0,"h"],"direction":"z"}]}},"expect":[]},
     {"name":"null port type cannot contain a group","set":{"ports[0].type":null,"ports[0].group":{"connection":"parallel","members":[{"start":[0,0,0],"stop":[0,0,1],"direction":"z"}]}},"expect":["error|expr|ports[0].group"]},
     {"name":"group mode must be explicit","set":{"ports[0].group":{"connection":"unknown","members":[]}},"expect":["error|expr|ports[0].group.connection"]},

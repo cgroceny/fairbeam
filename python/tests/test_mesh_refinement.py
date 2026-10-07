@@ -45,17 +45,44 @@ class RefinementBoundTest(unittest.TestCase):
         self.assertEqual(impact["baseline_cells"], report["total_cells"])
         self.assertTrue(any(not f["resolved"] for f in report["fine_features"]))
 
-    def test_cell_limit_restores_all_three_baseline_axes(self):
+    def test_cell_limit_drops_largest_refinement_and_keeps_smaller_ones(self):
         from tests.mesh_feature_measurements import build_blade
-        with patch.dict("os.environ", {"FAIRBEAM_MAX_CELLS": "10000000"}):
+        with patch.dict("os.environ", {"FAIRBEAM_MAX_CELLS": "1000000"}):
             sim = build_blade()
         report = sim.mesh_report
         impact = report["fine_feature_refinement"]
-        self.assertLess(impact["required_cells_lower_bound"], impact["cell_limit"])
         self.assertTrue(impact["skipped_cell_limit"])
-        self.assertEqual(report["cells"], [106, 28, 72])
-        self.assertEqual(report["total_cells"], 213696)
-        self.assertAlmostEqual(report["min_cell"], .19635)
+        self.assertGreater(impact["dropped_features"], 0)
+        self.assertGreater(impact["retained_features"], 0)
+        self.assertGreater(report["total_cells"], impact["baseline_cells"])
+        self.assertLessEqual(report["total_cells"], impact["cell_limit"])
+        self.assertTrue(any(f["kind"] == "strip" and not f["resolved"] for f in report["fine_features"]))
+        self.assertTrue(any(f["kind"] == "feed" and f["resolved"] for f in report["fine_features"]))
+
+    def test_no_refinement_fits_keeps_exact_baseline(self):
+        from tests.mesh_feature_measurements import build_blade
+        sim = build_blade()
+        sim.auto_mesh(keep_existing=False, refine_features=False)
+        baseline = [np.asarray(sim.mesh.GetLines(a)) for a in range(3)]
+        with patch.dict("os.environ", {"FAIRBEAM_MAX_CELLS": "213696"}):
+            report = sim.auto_mesh(keep_existing=False)
+        self.assertEqual(report["fine_feature_refinement"]["retained_features"], 0)
+        for a in range(3):
+            np.testing.assert_array_equal(sim.mesh.GetLines(a), baseline[a])
+
+    def test_helix_refinement_does_not_spread_down_wire_cover(self):
+        from fairbeam.model import load_model, resolve_params
+        from pathlib import Path
+        module = load_model(Path(__file__).parents[1] / "models" / "helix_axial.py")
+        sim = module.build(resolve_params(module.PARAMS, {}))
+        refined = [np.asarray(sim.mesh.GetLines(a)) for a in range(3)]
+        report = sim.mesh_report
+        sim.auto_mesh(cells_per_wavelength=30, keep_existing=False, refine_features=False)
+        baseline = [np.asarray(sim.mesh.GetLines(a)) for a in range(3)]
+        self.assertLess(report["total_cells"], 1.2 * sim.mesh_report["total_cells"])
+        self.assertLessEqual(report["max_neighbour_ratio"], 1.4)
+        np.testing.assert_array_equal(refined[2][refined[2] > 25], baseline[2][baseline[2] > 25])
+        self.assertLess(np.count_nonzero((np.diff(refined[2]) >= .7) & (np.diff(refined[2]) <= 1)), 15)
 
 
 if __name__ == "__main__":

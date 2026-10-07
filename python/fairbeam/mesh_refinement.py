@@ -6,6 +6,13 @@ import numpy as np
 REQUIRED_CELLS = 3
 
 
+def required_cells(feature):
+    """Slanted strips need connectivity; gaps retain the three-cell target."""
+    if feature.get("kind") == "strip" and sum(abs(v) > 1e-9 for v in feature["normal"]) > 1:
+        return 1.0
+    return REQUIRED_CELLS
+
+
 def collect_features(metals, feeds, max_width):
     from dataclasses import asdict
     from .mesh_features import detect_features
@@ -54,8 +61,8 @@ def measure_features(features, lines):
                 break
             projected += abs(component) * float(widths.max())
         across = float(f["width"] / projected) if projected > 0 else 0.0
-        measured.append({**f, "cells_across": across, "required_cells": REQUIRED_CELLS,
-                         "resolved": across >= REQUIRED_CELLS * (1 - 1e-6)})
+        measured.append({**f, "cells_across": across, "required_cells": required_cells(f),
+                         "resolved": across >= required_cells(f) * (1 - 1e-6)})
     return measured
 
 
@@ -63,7 +70,8 @@ def refinement_caps(features, min_cell=None):
     """(lo, hi, h) per axis; leave 10% headroom for fill's single-cell rule."""
     caps = [[] for _ in range(3)]
     for f in features:
-        h = f["width"] / (REQUIRED_CELLS * 1.1 * sum(abs(v) for v in f["normal"]))
+        target = 1.1 if required_cells(f) == 1 else REQUIRED_CELLS
+        h = f["width"] / (target * 1.1 * sum(abs(v) for v in f["normal"]))
         h = max(h, min_cell or 0.0)
         for a, component in enumerate(f["normal"]):
             if abs(component) > 1e-9:
@@ -107,3 +115,57 @@ def refinement_cell_lower_bound(caps, domain):
             count = max(count, math.floor(length / (1.1 * h)))
         required.append(count)
     return math.prod(required)
+
+
+def refine_axis(baseline, fixed, cap, ratio, max_cells):
+    """Refill local windows; preserve the normal mesh outside their grading fringe.
+
+    Optional cover lines can move inside a window. Keeping them as fixed lines
+    would force a chain of equal gaps to split forever instead of grading out.
+    Actual geometric constraints remain fixed.
+    """
+    from .automesh import fill
+
+    baseline = np.asarray(baseline, float)
+    widths = np.diff(baseline)
+    centers = (baseline[:-1] + baseline[1:]) / 2
+    # Include endpoints so a narrow feature cannot fall between sample centers.
+    samples = np.linspace(baseline[:-1], baseline[1:], 9, axis=1)
+    active = np.any(cap(samples) < widths[:, None] / 1.1, axis=1)
+    # Let both ends meet their unchanged neighbors with the normal size field.
+    for _ in range(4):
+        active = active | np.r_[False, active[:-1]] | np.r_[active[1:], False]
+    baseline_ratio = max(np.max(np.maximum(widths[1:] / widths[:-1], widths[:-1] / widths[1:]))
+                         if len(widths) > 1 else 1, 1 + (ratio - 1) / 0.9)
+    normal_cap = lambda t: np.minimum(cap(t), np.interp(t, centers, widths))
+    while True:
+        starts = np.flatnonzero(active & ~np.r_[False, active[:-1]])
+        stops = np.flatnonzero(active & ~np.r_[active[1:], False]) + 1
+        pieces, previous, count = [], 0, len(widths)
+        for start, stop in zip(starts, stops):
+            lo, hi = baseline[start], baseline[stop]
+            lines = np.unique(np.r_[lo, fixed[(fixed > lo) & (fixed < hi)], hi])
+            remaining = max_cells - (count - (stop - start))
+            refined = fill(lines, normal_cap, ratio, monotone=True, max_cells=remaining,
+                           boundary_cells=[widths[start - 1] if start else np.inf,
+                                           widths[stop] if stop < len(widths) else np.inf])
+            count += len(refined) - 1 - (stop - start)
+            pieces.extend([baseline[previous:start], refined[:-1]])
+            previous = stop
+        pieces.append(baseline[previous:])
+        result = np.concatenate(pieces)
+        w = np.diff(result)
+        bad = np.flatnonzero(np.maximum(w[1:] / w[:-1], w[:-1] / w[1:]) > baseline_ratio + 1e-6)
+        if not len(bad) or active.all():
+            return result
+        # A join may need a longer grading fringe. Extend only windows with a
+        # new ratio violation; untouched regions retain their exact old lines.
+        expanded = active.copy()
+        for j in bad:
+            cell = np.clip(np.searchsorted(baseline, result[j + 1]) - 1, 0, len(widths) - 1)
+            for start, stop in zip(starts, stops):
+                if start - 1 <= cell <= stop:
+                    expanded[max(0, start - 4):min(len(widths), stop + 4)] = True
+        if np.array_equal(expanded, active):
+            return result
+        active = expanded

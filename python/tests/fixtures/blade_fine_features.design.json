@@ -29,6 +29,6 @@
     ]}
   ],
   "ports": [{"type": "lumped", "number": 1, "R": 50, "start": [0, 0, 0], "stop": [0, 0, 1.35], "direction": "z"}],
-  "mesh": {"mode": "design"},
+  "mesh": {"mode": "design", "refine_features": true},
   "far_field": {"enabled": false}
 }

@@ -20,6 +20,15 @@ def polygon(points, normal=2, thickness=0):
 
 
 class PolygonFeaturesTest(unittest.TestCase):
+    def test_bounding_prefilter_matches_unbounded_edge_search(self):
+        shapes = [polygon([[x, 0], [x + .4, 0], [x + .4, 4], [x, 4]])
+                  for x in (0, .6, 1.2, 20)]
+        # Include a buried edge and a remote conductor; containment filtering
+        # must agree with the full search as well as the edge-pair filter.
+        shapes.append(polygon([[0, 1], [.8, 1], [.8, 2], [0, 2]]))
+        expected = [f for f in detect_features(shapes) if f.width <= .25]
+        self.assertEqual(detect_features(shapes, max_width=.25), expected)
+
     def test_slanted_strip_perpendicular_width_and_extent(self):
         tangent, normal = np.array([0.6, 0.8]), np.array([-0.8, 0.6])
         points = [np.zeros(2), 20 * tangent, 20 * tangent + 0.4 * normal, 0.4 * normal]

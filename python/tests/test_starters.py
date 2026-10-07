@@ -117,6 +117,8 @@ class Starters(unittest.TestCase):
         # the shortened description differ)
         ex = json.loads((REPO / "examples" / "designs" / "sleeve_dipole_867.design.json").read_text(encoding="utf-8"))
         d = template_design("sleeve-dipole", "sleeve", "Sleeve")
+        self.assertTrue(d["mesh"]["refine_features"])
+        ex["mesh"]["refine_features"] = True  # New starters opt in; saved examples retain their mesh.
         for k in ex:
             if k != "model":
                 with self.subTest(k):

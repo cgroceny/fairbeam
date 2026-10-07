@@ -309,7 +309,7 @@ class MeshChecks(unittest.TestCase):
         checks = [c for c in lint(d, None, b) if c["code"] == "mesh-fine-limit"]
         self.assertEqual(keys(checks), ["warning|mesh-fine-limit|mesh"])
         self.assertEqual(checks[0]["message"],
-                         "local fine-feature refinement exceeds the 40,000,000 cell limit; unresolved features remain")
+                         "the 40,000,000 cell limit dropped 0 fine-feature refinements; 0 refinements retained")
         self.assertEqual(checks[0]["explain"], EXPLANATIONS["mesh-fine-limit"])
 
     def test_underresolved_fine_features_from_preview(self):
@@ -321,8 +321,14 @@ class MeshChecks(unittest.TestCase):
         checks = [c for c in lint(d, None, b) if c["code"] == "mesh-fine-feature"]
         self.assertEqual(keys(checks), ["warning|mesh-fine-feature|mesh"])
         self.assertEqual(checks[0]["message"],
-                         "a fine feature 0.4 mm wide has 1.25 cells across; at least 3 are required")
+                         "under-resolved fine features: 1; worst widths (mm): 0.4; cells across: 1.25; required: 3")
         self.assertEqual(checks[0]["explain"], EXPLANATIONS["mesh-fine-feature"])
+        b["mesh"]["auto"]["fine_features"] = [dict(feature, width=i / 10) for i in range(1, 21)]
+        summary = [c for c in lint(d, None, b) if c["code"] == "mesh-fine-feature"]
+        self.assertEqual(len(summary), 1)
+        self.assertIn("under-resolved fine features: 20", summary[0]["message"])
+        self.assertIn("worst widths (mm): 0.1, 0.2, 0.3;", summary[0]["message"])
+        b["mesh"]["auto"]["fine_features"] = [feature]
         # Numeric resolution remains authoritative if an older producer omits the flag.
         del feature["resolved"]
         self.assertTrue(any(c["code"] == "mesh-fine-feature" for c in lint(d, None, b)))
