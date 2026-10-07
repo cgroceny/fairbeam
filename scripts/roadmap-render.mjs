@@ -1,5 +1,5 @@
-// Render landing/roadmap.json as the landing page's roadmap board: plain HTML that reads correctly
-// without JavaScript. scripts/build-site.mjs puts it between the roadmap markers of index.html;
+// Render landing/roadmap.json as the site's roadmap board: plain HTML that reads correctly
+// without JavaScript. scripts/build-site.mjs puts it between the roadmap markers of roadmap.html;
 // landing/script.js adds the mobile tabs and the motion. The data is refreshed by scripts/roadmap.mjs.
 
 const STATES = [

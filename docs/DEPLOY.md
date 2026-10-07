@@ -9,7 +9,8 @@ Vercel builds the site from the public source repository, and only the build out
 
 | On the site (in `site-dist/`) | Not on the site |
 | --- | --- |
-| `landing/` (landing page, `guide.html`, `privacy.html`, CSS, a small script; the roadmap board is rendered into the page at build time), the scroll story under `/story/`, `tokens.css` copied from `design-system/` | Python package, models, install scripts, tests |
+| `landing/` (the home page, `features.html`, `roadmap.html`, `privacy.html`, CSS and small scripts; the roadmap board is rendered into `roadmap.html` at build time), the scroll story under `/story/`, `tokens.css` copied from `design-system/` | Python package, models, install scripts, tests |
+| The docs under `/docs/`: the Markdown files listed in `landing/docs.json`, rendered at build time by `scripts/docs-render.mjs` (links between them go to their pages, other repository files to GitHub), with an overview page | The other Markdown files of the repository (they stay on GitHub) |
 | The viewer built with `--mode demo` under `/app/` (minified JS/CSS) | `src/` as source code (only the minified bundle ships) |
 | The 14 example projects in `public/projects/` (bundle JSON, listed in `index.json`) | The local run server; the demo never calls `/api` |
 | Four example SVGs from `examples/drawings/`, IBM Plex woff2 files (OFL) | `.sim/`, raw openEMS output, anything git-ignored |
@@ -35,14 +36,16 @@ the export package.
 It also sets these headers on every path: `X-Content-Type-Options: nosniff`,
 `Referrer-Policy: strict-origin-when-cross-origin`, `X-Frame-Options: SAMEORIGIN`,
 `Content-Security-Policy: frame-ancestors 'self'` and a restrictive `Permissions-Policy`. Same-origin
-framing stays allowed so the landing page can embed the demo on request. The cache rules are:
+framing stays allowed, so a site page can embed the demo. The cache rules are:
 
 - `/app/assets/*` and `/fonts/*`: one year, immutable. App assets have hashed names, and the font files are fixed.
 - `/media/*`: one day.
 - `/app/projects/*`: one hour.
 
-`/app` redirects to `/app/`. Pushes to branches other than `main` do not deploy (`git.deploymentEnabled`
-in `vercel.json`).
+`/app` redirects to `/app/` and `/docs` to `/docs/`. `/guide.html`, the address the app's Help ›
+Getting Started Guide opens, redirects to `/docs/getting-started.html` (and `landing/guide.html` does
+the same with a meta refresh where the redirect rules do not apply, as in a local preview). Pushes to
+branches other than `main` do not deploy (`git.deploymentEnabled` in `vercel.json`).
 
 The site also has one serverless function, `api/ping.js`, which receives the desktop app's usage
 statistics (see [TELEMETRY.md](TELEMETRY.md)). Vercel deploys every file in `api/` whose name does
@@ -98,6 +101,7 @@ that project's per-deployment `*.vercel.app` URLs; the repository's homepage is 
 
 The demo ships exactly what is committed in `public/projects/` (bundles and `index.json`) and the SVGs
 listed in `scripts/build-site.mjs` (`MEDIA`). To show another project, run it locally, commit its
-bundle and the updated `index.json`, then redeploy. To change the landing page, edit `landing/`.
+bundle and the updated `index.json`, then redeploy. To change the site pages, edit `landing/`; `npm run build:site` also checks their size budgets
+(the home page HTML and images, every page's HTML, and `media/`).
 Colors and spacing come from `design-system/tokens.css`, which is copied in at build time; do not
 duplicate token values in `landing/styles.css`.

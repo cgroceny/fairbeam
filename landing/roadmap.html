@@ -1,30 +1,36 @@
 <!doctype html>
 <html lang="en">
 <head>
-  <!--
-    What the desktop app's usage statistics would collect. Keep in step with docs/TELEMETRY.md and
-    api/_ping-schema.json (the only list of counter keys).
-  -->
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="color-scheme" content="light dark">
-  <title>Privacy and usage statistics · Fairbeam</title>
-  <meta name="description" content="What the Fairbeam desktop app's optional, anonymous usage statistics collect, where the data goes and how to turn them off. Not active yet.">
-  <link rel="canonical" href="https://fairbeam.org/privacy.html">
+  <title>Roadmap · Fairbeam</title>
+  <meta name="description" content="The Fairbeam roadmap: features available in a release, work in development and planned work, from the project's issues and pull requests.">
+  <meta property="og:title" content="Roadmap · Fairbeam">
+  <meta property="og:description" content="Features available in a release, work in development and planned work, from the project's issues and pull requests.">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://fairbeam.org/roadmap.html">
+  <meta property="og:image" content="https://fairbeam.org/media/fairbeam-promo-poster.jpg">
+  <meta property="og:image:width" content="1920">
+  <meta property="og:image:height" content="1080">
+  <meta name="twitter:card" content="summary_large_image">
+  <link rel="canonical" href="https://fairbeam.org/roadmap.html">
   <link rel="icon" href="favicon.svg" type="image/svg+xml">
   <link rel="icon" href="favicon.ico" sizes="48x48">
   <link rel="icon" href="favicon-32.png" sizes="32x32" type="image/png">
   <link rel="icon" href="favicon-16.png" sizes="16x16" type="image/png">
   <link rel="apple-touch-icon" href="apple-touch-icon.png">
   <link rel="preload" href="fonts/ibm-plex-sans-latin-400-normal.woff2" as="font" type="font/woff2" crossorigin>
+  <!-- tokens.css is copied from design-system/tokens.css by scripts/build-site.mjs -->
   <link rel="stylesheet" href="tokens.css">
   <link rel="stylesheet" href="styles.css">
   <link rel="stylesheet" href="navigation.css">
   <script>try{var t=localStorage.getItem("fairbeam.theme");if(t==="light"||t==="dark")document.documentElement.setAttribute("data-theme",t)}catch(e){}</script>
+  <script src="language.js" defer></script>
   <script src="navigation.js" defer></script>
   <script src="script.js" defer></script>
 </head>
-<body>
+<body data-page="roadmap">
   <a class="skip-link" href="#main">Skip to content</a>
 
   <header class="site-header">
@@ -46,6 +52,10 @@
       </nav>
       <div class="header-actions">
         <a class="button ghost button-sm header-demo" href="app/">Open the demo</a>
+        <div class="site-language-switch" role="group" aria-label="Site language" data-language-label-en="Site language" data-language-label-tr="Site dili">
+          <button type="button" data-site-language="en" aria-label="English" aria-pressed="true" lang="en">EN</button>
+          <button type="button" data-site-language="tr" aria-label="Türkçe" aria-pressed="false" lang="tr">TR</button>
+        </div>
         <button class="icon-button" type="button" id="theme-toggle" aria-label="Theme: system" title="Theme: system (click to change)">
           <svg viewBox="0 0 24 24" aria-hidden="true" class="icon-system"><rect x="3" y="4" width="18" height="12" rx="2"/><path d="M8 20h8M12 16v4"/></svg>
           <svg viewBox="0 0 24 24" aria-hidden="true" class="icon-light"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>
@@ -55,110 +65,31 @@
     </div>
   </header>
 
-  <main tabindex="-1" id="main" class="guide">
-    <div class="shell guide-head">
-      <p class="eyebrow">Privacy · desktop app</p>
-      <h1>Usage statistics</h1>
-      <p class="lede">The Fairbeam desktop app can share anonymous usage counts, only if you say yes. This page lists exactly what would be sent.</p>
-      <p class="fineprint"><strong>Not active yet.</strong> No released version collects or sends anything. The app does not ask, and Settings › General › Usage statistics says “Not active in this build”. This page describes the feature before it is turned on.</p>
+  <main tabindex="-1" id="main" class="page">
+    <div class="shell page-head">
+      <p class="eyebrow">Roadmap</p>
+      <h1 id="roadmap-title">Where Fairbeam is, and where it is going</h1>
     </div>
-
-    <div class="shell guide-layout">
-      <nav class="guide-toc" aria-labelledby="toc-title">
-        <p class="eyebrow" id="toc-title">On this page</p>
-        <ol>
-          <li><a href="#summary">In short</a></li>
-          <li><a href="#collected">What is sent</a></li>
-          <li><a href="#never">What is never sent</a></li>
-          <li><a href="#where">Where it goes</a></li>
-          <li><a href="#off">Turning it off</a></li>
-          <li><a href="#website">The website</a></li>
-        </ol>
-      </nav>
-
-      <article class="guide-body">
-        <section aria-labelledby="summary">
-          <h2 id="summary">In short</h2>
-          <ul>
-            <li><strong>Off unless you agree.</strong> On first start, the app asks once. Until you answer, nothing is counted.</li>
-            <li><strong>Anonymous counts.</strong> Only numbers such as “3 simulations on the CPU”, with a random id that is created on your computer. The id is not linked to your name, e-mail, account or hardware, and you can reset it.</li>
-            <li><strong>Once a day.</strong> At most one small message a day, holding the counts of a whole previous day.</li>
-            <li><strong>You can check it.</strong> Settings › General › Usage statistics › <em>View what would be sent</em> shows the exact message.</li>
-            <li>The legal basis is your consent (KVKK art. 5(1), GDPR art. 6(1)(a)). You can withdraw it at any time, and withdrawing it deletes the counts not sent yet.</li>
-          </ul>
-        </section>
-
-        <section aria-labelledby="collected">
-          <h2 id="collected">What is sent</h2>
-          <p>One message per day of use, with these fields and nothing else:</p>
-          <div class="guide-table">
-            <table>
-              <thead><tr><th scope="col">Field</th><th scope="col">Example</th><th scope="col">Meaning</th></tr></thead>
-              <tbody>
-                <tr><th scope="row"><code>install_id</code></th><td><code>1b4e28ba-…</code></td><td>a random id, created on your computer, resettable</td></tr>
-                <tr><th scope="row"><code>app_version</code></th><td><code>0.7.0</code></td><td>the Fairbeam version</td></tr>
-                <tr><th scope="row"><code>os</code>, <code>arch</code></th><td><code>macos</code>, <code>aarch64</code></td><td>operating system and processor type</td></tr>
-                <tr><th scope="row"><code>gpu_available</code></th><td><code>false</code></td><td>whether the openEMS build in use has the GPU engine</td></tr>
-                <tr><th scope="row"><code>day</code></th><td><code>2026-09-27</code></td><td>the day (UTC) the counts are for</td></tr>
-                <tr><th scope="row"><code>counters</code></th><td><code>{"app.start": 2}</code></td><td>whole numbers under fixed names, listed below</td></tr>
-              </tbody>
-            </table>
-          </div>
-          <p>The counters, per day:</p>
-          <ul>
-            <li><strong>App</strong>: starts, a new install, an update (and the version it came from).</li>
-            <li><strong>Simulations</strong>: started, finished, failed and canceled. They are grouped by engine (CPU or GPU) and by kind of model (your design, a bundled example or a Python model). Finished runs also count a duration range (under 10 s, 10–60 s, 1–10 min, over 10 min) and a size range (under 100 000, up to 1 million, over 1 million cells). For a failure, only a category code is counted, for example <code>solver</code>, <code>memory</code> or <code>mesh-cells</code>, never the message.</li>
-            <li><strong>Monitors</strong> used in a run: far field, surface current, efficiency, field planes.</li>
-            <li><strong>Sweeps</strong>, with a range of their number of points; <strong>optimizer runs</strong>, with the method.</li>
-            <li><strong>Features</strong>: VBA macro import, VBA macro export, Touchstone export, PDF report.</li>
-          </ul>
-        </section>
-
-        <section aria-labelledby="never">
-          <h2 id="never">What is never sent</h2>
-          <p>File names, design contents, model names, parameter names or values, folder paths, error messages, your e-mail, your user or computer name, and your IP address are never sent. The server refuses any message that has a field or a counter name not on the lists above.</p>
-        </section>
-
-        <section aria-labelledby="where">
-          <h2 id="where">Where it goes</h2>
-          <p>The app sends the message over HTTPS to <code>fairbeam.org/api/ping</code>, a function on this website (hosted by Vercel). There:</p>
-          <ul>
-            <li>the random id is replaced by a keyed hash, so even the stored data does not contain it;</li>
-            <li>the counts are appended to a daily file that only the developer can read;</li>
-            <li>the IP address and the exact time are not stored. Vercel's request logs keep the IP address for a short time, as for every page of this site.</li>
-          </ul>
-          <p>The counts are only ever used added up: how many installs are active per day and per week, which versions and systems are in use, how many simulations run and which features matter. Nothing is sold or shared.</p>
-        </section>
-
-        <section aria-labelledby="off">
-          <h2 id="off">Turning it off</h2>
-          <ul>
-            <li>In the app: Settings › General › Usage statistics › <strong>Off</strong>. It stops at once and deletes the counts not sent yet. <strong>Reset id</strong> creates a new random id.</li>
-            <li>For a whole computer: set the environment variable <code>FAIRBEAM_NO_TELEMETRY=1</code>. It wins over every setting.</li>
-            <li>Questions: open an issue on the <a href="https://github.com/ismailakdag/fairbeam-releases/issues/new/choose">public tracker</a>.</li>
-          </ul>
-        </section>
-
-        <section aria-labelledby="website">
-          <h2 id="website">The website</h2>
-          <p>This website sets no cookies and uses no analytics. The theme button and the demo remember your choices in your browser's local storage only.</p>
-        </section>
-      </article>
-    </div>
+    <section class="shell roadmap-page" id="roadmap" aria-labelledby="roadmap-title">
+      <!-- roadmap:start (scripts/build-site.mjs renders landing/roadmap.json here; refresh the data with npm run roadmap) -->
+      <p class="rm-intro">The board is rendered from landing/roadmap.json when the site is built.</p>
+      <!-- roadmap:end -->
+      <p class="rm-after">Known limits of the current version are under <a href="features.html#status">What to expect</a>. Ideas and requests are welcome on the <a href="https://github.com/ismailakdag/fairbeam-releases/issues/new/choose">public tracker</a>.</p>
+    </section>
   </main>
 
   <footer class="site-footer">
     <div class="shell footer-row">
       <nav class="footer-nav" aria-label="Site links">
         <a href="features.html">Features</a>
-        <a href="roadmap.html">Roadmap</a>
+        <a href="roadmap.html" aria-current="page">Roadmap</a>
         <a href="docs/">Docs</a>
         <a href="docs/getting-started.html">Getting started</a>
         <a href="app/">Demo</a>
         <a href="https://github.com/ismailakdag/fairbeam-releases/releases">Releases</a>
         <a href="https://github.com/ismailakdag/fairbeam">Source code</a>
         <a href="index.html#about">About</a>
-        <a href="privacy.html" aria-current="page">Privacy</a>
+        <a href="privacy.html">Privacy</a>
       </nav>
       <p class="footer-note">Simulations by <a href="https://openems.de" rel="noreferrer">openEMS</a> and CSXCAD. Fairbeam is free software under GPL-3.0-or-later.</p>
       <p class="footer-credit">by <a href="https://akdag.dev" rel="author">İsmail Akdağ</a></p>

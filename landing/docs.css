@@ -1,0 +1,271 @@
+/* Documentation section (docs/): pages rendered from the repository's Markdown files by
+   scripts/docs-render.mjs into the frame of landing-src/docs-page.html.
+   Three columns on wide screens (sidebar, text, contents list); up to 1200 px the contents list
+   moves above the text; up to 960 px the sidebar moves above it too, and both fold away behind a
+   button (docs.js; the breakpoints are also there). The text keeps a reading measure of about 70ch. */
+
+:root {
+  --docs-side: 220px;
+  --docs-toc: 200px;
+  --docs-measure: 72ch;
+  --docs-h1: clamp(26px, 1.4vw + 16px, 36px);
+  --docs-h2: clamp(20px, 0.6vw + 15px, 24px);
+  --docs-sticky-top: calc(56px + var(--al-space-5));
+}
+
+.docs-layout {
+  display: grid;
+  grid-template-columns: var(--docs-side) minmax(0, 1fr) var(--docs-toc);
+  grid-template-areas:
+    "side head  toc"
+    "side body  toc"
+    "side pager toc";
+  grid-template-rows: auto auto 1fr;
+  column-gap: var(--al-space-6);
+  align-items: start;
+  padding: var(--al-space-6) 0 var(--lp-section);
+}
+.docs-layout-overview {
+  grid-template-areas:
+    "side head head"
+    "side body body";
+  grid-template-rows: auto 1fr;
+}
+
+/* ------------------------------------------------------------------ sidebar */
+.docs-nav {
+  grid-area: side; align-self: start; position: sticky; top: var(--docs-sticky-top);
+  max-height: calc(100vh - var(--docs-sticky-top) - var(--al-space-5));
+  overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin; scrollbar-color: var(--al-border) transparent;
+  font-size: var(--al-text-md);
+}
+.docs-nav-list { display: grid; gap: var(--al-space-4); padding: 0 var(--al-space-1) var(--al-space-4) 0; }
+.docs-nav-list[hidden] { display: none; }
+.docs-nav-title {
+  margin-bottom: var(--al-space-1); padding-left: var(--al-space-3);
+  font-size: var(--al-text-xs); font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--al-text-3);
+}
+.docs-nav ul { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--al-space-0); }
+.docs-nav-list a {
+  display: block; padding: var(--al-space-1) var(--al-space-3); border-radius: var(--al-radius-sm);
+  color: var(--al-text-2); line-height: 1.4; text-decoration: none;
+}
+.docs-nav-list a:hover { background: var(--al-surface-2); color: var(--al-text); }
+.docs-nav-list a[aria-current="page"] {
+  background: var(--al-accent-soft); color: var(--al-text); font-weight: 600;
+  box-shadow: inset 2px 0 0 var(--al-action);
+}
+.docs-nav-home { font-weight: 500; }
+/* the sidebar and the contents list scroll by themselves, which would clip a ring drawn outside the link */
+.docs-nav-list a:focus-visible, .doc-toc-list a:focus-visible { outline-offset: -2px; }
+
+.docs-nav-toggle {
+  display: flex; align-items: center; gap: var(--al-space-2); width: 100%; min-height: 44px;
+  padding: 0 var(--al-space-3); border: 1px solid var(--al-border); border-radius: var(--al-radius-lg);
+  background: var(--al-surface); color: var(--al-text); font: inherit; font-size: var(--al-text-md); text-align: left; cursor: pointer;
+}
+.docs-nav-toggle[hidden] { display: none; }
+.docs-nav-toggle:hover { background: var(--al-surface-2); }
+.docs-nav-label { font-weight: 600; }
+.docs-nav-here { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--al-text-3); }
+.docs-nav-icon, .docs-chevron {
+  flex: none; width: 16px; height: 16px; fill: none; stroke: currentColor;
+  stroke-width: var(--al-icon-stroke); stroke-linecap: round; stroke-linejoin: round;
+}
+.docs-chevron { transition: transform var(--al-dur) var(--al-ease); }
+[aria-expanded="true"] > .docs-chevron { transform: rotate(180deg); }
+
+/* ------------------------------------------------------------------ page head */
+.doc-head { grid-area: head; display: grid; gap: var(--al-space-3); min-width: 0; max-width: var(--docs-measure); margin-bottom: var(--al-space-6); }
+/* the skip link lands here, past the sidebar */
+.doc-head:focus { outline: none; }
+.doc-meta { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--al-space-2) var(--al-space-4); }
+.doc-head .eyebrow { margin: 0; }
+.doc-head h1 { max-width: none; font-size: var(--docs-h1); line-height: 1.2; text-wrap: balance; overflow-wrap: break-word; }
+.doc-head h1 code { font-size: 0.8em; }
+.doc-edit {
+  display: inline-flex; align-items: center; gap: var(--al-space-1);
+  font-size: var(--al-text-sm); color: var(--al-text-3); text-decoration: none;
+}
+.doc-edit:hover { color: var(--al-accent-text); text-decoration: underline; }
+.doc-edit svg { width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-width: var(--al-icon-stroke); stroke-linecap: round; stroke-linejoin: round; }
+
+/* ------------------------------------------------------------------ "On this page" */
+.doc-toc {
+  grid-area: toc; align-self: start; position: sticky; top: var(--docs-sticky-top);
+  display: flex; flex-direction: column; min-width: 0;
+  max-height: calc(100vh - var(--docs-sticky-top) - var(--al-space-5));
+}
+.doc-toc-label { margin-bottom: var(--al-space-2); }
+.doc-toc-toggle { display: none; }
+.doc-toc-list {
+  list-style: none; margin: 0; padding: 0 0 0 var(--al-space-3); display: grid; gap: var(--al-space-1); font-size: var(--al-text-sm);
+  border-left: 1px solid var(--al-border); overflow-x: hidden; overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin; scrollbar-color: var(--al-border) transparent;
+}
+.doc-toc-list[hidden] { display: none; }
+.doc-toc-list ol { list-style: none; margin: var(--al-space-1) 0 0; padding-left: var(--al-space-3); display: grid; gap: var(--al-space-1); }
+.doc-toc-list a { position: relative; display: block; color: var(--al-text-3); line-height: 1.4; text-decoration: none; overflow-wrap: anywhere; }
+.doc-toc-list a:hover { color: var(--al-text); text-decoration: underline; }
+.doc-toc-list code { padding: 0; background: none; }
+/* the section being read (aria-current is set by script.js as the page scrolls) */
+.doc-toc-list a[aria-current="location"] { color: var(--al-text); }
+.doc-toc-list a[aria-current="location"]::before {
+  content: ""; position: absolute; top: 0; bottom: 0; left: calc(-1 * var(--al-space-3) - 1px); width: 2px; background: var(--al-action);
+}
+.doc-toc-list ol a[aria-current="location"]::before { left: calc(-2 * var(--al-space-3) - 1px); }
+
+/* ------------------------------------------------------------------ the text */
+.doc-body {
+  grid-area: body; min-width: 0; max-width: var(--docs-measure);
+  font-size: var(--lp-body); line-height: 1.65; overflow-wrap: break-word;
+}
+.doc-body > * + * { margin-top: var(--al-space-4); }
+.doc-body :is(h2, h3, h4, h5, h6) { position: relative; line-height: 1.3; font-weight: 600; scroll-margin-top: var(--al-space-2); }
+.doc-body h2 {
+  max-width: none; margin-top: var(--al-space-7); padding-bottom: var(--al-space-2);
+  border-bottom: 1px solid var(--al-border); font-size: var(--docs-h2); letter-spacing: -0.01em;
+}
+.doc-body h3 { margin-top: var(--al-space-6); font-size: var(--lp-lede); }
+.doc-body :is(h4, h5, h6) { margin-top: var(--al-space-5); font-size: var(--al-text-lg); }
+.doc-body > :first-child { margin-top: 0; }
+.doc-body :is(h2, h3, h4, h5, h6) + * { margin-top: var(--al-space-3); }
+.doc-body :is(h2, h3, h4) code { font-size: 0.85em; }
+/* a link to the section, shown beside its heading on hover */
+.doc-anchor { margin-left: var(--al-space-2); color: var(--al-text-3); text-decoration: none; opacity: 0; transition: opacity var(--al-dur) var(--al-ease); }
+.doc-anchor::before { content: "#"; font-weight: 400; }
+.doc-body :is(h2, h3, h4, h5, h6):hover .doc-anchor { opacity: 1; }
+.doc-anchor:hover { color: var(--al-accent-text); }
+
+.doc-body strong { font-weight: 600; }
+.doc-body :is(ul, ol) { padding-left: 1.5em; }
+.doc-body li + li { margin-top: var(--al-space-1); }
+.doc-body li > :is(ul, ol, p, .doc-code, .doc-table, blockquote) { margin-top: var(--al-space-1); }
+.doc-body li > p + p { margin-top: var(--al-space-2); }
+.doc-body li::marker { color: var(--al-text-3); }
+.doc-body :is(p, li, blockquote, h2, h3, h4) > code { overflow-wrap: anywhere; }
+.doc-body blockquote {
+  margin: var(--al-space-4) 0 0; padding: var(--al-space-3) var(--al-space-4);
+  border-left: 3px solid var(--al-accent-line); border-radius: 0 var(--al-radius) var(--al-radius) 0;
+  background: var(--al-surface); color: var(--al-text-2);
+}
+.doc-body blockquote > * + * { margin-top: var(--al-space-2); }
+.doc-body hr { margin: var(--al-space-6) 0; border: 0; border-top: 1px solid var(--al-border); }
+.doc-body kbd {
+  display: inline-block; min-width: 1.6em; padding: 0 5px; border: 1px solid var(--al-border-strong); border-bottom-width: 2px;
+  border-radius: var(--al-radius-sm); background: var(--al-surface); font-family: var(--al-font-mono); font-size: 0.85em; line-height: 1.5; text-align: center;
+}
+.doc-body img { border: 1px solid var(--al-border); border-radius: var(--al-radius-lg); background: var(--al-surface-2); }
+.doc-image { display: inline-block; max-width: 100%; vertical-align: top; }
+.doc-body img.doc-portrait { width: min(100%, 360px); }
+.doc-image:hover img { border-color: var(--al-border-strong); }
+
+/* code blocks: a Copy button is added by docs.js */
+.doc-code { position: relative; }
+.doc-code pre {
+  margin: 0; padding: var(--al-space-3) var(--al-space-4); overflow-x: auto;
+  border: 1px solid var(--al-border); border-radius: var(--al-radius-lg); background: var(--al-surface-2);
+  font-size: var(--al-text-md); line-height: 1.6; tab-size: 4;
+  scrollbar-width: thin; scrollbar-color: var(--al-border-strong) transparent;
+}
+.doc-code code { padding: 0; border-radius: 0; background: none; font-size: inherit; }
+.doc-copy {
+  position: absolute; top: var(--al-space-2); right: var(--al-space-2); min-height: var(--al-control-h-sm);
+  padding: 0 var(--al-space-2); border: 1px solid var(--al-border); border-radius: var(--al-radius-sm);
+  background: var(--al-surface); color: var(--al-text-2); font: inherit; font-size: var(--al-text-xs); cursor: pointer;
+  opacity: 0; transition: opacity var(--al-dur) var(--al-ease);
+}
+.doc-copy:hover { color: var(--al-text); border-color: var(--al-border-strong); }
+.doc-code:hover .doc-copy, .doc-copy:focus-visible, .doc-copy[data-copied] { opacity: 1; }
+@media (hover: none) { .doc-copy { opacity: 1; } }
+
+/* tables scroll sideways in their own box when they are wider than the text */
+.doc-table { overflow-x: auto; scrollbar-width: thin; scrollbar-color: var(--al-border-strong) transparent; }
+.doc-table table { font-size: var(--al-text-md); line-height: 1.5; }
+.doc-table :is(th, td) { padding: var(--al-space-2) var(--al-space-3); vertical-align: top; }
+.doc-table :is(th, td):first-child { padding-left: 0; }
+.doc-table :is(th, td):last-child { padding-right: 0; }
+.doc-table thead th { vertical-align: bottom; }
+.doc-table td code { font-size: 0.92em; }
+
+/* ------------------------------------------------------------------ previous / next */
+.doc-pager {
+  grid-area: pager; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--al-space-3);
+  max-width: var(--docs-measure); margin-top: var(--al-space-7); padding-top: var(--al-space-5); border-top: 1px solid var(--al-border);
+}
+.doc-pager a {
+  display: grid; gap: var(--al-space-0); padding: var(--al-space-3) var(--al-space-4);
+  border: 1px solid var(--al-border); border-radius: var(--al-radius-lg); background: var(--al-surface);
+  color: var(--al-text); text-decoration: none; transition: border-color var(--al-dur) var(--al-ease);
+}
+.doc-pager a:hover { border-color: var(--al-action); }
+.doc-pager-next { grid-column: 2; text-align: right; }
+.doc-pager-dir { font-size: var(--al-text-xs); color: var(--al-text-3); }
+.doc-pager-prev .doc-pager-dir::before { content: "← "; }
+.doc-pager-next .doc-pager-dir::after { content: " →"; }
+.doc-pager-title { font-weight: 600; color: var(--al-accent-text); }
+
+/* ------------------------------------------------------------------ overview (docs/index.html) */
+.doc-head .lede { max-width: 62ch; }
+.docs-overview { grid-area: body; display: grid; gap: var(--al-space-6); min-width: 0; }
+.docs-overview section { display: grid; gap: var(--al-space-3); }
+.docs-overview h2 { max-width: none; padding-bottom: var(--al-space-2); border-bottom: 1px solid var(--al-border); font-size: var(--lp-lede); }
+.docs-cards { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 260px), 1fr)); gap: var(--al-space-3); }
+.docs-card {
+  display: grid; gap: var(--al-space-1); align-content: start; height: 100%; padding: var(--al-space-4);
+  border: 1px solid var(--al-border); border-radius: var(--al-radius-lg); background: var(--al-surface);
+  color: var(--al-text); text-decoration: none; transition: border-color var(--al-dur) var(--al-ease);
+}
+.docs-card:hover { border-color: var(--al-action); }
+.docs-card-title { font-size: var(--al-text-lg); font-weight: 600; }
+.docs-card-text { font-size: var(--al-text-md); line-height: 1.5; color: var(--al-text-2); }
+
+/* ------------------------------------------------------------------ up to 1200 px: the contents list above the text */
+@media (max-width: 1200px) {
+  .docs-layout {
+    grid-template-columns: var(--docs-side) minmax(0, 1fr);
+    grid-template-areas: "side head" "side toc" "side body" "side pager";
+    grid-template-rows: auto auto auto 1fr;
+  }
+  .docs-layout-overview { grid-template-areas: "side head" "side body"; grid-template-rows: auto 1fr; }
+  .doc-toc {
+    position: static; max-height: none; max-width: var(--docs-measure); margin-bottom: var(--al-space-6);
+    padding: var(--al-space-2) var(--al-space-4); border: 1px solid var(--al-border); border-radius: var(--al-radius-lg); background: var(--al-surface);
+  }
+  .doc-toc-label { margin: var(--al-space-1) 0 var(--al-space-2); }
+  .js-docs .doc-toc-label { display: none; }
+  .doc-toc-toggle:not([hidden]) {
+    display: flex; align-items: center; justify-content: space-between; gap: var(--al-space-2); width: 100%; min-height: 36px;
+    padding: 0; border: 0; background: none; color: var(--al-text-2); cursor: pointer;
+    font: inherit; font-size: var(--al-text-xs); font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase;
+  }
+  .doc-toc-toggle:hover { color: var(--al-text); }
+  .doc-toc-list { padding: 0 0 var(--al-space-2); border-left: 0; overflow: visible; }
+  .doc-toc-list a[aria-current="location"]::before { display: none; }
+}
+
+/* ------------------------------------------------------------------ up to 960 px: one column */
+@media (max-width: 960px) {
+  .docs-layout, .docs-layout-overview {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas: "side" "head" "toc" "body" "pager";
+    grid-template-rows: none;
+    padding-top: var(--al-space-4);
+  }
+  .docs-layout-overview { grid-template-areas: "side" "head" "body"; }
+  .docs-nav { position: static; max-height: none; overflow: visible; margin-bottom: var(--al-space-5); }
+  .docs-nav-list {
+    margin-top: var(--al-space-2); padding: var(--al-space-3); gap: var(--al-space-3);
+    border: 1px solid var(--al-border); border-radius: var(--al-radius-lg); background: var(--al-surface);
+  }
+  .docs-nav-list a { display: flex; align-items: center; min-height: 40px; font-size: var(--al-text-lg); }
+  html:not(.js-docs) .docs-nav-list { margin-top: 0; }
+  .doc-toc-list { gap: 0; font-size: var(--al-text-md); }
+  .doc-toc-list ol { margin-top: 0; gap: 0; }
+  .doc-toc-list a { padding: var(--al-space-1) 0; }
+  .doc-head { margin-bottom: var(--al-space-5); }
+}
+@media (max-width: 560px) {
+  .doc-pager { grid-template-columns: minmax(0, 1fr); }
+  .doc-pager-next { grid-column: auto; }
+  .doc-code pre { padding: var(--al-space-3); font-size: var(--al-text-sm); }
+}

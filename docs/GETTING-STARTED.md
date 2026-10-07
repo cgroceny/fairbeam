@@ -1,9 +1,10 @@
 # Getting started
 
-> **Public copy:** this guide is published on the website as [landing/guide.html](../landing/guide.html)
-> (https://fairbeam.org/guide.html, opened by the app's Help › Getting Started Guide), converted
-> by hand without the developer links. Update both together; `npm run check:links` fails when a
-> heading here is missing from the page.
+<!--
+  The website renders this file as https://fairbeam.org/docs/getting-started.html (the app's
+  Help › Getting Started Guide opens it through https://fairbeam.org/guide.html). This file is the
+  only copy: edit it here.
+-->
 
 This guide is for people trying the Fairbeam desktop app: install it, then design, simulate and
 read the results of a patch antenna in about five minutes. The full reference for the designer is
@@ -17,7 +18,7 @@ Download the installer from [fairbeam.org](https://fairbeam.org) or the
 [releases page](https://github.com/ismailakdag/fairbeam-releases/releases).
 
 - **macOS** (Apple silicon, macOS 27 or newer): open the `.dmg` and drag Fairbeam to Applications.
-  The app is signed and notarized by Apple (since 0.4.4), so it opens with a normal double-click.
+  The app is signed and notarized by Apple, so it opens with a normal double-click.
 - **Windows** (10/11, x64): run the `-setup.exe`. It installs for your user, without an
   administrator prompt. The installer is not code-signed, so SmartScreen shows "Windows protected
   your PC": choose **More info › Run anyway**.

@@ -1,24 +1,13 @@
-.site-header .site-nav { gap: 22px; }
+/* Site header navigation: five entries in one row on wide screens, a compact menu below 960 px
+   (the breakpoint is also in navigation.js). */
+.site-header .site-nav { align-items: center; gap: var(--al-space-5); }
+.site-nav .nav-github { display: inline-flex; align-items: center; gap: var(--al-space-2); }
+.site-nav .nav-github svg { width: 15px; height: 15px; fill: currentColor; flex: none; }
+.site-nav .nav-demo { display: none; }
+.site-nav a[aria-current="page"], .site-nav a[aria-current="true"] { color: var(--al-text); text-decoration: underline; text-decoration-thickness: 2px; text-underline-offset: 6px; }
 .mobile-nav-toggle { display: none; }
 
-/* Keep every section reachable when the menu no longer fits beside the actions. */
-@media (max-width: 1280px) {
-  .site-header .header-row { height: auto; min-height: 56px; flex-wrap: wrap; row-gap: 0; }
-  .site-header .wordmark, .site-header .header-actions { min-height: 56px; }
-  .site-header .site-nav {
-    display: flex;
-    order: 3;
-    flex: 1 1 100%;
-    min-width: 0;
-    gap: 20px;
-    overflow-x: auto;
-    padding-bottom: 8px;
-    scrollbar-width: thin;
-  }
-}
-
-/* Keep a compact, keyboard-operable section menu available on phones. */
-@media (max-width: 800px) {
+@media (max-width: 960px) {
   html.js-site-nav .site-header .mobile-nav-toggle {
     display: inline-grid;
     order: 1;
@@ -47,26 +36,32 @@
     right: var(--lp-gutter);
     z-index: 11;
     display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: var(--al-space-1) var(--al-space-3);
-    max-height: min(70dvh, 480px);
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--al-space-1);
+    max-height: min(80dvh, 520px);
     overflow: auto;
     overscroll-behavior: contain;
     padding: var(--al-space-3);
     border: 1px solid var(--al-border);
     border-top: 0;
-    border-radius: 0 0 var(--al-radius) var(--al-radius);
+    border-radius: 0 0 var(--al-radius-lg) var(--al-radius-lg);
     background: var(--al-surface);
     box-shadow: var(--al-shadow-pop);
-    scrollbar-width: thin;
   }
-  html.js-site-nav .site-header .site-nav:not([hidden]) a {
+  html.js-site-nav .site-header .site-nav:not([hidden]) a:not(.button) {
     display: flex;
     min-height: 44px;
     align-items: center;
     padding: var(--al-space-2) var(--al-space-3);
     border-radius: var(--al-radius-sm);
+    font-size: var(--al-text-lg);
     white-space: normal;
   }
-  html.js-site-nav .site-header .site-nav:not([hidden]) a:hover { background: var(--al-surface-2); text-decoration: none; }
+  html.js-site-nav .site-header .site-nav:not([hidden]) a:not(.button):hover { background: var(--al-surface-2); text-decoration: none; }
+  html.js-site-nav .site-header .site-nav a:is([aria-current="page"], [aria-current="true"]) { text-underline-offset: 4px; }
+}
+/* phones: the demo button moves from the header into the menu */
+@media (max-width: 560px) {
+  .site-header .header-demo { display: none; }
+  html.js-site-nav .site-header .site-nav:not([hidden]) .nav-demo { display: flex; min-height: 44px; margin-top: var(--al-space-2); }
 }

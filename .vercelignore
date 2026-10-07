@@ -1,4 +1,4 @@
-# Only the sources needed for `npm run build:site` go to Vercel (landing + read-only demo).
+# Only the sources needed for `npm run build:site` go to Vercel (landing, docs and the read-only demo).
 .sim/
 .claude/
 node_modules/
