@@ -1,10 +1,10 @@
 // The documentation section of the site: renders the Markdown files listed in landing/docs.json
-// into site-dist/docs/<slug>.html and the overview page site-dist/docs/index.html, inside the page
+// into site-dist/docs/<slug>.html and docs/tr/<slug>.html, with an overview in each language, inside the page
 // frame of landing-src/docs-page.html (the site's header and footer). The Markdown files stay the
 // single source; nothing here is written back to them.
 //
 // Links are rewritten for the site: a link to another published file goes to its page (the
-// #fragment is kept; heading ids follow GitHub's rules, so anchors written for GitHub keep working),
+// #fragment is kept; translated headings retain the English IDs, so existing anchors keep working),
 // a link into landing/ goes to that site path, and a link to any other file of the repository goes
 // to that file on GitHub. Images from landing/media/ use the site's /media/; other images are copied
 // next to the pages under docs/img/, except those the manifest lists under hideImages (outdated
@@ -16,6 +16,7 @@
 import { existsSync, readFileSync, statSync } from "node:fs";
 import { join, posix } from "node:path";
 import { Marked } from "marked";
+import { highlightCode } from "./docs-highlight.mjs";
 import { globToRegExp } from "./lib/tracked-files.mjs";
 
 export const MANIFEST = "landing/docs.json";
@@ -55,7 +56,7 @@ export function loadManifest(root) {
   for (const h of manifest.hideImages ?? []) {
     if (typeof h?.path !== "string" || !h.reason) problems.push(`${MANIFEST}: every hideImages entry needs a path and a reason`);
   }
-  const pages = (manifest.groups ?? []).flatMap((group) => (group.pages ?? []).map((page) => ({ ...page, group: group.title })));
+  const pages = (manifest.groups ?? []).flatMap((group) => (group.pages ?? []).map((page) => ({ ...page, group: group.title, groupTr: group.titleTr })));
   return { manifest, pages, problems };
 }
 
@@ -114,15 +115,18 @@ const keepHtml = (text) => text
  * level-1 heading), the body HTML without it, the h2/h3 headings for the contents list, every id,
  * the cross-page anchors to verify, the images to copy and the problems found.
  */
-function renderMarkdown(root, source, { published, titles, repo, branch, hidden, ignored }) {
+function renderMarkdown(root, source, { published, titles, repo, branch, hidden, ignored, baseSource = source, headingIds, language = "en" }) {
   const text = readFileSync(join(root, source), "utf8");
   const slug = slugger();
   const ids = new Set();
   const headings = [];
+  const headingDepths = [];
+  const codeBlocks = [];
   const anchors = [];
   const images = [];
   const hiddenUsed = new Set();
   const problems = [];
+  let headingIndex = 0;
   let title = null;
   let linkTarget = null;
 
@@ -138,7 +142,7 @@ function renderMarkdown(root, source, { published, titles, repo, branch, hidden,
     }
     let target;
     try {
-      target = posix.normalize(path.startsWith("/") ? path.slice(1) : posix.join(posix.dirname(source), decodeURI(path))).replace(/\/$/, "");
+      target = posix.normalize(path.startsWith("/") ? path.slice(1) : posix.join(posix.dirname(baseSource), decodeURI(path))).replace(/\/$/, "");
     } catch {
       problems.push(`${source}: malformed link ${href}`);
       return href;
@@ -155,17 +159,17 @@ function renderMarkdown(root, source, { published, titles, repo, branch, hidden,
         hiddenUsed.add(target);
         return null;
       }
-      if (target.startsWith("landing/media/")) return `../media/${target.slice("landing/media/".length)}`;
+      if (target.startsWith("landing/media/")) return `${language === "tr" ? "../../" : "../"}media/${target.slice("landing/media/".length)}`;
       const to = `img/${target.startsWith("docs/") ? target.slice("docs/".length) : target}`;
       images.push({ from: target, to: `docs/${to}` });
-      return to;
+      return language === "tr" ? `../${to}` : to;
     }
     if (published.has(target)) {
       linkTarget = target;
       if (frag.length > 1) anchors.push({ page: published.get(target), frag: frag.slice(1), href });
       return `${published.get(target)}.html${frag}`;
     }
-    if (target.startsWith("landing/")) return `../${target.slice("landing/".length)}${frag}`;
+    if (target.startsWith("landing/")) return `${language === "tr" ? "../../" : "../"}${target.slice("landing/".length)}${frag}`;
     return ghUrl(target, statSync(join(root, target)).isDirectory(), frag);
   };
 
@@ -191,8 +195,9 @@ function renderMarkdown(root, source, { published, titles, repo, branch, hidden,
     },
     renderer: {
       heading({ tokens, depth }) {
+        headingDepths.push(depth);
         const inner = this.parser.parseInline(tokens);
-        const id = slug(plainText(inner));
+        const id = headingIds?.[headingIndex++] ?? slug(plainText(inner));
         ids.add(id);
         if (depth === 1 && title === null) {
           title = { id, html: inner, text: plainText(inner) };
@@ -205,14 +210,17 @@ function renderMarkdown(root, source, { published, titles, repo, branch, hidden,
         return keepHtml(text);
       },
       code({ text, lang }) {
+        codeBlocks.push({ text, lang: lang ?? "" });
         const language = (lang ?? "").match(/^\S*/)[0];
-        return `<div class="doc-code"><pre><code${language ? ` class="language-${esc(language)}"` : ""}>${esc(text.replace(/\n$/, ""))}</code></pre></div>\n`;
+        return `<div class="doc-code"><pre><code${language ? ` class="language-${esc(language)}"` : ""}>${highlightCode(text.replace(/\n$/, ""), language)}</code></pre></div>\n`;
       },
       image({ href, title: imageTitle, text: alt, inLink, hidden: leftOut }) {
         if (leftOut) return "";
         let size = "";
-        if (href.startsWith("img/") || href.startsWith("../media/")) {
-          const file = href.startsWith("img/") ? images.find((i) => i.to === `docs/${href}`)?.from : `landing/media/${href.slice("../media/".length)}`;
+        const imageHref = language === "tr" ? href.replace(/^\.\.\//, "") : href;
+        const mediaPrefix = language === "tr" ? "../../media/" : "../media/";
+        if (imageHref.startsWith("img/") || href.startsWith(mediaPrefix)) {
+          const file = imageHref.startsWith("img/") ? images.find((i) => i.to === `docs/${imageHref}`)?.from : `landing/media/${href.slice(mediaPrefix.length)}`;
           const dims = file ? imageSize(join(root, file)) : null;
           // a portrait screenshot (a phone, a narrow panel) is shown at most 360 px wide, as on a phone
           if (dims) size = ` width="${dims.width}" height="${dims.height}"${dims.height > dims.width ? ' class="doc-portrait"' : ""}`;
@@ -228,7 +236,7 @@ function renderMarkdown(root, source, { published, titles, repo, branch, hidden,
     // a paragraph that held only a left-out image
     .replace(/<p>\s*<\/p>\n?/g, "");
   if (!title) problems.push(`${source}: no level-1 heading for the page title`);
-  return { title, body, headings, ids, anchors, images, hiddenUsed, problems };
+  return { title, body, headings, headingDepths, codeBlocks, ids, anchors, images, hiddenUsed, problems };
 }
 
 /** The sidebar: the overview, then every group with its pages; the current page is marked. */
@@ -289,19 +297,63 @@ const markFooter = (html, href) => html.replace(/(<footer class="site-footer">[\
  * Render the whole docs section. Returns { files: [{ path, html }], images: [{ from, to }], problems },
  * paths relative to site-dist/.
  */
+export const translationSource = (source) => `docs/tr/${posix.basename(source)}`;
+
+// Read the exact English/Turkish string pairs shared with the browser. The table stays in
+// landing/language.js; only literal JSON strings are accepted, never executable expressions.
+function siteTranslations(root) {
+  const file = join(root, "landing/language.js");
+  if (!existsSync(file)) return new Map();
+  const pairs = [...readFileSync(file, "utf8").matchAll(/\[\s*("(?:\\.|[^"\\])*")\s*,\s*("(?:\\.|[^"\\])*")\s*\]/g)];
+  return new Map(pairs.map(([, en, tr]) => [JSON.parse(en), JSON.parse(tr)]));
+}
+
+function translateFrame(html, translations) {
+  const translated = (value) => translations.has(decode(value)) ? esc(translations.get(decode(value))) : value;
+  return html.replace(/>([^<>]+)</g, (_, value) => {
+    const trimmed = value.trim();
+    return `>${value.replace(trimmed, () => translated(trimmed))}<`;
+  }).replace(/(aria-label|title|content)="([^"]*)"/g, (_, attr, value) => `${attr}="${translated(value)}"`);
+}
+
 export function renderDocsSite(root) {
-  const { manifest, pages, problems } = loadManifest(root);
+  const english = renderDocsLanguage(root, "en");
+  if (english.problems.length) return english;
+  const turkish = renderDocsLanguage(root, "tr", english.rendered);
+  return { files: [...english.files, ...turkish.files], images: [...new Map([...english.images, ...turkish.images].map((img) => [img.to, img])).values()],
+    problems: [...english.problems, ...turkish.problems] };
+}
+
+function renderDocsLanguage(root, language, english = []) {
+  const { manifest, pages: sourcePages, problems } = loadManifest(root);
+  const tr = language === "tr";
+  const translations = tr ? siteTranslations(root) : new Map();
+  const t = (text) => translations.get(text) ?? text;
+  const localize = (html) => tr ? translateFrame(html, translations) : html;
+  const prefix = tr ? "docs/tr" : "docs";
+  const pages = sourcePages.map((p) => ({ ...p, title: tr ? (p.titleTr ?? t(p.title)) : p.title, description: t(p.description), group: tr ? (p.groupTr ?? t(p.group)) : p.group }));
   if (problems.length) return { files: [], images: [], problems };
   const { site, repo, branch } = manifest;
-  const template = readFileSync(join(root, TEMPLATE), "utf8");
+  let template = readFileSync(join(root, TEMPLATE), "utf8");
+  if (tr) template = localize(template).replace(/(["'])\.\.\//g, "$1../../")
+    .replace(/(data-site-language="en"[^>]*aria-pressed=")true/, "$1false")
+    .replace(/(data-site-language="tr"[^>]*aria-pressed=")false/, "$1true");
   const reserved = new Set([...template.matchAll(/\sid="([^"{}]+)"/g)].map((m) => m[1]));
   for (const id of ["doc-content", "docs-nav-list", "doc-toc-title", "doc-toc-list"]) reserved.add(id);
   const published = new Map(pages.map((p) => [p.source, p.slug]));
-  const groups = manifest.groups;
+  const groups = manifest.groups.map((g) => ({ ...g, originalTitle: g.title, title: tr ? (g.titleTr ?? t(g.title)) : g.title, pages: g.pages.map((p) => pages.find((item) => item.slug === p.slug)) }));
   const hidden = new Set((manifest.hideImages ?? []).map((h) => h.path));
 
   const ignored = deployIgnored(root);
-  const rendered = pages.map((page) => ({ page, ...renderMarkdown(root, page.source, { published, titles: new Map(pages.map((p) => [p.source, p.title])), repo, branch, hidden, ignored }) }));
+  const rendered = pages.map((page, index) => {
+    const translated = tr && existsSync(join(root, translationSource(page.source)));
+    const source = translated ? translationSource(page.source) : page.source;
+    const result = renderMarkdown(root, source, { published, titles: new Map(pages.map((p) => [p.source, p.title])), repo, branch, hidden, ignored,
+      baseSource: page.source, headingIds: translated ? [...english[index].ids] : undefined, language });
+    if (translated && JSON.stringify(result.headingDepths) !== JSON.stringify(english[index].headingDepths)) problems.push(`${source}: heading structure differs from ${page.source}`);
+    if (translated && JSON.stringify(result.codeBlocks) !== JSON.stringify(english[index].codeBlocks)) problems.push(`${source}: code examples differ from ${page.source}`);
+    return { page, source, translated, ...result };
+  });
   // every hideImages entry must still leave out an image, so the list stays as short as it can be
   for (const path of hidden) {
     if (!rendered.some((r) => r.hiddenUsed.has(path))) problems.push(`${MANIFEST}: hideImages lists ${path}, which no published page shows`);
@@ -328,39 +380,42 @@ export function renderDocsSite(root) {
     const prev = pages[i - 1];
     const next = pages[i + 1];
     const pager = (p, rel, label) => (p ? `<a class="doc-pager-${rel}" href="${p.slug}.html" rel="${rel}"><span class="doc-pager-dir">${label}</span><span class="doc-pager-title" lang="en" data-i18n="off">${esc(p.title)}</span></a>` : "<span></span>");
-    const toc = r.headings.length >= 3 ? contents(r.headings) : "";
+    const toc = r.headings.length >= 3 ? localize(contents(r.headings)).replace(/lang="en"/g, `lang="${tr && r.translated ? "tr" : "en"}"`) : "";
     const main = `<div class="shell docs-layout">
-    ${sidebar(groups, page.slug)}
+    ${localize(sidebar(groups, page.slug)).replace(/lang="en"/g, `lang="${language}"`)}
     <div class="doc-head" id="doc-content" tabindex="-1">
       <div class="doc-meta">
         <p class="eyebrow">${esc(page.group)}</p>
-        <a class="doc-edit" href="${repo}/edit/${branch}/${page.source}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20h4L19 9a2.8 2.8 0 0 0-4-4L4 16v4zM13.5 6.5l4 4"/></svg>Edit on GitHub</a>
+        <a class="doc-edit" href="${repo}/edit/${branch}/${r.source}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20h4L19 9a2.8 2.8 0 0 0-4-4L4 16v4zM13.5 6.5l4 4"/></svg>${t("Edit on GitHub")}</a>
       </div>
-      <h1 id="${r.title?.id ?? "top"}" lang="en" data-i18n="off">${r.title?.html ?? esc(page.title)}</h1>
+      <h1 id="${r.title?.id ?? "top"}" lang="${tr && r.translated ? "tr" : "en"}" data-i18n="off">${r.title?.html ?? esc(page.title)}</h1>
     </div>
     ${toc}
-    <article class="doc-body" lang="en" data-i18n="off">
+    <article class="doc-body" lang="${tr && r.translated ? "tr" : "en"}" data-i18n="off">
+    ${tr && !r.translated ? `<p class="doc-translation-note" lang="tr" data-i18n="off">${t("This page is not available in Turkish yet. The English version is shown below.")}</p>` : ""}
 ${r.body}
     </article>
-    <nav class="doc-pager" aria-label="Previous and next page">
-      ${pager(prev, "prev", "Previous")}
-      ${pager(next, "next", "Next")}
+    <nav class="doc-pager" aria-label="${t("Previous and next page")}">
+      ${pager(prev, "prev", t("Previous")).replace(/lang="en"/g, `lang="${language}"`)}
+      ${pager(next, "next", t("Next")).replace(/lang="en"/g, `lang="${language}"`)}
     </nav>
   </div>`;
     const html = fill(template, {
-      title: esc(`${page.title} · Fairbeam docs`),
+      title: esc(`${page.title} · ${t("Fairbeam docs")}`),
       description: esc(page.description),
-      url: `${site}/docs/${page.slug}.html`,
+      url: `${site}/${prefix}/${page.slug}.html`,
+      language,
+      alternates: alternateLinks(site, `${page.slug}.html`),
       type: "article",
       main,
     });
-    files.push({ path: `docs/${page.slug}.html`, html: markFooter(html, `${page.slug}.html`) });
+    files.push({ path: `${prefix}/${page.slug}.html`, html: markFooter(html, `${page.slug}.html`) });
   });
 
   // the overview: the groups with a line for each page
   const groupSlug = slugger();
   const sections = groups.map((group) => {
-    const id = groupSlug(group.title);
+    const id = groupSlug(group.originalTitle);
     const cards = group.pages.map((p) => `<li><a class="docs-card" href="${p.slug}.html"><span class="docs-card-title" lang="en" data-i18n="off">${esc(p.title)}</span><span class="docs-card-text">${esc(p.description)}</span></a></li>`).join("\n          ");
     return `<section aria-labelledby="${id}">
         <h2 id="${id}">${esc(group.title)}</h2>
@@ -388,14 +443,22 @@ ${r.body}
     </div>
   </div>`;
   files.unshift({
-    path: "docs/index.html",
+    path: `${prefix}/index.html`,
     html: markFooter(fill(template, {
-      title: "Documentation · Fairbeam",
-      description: esc("Fairbeam documentation: getting started with the desktop app, the designer, simulation, results and exports, Python models and the command line, building from source, and validation."),
-      url: `${site}/docs/`,
+      title: t("Documentation · Fairbeam"),
+      description: esc(t("Fairbeam documentation: getting started with the desktop app, the designer, simulation, results and exports, Python models and the command line, building from source, and validation.")),
+      url: `${site}/${prefix}/`,
+      language,
+      alternates: alternateLinks(site, ""),
       type: "website",
-      main: overview,
+      main: localize(overview).replace(/lang="en"/g, `lang="${language}"`).replace(/href="\.\.\//g, tr ? 'href="../../' : 'href="../'),
     }), "./"),
   });
-  return { files, images: [...images.values()], problems };
+  return { files, images: [...images.values()], problems, rendered };
+}
+
+function alternateLinks(site, page) {
+  return `<link rel="alternate" hreflang="en" href="${site}/docs/${page}">
+  <link rel="alternate" hreflang="tr" href="${site}/docs/tr/${page}">
+  <link rel="alternate" hreflang="x-default" href="${site}/docs/${page}">`;
 }

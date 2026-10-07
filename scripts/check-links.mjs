@@ -78,9 +78,9 @@ const SITE = [
   [/^tokens\.css$/, () => join(root, "design-system", "tokens.css")],
   [/^favicon\.svg$/, () => join(root, "public", "favicon.svg")],
   [/^story\/story\.js$/, () => join(root, "landing-src", "story.js")],
-  [/^docs\/?$|^docs\/index\.html$/, () => page("docs/index.html")],
+  [/^docs(?:\/tr)?(?:\/index\.html)?\/?$/, (m) => page(m[0].endsWith(".html") ? m[0] : `${m[0].replace(/\/$/, "")}/index.html`)],
   [/^docs\/img\/(.+)$/, (m) => docImages.get(m[0]) ?? m[0]],
-  [/^docs\/([^/]+\.html)$/, (m) => (rendered.has(m[0]) ? page(m[0]) : m[0])],
+  [/^docs\/(?:tr\/)?([^/]+\.html)$/, (m) => (rendered.has(m[0]) ? page(m[0]) : m[0])],
   // landing/media (screenshots) is copied as is; the drawings come from examples/drawings
   [/^media\/(.+)$/, (m) => [join(root, "landing", "media", m[1]), join(root, "examples", "drawings", m[1])].find(existsSync) ?? m[0]],
   [/^fonts\/(.+)$/, (m) => fontTarget(m[1]) ?? m[0]],
@@ -138,7 +138,8 @@ for (const { file, text, label, self } of sources) {
   for (const [link, line] of links) {
     if (external.test(link) || link.startsWith("/")) continue;
     checked++;
-    const [path, frag] = link.split("#", 2);
+    const [pathWithQuery, frag] = link.split("#", 2);
+    const path = pathWithQuery.split("?", 1)[0];
     const where = `${label ?? relative(root, file)}:${line}`;
     const target = path ? resolveTarget(file, path) : (self ?? file);
     if (target === PROVIDED) continue;

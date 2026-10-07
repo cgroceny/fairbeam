@@ -50,6 +50,37 @@ package) the export is numeric as before.
 - **PDF report.** *Export report (PDF)* in the package dialog (in the designer also Post-processing › Report and export › **PDF report**) writes a multi-page A4 vector PDF: summary with key results, the dimensioned drawing, parameter/solver/mesh/run tables, |S11|, Zin, Smith chart, one pattern page per far-field frequency and the reproduce command. Pages are composed as SVG and drawn with jsPDF by `src/drawing/svgpdf.ts`, so the same code runs in Node.
 - `npm run check:exports` validates all of this on the example bundles and writes [examples/drawings/](../examples/drawings/) and [examples/reports/patch-antenna.pdf](../examples/reports/patch-antenna.pdf).
 
+## Matched-band CSV columns
+
+The export package's `data/bands.csv` has one row per matched band, with these columns in order:
+
+| Column | Meaning |
+| --- | --- |
+| `f_lo_GHz`, `f_hi_GHz` | Band edges in GHz |
+| `f_center_GHz` | Middle of the edges, `(f_lo + f_hi) / 2`, in GHz |
+| `f_best_GHz` | Frequency of minimum S11 within the band, in GHz |
+| `s11_min_dB` | Minimum S11 in dB |
+| `fractional_bw` | Width divided by the band middle, as a fraction (not a percentage) |
+| `bandwidth_MHz` | Band width in MHz |
+| `edge_lo`, `edge_hi` | `true` when that edge touches the simulated range, otherwise `false` |
+
+For an open band, `edge_lo=true` means the low edge is an upper bound (≤), and
+`edge_hi=true` means the high edge is a lower bound (≥). Either flag makes bandwidth and
+fractional bandwidth lower bounds, matching the tables. The center is an upper bound when only
+the low edge is open, a lower bound when only the high edge is open, and has no directional
+bound when both edges are open. All frequency and bandwidth cells stay numeric.
+
+The Summary tab's CSV export and copied TSV use the same definitions in their per-band columns:
+`Band low (GHz)`, `Band high (GHz)`, `Band center (GHz)`, `Band best match (GHz)`,
+`Band bandwidth (MHz)`, `Band fractional BW`, `Band edge low` and `Band edge high`.
+The edge flags are numeric `1` (open) or `0` (closed); missing bands leave empty cells.
+With multiple bands, each group is numbered (`Band 1 low (GHz)`, and so on).
+The headline `Bandwidth (%)` is 100 times the deepest band's fractional bandwidth.
+
+**Compatibility:** `f_center_GHz` previously held the frequency of minimum |S11|; consumers
+that need that value must now read `f_best_GHz`. The bundle JSON still uses `f_center` for
+best match and its stored `fractional_bw` divides by that frequency ([BUNDLE.md](BUNDLE.md#results)).
+
 ## Fabrication export (preview)
 
 *Fabrication files* in the export package adds a `fab/` folder for printed designs (patch antennas, the microstrip line, the Wilkinson divider, the branch-line coupler, the low-pass filter, the 2×1 and 4×1 arrays):

@@ -1,5 +1,5 @@
 // Matched (-10 dB) bands as the result tables and the example picker show them. A band's centre is the
-// middle of its edges, (f_lo + f_hi) / 2; the frequency of the |S11| minimum inside it (the exporter's
+// middle of its edges, (f_lo + f_hi) / 2; the frequency of the |S11| minimum inside it (the bundle's
 // f_center) is the band's best match, a column of its own. A band that runs into the edge of the
 // simulated range continues past it: its width is a lower bound ("≥"), the edge it touches is marked
 // "≤" (low) or "≥" (high), and its centre moves the same way. Pure, so scripts/check-run-summary.mjs

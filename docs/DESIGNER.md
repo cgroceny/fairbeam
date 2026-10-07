@@ -263,6 +263,13 @@ Shortcuts (or ? in the designer) lists them all.
   **Copy data** (Ctrl/⌘+C) and **CSV** in the result tab's toolbar write what the plot shows: the
   picked S_ij in dB or phase, the Smith port, every compared run named like the legend; the
   format menu beside them chooses As plotted, dB, dB + phase, Re/Im, Linear magnitude + phase or All.
+  The **Figure** menu beside them saves the plot as PNG (300 dpi) or SVG, with the design name,
+  view and frequency as a title, always in the light style on white paper whatever the app theme.
+  Figures, CSV and Touchstone files of a result share one name:
+  `<design>_<view>_<frequency>_<run time>` (for example
+  `patch_antenna_impedance_1.5-3GHz_2026-10-07T10-22-01+0300.csv`), with the frequency of a sweep or
+  of the selected far-field cut, the run time written without colons, and only letters, digits and
+  `_ . + -`, so the name is valid on Windows and macOS. Touchstone files use the view `sparams`.
 
 The **Filter** box at the top keeps the items whose name or detail contains every word typed, with
 the folders above them; Escape clears it. The tree works from the keyboard: Up/Down move, Right
@@ -1206,16 +1213,33 @@ here. The command line does the same: `fairbeam import-cst model.bas --out my.de
 
 What is read (`python/fairbeam/cst_import.py`, `SUPPORTED`): units; parameters (`StoreParameter`,
 `MakeSureParameterExists`, ...) as design parameters, a value as an independent one and an
-expression as a derived one (VBA `^`, `Sqr`, `Atn`, `Mod`, `\`, `Pi`, `clight`, ... translated);
+expression as a derived one (VBA `^`, `Sqr`, `Atn`, `Mod`, `\`, `Pi`, `clight`, ... translated, and the degree
+functions `Sind`, `Cosd`, `Tand`, `Asind`, `Acosd` and `Atnd`, whose angles and results are in degrees);
 materials (Normal: εr and tan δ, a conductivity as the equivalent tan δ; PEC; lossy metals as PEC,
 with a note); bricks, cylinders and tubes, cones, spheres, tori, polygons and rectangles or circles
-covered or extruded, point-list extrusions; components; `Solid.Add` (a union), `Solid.Subtract`,
+covered or extruded, point-list extrusions; `Solid.ThickenSheetAdvanced` on a planar sheet (Inside,
+Outside or Centered, taken relative to the sheet's face normal); a straight `Loft` (zero tangency) between two
+convex, parallel sheets of the same outline, as a polyhedron; components; `Solid.Add` (a union), `Solid.Subtract`,
 `Intersect` and `Insert` as live Booleans where the designer's Booleans can hold them (bricks,
 sheets, polygons); transforms (translate, rotations by any angle, mirror, uniform scale, with copies);
 axis-aligned local working coordinate systems; the frequency range, boundaries, the mesh density
 (lines per wavelength), discrete ports, resistors, waveguide ports with given ranges, far-field and
 H-field monitors. Coordinates are converted to mm and rounded to 1e-6 mm, the precision of the
 mesh lines, so ports sit on mesh lines. VBA code itself (variables, `If`, `For`) is not run.
+
+No shape is dropped silently: every object or operation that cannot be imported is named in the report
+(for example a `Loft` with tangency or non-matching profiles). A loft that cannot be imported keeps its
+profile sheets, and the dialog warns that the geometry is incomplete, so rebuild the connecting solid
+before simulating.
+
+Mesh density is read from `Mesh.LinesPerWavelength` and from `MeshSettings` blocks explicitly
+marked `SetMeshType "Hex"` or `"HexTLM"`. In those blocks, `StepsPerWaveNear` sets cells per
+wavelength and `StepsPerWaveFar` sets air cells per wavelength only when positive and lower than
+the near density. Tetrahedral, surface, unknown and unspecified mesh types do not set FDTD density:
+their steps per wavelength are ignored. Without a supported density, Fairbeam uses its automatic
+mesh default of 20 cells per wavelength. A supported hexahedral density is retained even if an
+unsupported block appears later in the VBA macro. The import report explains the mapping or the
+ignored density settings; review the mesh and design checks before running a simulation.
 
 A macro exported by Fairbeam carries comments starting with `fairbeam-data:` with the exact
 openEMS port boxes, the boundary types and the automatic mesh settings (other readers ignore them), so

@@ -2,6 +2,7 @@ import { projectUrl } from "../env";
 import { summarize, validateBundle } from "../lib/validate";
 import { addResultToComparison as addRun, copyResultData as copyData, exportResultCsv as exportCsv } from "./resultData";
 import type { ResultView } from "./resultFocus";
+import { resultExportStem } from "../lib/resultExportNames";
 import { t } from "../i18n";
 
 export type TreeResultRef = { file: string; view: ResultView; f?: number; map?: number };
@@ -24,8 +25,10 @@ export async function copyResultData(ref: TreeResultRef): Promise<string> {
 }
 
 export async function exportResultCsv(ref: TreeResultRef): Promise<string> {
-  const filename = `${ref.file.split(/[\\/]/).pop()?.replace(/\.[^.]+$/, "") ?? "result"}-${dataView(ref.view)}.csv`;
-  await exportCsv(await readResult(ref), dataView(ref.view), filename, ref.f, undefined, { fieldPlane: ref.map });
+  const bundle = await readResult(ref);
+  const view = dataView(ref.view);
+  const filename = `${resultExportStem(bundle, view, view === "pattern" ? ref.f ?? bundle.results?.farfield[0]?.f : undefined)}.csv`;
+  await exportCsv(bundle, view, filename, ref.f, undefined, { fieldPlane: ref.map });
   return t("tree.result.downloadRequested", { file: filename });
 }
 

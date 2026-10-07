@@ -251,11 +251,11 @@ export interface SummaryRun { label: string; file: string; bundle: Bundle }
 export interface SummaryTable { header: string[]; rows: (string | number | null)[][] }
 
 const round = (v: number | null | undefined, digits: number): number | null => (finite(v) ? Number(v.toFixed(digits)) : null);
-/** The band columns: a low and a high edge per band (numbers, which a spreadsheet reads as such; a
- * "2.098-2.287" text it would read as a date or a subtraction), numbered when a run has several. */
+/** Numeric band columns, numbered when a run has several. Edge flags (0/1) keep open-band
+ * bounds separate from the numbers, as in data/bands.csv. */
 const bandHeaders = (count: number) => Array.from({ length: Math.max(1, count) }, (_, i) => {
   const n = count > 1 ? ` ${i + 1}` : "";
-  return [`Band${n} low (GHz)`, `Band${n} high (GHz)`];
+  return ["low (GHz)", "high (GHz)", "center (GHz)", "best match (GHz)", "bandwidth (MHz)", "fractional BW", "edge low", "edge high"].map((name) => `Band${n} ${name}`);
 }).flat();
 
 /** The Δ columns of the delta view: the difference from the reference run, in the units of their headers. */
@@ -299,7 +299,10 @@ export function summaryTable(runs: readonly SummaryRun[], options: { deltas?: bo
       m?.quality?.verdict ?? null,
       round(m?.f0 == null || m.noResonance ? null : m.f0 / 1e9, 6), round(m?.s11MinDb, 3), round(m?.bwHz == null ? null : m.bwHz / 1e6, 3),
       round(m?.fractionalBw == null ? null : m.fractionalBw * 100, 3),
-      ...Array.from({ length: bandCount }, (_, k) => m?.bands[k]).flatMap((b) => [round(b ? b.f_lo / 1e9 : null, 6), round(b ? b.f_hi / 1e9 : null, 6)]),
+      ...Array.from({ length: bandCount }, (_, k) => m?.bands[k]).flatMap((b) => b ? [
+        round(b.f_lo / 1e9, 6), round(b.f_hi / 1e9, 6), round(bandCentre(b) / 1e9, 6), round(b.f_center / 1e9, 6),
+        round((b.f_hi - b.f_lo) / 1e6, 3), (b.f_hi - b.f_lo) / bandCentre(b), Number(!!b.edge_lo), Number(!!b.edge_hi),
+      ] : Array(8).fill(null)),
       round(ff ? ff.f / 1e9 : null, 6), round(ff?.dmaxDbi, 3), round(ff?.gainDbi, 3), round(ff?.realizedDbi, 3),
       round(ff?.radEff == null ? null : ff.radEff * 100, 2), round(m?.totalEff == null ? null : m.totalEff * 100, 2), m?.cells ?? null,
       ...(withDeltas ? [...DELTA_COLUMNS.map((c) => round(deltas?.[c.key]?.value, c.digits)), i === ref ? null : runs[ref].label] : []),

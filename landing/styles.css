@@ -336,7 +336,9 @@ thead .group th[colspan] { text-align: center; padding-right: 0; padding-left: v
 
 /* ------------------------------------------------------------------ home: examples strip */
 .example-strip { list-style: none; padding: 0; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--al-space-5); }
-.example-card { display: grid; gap: var(--al-space-1); align-content: start; min-width: 0; }
+.example-card { display: grid; gap: var(--al-space-1); align-content: start; min-width: 0; color: inherit; text-decoration: none; border-radius: var(--al-radius-lg); }
+.example-card:hover h3 { text-decoration: underline; text-underline-offset: 0.2em; }
+.example-card:focus-visible { outline: 2px solid var(--al-accent); outline-offset: 4px; }
 .example-card img { margin-bottom: var(--al-space-2); border: 1px solid var(--al-border); border-radius: var(--al-radius-lg); background: var(--al-surface-2); }
 .example-card p { font-size: var(--al-text-md); color: var(--al-text-2); }
 
@@ -396,7 +398,7 @@ thead .group th[colspan] { text-align: center; padding-right: 0; padding-left: v
     grid-template-columns: none; grid-auto-flow: column; grid-auto-columns: min(78%, 320px);
     overflow-x: auto; overscroll-behavior-x: contain; scroll-snap-type: x mandatory; padding-bottom: var(--al-space-3);
   }
-  .example-card { scroll-snap-align: start; }
+  .example-strip > li { scroll-snap-align: start; }
 }
 @media (max-width: 560px) {
   .feature-grid, .feature-grid-2, .artifacts, .dl-cards { grid-template-columns: minmax(0, 1fr); }

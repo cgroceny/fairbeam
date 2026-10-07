@@ -168,6 +168,11 @@
   scrollbar-width: thin; scrollbar-color: var(--al-border-strong) transparent;
 }
 .doc-code code { padding: 0; border-radius: 0; background: none; font-size: inherit; }
+/* Copper and neutral text roles follow the shared light/dark theme. Keep inline code unchanged. */
+.doc-code :is(.hljs-keyword, .hljs-selector-tag, .hljs-literal, .hljs-number, .hljs-meta) { color: var(--al-accent-text); }
+.doc-code :is(.hljs-string, .hljs-regexp, .hljs-symbol) { color: var(--al-text-2); }
+.doc-code :is(.hljs-comment, .hljs-quote) { color: var(--al-text-3); font-style: italic; }
+.doc-code :is(.hljs-title, .hljs-section, .hljs-attr, .hljs-built_in, .hljs-type) { color: var(--al-text); font-weight: 600; }
 .doc-copy {
   position: absolute; top: var(--al-space-2); right: var(--al-space-2); min-height: var(--al-control-h-sm);
   padding: 0 var(--al-space-2); border: 1px solid var(--al-border); border-radius: var(--al-radius-sm);

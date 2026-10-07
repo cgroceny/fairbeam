@@ -107,6 +107,8 @@ class DipoleLog(unittest.TestCase):
         self.assertAlmostEqual(s["speed_mcells_s"], 141.78)
         self.assertTrue(s["converged"])
         self.assertEqual(s["final_energy_db"], -97.91)
+        self.assertEqual(s["bands"][0]["f_lo_ghz"], 2.058)
+        self.assertEqual(s["bands"][0]["f_hi_ghz"], 2.475)
         self.assertEqual(s["bands"][0]["f_center_ghz"], 2.245)
         self.assertEqual(s["farfield"][0]["dmax_dbi"], 2.06)
         self.assertEqual(s["farfield"][0]["rad_efficiency"], 0.9984)
