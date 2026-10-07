@@ -154,7 +154,7 @@ Tasarım dosyasıyla `converge` seçenekleri (ayrıca `sweep` seçeneklerini kab
 
 Tüm değişimler toleranslarından kesin olarak küçükse adım yakınsamıştır. İnceleme ilk böyle adımda durur, tabloyu ve kararı yazdırır ("converged at 30 cells/λ", o adımın daha kaba yoğunluğu veya "not converged: refine further or check the model"). Her iki kararda çıkış kodu 0, çalıştırma başarısızsa 1'dir.
 
-İsteğe bağlı ağ ölçütleri hem tasarım yoğunluğu hem `--param` incelemeleriyle çalışır. Mevcut rezonans/Dmax kontrollerine (tasarım yolunda S11'e de) eklenir; belirtilmezse mevcut davranış korunur. Bu seçenekler Tasarımcı'nın yakınsama penceresini değil CLI incelemesini etkiler.
+İsteğe bağlı mesh ölçütleri hem tasarım yoğunluğu hem `--param` incelemeleriyle çalışır. Mevcut rezonans/Dmax kontrollerine (tasarım yolunda S11'e de) eklenir; belirtilmezse mevcut davranış korunur. Bu seçenekler Tasarımcı'nın yakınsama penceresini değil CLI incelemesini etkiler.
 
 | Seçenek | Varsayılan | Anlamı |
 | --- | --- | --- |
