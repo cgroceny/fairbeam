@@ -25,6 +25,8 @@
   "about.license": "Fairbeam is free software under GPL-3.0-or-later.",
   "about.releases": "Releases:",
   "about.releasesLink": "fairbeam-releases on GitHub",
+  "about.solverLicense": "GPL-3.0-or-later",
+  "about.cadLicense": "LGPL-3.0-or-later",
   "about.solver": "Solver:",
   "about.source": "Source code:",
   "about.sourceLink": "ismailakdag/fairbeam on GitHub",

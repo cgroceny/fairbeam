@@ -5,9 +5,9 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="color-scheme" content="light dark">
   <title>Fairbeam: antenna simulation with openEMS</title>
-  <meta name="description" content="Fairbeam is a desktop workbench for antennas, microstrip circuits and arrays: model them in a ribbon-based 3D designer or import a CST-compatible VBA macro, simulate with openEMS FDTD on the CPU or a Metal or CUDA GPU, then read S-parameters with markers, far fields and surface currents, sweep and optimize, and export Touchstone, drawings, reports and fabrication files.">
+  <meta name="description" content="Design and simulate antennas with openEMS; optional GPU runtimes and preview fabrication exports are available.">
   <meta property="og:title" content="Fairbeam: antenna simulation with openEMS">
-  <meta property="og:description" content="A ribbon-based 3D designer, VBA macro import, the openEMS FDTD solver on CPU or GPU, and results in one window: S-parameters with markers, far field, surface currents, sweeps, an optimizer and exports.">
+  <meta property="og:description" content="Design and simulate antennas with openEMS; optional GPU runtimes and preview fabrication exports are available.">
   <meta property="og:type" content="website">
   <meta property="og:url" content="https://fairbeam.org/">
   <meta property="og:image" content="https://fairbeam.org/media/fairbeam-promo-poster.jpg">
@@ -75,7 +75,7 @@
               <source src="media/fairbeam-promo.mp4" type="video/mp4">
             </video>
           </div>
-          <figcaption>Fifty seconds of Fairbeam: a microstrip line drawn, a horn that radiates, an array beam steered, and the app on macOS and Windows.</figcaption>
+          <figcaption>A 50-second introduction to Fairbeam.</figcaption>
         </figure>
       </div>
     </section>
@@ -97,10 +97,10 @@
               <a class="button" href="#download">Download Fairbeam</a>
               <a class="button ghost" href="app/">Open the demo</a>
             </div>
-            <p class="fineprint">For macOS (Apple silicon) and Windows. The browser demo opens 14 simulated example projects, read-only.</p>
+            <p class="fineprint">For macOS (Apple silicon) and Windows. The browser demo opens 20 simulated example projects, read-only.</p>
           </div>
         </div>
-        <p class="scroll-cue" aria-hidden="true">Scroll: the patch is taken apart and simulated again</p>
+        <p class="scroll-cue" aria-hidden="true">Scroll through the patch model and its recorded simulation results.</p>
       </section>
 
       <section class="chapter chapter-3d" id="how" data-steps="6" style="--steps: 6" aria-labelledby="how-title">
@@ -116,11 +116,11 @@
     sim.dielectric(<span class="s">"substrate"</span>, <span class="n">3.38</span>).AddBox(...)
     sim.lumped_port(<span class="n">1</span>, <span class="n">50</span>, ...)
     <span class="k">return</span> sim</code></pre></li>
-              <li><h3>Exact geometry</h3><p>The viewer rebuilds every primitive exactly: a 32 × 40 mm patch on 1.524 mm of ε<sub>r</sub> 3.38, the ground plane and a 50 Ω probe feed.</p></li>
-              <li><h3>Meshed for FDTD</h3><p>Fine cells at the patch edges and in the substrate, coarse ones in the air: 69 × 69 × 58 mesh lines, 263 k cells.</p></li>
-              <li><h3>Excited, the currents flow</h3><p>A Gaussian pulse at the feed rings the patch. This is the surface current openEMS recorded at resonance: strongest in the middle of the patch and falling to zero at the two radiating edges, as the TM<sub>010</sub> mode predicts.</p></li>
+              <li><h3>Model geometry</h3><p>The viewer reconstructs the model geometry: a 32 × 40 mm patch on a 1.524 mm substrate with εr 3.38, a ground plane and a 50 Ω probe feed.</p></li>
+              <li><h3>Meshed for FDTD</h3><p>Fine cells at patch edges and in the substrate, coarser cells in air: 69 × 69 × 58 mesh lines, about 264 k cells.</p></li>
+              <li><h3>Excited, the currents flow</h3><p>A Gaussian-derivative pulse excites the patch. The recorded surface current is strongest near the middle and decreases toward the radiating edges, consistent with the fundamental patch mode.</p></li>
               <li><h3>It radiates</h3><p>Near-to-far-field transform: 6.79 dBi broadside at 2.453 GHz, 96.5 % radiation efficiency. Radius and color both show directivity.</p></li>
-              <li><h3>Checked, then exported</h3><p>|S11| dips to −34.5 dB at 2.453 GHz, within 0.1 % of the converged mesh. Then everything goes out: a CST-compatible VBA macro, Touchstone, drawings, a report, Gerber files.</p></li>
+              <li><h3>Checked, then exported</h3><p>The recorded |S11| minimum is −34.5 dB at 2.4525 GHz. The resonance is about 0.1% below the finer-mesh value of 2.4550 GHz. Export the model, Touchstone data, drawings, a report and preview fabrication files.</p></li>
             </ol>
           </div>
         </div>
@@ -134,7 +134,7 @@
             <ol class="chapter-steps">
               <li><h3>One patch becomes four</h3><p>The same patch four times, half a wavelength apart (61.2 mm) on one 66 × 243.6 mm board, each with its own 50 Ω port. Fed in phase they reach 11.9 dBi broadside, about 5 dB above the single patch.</p></li>
               <li><h3>Steered by phase alone</h3><p>A phase that falls by k·d·sin θ<sub>0</sub> from port to port turns the beam. Each angle is the weighted sum of four embedded element patterns from four openEMS runs, so coupling is included and each port's active reflection moves with the beam.</p></li>
-              <li><h3>Your turn</h3><p>Steer it. The app does the same for any amplitudes and phases, and exports the steered pattern.</p>
+              <li><h3>Your turn</h3><p>Steer the beam using valid amplitude and phase weights at a recorded frequency, and export the combined pattern.</p>
                 <label class="scan-slider"><span>Scan angle θ<sub>0</sub></span>
                   <input type="range" id="array-scan" min="-45" max="45" step="1" value="25">
                   <output id="array-scan-out" for="array-scan">+25°</output></label></li>
@@ -194,7 +194,7 @@
           </li>
           <li>
             <h3>openEMS on the CPU or the GPU</h3>
-            <p>The open-source FDTD solver, with optional Metal and CUDA engines: the patch antenna takes 1.6 s instead of 10.6 s on an M5 Pro.</p>
+            <p>Optional Metal and CUDA engines are available. In the documented patch benchmark, solver time was 1.6 s on Metal and 10.6 s on a four-thread CPU build on an M5 Pro; times depend on the model and runtime.</p>
           </li>
           <li>
             <h3>Results beside the model</h3>
@@ -222,7 +222,7 @@
         <div class="section-head">
           <p class="eyebrow">Examples</p>
           <h2 id="examples-title">Horns, helices, fractals and circuits</h2>
-          <p class="section-lede">Fourteen simulated projects come with the app, and all of them open in the browser demo.</p>
+          <p class="section-lede">Twenty simulated projects come with the app and are listed in the browser demo.</p>
         </div>
         <ul class="example-strip">
           <li>
@@ -250,7 +250,7 @@
             </a>
           </li>
         </ul>
-        <p class="section-more"><a href="app/">Open all 14 examples in the demo</a></p>
+        <p class="section-more"><a href="app/">Open all 20 examples in the demo</a></p>
       </div>
     </section>
 
@@ -259,8 +259,8 @@
         <div class="download-intro">
           <p class="eyebrow">Download</p>
           <h2 id="download-title">Download Fairbeam</h2>
-          <p class="section-lede">Free for macOS and Windows. On first start the app installs Python and openEMS for your user account, once and without admin rights: about 120–155 MB.</p>
-          <p class="dl-guide">New here? <a href="docs/getting-started.html">Read the getting-started guide</a>: install, a first design, the run and its results in about five minutes.</p>
+          <p class="section-lede">Free for macOS and Windows. First-time setup downloads Python, openEMS and dependencies for your user account without admin rights. Estimated download: about 120–155 MB; installed size is larger. Setup and updates need internet access.</p>
+          <p class="dl-guide">New here? <a href="docs/getting-started.html">Read the getting-started guide</a>: install the app, create a patch antenna, run it and inspect the results.</p>
         </div>
         <div class="download-files">
           <div class="dl-cards">
@@ -276,7 +276,7 @@
             </a>
           </div>
           <ul class="dl-notes">
-            <li>The macOS app is signed and notarized by Apple.</li>
+            <li>The macOS app is signed with a Developer ID and notarized by Apple.</li>
             <li>The Windows installer is not code-signed. If SmartScreen warns, choose More info › Run anyway.</li>
             <li>Checksums are in <a href="https://github.com/ismailakdag/fairbeam-releases/releases/download/v0.7.0/SHA256SUMS.txt">SHA256SUMS.txt</a>. Every version is on the <a href="https://github.com/ismailakdag/fairbeam-releases/releases">releases page</a>. Later versions are offered in the app.</li>
             <li>Linux: no installer yet. <a href="https://github.com/ismailakdag/fairbeam/blob/main/docs/LINUX.md">Run Fairbeam from the repository</a>. To build it from source, see <a href="https://github.com/ismailakdag/fairbeam/blob/main/docs/FROM-SOURCE.md">Running Fairbeam from source</a>.</li>
@@ -305,6 +305,7 @@
         <a href="https://github.com/ismailakdag/fairbeam-releases/releases">Releases</a>
         <a href="https://github.com/ismailakdag/fairbeam">Source code</a>
         <a href="#about">About</a>
+        <a href="https://github.com/ismailakdag/fairbeam/blob/main/NOTICE.md">Third-party licenses and trademark notices</a>
         <a href="privacy.html">Privacy</a>
       </nav>
       <p class="footer-note">Simulations by <a href="https://openems.de" rel="noreferrer">openEMS</a> and CSXCAD. Fairbeam is free software under GPL-3.0-or-later.</p>

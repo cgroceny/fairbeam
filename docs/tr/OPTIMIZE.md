@@ -83,7 +83,7 @@ Uygulama aynı kuralı izler. **Uyarılan portlar**, *Gerekenler* veya *Tümü* 
 - **nelder-mead**, diğer tüm durumların varsayılanıdır.
   - [0, 1] aralığına ölçeklenmiş parametrelerde çalışır. Kutu dışındaki noktalar kırpılır; başlangıç simpleksi her aralığın %15'i kadar adım kullanır.
   - Simpleks durakladığında en iyi noktanın çevresinde yarım adımla yeniden başlar (iki kez).
-- **bayesian** (Gauss süreciyle beklenen iyileşme), **cma-es**, **particle-swarm** ve **genetic** (popülasyon aramaları), ayrıca **trust-region** (sınırlı sonlu fark yerel araması) `--method` ile seçilebilir. Aynı [0, 1] ölçekli kutuda çalışırlar; aşağıdaki ölçülmüş örnekler yalnızca sekant ve Nelder–Mead kullanır.
+- **bayesian** (Gauss süreciyle beklenen iyileşme), **cma-es**, **particle-swarm** ve **genetic** (popülasyon aramaları), ayrıca **trust-region** (sınırlı sonlu fark yerel araması) `--method` ile seçilebilir. Aynı [0, 1] ölçekli kutuda çalışırlar; aşağıdaki benzetim örnekleri yalnızca sekant ve Nelder–Mead kullanır.
 
 ## Çıktı
 

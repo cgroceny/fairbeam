@@ -1,7 +1,7 @@
 # openEMS lumped resistors: accuracy check (reproduction for the openEMS developers)
 
-**Result: openEMS lumped resistors are accurate.** Measured directly at the element, the resistance
-is exact to better than 0.1 % in its real part from 0.5 to 6 GHz. The small parallel reactance
+**Result: agreement within 0.1% for the tested resistor fixtures.** Simulated directly at the element, the resistance
+agrees within 0.1% in its real part from 0.5 to 6 GHz. The small parallel reactance
 comes from the probe box. The result does not depend on the resistor value (30-300 Ω), the cells
 along or across the current (1-8), `caps`, or whether the element is a plain `LumpedElement` or a
 passive `LumpedPort`. A lossy material block of the same resistance behaves identically.
@@ -36,7 +36,7 @@ impedance follows from open-short de-embedding:
 Y'_m = 1/Z_m − 1/Z_open,   Y'_s = 1/Z_short − 1/Z_open,   Z_dut = 1/Y'_m − 1/Y'_s
 ```
 
-For a passive port as the DUT, the script also reports **−U/I measured at the DUT itself**. This is
+For a passive port as the DUT, the script also reports **−U/I simulated at the DUT itself**. This is
 the voltage and current of the element's own probes, with no fixture in between. The excitation is
 a DC-free Gaussian derivative, and the end criterion is −60 dB. All 14 cases of the table below ran
 in 8 s on the openEMS Metal GPU fork. The CPU engine gives the same numbers, only slower.
@@ -66,7 +66,7 @@ in 8 s on the openEMS Metal GPU fork. The CPU engine gives the same numbers, onl
   fixture size: a = 0.5 mm gives 0.983 at 6 GHz, a = 1 mm gives 0.959, and a 2 mm gap gives 0.937.
   That is the signature of the open-short model's lumped assumption failing on a fixture that is
   a short transmission line. The resistor has nothing to do with it.
-- Measured at the element, the real part is exact. The imaginary part (−0.7 % of R at 2.4 GHz,
+- Simulated at the element, the real part agrees within 0.1% in these fixtures. The imaginary part (−0.7 % of R at 2.4 GHz,
   −1.7 % at 6 GHz) corresponds to a parallel capacitance of about 5 fF from the probe box.
 
 ## Consequences for Fairbeam

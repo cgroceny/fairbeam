@@ -15,8 +15,8 @@ Bu sayfa Fairbeam/openEMS sonuçlarını kapalı biçimli teoriyle (analitik son
 | Yama verimliliği (tan δ = 0,001) | 0,95–0,965; 1 − Q/Q_d ≈ 0,953 ile tutarlı |
 | Yarı uzay ayna düzeltmesi | Sierpinski modelinde ışıma verimliliği 0,985–0,995; düzeltme olmadan yaklaşık 1,99 olurdu |
 | 50 Ω mikroşerit hat (iki portlu) | Varsayılan mesh'te Z0 48,3 Ω; ≈ 49,3 Ω'a yakınsar (Hammerstad: 50,0 Ω); ε_eff 2,68'e karşı 2,75 (+%2,7); 6 GHz'e kadar \|S11\| ≤ −22 dB; dielektrik kaybı sabit iletkenlik modeliyle uyuşur |
-| Wilkinson bölücü, 2,4 GHz | Ders kitabındaki 100 Ω dirençle S21 = S31 = −3,09 dB, S11 −24 dB, S23 −22 dB; ancak S22 = S33 yalnızca −18,4 dB. 70 Ω dirençle tüm yansımalar ve yalıtım −25 dB altındadır. Direnç modeli doğrudur (elemanda doğrudan ölçülmüştür); neden henüz bilinmemektedir (bölüm 8) |
-| openEMS toplu direnci | Elemanda ölçüldüğünde 0,5–6 GHz arasında gerçek kısım hatası <%0,1; değer, mesh ve caps'ten bağımsız ([openems-lumped-resistor.md](openems-lumped-resistor.md)) |
+| Wilkinson bölücü, 2,4 GHz | Ders kitabındaki 100 Ω dirençle S21 = S31 = −3,09 dB, S11 −24 dB, S23 −22 dB; ancak S22 = S33 yalnızca −18,4 dB. 70 Ω dirençle tüm yansımalar ve yalıtım −25 dB altındadır. Direnç düzenekleri denenen aralıkta %0,1 içinde uyuşur (eleman üzerinde doğrudan benzetilmiştir); neden henüz bilinmemektedir (bölüm 8) |
+| openEMS toplu direnci | Eleman üzerinde benzetildiğinde, denenen değer, mesh ve caps seçeneklerinde 0,5–6 GHz arasında gerçek kısım hatası <%0,1 ([openems-lumped-resistor.md](openems-lumped-resistor.md)) |
 | Dizi süperpozisyonu | `fairbeam.array.combine` üzerinden tek uyarılan eleman, openEMS gerçekleşen kazancını (6,019 dBi) ve örüntü Dmax değerini tam yeniden üretir; 2×1 yama kuplajı S21 −17,3 dB |
 | Otomatik mesh | Yakınsamış elle oluşturulan mesh rezonanslarına göre dipol −%0,07, yama −%0,10; benzer veya daha az hücreyle ([MESHING.md](MESHING.md)) |
 | Dal hatlı kuplör, 2,4 GHz | 2,4 GHz'de S21 −3,21 / S31 −2,99 dB, 90,0°, S11 −34 dB, S41 −35 dB (kollar %3,5 ayarlanmış; ders kitabı uzunluklarında merkez %3,8 yüksek) |
@@ -255,9 +255,9 @@ Model: `python/models/wilkinson_divider.py`, aynı alttaş üzerinde 2,4 GHz. Me
   - Düğümden her porta çıkış yolu (besleme hattı, kıvrım ve uzantı) 21 mm, yani 2,4 GHz'de yaklaşık λg/4'tür. Bu, 1/R bağıntısını açıklar: Z_seen = Z_line² / Z_node. Bu mesh'in 47,5 Ω hattıyla (bölüm 7), Z_node = 47,5² / 34 ≈ 66 Ω.
   - Her beslemeyi λg/4 uzatmak (`--set feed_len=29`), portun düğümü doğrudan görmesini sağlar: Z_odd = 61,4 − j2,4 Ω. S22 yalnızca dönüşüm değiştiği için −24,8 dB'ye iyileşir.
   - Tek-mod kol uzantısı 2,4 GHz'de açık devredir (|X| > 2 kΩ); eksik iletkenliği sağlayamaz.
-  - **Neden direnç değildir (bu, önceki yorumu düzeltir).** Doğrudan elemanda ölçüldüğünde (pasif ayrık portun −U/I değeri), openEMS toplu direncinin gerçek kısmındaki hata 0,5–6 GHz boyunca <%0,1'dir; 30–300 Ω, akım boyunca veya enine 1–8 hücre, `caps` ile veya onsuz aynı sonuç alınır. Kayıplı malzeme bloğu aynı davranır ([openems-lumped-resistor.md](openems-lumped-resistor.md)). Önceki “2,4 GHz'de +%10” yorumu, mikroşerit test hattının farklı mesh'li referans hatla de-embedding işleminden kaynaklanıyordu ve yanlıştı. Wilkinson'un toplu direncini aynı 100 Ω değerinde kayıplı malzeme gövdesiyle değiştirmek aynı tek-mod empedansını verir: 34,1 + j3 Ω'a karşı 34,2 + j3 Ω.
+  - **Neden direnç değildir (bu, önceki yorumu düzeltir).** Doğrudan elemanda benzetildiğinde (pasif ayrık portun −U/I değeri), openEMS toplu direncinin gerçek kısmındaki hata 0,5–6 GHz boyunca <%0,1'dir; 30–300 Ω, akım boyunca veya enine 1–8 hücre, `caps` ile veya onsuz aynı sonuç alınır. Kayıplı malzeme bloğu aynı davranır ([openems-lumped-resistor.md](openems-lumped-resistor.md)). Önceki “2,4 GHz'de +%10” yorumu, mikroşerit test hattının farklı mesh'li referans hatla de-embedding işleminden kaynaklanıyordu ve yanlıştı. Wilkinson'un toplu direncini aynı 100 Ω değerinde kayıplı malzeme gövdesiyle değiştirmek aynı tek-mod empedansını verir: 34,1 + j3 Ω'a karşı 34,2 + j3 Ω.
   - Direnç aralığı da neden değildir (0,5 mm'de Z_odd = 32,5 + j10 Ω; 1,9 veya 2 mm ile aynı); mesh yoğunluğu (şerit başına 10 hücre, mesh_div 30), çıkış kıvrımı açıklığı (1–8 mm) ve yan yana çıkış uzantıları da değildir.
-  - **Hâlâ açıklanamayan nokta:** bu yerleşimin tek-mod düğüm empedansı yaklaşık 1,25–1,3 × R/2'dir. 70 Ω direnç bunu yaklaşık 50 Ω'a getirir (−42 dB yalıtım). Direnç modeli doğru ve uygulama biçiminden bağımsız olduğuna göre bu, ya yerleşimin gerçek özelliğidir (ideal çift/tek-mod modelinde görünmeyen bir düğüm etkisi) ya da düğümdeki basamaklı FDTD etkisidir.
+  - **Hâlâ açıklanamayan nokta:** bu yerleşimin tek-mod düğüm empedansı yaklaşık 1,25–1,3 × R/2'dir. 70 Ω direnç bunu yaklaşık 50 Ω'a getirir (−42 dB yalıtım). Denenen direnç düzenekleri %0,1 içinde uyuşur; olası açıklamalar arasında düğümdeki yerleşim ve basamaklı FDTD etkileri bulunur. Daha fazla inceleme gereklidir.
   - **Model fiziksel 100 Ω değerini korur.** Hangi nedenin geçerli olduğu henüz bilinmemektedir.
 - **Direnç taraması** (`fairbeam sweep python/models/wilkinson_divider.py --param r_iso=60,70,85,100 --engine gpu`, `public/projects/studies/wilkinson-resistor-sweep.json`):
 
@@ -517,7 +517,7 @@ uzakta, uyarım düzlemi iki hücre daha dışarıdadır; ardından PML_8 gelir.
 port 2 sonlandırılır.
 
 `fairbeam material-cell`, boş kılavuzu ve numuneyi aynı zaman adımıyla çalıştırır. S11 ve S21'i
-port dalgalarından alır (referans: TE10 dalga empedansı); boş çalıştırmada ölçülen β0 ile
+port dalgalarından alır (referans: TE10 dalga empedansı); boş çalıştırmada benzetilen β0 ile
 referanslarını numune yüzlerine taşır. Referans çözüm kılavuzlu aktarım matrisi levhasıdır:
 `fairbeam.analytic.slab_s(..., kc=π/a)`. Birim testleri bunu kapalı biçimdeki kılavuzlu levha
 çözümüyle karşılaştırır. εr = 1 için model boş kılavuz denetimidir. Mesh, numunede 20 hücre/λ
@@ -568,7 +568,7 @@ boş kılavuzda 401'inin tamamı; tan δ hataları mutlaktır):
   20'den 30 hücre/λ'ya geçiş hataları yaklaşık yarıya indirir. Kılavuzlu biçim, düzlem dalga
   hücresine (bölüm 15b) göre yeni hata kaynağı içermez: aynı ayrıklaştırma hatasına portun kendi
   uyumsuzluğu eklenir (boş kılavuzun |S11|'i 20 hücre/λ'da en çok −42,8 dB, 30'da −48,6 dB).
-- **Ölçülen β0.** Boş kılavuzda referans düzlemleri arasında ölçülen β0, analitik
+- **Benzetilen β0.** Boş kılavuzda referans düzlemleri arasında benzetilen β0, analitik
   √(k0² − (π/a)²) değerinden %0,16–0,22 (20 hücre/λ) ve %0,07–0,10 (30) farklıdır; bu sayısal
   dispersiyondur. Çalıştırıcı, referans düzlemi taşıma işleminde (de-embedding), NRW'de ve NIST'te
   ölçülen değeri kullanır; karşılaştırma için analitik değeri raporlar. Analitik β0 kullanılırsa

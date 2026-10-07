@@ -10,7 +10,7 @@ npm run serve:gpu          # run server using the GPU build; the Run panel and t
 
 Masaüstü uygulaması, openEMS GPU motorunu listeliyorsa `~/opt/openEMS-gpu/venv` ortamını kendiliğinden kullanır (Genel ayarlar › openEMS'in GPU derlemesiyle başlat; varsayılan açık; [DESKTOP.md](DESKTOP.md#shell)).
 
-Apple M5 Pro üzerinde ölçülmüştür; iki motorun sonuçları aynıdır (durma zaman adımı, |S11|, Dmax, verimlilik):
+Çözücü süreleri Apple M5 Pro üzerinde ölçülmüştür. Belgelenmiş aynı zaman adımında duran Windows CPU / macOS Metal karşılaştırmalarında −30 dB üzerindeki S-parametresi büyüklükleri 0,1 dB, Dmax ise 0,004 dB içinde uyuşur. Denenen modeller ve sınırlar için [BENCHMARKS.md](BENCHMARKS.md) sayfasına bakın:
 
 | Model | Hücre | CPU (4 iş parçacığı) | Metal GPU |
 | --- | --- | --- | --- |

@@ -70,7 +70,7 @@ it; the website counts cells between lines (patch antenna: 68 × 68 × 57 = 0.26
 
 ### What the comparison shows
 
-- **Same stopping timestep, same results.** Where both platforms stopped at the same timestep
+- **Agreement in the tested same-timestep runs.** Where both platforms stopped at the same timestep
   (microstrip line, both patch arrays, Wilkinson divider), Windows' CPU engine and the M5 Pro's
   Metal GPU engine agree to within 0.1 dB in every S-parameter above −30 dB, and to within
   0.004 dB in Dmax.

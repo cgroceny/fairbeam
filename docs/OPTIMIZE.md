@@ -83,7 +83,7 @@ The app mirrors this rule. **Driven ports** offers *Needed* or *All*, and the pa
 - **nelder-mead** is the default for everything else.
   - It works on parameters scaled to [0, 1]. Points outside the box are clipped, and the starting simplex steps 15 % of each range.
   - It restarts around the best point with half the step when the simplex stagnates (twice).
-- **bayesian** (Gaussian-process expected improvement), **cma-es**, **particle-swarm** and **genetic** (population searches) and **trust-region** (bounded finite-difference local search) are also available with `--method`. They work on the same [0, 1]-scaled box; the measured examples below use only secant and Nelder–Mead.
+- **bayesian** (Gaussian-process expected improvement), **cma-es**, **particle-swarm** and **genetic** (population searches) and **trust-region** (bounded finite-difference local search) are also available with `--method`. They work on the same [0, 1]-scaled box; the simulated examples below use only secant and Nelder–Mead.
 
 ## Output
 
@@ -178,5 +178,5 @@ The arm impedance (width) was not optimized. The resistor alone already met both
 
 - **Partial excitation.** Driving only the needed ports is cheap but uses b_i / a_j (other ports assumed matched). It can differ from the complete matrix by about 2 dB near deep nulls. Use `--excite all` for the final evaluation, or confirm with a run.
 - **First feasible point.** The search stops once every goal is met. To find the optimum rather than a feasible point, tighten the targets.
-- **Nelder–Mead is local.** A different start point can reach a different match. The other `--method` choices (bayesian, cma-es, particle-swarm, genetic, trust-region) are not measured in this document.
+- **Nelder–Mead is local.** A different start point can reach a different match. The other `--method` choices (bayesian, cma-es, particle-swarm, genetic, trust-region) are not evaluated in this document.
 - **Coarse metrics.** Metrics come from 801 frequency points, and f0 cannot be resolved finer than that grid.

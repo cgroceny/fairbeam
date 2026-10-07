@@ -183,4 +183,4 @@ See [DESKTOP.md](DESKTOP.md) for the contract. On Windows:
   stops without its graceful abort. The result is the same: no bundle, no processes left. (Not
   tried: every verified setup ran the server from a console.)
 - The installer is not code-signed: SmartScreen shows "Windows protected your PC" on the first run
-  of the downloaded `.exe` (More info › Run anyway). The macOS build is signed and notarized.
+  of the downloaded `.exe` (More info › Run anyway). The macOS build is signed with a Developer ID and notarized by Apple.

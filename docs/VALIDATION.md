@@ -19,8 +19,8 @@ numerical record; its raw simulation outputs are not committed to the repository
 | Patch efficiency (tan δ = 0.001) | 0.95-0.965, consistent with 1 − Q/Q_d ≈ 0.953 |
 | Half-space mirror correction | radiation efficiency 0.985-0.995 on the Sierpinski model; without the correction it would read ~1.99 |
 | 50 Ω microstrip line (two-port) | Z0 48.3 Ω at the default mesh, converging to ≈ 49.3 Ω (Hammerstad: 50.0 Ω); ε_eff 2.75 vs 2.68 (+2.7 %); \|S11\| ≤ −22 dB to 6 GHz; dielectric loss matches the constant-conductivity model |
-| Wilkinson divider, 2.4 GHz | S21 = S31 = −3.09 dB, S11 −24 dB, S23 −22 dB with the textbook 100 Ω resistor, but S22 = S33 only −18.4 dB. With a 70 Ω resistor all reflections and the isolation are below −25 dB. The resistor model is exact (measured directly at the element); the cause is not yet known (see section 8) |
-| openEMS lumped resistor | exact to < 0.1 % (real part) from 0.5 to 6 GHz, measured at the element; independent of value, mesh and caps ([openems-lumped-resistor.md](openems-lumped-resistor.md)) |
+| Wilkinson divider, 2.4 GHz | S21 = S31 = −3.09 dB, S11 −24 dB, S23 −22 dB with the textbook 100 Ω resistor, but S22 = S33 only −18.4 dB. With a 70 Ω resistor all reflections and the isolation are below −25 dB. Resistor fixtures agree within 0.1% in the tested range (simulated directly at the element); the cause is not yet known (see section 8) |
+| openEMS lumped resistor | within 0.1% in the real part from 0.5 to 6 GHz, simulated at the element for tested values, meshes and caps ([openems-lumped-resistor.md](openems-lumped-resistor.md)) |
 | Array superposition | a single driven element through `fairbeam.array.combine` reproduces openEMS' realized gain (6.019 dBi) and pattern Dmax exactly; 2×1 patch coupling S21 −17.3 dB |
 | Automatic mesh | dipole −0.07 % and patch −0.10 % from the converged hand-meshed resonances, with similar or fewer cells ([MESHING.md](MESHING.md)) |
 | Branch-line coupler, 2.4 GHz | S21 −3.21 / S31 −2.99 dB, 90.0°, S11 −34 dB, S41 −35 dB at 2.4 GHz (branches trimmed 3.5 %; textbook lengths center 3.8 % high) |
@@ -385,8 +385,8 @@ Ideal theory (Pozar sec. 7.3): S21 = S31 = −3.01 dB and S11 = S22 = S33 = S23 
     directly: Z_odd = 61.4 − j2.4 Ω. S22 improves to −24.8 dB only because the transformation changed.
   - The odd-mode arm stub is open at 2.4 GHz (|X| > 2 kΩ), so it cannot supply the missing
     conductance.
-  - **The resistor is not the cause (this corrects an earlier reading).** Measured directly at the
-    element (−U/I of a passive lumped port), an openEMS lumped resistor is exact to < 0.1 % in its
+  - **The resistor is not the cause (this corrects an earlier reading).** Simulated directly at the
+    element (−U/I of a passive lumped port), an openEMS lumped resistor agrees within 0.1% in its
     real part from 0.5 to 6 GHz, for 30-300 Ω, 1-8 cells along or across, with or without `caps`.
     A lossy-material block behaves identically ([openems-lumped-resistor.md](openems-lumped-resistor.md)).
     The earlier "+10 % at 2.4 GHz" reading came from de-embedding a microstrip test line
@@ -397,11 +397,9 @@ Ideal theory (Pozar sec. 7.3): S21 = S31 = −3.01 dB and S11 = S22 = S33 = S23 
     2 mm), the mesh density (10 cells per strip, mesh_div 30), the output-jog clearance (1-8 mm), or
     the side-by-side output stubs.
   - **Still unexplained.** The odd-mode node impedance of this layout is about 1.25-1.3 × R/2. A
-    70 Ω resistor brings it to about 50 Ω (−42 dB isolation). Because the resistor model is exact
-    and independent of the resistor implementation, this is either a real property of this layout
-    (something at the node that is invisible in the ideal even/odd-mode picture) or a staircase-FDTD
-    effect at the node.
-  - **The model keeps the physical 100 Ω.** Which of the two causes it is open.
+    70 Ω resistor brings it to about 50 Ω (−42 dB isolation). The tested resistor fixtures agree within 0.1%; possible explanations include a layout
+    effect at the node or a staircase-FDTD effect. Further investigation is needed.
+  - **The model keeps the physical 100 Ω.** The cause remains unresolved.
 - **Resistor sweep** (`fairbeam sweep python/models/wilkinson_divider.py --param r_iso=60,70,85,100 --engine gpu`,
   `public/projects/studies/wilkinson-resistor-sweep.json`):
 
@@ -909,7 +907,7 @@ port 2 is terminated.
 
 `fairbeam material-cell` runs the empty guide and the sample at one timestep. It takes S11 and
 S21 from the port waves (reference: the TE10 wave impedance) and refers them to the sample faces
-with β0 measured in the empty run. The reference is the guided transfer-matrix slab,
+with β0 simulated in the empty run. The reference is the guided transfer-matrix slab,
 `fairbeam.analytic.slab_s(..., kc=π/a)`; the unit tests check it against the closed-form guided
 slab. With εr = 1 the model is the empty-guide check. The mesh is 20 × 10 × 86 lines at 20 cells/λ
 (in the sample) and 30 × 14 × 112 at 30. Both runs together take 1.5-4 s on 4 threads.
@@ -958,7 +956,7 @@ all 401 for the empty guide; tan δ errors are absolute):
   The guided form has no new error source compared with the plane-wave cell (section 15b): it is
   the same discretisation error, with the port's own mismatch on top (|S11| of the empty guide at
   most −42.8 dB at 20 cells/λ, −48.6 dB at 30).
-- **Measured β0.** The empty guide's β0, measured between the reference planes, is 0.16-0.22 %
+- **Simulated β0.** The empty guide's β0, simulated between the reference planes, is 0.16-0.22 %
   (20 cells/λ) and 0.07-0.10 % (30) off the analytic √(k0² − (π/a)²): numerical dispersion. The
   runner uses the measured value for the de-embedding and in NRW and NIST, and reports the
   analytic one for comparison. With the analytic β0 instead, NIST εr′ is off by 0.66 % rather than
@@ -1057,7 +1055,7 @@ over 8.2-12.4 GHz (401 frequencies), with its largest value over the band in bra
   the guide height) costs 1.2-1.3 %; 0.2 mm costs 8.8 %. The apparent tan δ drops with it
   (0.0183 for 0.02 at 0.2 mm). Both meshes agree within 0.15 percentage points, so this is the
   gap, not the discretisation.
-- **The drop follows the resonance model.** Measured from the gap-free result (30 cells/λ), the
+- **The drop follows the resonance model.** Simulated in the gap-free result (30 cells/λ), the
   simulation gives −1.39, −2.68, −5.01 and −8.99 % for 0.025-0.2 mm; the resonance model's band
   means are −1.42, −2.75, −5.15 and −9.24 %, the capacitor model's −1.45, −2.87, −5.58 and −10.56 %.
 - **The capacitor correction over-corrects because it is quasi-static.** Its corrected εr′ lands

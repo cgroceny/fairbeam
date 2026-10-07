@@ -170,14 +170,14 @@
         },
         {
           "title": "Metal GPU engine",
-          "description": "An optional Metal build of openEMS on Apple silicon: several times faster, same results.",
+          "description": "The optional Metal engine reduced solver time in the documented benchmarks; agreement depends on the model and stopping settings.",
           "links": [],
           "status": "available",
           "release": "0.7.0"
         },
         {
           "title": "CUDA GPU engine",
-          "description": "An optional NVIDIA engine on Windows, in the Run panel: the patch in 2.6 s instead of 53 s.",
+          "description": "Optional CUDA builds support NVIDIA GPUs under Windows; solver times depend on the model and runtime.",
           "links": [10, 14, 17, 19],
           "status": "available",
           "release": "0.7.0"
@@ -191,7 +191,7 @@
         },
         {
           "title": "Convergence checks",
-          "description": "A run that cannot converge is stopped before it starts, with the reason and a fix.",
+          "description": "Preflight checks block known invalid setups and flag some convergence risks; check convergence after the run.",
           "links": [39, 46],
           "status": "available",
           "release": "0.7.0"
@@ -233,7 +233,7 @@
         },
         {
           "title": "Examples keep their mesh",
-          "description": "An example opened as a new design keeps its exact mesh lines, so it gives the same results.",
+          "description": "Supported example-to-design conversions preserve recorded mesh lines. Review conversion limits and compare a new run before relying on equivalence.",
           "links": [164, 165, 169],
           "status": "available",
           "release": "0.7.0"
@@ -247,14 +247,14 @@
         },
         {
           "title": "GPU build by default",
-          "description": "When the GPU build of openEMS is installed, the app starts with it and offers both engines; a general setting switches it.",
+          "description": "A compatible GPU runtime is preferred when the GPU startup preference is enabled; the CPU engine remains available.",
           "links": [176],
           "status": "available",
           "release": "0.7.0"
         },
         {
           "title": "Mesh convergence",
-          "description": "Simulation › Mesh convergence… refines the automatic mesh until the results stop changing; fairbeam converge does the same from the command line.",
+          "description": "Refine the automatic mesh until the comparison meets tolerances or reaches the run limit; the study may report Not converged.",
           "links": [],
           "status": "available",
           "release": "0.7.0"
@@ -287,7 +287,7 @@
         },
         {
           "title": "VBA macro export",
-          "description": "A CST-compatible VBA macro rebuilds the model in the target program.",
+          "description": "Export supported geometry and settings as a CST-compatible VBA macro; verify the reconstructed model in the target program.",
           "links": [],
           "status": "available",
           "release": "0.7.0"
@@ -378,7 +378,7 @@
         },
         {
           "title": "Efficiency over the band",
-          "description": "Optional radiation and total efficiency across the band from Simulation › Monitors › Efficiency, computed after the run without changing the solver time.",
+          "description": "Optional radiation and total efficiency curves are computed after the solver finishes, with additional post-processing time.",
           "links": [179],
           "status": "available",
           "release": "0.7.0"
@@ -411,21 +411,21 @@
         },
         {
           "title": "Updates in the app",
-          "description": "New versions are offered in the app, checked against their signature, and install themselves.",
+          "description": "With your confirmation, updates are installed after their payload signature is checked against the configured updater key. This is separate from Developer ID signing and Apple notarization.",
           "links": [],
           "status": "available",
           "release": "0.7.0"
         },
         {
           "title": "Sturdier on Windows",
-          "description": "Proxies are honoured, interrupted downloads resume, and the server always stops with the app.",
+          "description": "Proxy settings are supported, verified downloads are reused on retry, partial downloads restart, and the app manages the run-server process tree.",
           "links": [4, 7, 8, 15, 18, 25, 27, 29],
           "status": "available",
           "release": "0.7.0"
         },
         {
           "title": "Clean updates and uninstall",
-          "description": "On Windows, an update replaces the old files and uninstalling removes the whole folder.",
+          "description": "On Windows, uninstall removes owned application resources. Runtime data and settings remain unless you select Delete the application data; workspaces remain in either case.",
           "links": [36],
           "status": "available",
           "release": "0.7.0"
@@ -446,7 +446,7 @@
         },
         {
           "title": "Start, Design and Examples",
-          "description": "Examples open read-only with their results; Open as new design makes an editable copy.",
+          "description": "Examples open read-only with their results. Supported examples can be copied to an editable design; unsupported geometry is explained.",
           "links": [51, 76, 153, 157],
           "status": "available",
           "release": "0.7.0"
@@ -459,8 +459,8 @@
           "release": "0.7.0"
         },
         {
-          "title": "No lost work",
-          "description": "Closing a project, the window or the app asks to save, discard or cancel when there are unsaved changes.",
+          "title": "Unsaved-change prompts",
+          "description": "Unsaved-change prompts offer Save, Discard or Cancel during supported close actions.",
           "links": [41, 43, 99, 118],
           "status": "available",
           "release": "0.7.0"
@@ -500,7 +500,7 @@
         },
         {
           "title": "Benchmarks on Mac and Windows",
-          "description": "All 14 examples timed on both platforms, with matching results.",
+          "description": "Fourteen reference examples have recorded Windows and macOS timings, with differences and limitations documented.",
           "links": [9, 13],
           "status": "available",
           "release": "0.7.0"
@@ -521,7 +521,7 @@
         },
         {
           "title": "Keyboard access",
-          "description": "Designer commands stay visible and every control can be reached from the keyboard.",
+          "description": "Keyboard navigation and shortcuts are available; see the documented keyboard controls and limitations.",
           "links": [26],
           "status": "available",
           "release": "0.7.0"
@@ -535,28 +535,28 @@
         },
         {
           "title": "Faster meshing of detailed designs",
-          "description": "Automatic meshing of polygon designs and arrays runs 4 to 64 times faster.",
+          "description": "Automatic meshing uses indexed geometry processing for detailed polygon designs.",
           "links": [71],
           "status": "available",
           "release": "0.7.0"
         },
         {
           "title": "A quicker designer",
-          "description": "The Start screen opens in half the time, and checks and saves answer sooner.",
+          "description": "The designer includes improvements to loading, checking and saving.",
           "links": [72, 73, 74],
           "status": "available",
           "release": "0.7.0"
         },
         {
           "title": "Large designs stay responsive",
-          "description": "Big polygon designs edit, preview and check faster, with identical results.",
+          "description": "Geometry processing and asynchronous state handling have been optimized; responsiveness depends on design size and hardware.",
           "links": [104, 105, 137, 138],
           "status": "available",
           "release": "0.7.0"
         },
         {
           "title": "Horn efficiency",
-          "description": "Waveguide-port power is calibrated, so the pyramidal horn's radiation efficiency reads about 99 %.",
+          "description": "The horn has about 99.3% raw efficiency at 10 GHz; its lossless-normalized result is 100%.",
           "links": [12, 162],
           "status": "available",
           "release": "0.7.0"
