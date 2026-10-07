@@ -48,10 +48,16 @@ pack. It holds release files and the issue tracker for app users, and no source.
 Build only from a tag on `main` of the source repository (`git tag v<version>`), after the checks in
 [CONTRIBUTING.md](../CONTRIBUTING.md) pass.
 
-1. Bump the version in `src-tauri/tauri.conf.json`, `src-tauri/Cargo.toml` and
+1. Bump the version in `package.json`, `src-tauri/tauri.conf.json`, `src-tauri/Cargo.toml` and
    `python/fairbeam/_meta.py`. The runtime refreshes its copy of the Python package when the bundled
    version changes.
-2. Build each platform on its own machine with `npm run desktop:release` and the key in the
+2. Regenerate the third-party inventory with `npm run licenses`, review any changed licenses
+   and exceptions in `scripts/licenses/exceptions.json`, and run `npm run check:licenses`.
+   Commit `THIRD-PARTY-NOTICES.md` and `scripts/licenses/inventory.json` before tagging. The
+   app bundles the notices, and `scripts/publish-release.mjs` attaches the same file as a release
+   asset and includes it in `SHA256SUMS.txt`. Retain exact corresponding source archives and
+   solver build inputs with the release; upstream links alone do not replace that retention.
+3. Build each platform on its own machine with `npm run desktop:release` and the key in the
    environment. The release build adds `src-tauri/tauri.release.conf.json`
    (`createUpdaterArtifacts`), so it writes the updater artifact and its `.sig` next to the
    installer. `npm run desktop:build` stays a plain build that needs no key:
@@ -89,7 +95,7 @@ Build only from a tag on `main` of the source repository (`git tag v<version>`),
    Without the key, `desktop:release` stops once it has built the bundle. Everything is built,
    but no updater artifact is written. You can sign a file afterwards with
    `npx tauri signer sign -f ~/.tauri/fairbeam-updater.key -p "" <file>`.
-3. Publish from each machine. The script creates or updates the `v<version>` release in
+4. Publish from each machine. The script creates or updates the `v<version>` release in
    `ismailakdag/fairbeam-releases`, uploads the files, and merges `latest.json` and
    `SHA256SUMS.txt`. Entries of platforms already published are kept. Publish with
    `--latest=false` first:
@@ -114,7 +120,7 @@ Build only from a tag on `main` of the source repository (`git tag v<version>`),
 
    The mark is a property of the release, so a later publish to the same version leaves it as it
    is. Never mark an older release as the latest again: the updater does not downgrade.
-4. Update the download links on the website (`landing/index.html`, section `#download`: file
+5. Update the download links on the website (`landing/index.html`, section `#download`: file
    names, sizes and minimum OS versions) and push. Vercel deploys the site from `main`.
 
 ## Issues and feedback

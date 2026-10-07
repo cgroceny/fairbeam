@@ -123,7 +123,9 @@
     "check:export-dialog": "node scripts/check-export-dialog.mjs",
     "check:reactive-order": "node scripts/check-reactive-order.mjs",
     "check:docs-translations": "node scripts/check-docs-translations.mjs",
-    "check:docs-language": "node scripts/check-docs-language.mjs"
+    "check:docs-language": "node scripts/check-docs-language.mjs",
+    "licenses": "node scripts/third-party-licenses.mjs --refresh",
+    "check:licenses": "node scripts/check-licenses.mjs && node scripts/third-party-licenses.mjs --check"
   },
   "dependencies": {
     "@codemirror/commands": "^6.11.1",

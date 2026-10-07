@@ -6,6 +6,7 @@
   // Exact source strings keep translations attached to copy while preserving inline markup,
   // equations, links, measured values, version numbers and commands.
   const pairs = [
+    ["Full third-party license texts", "Üçüncü taraf lisanslarının tam metinleri"],
     ["If usage counts are turned on (not available in this release)", "Kullanım sayımı açılırsa (bu sürümde kullanılamaz)"],
     ["Draft KVKK information notice and GDPR-style privacy notice for a possible future release. This release cannot send usage reports. The maintainer must review this text with a lawyer before enabling usage counts.", "Olası gelecek bir sürüm için taslak KVKK aydınlatma metni ve GDPR kapsamında gizlilik bildirimi. Bu sürüm kullanım raporu gönderemez. Kullanım sayımı etkinleştirilmeden önce proje sorumlusu bu metni bir avukatla incelemelidir."],
     ["Controller: İsmail Akdağ. Contact: ismail@fairbeam.org.", "Veri sorumlusu: İsmail Akdağ. İletişim: ismail@fairbeam.org."],
