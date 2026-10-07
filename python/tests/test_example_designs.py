@@ -43,6 +43,31 @@ class ExampleDesigns(unittest.TestCase):
             with self.subTest(values):
                 self.assertEqual(problems(d, values), [])
 
+    def test_blade_bundle_matches_refined_design(self):
+        # Catch stale results when the shipped design's mesh changes, without running FDTD.
+        root = Path(__file__).resolve().parents[2]
+        d = json.loads((root / "examples/designs/blade_867.design.json").read_text())
+        b = json.loads((root / "public/projects/blade-867.json").read_text())
+        preview = build_preview(None, {}, design=d)["bundle"]
+        self.assertTrue(d["mesh"]["refine_features"])
+        self.assertTrue(b["mesh"]["auto"]["settings"]["refine_features"])
+        for key in ("x", "y", "z", "cells", "total_cells"):
+            self.assertEqual(b["mesh"][key], preview["mesh"][key], key)
+        self.assertEqual(b["solver"]["end_criteria_db"], d["simulation"]["end_criteria_db"])
+        self.assertEqual(b["solver"]["max_timesteps"], 60000)
+        self.assertTrue(b["run"]["converged"])
+        self.assertEqual(len(b["results"]["frequency"]), 801)
+        self.assertEqual(len(b["results"]["efficiency"][0]["f"]), 21)
+        self.assertTrue(b["fields"]["planes"])
+        self.assertEqual(len(b["field_planes"]), 1)
+        self.assertEqual(b["field_planes"][0]["f"], 867e6)
+        index = json.loads((root / "public/projects/index.json").read_text())["projects"]
+        entry = next(e for e in index if e["file"] == "blade-867.json")
+        from fairbeam.cli import _read_index_entry
+        generated = _read_index_entry(root / "public/projects/blade-867.json")
+        for key, value in entry.items():
+            self.assertEqual(value, generated[key], key)
+
     # --- wideband_dipole_867 (slotted planar dipole, no ground plane) ---
 
     def test_wideband_dipole_slots_stay_clean(self):

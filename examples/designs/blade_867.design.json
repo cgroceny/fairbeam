@@ -3,7 +3,7 @@
   "model": {
     "id": "blade-867",
     "name": "UAV blade antenna (867 MHz)",
-    "description": "Swept metal blade monopole on a 300 x 300 mm fuselage-skin ground plane, fed by a 50 ohm probe across a 2 mm gap at its base (x: flight axis, +x aft; z: up). A vertically polarised, azimuth-omnidirectional UAV telemetry antenna for the 863-870 MHz SRD / LoRa band; h = 80 mm gives |S11| about -23 dB at 867 MHz and a -10 dB band of about 0.75-1.8 GHz. Its tuning, its results and how to scale it to other bands are described with the example designs in the Fairbeam documentation."
+    "description": "Swept metal blade monopole on a 300 x 300 mm fuselage-skin ground plane, fed by a 50 ohm probe across a 2 mm gap at its base (x: flight axis, +x aft; z: up). A vertically polarised, azimuth-omnidirectional UAV telemetry antenna for the 863-870 MHz SRD / LoRa band; With fine-feature refinement enabled, h = 80 mm gives |S11| about -14.4 dB at 867 MHz and a -10 dB band from 0.757 GHz to above the 1.05 GHz sweep limit. Its tuning, its results and how to scale it to other bands are described with the example designs in the Fairbeam documentation."
   },
   "params": [
     {"key": "f0", "default": 0.867, "label": "Design frequency", "unit": "GHz", "min": 0.1, "max": 6},
