@@ -1,8 +1,10 @@
 #!/usr/bin/env node
 // Build the public static site into site-dist/:
-//   /           landing page (landing/*: index.html and guide.html, the public copy of
-//               docs/GETTING-STARTED.md), with design-system/tokens.css copied next to it and the
-//               roadmap board rendered from landing/roadmap.json (scripts/roadmap-render.mjs)
+//   /           the site pages from landing/*: index.html (the home page), features.html,
+//               roadmap.html (its board rendered from landing/roadmap.json by
+//               scripts/roadmap-render.mjs), docs/, guide.html (the public copy of
+//               docs/GETTING-STARTED.md) and privacy.html, with design-system/tokens.css copied
+//               next to them
 //   /app/       the viewer in demo mode (vite --mode demo, base /app/, bundled example projects)
 //   /media/     example drawings and figures from examples/drawings/, landing/media/ and the
 //               story data (media/patch-story.json, reduced from public/projects/patch-antenna.json)
@@ -83,13 +85,13 @@ cpSync(join(root, "landing"), out, { recursive: true, filter: (src) => !src.ends
 cpSync(join(root, "design-system", "tokens.css"), join(out, "tokens.css"));
 cpSync(join(root, "public", "favicon.svg"), join(out, "favicon.svg"));
 
-// 2b. the roadmap board, rendered into the page at build time: no fetch, and it reads without JS
+// 2b. the roadmap board, rendered into its page at build time: no fetch, and it reads without JS
 {
-  const page = join(out, "index.html");
+  const page = join(out, "roadmap.html");
   const html = readFileSync(page, "utf8");
   const slot = /<!-- roadmap:start[\s\S]*?<!-- roadmap:end -->/;
   if (!slot.test(html)) {
-    console.error("build-site: landing/index.html has no <!-- roadmap:start --> … <!-- roadmap:end --> slot");
+    console.error("build-site: landing/roadmap.html has no <!-- roadmap:start --> … <!-- roadmap:end --> slot");
     process.exit(1);
   }
   writeFileSync(page, html.replace(slot, () => roadmap));
@@ -180,8 +182,9 @@ for (const [pkg, f] of FONTS) cpSync(join(root, "node_modules", "@fontsource", p
   });
 }
 
-// 4. sanity checks and a size report
-const must = ["index.html", "guide.html", "privacy.html", "styles.css", "tokens.css", "script.js", "language.js", "navigation.js", "navigation.css", "story/story.js", "media/patch-story.json", "media/array-story.json", "app/index.html", "app/projects/index.json"];
+// 4. sanity checks, size budgets and a size report
+const PAGES = ["index.html", "features.html", "roadmap.html", "docs/index.html", "guide.html", "privacy.html"];
+const must = [...PAGES, "styles.css", "tokens.css", "script.js", "language.js", "navigation.js", "navigation.css", "story/story.js", "media/patch-story.json", "media/array-story.json", "app/index.html", "app/projects/index.json"];
 const missing = must.filter((p) => !existsSync(join(out, p)));
 if (missing.length) {
   console.error(`build-site: missing ${missing.join(", ")}`);
@@ -193,5 +196,27 @@ const size = (dir) => readdirSync(dir).reduce((n, f) => {
   return n + (s.isDirectory() ? size(p) : s.size);
 }, 0);
 const kib = (n) => `${(n / 1024).toFixed(0)} KiB`;
-const landing = ["index.html", "guide.html", "styles.css", "tokens.css", "script.js", "language.js", "favicon.svg"].reduce((n, f) => n + statSync(join(out, f)).size, 0);
-console.log(`site-dist/ built: landing ${kib(landing)} + media ${kib(size(join(out, "media")))} + fonts ${kib(size(join(out, "fonts")))}; app ${kib(size(join(out, "app")))}`);
+const bytes = (p) => statSync(join(out, p)).size;
+
+// Budgets keep the home page short and light: long material belongs on features.html, roadmap.html
+// and the docs. The home page images are the <img> sources and video posters of index.html (the film
+// itself loads only when it is played; it counts towards media). media/ is held below its size before
+// the redesign (8.66 MiB): new pictures replace old ones instead of adding to them.
+const MiB = 1024 * 1024;
+const BUDGET = { homeHtml: 32 * 1024, homeImages: 1 * MiB, pageHtml: 128 * 1024, media: 8.65 * MiB };
+const home = readFileSync(join(out, "index.html"), "utf8");
+const homeImageFiles = [...new Set([...home.matchAll(/<(?:img|video)\b[^>]*?\s(?:src|poster)="(media\/[^"]+\.(?:jpe?g|png|webp|avif|svg))"/g)].map((m) => m[1]))];
+const usage = {
+  homeHtml: bytes("index.html"),
+  homeImages: homeImageFiles.reduce((n, p) => n + bytes(p), 0),
+  pageHtml: Math.max(...PAGES.map(bytes)),
+  media: size(join(out, "media")),
+};
+const over = Object.keys(BUDGET).filter((k) => usage[k] > BUDGET[k]);
+const pages = PAGES.reduce((n, p) => n + bytes(p), 0);
+const shared = ["styles.css", "navigation.css", "tokens.css", "script.js", "navigation.js", "language.js", "favicon.svg"].reduce((n, f) => n + bytes(f), 0);
+console.log(`site-dist/ built: pages ${kib(pages)} (home ${kib(usage.homeHtml)} + ${homeImageFiles.length} images ${kib(usage.homeImages)}) + shared css/js ${kib(shared)} + media ${kib(usage.media)} + fonts ${kib(size(join(out, "fonts")))}; app ${kib(size(join(out, "app")))}`);
+if (over.length) {
+  console.error(`build-site: over budget: ${over.map((k) => `${k} ${kib(usage[k])} > ${kib(BUDGET[k])}`).join(", ")}`);
+  process.exit(1);
+}

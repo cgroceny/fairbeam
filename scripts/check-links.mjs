@@ -1,12 +1,12 @@
 #!/usr/bin/env node
-// Check relative links in README.md, docs/*.md, landing/index.html and landing/guide.html: the
-// target file must exist and a #fragment must name a heading (GitHub slug rules) or an id in the
+// Check relative links in README.md, docs/*.md and the site pages in landing/ (index, features,
+// roadmap, docs/, guide, privacy): the target file must exist and a #fragment must name a heading (GitHub slug rules) or an id in the
 // target. External links (http, https, mailto) are not fetched. Links inside fenced or inline code
 // are ignored. Also a cheap drift guard for the public guide: landing/guide.html is a hand-made copy
 // of docs/GETTING-STARTED.md, so every heading of the Markdown guide must be a heading of the page.
 // Usage: node scripts/check-links.mjs   (part of npm run check:exports)
 import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
-import { dirname, join, relative, resolve } from "node:path";
+import { dirname, join, relative, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
@@ -87,10 +87,15 @@ function fontTarget(name) {
 }
 
 function resolveTarget(from, path) {
-  if (from.startsWith(join(root, "landing"))) {
-    for (const [re, fn] of SITE) {
-      const m = re.exec(path);
-      if (m) return fn(m);
+  const landing = join(root, "landing");
+  if (from.startsWith(landing)) {
+    // the link as a path from the site root, so pages in subfolders (docs/) resolve like index.html
+    const site = relative(landing, resolve(dirname(from), decodeURI(path))).split(sep).join("/");
+    if (!site.startsWith("..")) {
+      for (const [re, fn] of SITE) {
+        const m = re.exec(site);
+        if (m) return fn(m);
+      }
     }
   }
   return resolve(dirname(from), decodeURI(path));
@@ -99,9 +104,7 @@ function resolveTarget(from, path) {
 const files = [
   join(root, "README.md"),
   ...readdirSync(join(root, "docs")).filter((f) => f.endsWith(".md")).map((f) => join(root, "docs", f)),
-  join(root, "landing", "index.html"),
-  join(root, "landing", "guide.html"),
-  join(root, "landing", "privacy.html"),
+  ...["index.html", "features.html", "roadmap.html", "docs/index.html", "guide.html", "privacy.html"].map((p) => join(root, "landing", p)),
 ];
 
 const errors = [];

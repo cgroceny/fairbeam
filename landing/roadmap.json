@@ -1,6 +1,6 @@
 {
   "$comment": [
-    "The roadmap board on the landing page (#roadmap). scripts/build-site.mjs renders it into the page.",
+    "The roadmap board on the roadmap page (landing/roadmap.html, #roadmap). scripts/build-site.mjs renders it into the page.",
     "Edit by hand: areas, their order, and each item's title, description and links (issue and PR numbers of the repo below).",
     "npm run roadmap reads the links' states with gh and rewrites status, release and updated; it keeps everything else.",
     "status: available (merged, and every linked issue closed as completed), development (an open PR, a linked issue with an open PR, part of the work merged, or started: true), planned (open issues only).",
