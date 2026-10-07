@@ -9,11 +9,13 @@ import { gerberCopper, gerberProfile } from "./gerber.ts";
 import { excellon } from "./excellon.ts";
 import { dxf, regionRings } from "./dxf.ts";
 import { regionArea } from "./polygon.ts";
+import { APP_VERSION } from "../lib/appVersion.ts";
 
 export { fabModel, DEFAULT_FAB_OPTIONS, type FabModel, type FabOptions } from "./layers.ts";
 
-/** Fairbeam version written into the X2 GenerationSoftware attribute (package.json) */
-export const FAB_VERSION = "0.1.0";
+/** Fairbeam version written into the X2 GenerationSoftware attribute, the drill header and the README: the
+ * running app's (package.json), which generates the files now, whatever build wrote the bundle */
+export const FAB_VERSION = APP_VERSION;
 
 export interface FabFile {
   path: string;

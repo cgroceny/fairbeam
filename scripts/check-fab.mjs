@@ -18,6 +18,8 @@ import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { fabFiles } from "../src/fab/index.ts";
 import { packageFiles } from "../src/export/package.ts";
+import { technicalDrawing } from "../src/drawing/drawing.ts";
+import { APP_VERSION, bundleWriter, releasedVersion } from "../src/lib/appVersion.ts";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const projects = join(root, "public", "projects");
@@ -364,6 +366,12 @@ for (const file of bundles) {
   const readme = byName.get("README.txt");
   check(!!readme && /35 µm/.test(readme) && /zero-thickness/.test(readme) && /GerbView/.test(readme) && /εr = /.test(readme), stem, "README.txt lacks stack-up/caveats");
   check(!/NaN|undefined|Infinity/.test(files.map((f) => f.data).join("")), stem, "NaN/undefined in fab files");
+  // the files are generated now: stamped with the running app's version (package.json), never the version of the
+  // build that wrote the bundle (the examples were written by builds before the first release)
+  check(readme.includes(`by Fairbeam ${APP_VERSION}`), stem, `README.txt is not stamped with Fairbeam ${APP_VERSION}`);
+  for (const f of files.filter((x) => x.path.endsWith(".gbr"))) check(f.data.includes(`%TF.GenerationSoftware,Fairbeam,Fairbeam,${APP_VERSION}*%`), `${stem} ${f.path}`, "GenerationSoftware is not the running version");
+  for (const f of files.filter((x) => x.path.endsWith(".drl"))) check(f.data.includes(`{Fairbeam ${APP_VERSION}}`), `${stem} ${f.path}`, "drill header is not stamped with the running version");
+  check(!/antenlab|Fairbeam 0\.[1-6]\.\d/i.test(files.map((f) => f.data).join("")), stem, "a former product name or an unreleased version in the fab files");
 
   // copper layers
   const faces = [...geo.copper.keys()].sort((a, c) => c - a);
@@ -446,6 +454,24 @@ for (const file of bundles) {
     writeFileSync(join(dir, "render.svg"), renderSvg(`${b.name.replace(/&/g, "&amp;").replace(/</g, "&lt;")}: fabrication preview`, parsedLayers, loops, drills));
     console.log(`  wrote examples/fab/${stem}/ (${files.length + 1} files)`);
   }
+}
+
+// ---------------------------------------------------------------- version stamps of the other generated files
+
+{
+  const pkg = JSON.parse(readFileSync(join(root, "package.json"), "utf8"));
+  check(APP_VERSION === pkg.version, "version", `APP_VERSION ${APP_VERSION} is not package.json's ${pkg.version}`);
+  check(releasedVersion("0.7.0") && releasedVersion("0.7.1") && releasedVersion("1.0.0") && !releasedVersion("0.6.0") && !releasedVersion("0.1.0")
+    && !releasedVersion("?") && !releasedVersion(undefined), "version", "releasedVersion: 0.7.0 is the first release");
+  const example = JSON.parse(readFileSync(join(projects, "patch-antenna.json"), "utf8"));
+  check(!releasedVersion(example.generator?.version), "version", `the bundled example says it was written by ${example.generator?.version}: update the check`);
+  // the Examples panel footer names no Fairbeam version for a bundle written before the first release
+  check(bundleWriter(example) === null, "version", `bundleWriter of an example: ${bundleWriter(example)}`);
+  check(bundleWriter({ generator: { version: "0.7.2" } }) === "Fairbeam 0.7.2", "version", "bundleWriter of a released build");
+  // an example's technical drawing is generated now: its title block's Generator is the running version
+  const svg = technicalDrawing(example, { sheet: "A3", date: "2026-09-25" }).svg;
+  check(svg.includes(`Fairbeam ${APP_VERSION}`) && !svg.includes(`Fairbeam ${example.generator.version}`), "version", "the drawing's Generator is not the running version");
+  console.log(`  version stamps: Fairbeam ${APP_VERSION} in the fab files and drawings; examples written by ${example.generator.version} name no version`);
 }
 
 console.log(`\n${checks} fabrication checks, ${failures} failed. Examples in ${outRoot}`);

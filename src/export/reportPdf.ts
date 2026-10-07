@@ -15,6 +15,7 @@ import { fit, wrap } from "../drawing/metrics.ts";
 import { esc, FONT, group, line, n, rect, text } from "../drawing/svg.ts";
 import { svgPagesToPdf, type PdfFonts } from "../drawing/pdfdoc.ts";
 import { modelPath, reproduceCommand } from "./report.ts";
+import { APP_VERSION, bundleWriter } from "../lib/appVersion.ts";
 
 const W = 210;
 const H = 297;
@@ -193,7 +194,7 @@ class Doc {
       ];
       const foot = [
         line(ML, 283, W - MR, 283, { stroke: "#000", "stroke-width": 0.2 }),
-        text(ML, 287.5, fit(`Fairbeam ${b.generator.version} · ${b.solver.engine}${b.generator.openems ? ` ${b.generator.openems.split(/\.post|\+/)[0]}` : ""} · generated ${this.opt.generated}`, 2.5, 140), { "font-size": 2.5, fill: "#444" }),
+        text(ML, 287.5, fit(`Fairbeam ${APP_VERSION} · ${b.solver.engine}${b.generator.openems ? ` ${b.generator.openems.split(/\.post|\+/)[0]}` : ""} · generated ${this.opt.generated}`, 2.5, 140), { "font-size": 2.5, fill: "#444" }),
         text(W - MR, 287.5, `Page ${i + 1} / ${N}`, { "font-size": 2.5, fill: "#444", "text-anchor": "end" }),
       ];
       return (
@@ -223,7 +224,7 @@ export function reportPages(bundle: Bundle, opt: ReportOptions): string[] {
   d.kv([
     ["Simulated", b.created],
     ["Report generated", opt.generated],
-    ["Generator", `Fairbeam ${b.generator.version}, Python ${b.generator.python}`],
+    ["Generator", [bundleWriter(b), b.generator.python && b.generator.python !== "?" ? `Python ${b.generator.python}` : null].filter(Boolean).join(", ") || "—"],
     ["Solver", `${b.solver.engine}${b.generator.openems ? ` ${b.generator.openems}` : ""} — ${b.solver.method}`],
     ["CSXCAD", b.generator.csxcad ?? "—"],
     ["Host", run ? `${run.host.os} ${run.host.machine}${run.host.cpu ? `, ${run.host.cpu}` : ""}` : "—"],

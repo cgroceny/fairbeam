@@ -2,6 +2,7 @@ import { For, Show } from "solid-js";
 import { CircleCheck, TriangleAlert } from "lucide-solid";
 import { bundle, farfieldIndex, setDockTab, setFarfieldIndex, setLayers } from "../state";
 import { BOUNDARY_LABEL, compact, GHz, num, seconds, timeUnit } from "../lib/format";
+import { bundleWriter } from "../lib/appVersion";
 import { convergenceTextUi, efficiencyIssue, efficiencyWarningUi } from "../lib/runText";
 import ComparisonCard from "./ComparisonCard";
 import MeasuredTimes from "./MeasuredTimes";
@@ -197,7 +198,7 @@ export default function SpecPanel() {
 
               <section class="section section-foot">
                 <p class="muted mono">
-                  {b().schema} · Fairbeam {b().generator.version} · CSXCAD {b().generator.csxcad}
+                  {[b().schema, bundleWriter(b()), b().generator.csxcad ? `CSXCAD ${b().generator.csxcad}` : null].filter(Boolean).join(" · ")}
                 </p>
                 <p class="muted mono">{b().created}</p>
               </section>
