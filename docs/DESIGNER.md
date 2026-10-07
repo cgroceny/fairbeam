@@ -1239,7 +1239,7 @@ fairbeam import-pcb board.gtl board.gbl board.gko board.drl --substrate RO4003C 
   name (F.Cu, Top, GTL, Edge.Cuts, Profile ...) or by the Gerber X2 file function; `--layer-map
   NAME=role` overrides that, with the roles `top_copper`, `bottom_copper`, `outline`, `ignore`,
   `top_clearance` and `bottom_clearance` (a layer name, file name or pattern on the left). A file
-  with a single unrecognised layer of outlines is taken as top copper, with a warning.
+  with a single unrecognized layer of outlines is taken as top copper, with a warning.
 - **Clearances.** A layer named after a copper layer with `_Antipad` (or "clearance"), as
   Fairbeam's own fab export writes them (`B_Cu_Antipad`), is the clearance of that copper: its
   circles and outlines are cut out of the copper as holes. Fairbeam's fab DXF and Gerber files
