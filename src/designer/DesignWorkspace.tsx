@@ -157,7 +157,10 @@ function fitRibbon(shell: HTMLElement) {
   if (!toolbar) return;
   const groups = [...toolbar.querySelectorAll<HTMLElement>(":scope > .rb-group")];
   for (const g of groups) { delete g.dataset.size; delete g.dataset.collapsed; delete g.dataset.align; }
-  const room = toolbar.clientWidth;
+  // an item that is not a group (the Post-processing note) keeps its min-width: groups fold first
+  const reserved = [...toolbar.querySelectorAll<HTMLElement>(":scope > :not(.rb-group)")]
+    .reduce((sum, el) => sum + (parseFloat(getComputedStyle(el).minWidth) || 0), 0);
+  const room = toolbar.clientWidth - reserved;
   const fits = () => groups.reduce((sum, g) => sum + g.offsetWidth, 0) <= room;
   const done = () => {
     shell.dataset.fit = fits() ? "row" : "scroll";
@@ -411,6 +414,10 @@ export function Ribbon() {
   const fit = () => { activateMainTab("3d"); document.querySelector<HTMLButtonElement>(".viewport [data-action='fit']")?.click(); };
   const currentMonitors = () => (draft as typeof draft & { monitors?: { currents?: Expr[] } }).monitors?.currents ?? [];
   const fieldPlaneCount = () => (draft as typeof draft & { monitors?: { field_planes?: unknown[] } }).monitors?.field_planes?.length ?? 0;
+  // Post-processing's note: how to get plots, or how to compare (and why currents are off)
+  const resultNote = () => ribbonResult()
+    ? `${t("ribbon.post.compareNote")}${ribbonCurrents().ok ? "" : ` ${ribbonCurrents().reason}`}`
+    : t("ribbon.results.selectResult");
   /** the efficiency-over-the-band monitor's number of frequencies (undefined: no such monitor) */
   const efficiencyPoints = () => {
     const eff = (draft as typeof draft & { monitors?: { efficiency?: { points?: number } } }).monitors?.efficiency;
@@ -664,7 +671,13 @@ export function Ribbon() {
           <RButton icon={Layers2} label={t("ribbon.fieldPlane")} title={ribbonFieldPlanes().reason} disabled={!ribbonFieldPlanes().ok} pressed={resultFocus()?.view === "fieldplane"} onClick={() => void openRibbonResult("fieldplane")} />
           <RButton icon={Grid2x2} label={t("ribbon.post.fieldMap")} title={ribbonFieldPlanes().ok ? t("ribbon.post.fieldMapTitle") : ribbonFieldPlanes().reason} disabled={!ribbonFieldPlanes().ok} pressed={resultFocus()?.view === "fieldmap"} onClick={() => void openRibbonResult("fieldmap")} />
         </RGroup>
-        {/* while a pattern is shown (the Pattern tab or the 3D pattern): the quantity it draws */}
+        <RGroup label={t("ribbon.post.report")} icon={FileText}>
+          <RButton icon={FileText} label={t("ribbon.post.pdf")} title={ribbonExportReady() ? t("ribbon.post.pdfTitle") : t("ribbon.post.openRunFirst")} disabled={!ribbonExportReady()} onClick={() => openRibbonResult("report")} />
+          <RButton icon={Package} label={t("ribbon.post.package")} title={ribbonExportReady() ? t("ribbon.post.packageTitle") : t("ribbon.post.openRunFirst")} disabled={!ribbonExportReady()} onClick={() => openRibbonResult("export")} />
+          <RButton icon={FileCode} label={t("ribbon.post.python")} action="open-python" title={t("ribbon.post.pythonTitle")} onClick={() => { setRunOpen(false); setSidePanelCollapsed(false); void openPythonPanel(); }} />
+        </RGroup>
+        {/* while a pattern is shown (the Pattern tab or the 3D pattern): the quantity it draws. It comes
+            after the report group, so PDF report, Package and Python keep their place when it appears. */}
         <Show when={ribbonFarfield()}>{(shown) => (
           <RGroup label={t("ribbon.post.farfield")} icon={Globe}>
             <label class="rb-ff-quantity"><span>{t("ribbon.post.quantity")}</span>
@@ -673,13 +686,8 @@ export function Ribbon() {
             </label>
           </RGroup>
         )}</Show>
-        <RGroup label={t("ribbon.post.report")} icon={FileText}>
-          <RButton icon={FileText} label={t("ribbon.post.pdf")} title={ribbonExportReady() ? t("ribbon.post.pdfTitle") : t("ribbon.post.openRunFirst")} disabled={!ribbonExportReady()} onClick={() => openRibbonResult("report")} />
-          <RButton icon={Package} label={t("ribbon.post.package")} title={ribbonExportReady() ? t("ribbon.post.packageTitle") : t("ribbon.post.openRunFirst")} disabled={!ribbonExportReady()} onClick={() => openRibbonResult("export")} />
-          <RButton icon={FileCode} label={t("ribbon.post.python")} action="open-python" title={t("ribbon.post.pythonTitle")} onClick={() => { setRunOpen(false); setSidePanelCollapsed(false); void openPythonPanel(); }} />
-        </RGroup>
-        <p class="rb-result-note" title={ribbonResult() ? t("ribbon.post.compareNote") : t("ribbon.results.selectResult")}>{ribbonResult() ? t("ribbon.post.compareNote") : t("ribbon.results.selectResult")}
-          <Show when={ribbonResult() && !ribbonCurrents().ok}> {ribbonCurrents().reason}</Show></p>
+        {/* wraps to at most three lines inside the ribbon (ribbon.css); the tooltip has the whole text */}
+        <p class="rb-result-note" title={resultNote()}>{resultNote()}</p>
       </Show>
       </Show>
       </div>
@@ -712,10 +720,12 @@ export function Ribbon() {
   );
 }
 
-/** Under the ribbon while a draw tool is on: what to click, and how many points so far. */
+/** Over the top of the 3D view while a tool, a pick or a Boolean is on: what to click, and how many
+ * points so far. The bars float over the view (designer.css .dw-hints), so showing, growing or hiding
+ * one never resizes the canvas or moves the model under the pointer. */
 export function DrawHint() {
   return (
-    <>
+    <div class="dw-hints">
     <PointReadout />
     <Show when={automaticOverlap()}>{(overlap) =>
       <div class="rb-hint" role="group" aria-label={t("boolean.overlap.aria")}>
@@ -783,7 +793,7 @@ export function DrawHint() {
         <button class="icon-btn icon-btn-sm rb-hint-x" onClick={() => startTool(null)} aria-label={t("draw.stop")} title={t("draw.stopTitle")}><X size={13} /></button>
       </div>
     </Show>
-    </>
+    </div>
   );
 }
 

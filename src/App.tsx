@@ -330,7 +330,6 @@ export default function App() {
               <PanelBoundary name="Ribbon" class="rb-wrap">
                 <div class="rb-stack">
                   <Ribbon />
-                  <DrawHint />
                 </div>
               </PanelBoundary>
               {/* the 3D view is the first of the main area's document tabs; result tabs open beside it */}
@@ -339,6 +338,8 @@ export default function App() {
                   <Viewport />
                 </PanelBoundary>
                 <MeshViewPanel />
+                {/* tool hints float over the top of the 3D view: the canvas keeps its size */}
+                <DrawHint />
               </MainArea>
               <PanelBoundary name="Checks" class="dock dw-dock-wrap">
                 <DesignDock />

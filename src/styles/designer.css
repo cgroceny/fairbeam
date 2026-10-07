@@ -257,6 +257,18 @@ textarea.dz-autogrow { resize: none; overflow-y: auto; min-height: 0; max-height
   background: var(--al-accent-soft); border-bottom: 1px solid var(--al-accent-line); font-size: var(--al-text-xs); color: var(--al-text);
 }
 .rb-hint-x { margin-left: auto; }
+/* Tool hints (DrawHint) float over the top of the 3D view, below its camera-view row, instead of
+   taking a row above it: the canvas size and the camera do not change when a hint appears or grows. */
+.dw-hints {
+  position: absolute; z-index: 5; top: calc(var(--al-pad-hud) + var(--al-control-h) + var(--al-space-2));
+  left: var(--al-pad-hud); right: var(--al-pad-hud); display: grid; gap: var(--al-space-1); pointer-events: none;
+}
+.dw-hints:empty { display: none; }
+.dw-hints > * {
+  pointer-events: auto; border: 1px solid var(--al-accent-line); border-radius: var(--al-radius);
+  box-shadow: var(--al-shadow-pop); max-height: 40vh; overflow: auto;
+}
+.dw-hints > .point-tools-panel { background: var(--al-surface); border-color: var(--al-border); }
 /* Boolean set-up: the operand colours of the 3D preview (tokens --al-3d-bool-*) as legend chips */
 .bool-chip { display: inline-flex; align-items: center; gap: var(--al-space-1); font-weight: 600; }
 .bool-chip::before { content: ""; width: 10px; height: 10px; border-radius: 2px; background: var(--bool-chip); border: 1px solid color-mix(in srgb, var(--bool-chip) 70%, var(--al-text)); }

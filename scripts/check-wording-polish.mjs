@@ -1,6 +1,7 @@
 // Wording and polish: Turkish terms (one name per concept), numbers shown with one
 // notation, parameter default labels, the Start screen, the Parameters dock, the work-plane label, the
-// Translate copies label, the camera refit and the ribbon tab of a new design. The behaviour that needs a
+// Translate copies label, the camera refit, the ribbon tab of a new design and the layout that must
+// not jump (floating tool hints, the Post-processing group order and note). The behaviour that needs a
 // browser is asserted as source contracts, as the other check scripts do.
 //
 //   node --experimental-strip-types scripts/check-wording-polish.mjs
@@ -123,6 +124,22 @@ ok(step.indexOf('<div class="dz-vec-row">') < step.indexOf("transform.useLastTwo
 const vp = read("src/scene/Viewport.tsx");
 ok(/refitWhenSceneChanged\(b\)/.test(vp) && /ratio > 3 \|\| ratio < 1 \/ 3/.test(vp), "a large change of the scene's size or place fits the view again");
 ok(/framedByAddition/.test(vp), "an explicit addition's own framing is not overridden");
+
+// ---- nothing in the designer jumps: tool hints float over the 3D view, the ribbon keeps its places
+const app = read("src/App.tsx");
+const stackStart = app.indexOf('<div class="rb-stack">');
+ok(stackStart > 0 && !app.slice(stackStart, app.indexOf("</div>", stackStart)).includes("<DrawHint />"), "tool hints are not a row under the ribbon (that row resized the 3D view)");
+ok(/<MainArea>[\s\S]*?<DrawHint \/>[\s\S]*?<\/MainArea>/.test(app), "tool hints are drawn inside the 3D view's stage");
+ok(/export function DrawHint\(\) \{\s*return \(\s*<div class="dw-hints">/.test(ws), "every hint bar sits in the floating .dw-hints container");
+const dCss = read("src/styles/designer.css");
+ok(/\.dw-hints \{[^}]*position: absolute;/.test(dCss) && /\.stage \{[^}]*position: relative;/.test(read("src/styles/drawing.css")), "the hints are positioned over the stage, outside the layout");
+ok(/\.dw-hints \{[^}]*top: calc\(var\(--al-pad-hud\) \+ var\(--al-control-h\) \+ var\(--al-space-2\)\)/.test(dCss), "the hints start below the camera-view row (the view buttons stay usable)");
+const post = ws.slice(ws.indexOf('tab.key === "post"'));
+ok(post.indexOf('t("ribbon.post.report")') > 0 && post.indexOf('t("ribbon.post.report")') < post.indexOf('t("ribbon.post.farfield")'), "Post-processing: the far-field quantity comes after PDF report, Package and Python (they keep their x)");
+const ribbonCss = read("src/styles/ribbon.css");
+ok(/\.rb-shell \.rb-result-note \{[^}]*min-width: 160px;[^}]*white-space: normal;[^}]*-webkit-line-clamp: 3;/.test(ribbonCss), "the Post-processing note wraps (up to three lines) instead of 'Sele…'");
+ok(/<p class="rb-result-note" title=\{resultNote\(\)\}>\{resultNote\(\)\}<\/p>/.test(ws), "the note's tooltip carries the whole text");
+ok(/:scope > :not\(\.rb-group\)[\s\S]{0,120}minWidth[\s\S]{0,80}const room = toolbar\.clientWidth - reserved;/.test(ws), "fitRibbon keeps the note's min-width free");
 
 // ---- a new design opens on a usable ribbon tab
 ok(/ribbonTab\(\) === "post"\) \{ setRibbonTab\("model"\)/.test(ws), "a design without results does not open on Post-processing");
