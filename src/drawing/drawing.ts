@@ -1,5 +1,6 @@
 import { withoutVoids } from "../lib/voidParts.ts";
 import { lumpedLabel } from "../lumped.ts";
+import { APP_VERSION } from "../lib/appVersion.ts";
 // Academic / engineering technical drawing of a project bundle: orthographic views (first or third
 // angle), optional isometric view, automatic ISO-style dimensions, on an A4/A3 sheet with title
 // block, or as a bare figure for papers. Pure TypeScript: bundle in, SVG string out (no DOM).
@@ -883,7 +884,7 @@ export function technicalDrawing(bundle: Bundle, options: Partial<DrawingOptions
   const notes = collectNotes(ctx);
   const dims = o.dimensions ? [...ctx.plan.dims.map((d) => d.text), ...ctx.plan.angles.map((a) => a.text)] : [];
   const dimKeys = o.dimensions ? [...ctx.plan.dims.map((d) => d.key), ...ctx.plan.angles.map((a) => `angle:${a.owner}`)] : [];
-  const desc = `${b.name} (${b.model.id}) · Fairbeam ${b.generator.version} · ${o.projection}-angle projection`;
+  const desc = `${b.name} (${b.model.id}) · Fairbeam ${APP_VERSION} · ${o.projection}-angle projection`;
 
   if (figure) {
     const width = o.figureWidthMm;
@@ -915,7 +916,7 @@ export function technicalDrawing(bundle: Bundle, options: Partial<DrawingOptions
   const size = o.sheet as SheetSize;
   const sheet = SHEETS[size];
   const fr = frameRect(size);
-  const tb = titleBlock(b, { size, projection: o.projection, date: o.date ?? today(), version: b.generator.version }, { fs: st.fs, thick: st.metal, thin: st.thin });
+  const tb = titleBlock(b, { size, projection: o.projection, date: o.date ?? today(), version: APP_VERSION }, { fs: st.fs, thick: st.metal, thin: st.thin });
   const tbBox: Box = [fr[2] - tb.w, fr[3] - tb.h, fr[2], fr[3]];
   const leftW = fr[2] - fr[0] - tb.w - 8;
   const noteW = leftW >= 70 ? leftW : tb.w;

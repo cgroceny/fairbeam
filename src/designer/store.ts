@@ -292,7 +292,7 @@ export function releaseDraft() {
 }
 
 export async function createDesign(body: { id: string; name?: string; from?: string; template?: TemplateKey; python?: { source_model: string; model?: Design["model"] }; cst?: { source: string; filename?: string };
-  pcb?: { files: PcbFile[]; options?: PcbOptions } }) {
+  pcb?: { files: PcbFile[]; options?: PcbOptions }; design?: Design }) {
   if (!(await confirmReplaceDraft("create", body.name || body.id))) return null;
   const mine = asyncState.navigationTicket();
   defaultDesignerIO.setNavigationTarget(body.id);
@@ -304,8 +304,8 @@ export async function createDesign(body: { id: string; name?: string; from?: str
     // Apply this only to newly created designs, then persist it in the created file. An imported
     // CST macro or PCB artwork keeps the mesh the import chose (an fairbeam export restores its original mesh).
     const preferredMesh = readGeneralSettings().meshMode === "auto" ? "design" : "auto";
-    const { from, python, cst, pcb } = body;
-    const meshChanged = !from && !python && !cst && !pcb && !!res.design.mesh && res.design.mesh.mode !== "manual" && res.design.mesh.mode !== preferredMesh;
+    const { from, python, cst, pcb, design } = body;
+    const meshChanged = !from && !python && !cst && !pcb && !design && !!res.design.mesh && res.design.mesh.mode !== "manual" && res.design.mesh.mode !== preferredMesh;
     if (meshChanged) {
       res.design.mesh.mode = preferredMesh;
       if (preferredMesh === "design") {
@@ -327,7 +327,9 @@ export async function createDesign(body: { id: string; name?: string; from?: str
     // (PCB artwork: only the entities that were not imported; its warnings, such as the missing port, are advice)
     const gaps = report ? (body.pcb ? report.notes.filter((n) => n.severity === "refused").length : gapCounts(report.notes).total) : 0;
     const pcbFiles = body.pcb?.files ?? [];
-    showSaveNote({ tone: gaps ? "warn" : "good", text: body.python
+    showSaveNote({ tone: gaps ? "warn" : "good", text: body.design
+      ? t("store.importedDesign", { name: res.design.model.name, file: res.file })
+      : body.python
       ? t("store.createdPython", { file: res.file })
       : report ? t("store.createdCst", { file: res.file,
         source: body.pcb ? (pcbFiles.length === 1 ? pcbFiles[0].name : t("pcbImport.nFiles", { count: pcbFiles.length })) : body.cst?.filename ?? t("store.theCstMacro"),

@@ -50,7 +50,7 @@ Turkish students and Teknofest teams are welcome.
 | Examples | Örnekler | |
 | Results | Sonuçlar | tab, tree folder, dock; "2B/3B Sonuçlar" is the tree's field-map folder |
 | Post (ribbon tab, run step) | Son işlem | processing after the solver |
-| Result file (a run's saved `.json`) | Sonuç dosyası | what "Open result file…" opens; "Proje" is no longer used in the interface (see UI terms) |
+| Result file (a run's saved `.json`) | Sonuç dosyası | what "Open result or design file…" opens (a design file becomes a new design); "Proje" is no longer used in the interface (see UI terms) |
 | Workspace (folder) | Çalışma klasörü / çalışma alanı | |
 | Ribbon | Şerit | as in Office |
 | Tab | Sekme | |
@@ -180,7 +180,7 @@ The English interface uses one word per thing. The Turkish texts follow the same
 |---|---|---|---|
 | The editable model file (`*.design.json`) | design: "New design", "Close design", "Your designs", "Open as new design…", "Design ID" | project | tasarım |
 | One simulation and what it produced | run: "Runs" tab, "Compare runs", "Run server" | project, simulation cell | çalıştırma |
-| The saved `.json` of a run | result file: "Open result file…", "Result file" | project bundle, project | sonuç dosyası |
+| The saved `.json` of a run | result file: "Open result or design file…", "Result file" | project bundle, project | sonuç dosyası |
 | A bundled read-only design with results | example: "Example: Patch antenna", "Open as new design…" | example project | örnek |
 | The copy action on an example (app, docs and website) | "Open as new design…" | Open as new project | Yeni tasarım olarak aç |
 | Parameter sweep (dialog title, ribbon button and docs) | "Parameter sweep", sentence case | Parametric sweep, Parameter Sweep | parametre taraması |

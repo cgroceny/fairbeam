@@ -11,7 +11,12 @@
 .render-angles legend { padding: 0 var(--al-space-1); font-size: var(--al-text-sm); color: var(--al-text-2); }
 .render-angle { display: flex; align-items: center; gap: var(--al-space-2); font-size: var(--al-text-sm); cursor: pointer; }
 .render-field .seg { align-self: start; flex-wrap: wrap; }
-.render-custom { display: grid; grid-template-columns: 1fr 1fr; gap: var(--al-space-2); }
+/* two equal columns that may shrink below the inputs' intrinsic width: no horizontal scroll in the options column */
+.render-custom { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: var(--al-space-2); }
+.render-custom .field { min-width: 0; }
+.render-custom input { width: 100%; min-width: 0; box-sizing: border-box; }
+.render-custom input[aria-invalid="true"] { border-color: var(--al-critical); }
+.render-size-error { grid-column: 1 / -1; font-size: var(--al-text-xs); }
 .render-check { display: flex; align-items: center; gap: var(--al-space-2); font-size: var(--al-text-sm); }
 .render-note { font-size: var(--al-text-xs); }
 .render-results { overflow: auto; padding: var(--al-space-4); min-height: 240px; }
@@ -22,6 +27,7 @@
 .render-thumb img { max-width: 100%; max-height: 100%; object-fit: contain; display: block; }
 .render-meta { display: grid; gap: 2px; min-width: 0; font-size: var(--al-text-xs); }
 .render-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-family: var(--al-font-mono); }
+.render-path { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-family: var(--al-font-mono); }
 .render-card-actions { display: flex; gap: var(--al-space-2); }
 @media (max-width: 760px) { .render-body { grid-template-columns: minmax(0, 1fr); } }
 /* the studio background is light: the scale bar and the readouts stay legible on it */

@@ -59,8 +59,12 @@ The header's **Start · Design · Examples** switch moves between the start scre
 the examples:
 
 The header's **More** menu keeps secondary actions available with arrow-key navigation and Escape.
-**Open result file** is available there and through desktop **File → Open**. Opening a design lists
-its saved runs under **Results** in the tree; select a run to view it without opening a file manually.
+**Open result or design file…** is available there and through desktop **File → Open**: a result
+file (`.json` of a run) opens in Examples; a design file (`.design.json`, e.g. Export › Current
+design JSON from a colleague) is created as a new design in the workspace, under a free file name
+from its name, and opened in Design. Dropping either on the window does the same. Opening a design
+lists its saved runs under **Results** in the tree; select a run to view it without opening a file
+manually.
 On narrow windows the tree and properties panels share one overlay slot so they do not cover
 both sides of the canvas at once. Resizing back restores the independently remembered desktop
 panel choices. General Settings and About take focus whenever opened; dialogs contain Tab,
@@ -1233,20 +1237,25 @@ fairbeam import-pcb board.gtl board.gbl board.gko board.drl --substrate RO4003C 
 - **Layers.** Each copper layer becomes a part of `polygon` sheets on a z plane: top copper at
   z = `h` (the substrate thickness, a parameter), bottom copper at z = 0. Layers are recognized by
   name (F.Cu, Top, GTL, Edge.Cuts, Profile ...) or by the Gerber X2 file function; `--layer-map
-  NAME=role` overrides that, with the roles `top_copper`, `bottom_copper`, `outline` and `ignore`
-  (a layer name, file name or pattern on the left). A file with a single unrecognised layer of
-  outlines is taken as top copper, with a warning.
+  NAME=role` overrides that, with the roles `top_copper`, `bottom_copper`, `outline`, `ignore`,
+  `top_clearance` and `bottom_clearance` (a layer name, file name or pattern on the left). A file
+  with a single unrecognized layer of outlines is taken as top copper, with a warning.
+- **Clearances.** A layer named after a copper layer with `_Antipad` (or "clearance"), as
+  Fairbeam's own fab export writes them (`B_Cu_Antipad`), is the clearance of that copper: its
+  circles and outlines are cut out of the copper as holes. Fairbeam's fab DXF and Gerber files
+  therefore read back with the anti-pad round the probe in the ground plane.
 - **Substrate.** A box over the board outline (the Edge.Cuts / Profile layer), else the copper's
   bounding box plus `--margin` (2 mm). `--substrate` takes a library name (FR4, RO4003C ...) or a
   name with `--eps-r` and `--tan-d`; tan δ is applied at the design frequency `f0` (`--f0`, default
   2.45 GHz; the band is 0.6 to 1.3 f0). The board center is moved to x = y = 0 (`--origin keep`
   leaves the file's coordinates; the report gives the offset).
-- **Units.** DXF: `$INSUNITS` (mm assumed, with a warning, when absent; `--units mm|inch` forces).
-  Gerber and Excellon files carry their own.
+- **Units.** DXF: `$INSUNITS` (mm assumed, with one warning for all the files that lack it;
+  `--units mm|inch` forces). Gerber and Excellon files carry their own.
 - **Curves.** Arcs and circles are tessellated so that no chord is more than `--chord-tol` (0.02 mm)
   from the curve.
-- **Holes.** CSXCAD polygons have no holes, so a loop inside a loop (or a Gerber aperture hole)
-  makes the copper part a **live Boolean subtraction** (outlines minus holes, see Cuts above): the
+- **Holes.** CSXCAD polygons have no holes, so a loop inside a loop (a Gerber aperture hole, a clear
+  (LPC) circle flash or region inside one dark region, a clearance layer's circle) makes the copper
+  part a **live Boolean subtraction** (outlines minus holes, see Cuts above): the
   stored sheets are the exact difference, and the operands stay editable. An island inside a hole
   is a separate part (`top_copper_islands`).
 - **Ports.** None: the importer cannot know the feed. The report says "add a port at the feed".
@@ -1254,7 +1263,8 @@ fairbeam import-pcb board.gtl board.gbl board.gko board.drl --substrate RO4003C 
 The **import report** (printed by the command) lists the layers and their roles, what was created
 and every entity that was not imported, with its line and the reason: text, hatches, splines, block
 references, open paths that do not close, self-crossing outlines, Gerber aperture macros, clear
-polarity, step and repeat, unplated holes, routed slots.
+polarity objects other than circle flashes and regions inside one dark region, step and repeat,
+unplated holes, routed slots.
 
 ### The Import PCB artwork dialog
 
@@ -1264,8 +1274,8 @@ desktop app) does the same with a form. Choose the files or drop them on the dia
 nothing until you create the design).
 
 - **Layers.** A table lists every layer of the files (a DXF layer, or a Gerber or drill file) with
-  what it holds, a **role** dropdown (top copper, bottom copper, board outline, ignore; a drill file
-  is drills or ignored) and why that role was picked: the layer name, the Gerber file function, the
+  what it holds, a **role** dropdown (top copper, bottom copper, board outline, ignore, clearance in
+  the top or bottom copper; a drill file is drills or ignored) and why that role was picked: the layer name, the Gerber file function, the
   Excellon file, or your choice. A layer whose name gives no hint shows "Unclear: not used" and
   is highlighted; pick its role. Each change imports again, so the report always matches the table.
   The arrow next to a role you chose goes back to the importer's pick. A map entry names a DXF layer
@@ -1275,8 +1285,12 @@ nothing until you create the design).
   are the ones the design gets. **Advanced**: the units of DXF files, the arc chord tolerance, the
   margin used when no layer is the board outline, and center or keep the file's origin.
 - **Report.** The entries that were not imported come first, then warnings and notes, then the
-  design checks (the missing port is left out of them: the dialog says so itself). Name the design
-  and **Create and open** it.
+  design checks (the missing port is left out of them: the dialog says so itself). The summary lists
+  the roles guessed from layer names instead of "everything was imported", and notes that name a
+  command-line flag are worded for the dialog's own controls (Advanced › Units of DXF files,
+  Advanced › Origin, the Layers table). The proposed name is the stem the files share without their
+  layer suffixes (`export_patch` for `export_patch-F_Cu.dxf`, `export_patch-B_Cu.dxf` ...). Name the
+  design and **Create and open** it.
 - **Port.** The importer cannot know the feed, so a new design has no port. After the design opens,
   the dialog shows "Add a port at the feed" with a button that goes to Simulation › Ports › Lumped
   and adds a lumped port to move to the feed.

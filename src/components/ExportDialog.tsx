@@ -13,14 +13,15 @@ import { appMode } from "../workspace";
 import { draft } from "../designer/store";
 import { api } from "../runner/api";
 import NumberField from "./NumberField";
-import { DEFAULT_SHEET_THICKNESS_UM } from "../export/mesh";
+import { DEFAULT_SHEET_THICKNESS_UM, SHEET_THICKNESS_UM } from "../export/mesh";
 import type { Bundle } from "../types";
+import { designStem } from "../lib/exportNames";
 
 /** the macro's options; their label and hint are export.option.<key>.label / .hint */
 const OPTIONS: (keyof Omit<CstOptions, "component">)[] = ["mergeParts", "includePorts", "farfieldMonitors", "solverSettings"];
 type GeometryFormat = "blender" | "glb" | "stl" | "cst";
-/** the CST files' name (<stem>.bas, <stem>-cst.zip), from the model id */
-const cstFileStem = (modelId: string | undefined) => (modelId ?? "fairbeam").replace(/[^a-z0-9_-]+/gi, "_");
+/** the CST files' name (<stem>.bas, <stem>-cst.zip): the design's file stem, as every export of it */
+const cstFileStem = (modelId: string | undefined) => designStem(modelId);
 
 export default function ExportDialog() {
   let dialog!: HTMLDivElement;
@@ -59,9 +60,17 @@ export default function ExportDialog() {
   /** polyhedra travel as .stl files next to the macro, so the download is a .zip with the macro and the files */
   const stlCount = () => result()?.files.length ?? 0;
   const formatHint = () => t(format() === "cst" ? "export.description" : `export.${format()}.hint`);
+  /** what the chosen mesh format carries, and what it leaves out */
+  const formatScope = () => t(format() === "stl" ? "export.stl.scope" : format() === "glb" ? "export.glb.scope" : "export.blender.scope");
   const downloadLabel = () => t(blenderBusy() ? "export.blender.preparing" : format() === "cst" ? (stlCount() ? "export.downloadZip" : "export.download") : `export.${format()}.download`);
-  const sheetUmValue = () => { const v = Number(sheetUm()); return Number.isFinite(v) && v > 0 && v <= 5000 ? v : null; };
-  const meshOptions = () => ({ sheetThicknessUm: sheetSolid() ? (sheetUmValue() ?? DEFAULT_SHEET_THICKNESS_UM) : 0 });
+  // the thickness typed, within SHEET_THICKNESS_UM, else null: the field shows the range and the export waits (never
+  // another thickness than the one shown)
+  const sheetUmValue = () => {
+    const text = sheetUm().trim(), v = Number(text);
+    return text !== "" && Number.isFinite(v) && v >= SHEET_THICKNESS_UM.min && v <= SHEET_THICKNESS_UM.max ? v : null;
+  };
+  const sheetInvalid = () => !isCst() && sheetSolid() && sheetUmValue() === null;
+  const meshOptions = () => ({ sheetThicknessUm: sheetSolid() ? sheetUmValue()! : 0 });
 
   let controller: AbortController | undefined;
   const prepare = async () => {
@@ -80,7 +89,7 @@ export default function ExportDialog() {
   onCleanup(() => controller?.abort());
   const downloadGeometry = async () => {
     const b = source();
-    if (!b || blenderBusy()) return;
+    if (!b || blenderBusy() || sheetInvalid()) return;
     setBlenderBusy(true);
     setNote({ text: t("export.blender.preparing"), warn: false });
     const chosen = format();
@@ -145,7 +154,7 @@ export default function ExportDialog() {
 
   return (
     <div class="scrim" onClick={(e) => e.target === e.currentTarget && setExportOpen(false)}>
-      <div class="dialog" role="dialog" aria-modal="true" aria-labelledby="export-title" aria-describedby="export-desc" tabindex={-1} ref={dialog}>
+      <div class="dialog export-dialog" role="dialog" aria-modal="true" aria-labelledby="export-title" aria-describedby="export-desc" tabindex={-1} ref={dialog}>
         <header class="dialog-head">
           <div>
             <h2 id="export-title">{t("export.title")}</h2>
@@ -185,12 +194,12 @@ export default function ExportDialog() {
                 <li>{t("export.step.check")}</li>
               </ol>
             </div>
-            <p class="status-block" role="note">{t("export.notValidated")}</p>
+            <p class="muted export-note" role="note">{t("export.notValidated")}</p>
             <Show when={stlCount()}>
-              <p class="status-block" role="note">{t("export.stlNote", { count: stlCount() })}</p>
+              <p class="muted export-note" role="note">{t("export.stlNote", { count: stlCount() })}</p>
             </Show>
             <Show when={result()?.parameters.length}>
-              <p class="status-block" role="note">{t("export.parametric.summary", { count: result()!.parameters.length })}</p>
+              <p class="muted export-note" role="note">{t("export.parametric.summary", { count: result()!.parameters.length })}</p>
             </Show>
             <Show when={result()?.notes.length}>
               <div class="export-warnings">
@@ -206,7 +215,7 @@ export default function ExportDialog() {
             </Show>
             </Show>
             <Show when={!isCst()}>
-              <p class="muted">{t(format() === "stl" ? "export.stl.scope" : "export.blender.scope")}</p>
+              <p class="muted">{formatScope()}</p>
               <div class="toggle-list">
                 <label class="toggle" title={t("export.sheet.hint")}>
                   <input type="checkbox" checked={sheetSolid()} disabled={blenderBusy()} onChange={e => setSheetSolid(e.currentTarget.checked)} />
@@ -222,20 +231,23 @@ export default function ExportDialog() {
                 </Show>
               </div>
               <Show when={sheetSolid()}>
-                <label class="field">
+                <label class="field export-sheet">
                   <span>{t("export.sheet.thickness")}</span>
-                  <NumberField min="1" max="5000" step="1" value={sheetUm()} disabled={blenderBusy()} aria-invalid={sheetUmValue() === null} onInput={e => setSheetUm(e.currentTarget.value)} />
+                  <NumberField min={SHEET_THICKNESS_UM.min} max={SHEET_THICKNESS_UM.max} step="1" value={sheetUm()} disabled={blenderBusy()} aria-invalid={sheetInvalid()}
+                    aria-describedby={sheetInvalid() ? "export-sheet-error" : undefined} onInput={e => setSheetUm(e.currentTarget.value)} />
+                  <Show when={sheetInvalid()}><span id="export-sheet-error" class="rp-error nm-hint" role="alert">{t("export.sheet.range", { min: SHEET_THICKNESS_UM.min, max: SHEET_THICKNESS_UM.max })}</span></Show>
                 </label>
               </Show>
               <p class="muted">{t(sheetSolid() ? "export.sheet.onNote" : "export.sheet.offNote")}</p>
             </Show>
           </div>
-          <Show when={isCst()} fallback={<div class="export-options">
-            <Show when={format() === "blender"} fallback={<><h3>{t("export.mesh.title")}</h3><p class="muted">{formatHint()}</p><p class="muted">{t("export.mesh.limitations")}</p></>}>
+          <Show when={isCst()} fallback={<div class="export-options export-side">
+            {/* what is exported, as a summary row on top; the header already says what the format is */}
+            <Show when={source()}>{b => <p class="export-summary"><span>{b().model.name}</span><span class="muted">{t("export.blender.solidCount", { count: b().parts.length })}</span></p>}</Show>
+            <Show when={format() === "blender"} fallback={<><h3>{t("export.mesh.title")}</h3><p class="muted">{t("export.mesh.limitations")}</p></>}>
               <h3>{t("export.blender.stepsTitle")}</h3>
               <ol class="export-render-steps"><li>{t("export.blender.stepExtract")}</li><li>{t("export.blender.stepRender")}</li><li>{t("export.blender.stepEdit")}</li></ol>
             </Show>
-            <Show when={source()}>{b => <p class="mono">{b().model.name} · {t("export.blender.solidCount", { count: b().parts.length })}</p>}</Show>
           </div>}><pre class="code" aria-label={t("export.previewAria")} tabindex={0}>{previewText()}</pre></Show>
         </div>
         <footer class="dialog-foot">
@@ -250,7 +262,7 @@ export default function ExportDialog() {
             <Show when={format() === "cst"}><button class="btn btn-ghost" disabled={!result()} onClick={copy}>
               <Show when={copied()} fallback={<><Copy size={14} aria-hidden="true" /> {t("common.copy")}</>}><Check size={14} aria-hidden="true" /> {t("export.copied")}</Show>
             </button></Show>
-            <button class="btn btn-primary" disabled={!source() || sourceBusy() || blenderBusy() || (isCst() && !result())} onClick={() => format() === "cst" ? void download() : void downloadGeometry()}><Download size={14} aria-hidden="true" /> {downloadLabel()}</button>
+            <button class="btn btn-primary" disabled={!source() || sourceBusy() || blenderBusy() || (isCst() && !result()) || sheetInvalid()} onClick={() => format() === "cst" ? void download() : void downloadGeometry()}><Download size={14} aria-hidden="true" /> {downloadLabel()}</button>
           </div>
         </footer>
       </div>

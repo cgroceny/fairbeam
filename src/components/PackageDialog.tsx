@@ -1,7 +1,7 @@
 import { createMemo, createSignal, For, Show } from "solid-js";
 import { createStore } from "solid-js/store";
 import { Download, FileText, TriangleAlert, X } from "lucide-solid";
-import { bundle, setPackageOpen } from "../state";
+import { setPackageOpen } from "../state";
 import { PACKAGE_GROUPS, cstGeometryOnly, fabUnavailable, packageFiles, packageName, zipPackage, type PackageGroup } from "../export/package";
 import { technicalDrawing } from "../drawing/drawing";
 import { capture3d, reportPdfFor, svgToPdf } from "../drawing/render";
@@ -11,6 +11,18 @@ import { reference } from "../compare/store";
 import { downloadFailedMessage, downloadMessage, revealDownloadedFile, saveDownload } from "../lib/download";
 import { countUsage } from "../lib/telemetry";
 import { hasKey, t } from "../i18n";
+import { appMode } from "../workspace";
+import { designResultState, exportBundle } from "../designer/activeResult";
+import { activeExportSurface, geometryAvailable } from "./exportContext";
+import { models } from "../runner/store";
+import type { ModelFileRef } from "../export/report";
+import type { Bundle } from "../types";
+
+/** The workspace file a bundle was run from, as the run server lists it (the reproduce command runs it). */
+function modelFileOf(b: Bundle): ModelFileRef | null {
+  const m = models().find((x) => x.model?.id === b.model.id && !x.error);
+  return m ? { file: m.file, kind: m.kind ?? (m.file.endsWith(".design.json") ? "design" : "python") } : null;
+}
 
 /** A package group's label or hint in the UI language (package.group.<id>.*), else its English text. */
 const groupText = (g: { id: PackageGroup; label: string; hint: string }, field: "label" | "hint") =>
@@ -18,7 +30,15 @@ const groupText = (g: { id: PackageGroup; label: string; hint: string }, field: 
 
 export default function PackageDialog() {
   let dialog!: HTMLDivElement;
+  // in Design mode the design's run (else its geometry), never the preview or an Examples bundle (designer/activeResult.ts)
+  const bundle = exportBundle;
   const hasResults = () => !!bundle()?.results;
+  /** why Data and Publication figures are not offered */
+  const resultsReason = () => appMode() !== "design" ? t("package.needsResults")
+    : designResultState().loading ? t("package.readingRun") : t("package.noRunYet");
+  /** why the 3D view cannot be captured: the viewport is not on screen (a result tab, the drawing) */
+  const imageReason = () => activeExportSurface() === "viewport" && geometryAvailable() ? null
+    : activeExportSurface() === "design-result" ? t("package.image.resultTab") : t("package.image.noView");
   const [inc, setInc] = createStore<Record<PackageGroup, boolean>>({
     project: true, readme: true, report: true, data: true, drawings: true, figures: true, cst: true, fab: true, image: true,
   });
@@ -30,7 +50,8 @@ export default function PackageDialog() {
   // the CST macro of a design with a grouped port carries the geometry only (src/export/package.ts)
   const cstNoPorts = createMemo(() => !!bundle() && cstGeometryOnly(bundle()!));
   const hint = (g: (typeof PACKAGE_GROUPS)[number]) => (g.id === "cst" && cstNoPorts() ? t("package.group.cst.noPorts") : groupText(g, "hint"));
-  const available = (g: PackageGroup) => (g === "fab" ? !fabReason() : hasResults() || !(g === "data" || g === "figures"));
+  const available = (g: PackageGroup) => (g === "fab" ? !fabReason() : g === "image" ? !imageReason() : hasResults() || !(g === "data" || g === "figures"));
+  const unavailableText = (g: PackageGroup) => g === "fab" ? t("package.unavailable", { reason: fabReason() }) : g === "image" ? imageReason() : resultsReason();
   const effective = () => Object.fromEntries(PACKAGE_GROUPS.map((g) => [g.id, inc[g.id] && available(g.id)])) as Record<PackageGroup, boolean>;
   // preview of the file list (placeholders for the browser-rendered PNG and PDF)
   const preview = createMemo(() => {
@@ -39,15 +60,19 @@ export default function PackageDialog() {
     const ph = new Uint8Array(0);
     return packageFiles(b, effective(), { isoPng: ph, drawingPdf: ph, reportPdf: ph, arrayWeights: hasArray() ? arrayWeights() : null, reference: reference() }).map((f) => f.path);
   });
-  const name = () => (bundle() ? packageName(bundle()!, new Date()) : "");
+  // the time in the file name: when the dialog opened, then the moment of the last export (the name shown is the name saved)
+  const [stampAt, setStampAt] = createSignal(new Date());
+  const name = () => (bundle() ? packageName(bundle()!, stampAt()) : "");
 
   const download = async () => {
     const b = bundle();
     if (!b || busy()) return;
     const now = new Date();
+    setStampAt(now);
     const want = effective();
     const problems: string[] = [];
     const file = packageName(b, now);
+    const model = modelFileOf(b);
     setNote(null);
     try {
       let isoPng: Uint8Array | null = null;
@@ -72,7 +97,10 @@ export default function PackageDialog() {
       if (want.report) {
         setBusy(t("package.busy.report"));
         try {
-          reportPdf = await reportPdfFor(b, now, hasArray() ? arrayWeights() : null, reference());
+          // the report lists the files of this package: the ones captured and rendered so far, the report itself
+          const ph = new Uint8Array(1);
+          const paths = packageFiles(b, want, { isoPng, drawingPdf, reportPdf: ph, arrayWeights: hasArray() ? arrayWeights() : null, reference: reference(), model }, now).map((f) => f.path);
+          reportPdf = await reportPdfFor(b, now, hasArray() ? arrayWeights() : null, reference(), { files: paths, model });
         } catch (e) {
           console.error(e);
           problems.push(t("package.missing.report"));
@@ -80,7 +108,7 @@ export default function PackageDialog() {
       }
       setBusy(t("package.busy.zip"));
       await new Promise((r) => setTimeout(r, 0));
-      const files = packageFiles(b, want, { isoPng, drawingPdf, reportPdf, arrayWeights: hasArray() ? arrayWeights() : null, reference: reference() }, now);
+      const files = packageFiles(b, want, { isoPng, drawingPdf, reportPdf, arrayWeights: hasArray() ? arrayWeights() : null, reference: reference(), model }, now);
       const r = await saveDownload(file, zipPackage(files, file.replace(/\.zip$/, ""), now), "application/zip");
       if (reportPdf && r.status !== "cancelled" && r.status !== "failed") countUsage("feature.pdf_report");
       setNote(problems.length
@@ -100,9 +128,10 @@ export default function PackageDialog() {
     setBusy(t("package.busy.report"));
     setNote(null);
     const now = new Date();
+    setStampAt(now);
     const file = packageName(b, now).replace(/\.zip$/, "_report.pdf");
     try {
-      const r = await saveDownload(file, await reportPdfFor(b, now, hasArray() ? arrayWeights() : null, reference()), "application/pdf");
+      const r = await saveDownload(file, await reportPdfFor(b, now, hasArray() ? arrayWeights() : null, reference(), { model: modelFileOf(b) }), "application/pdf");
       if (r.status !== "cancelled" && r.status !== "failed") countUsage("feature.pdf_report");
       setNote({ text: downloadMessage(r), warn: r.status === "failed" || r.status === "cancelled", path: r.status === "saved" ? r.path : undefined });
     } catch (e) {
@@ -135,7 +164,7 @@ export default function PackageDialog() {
                   <span class="toggle-box" aria-hidden="true" />
                   <span class="package-text">
                     <span>{groupText(g, "label")}</span>
-                    <span class="package-hint">{available(g.id) ? hint(g) : g.id === "fab" ? t("package.unavailable", { reason: fabReason() }) : t("package.needsResults")}</span>
+                    <span class="package-hint">{available(g.id) ? hint(g) : unavailableText(g.id)}</span>
                   </span>
                 </label>
               )}
@@ -161,7 +190,7 @@ export default function PackageDialog() {
             </span>
           </Show>
           <div class="dialog-actions">
-            <button class="btn btn-ghost" onClick={downloadReport} disabled={!!busy()} title={t("package.reportTitle")}>
+            <button class="btn btn-ghost" onClick={downloadReport} disabled={!!busy() || !bundle()} title={t("package.reportTitle")}>
               <FileText size={14} aria-hidden="true" /> {t("package.exportReport")}
             </button>
             <button class="btn btn-primary" onClick={download} disabled={!!busy() || !preview().length}>

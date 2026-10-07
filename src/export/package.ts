@@ -6,7 +6,7 @@ import { strToU8, zipSync } from "fflate";
 import type { Bundle } from "../types";
 import { cstMacro, DEFAULT_CST_OPTIONS } from "./cst.ts";
 import { arrayWeightsCsv, bandsCsv, farfieldCsv, patternCsv, signalsCsv, sparamsCsv, sweepCsv } from "./csv.ts";
-import { readmeReport } from "./report.ts";
+import { readmeReport, type ModelFileRef } from "./report.ts";
 import * as touchstone from "./touchstone.ts";
 import { touchstoneS1p } from "./touchstone.ts";
 import { sweep } from "../lib/rf.ts";
@@ -19,6 +19,7 @@ import { comparisonMetrics, metricsRows } from "../import/metrics.ts";
 import type { RefBundle } from "../import/reference.ts";
 import { toCsv } from "./csv.ts";
 import { fabFiles, fabModel } from "../fab/index.ts";
+import { designStem } from "../lib/exportNames.ts";
 
 /**
  * N-port Touchstone writer, provided by the physics side in touchstone.ts (not edited here). The
@@ -80,6 +81,8 @@ export interface PackageExtras {
   arrayWeights?: Map<number, Weight> | null;
   /** imported reference data (Touchstone / CSV) to compare with */
   reference?: RefBundle | null;
+  /** the workspace file the bundle was run from: the README's reproduce command runs it */
+  model?: ModelFileRef | null;
 }
 
 export interface PackageFile {
@@ -90,7 +93,8 @@ export interface PackageFile {
 
 const p2 = (n: number) => String(n).padStart(2, "0");
 export const stamp = (d: Date) => `${d.getFullYear()}${p2(d.getMonth() + 1)}${p2(d.getDate())}-${p2(d.getHours())}${p2(d.getMinutes())}`;
-const safeId = (s: string) => s.replace(/[^A-Za-z0-9_-]+/g, "_") || "fairbeam";
+/** the design's file stem (src/lib/exportNames.ts): the package, its macro and its fab files share it */
+const safeId = (s: string) => designStem(s);
 
 export const packageName = (b: Bundle, now: Date) => `${safeId(b.model.id)}_${stamp(now)}.zip`;
 
@@ -181,7 +185,7 @@ export function packageFiles(b: Bundle, include: Record<PackageGroup, boolean>, 
   if (include.image) add("images/view_iso.png", "3D view as shown in the viewer", extras.isoPng);
   if (include.readme) {
     const index = [{ path: "README.md", description: "This report" }, ...files.map(({ path, description }) => ({ path, description }))];
-    files.unshift({ path: "README.md", description: "This report", data: readmeReport(b, { exported: localTime(now), files: index }) });
+    files.unshift({ path: "README.md", description: "This report", data: readmeReport(b, { exported: localTime(now), files: index, model: extras.model }) });
   }
   return files;
 }

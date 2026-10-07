@@ -118,7 +118,7 @@ export async function captureImages(req: CaptureRequest): Promise<RenderedImage[
         ? frameFromView(req.view, model.bounds, options.projection)
         : frameBox(model.bounds, angleDirection(angle === "current" ? "iso" : angle), aspect, options.projection);
       const camera = cameraFromFraming(framing, aspect);
-      stage.update(camera);
+      stage.update(camera, options.height);
       renderer.shadowMap.needsUpdate = true;
       renderer.clear();
       lut.run(() => renderer.render(scene, camera));

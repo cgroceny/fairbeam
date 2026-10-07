@@ -744,6 +744,11 @@ input[type="range"] { height: var(--al-control-h-sm); margin: 0; accent-color: v
 .export-options > .status-block { margin-top: var(--al-space-2); }
 .export-warnings { margin-top: var(--al-space-2); }
 .export-warnings ul { padding-left: var(--al-space-4); display: grid; gap: var(--al-space-1); font-size: var(--al-text-xs); color: var(--al-text-2); }
+/* the export dialog keeps its height when the format changes: the header's description reserves three lines */
+.export-dialog .dialog-head p { min-height: 4.5em; min-height: 3lh; }
+.export-note { font-size: var(--al-text-sm); line-height: var(--al-leading); }
+.export-summary { display: flex; flex-wrap: wrap; gap: var(--al-space-1) var(--al-space-2); padding-bottom: var(--al-space-2); border-bottom: 1px solid var(--al-border); font-size: var(--al-text-sm); }
+.export-sheet input[aria-invalid="true"] { border-color: var(--al-critical); }
 .code {
   margin: 0; padding: var(--al-space-3) var(--al-space-4); overflow: auto; white-space: pre; tab-size: 4;
   font-family: var(--al-font-mono); font-size: var(--al-text-xs); line-height: 1.6;

@@ -49,7 +49,7 @@ import { t } from "../i18n";
 import { cellsText, meshStats } from "./meshStats";
 import { leaveResultsFor, resultFocus } from "./resultFocus";
 import { activateMainTab, cycleMainTabs, focusActiveMainTab } from "./mainTabsState";
-import { openRibbonResult, ribbonCurrents, ribbonExportReady, ribbonFarfield, ribbonFieldPlanes, ribbonPattern3d, ribbonResult } from "./ribbonResults";
+import { openRibbonResult, ribbonCurrents, ribbonExportReady, ribbonExportReason, ribbonFarfield, ribbonFieldPlanes, ribbonPattern3d, ribbonResult } from "./ribbonResults";
 import { ARRAY_PATTERN_NOTE, PatternQuantitySelect } from "../components/FarfieldCard";
 import { farfieldOverride } from "../lib/arrayStore";
 import RibbonField from "./RibbonField";
@@ -683,8 +683,8 @@ export function Ribbon() {
           <RButton icon={Grid2x2} label={t("ribbon.post.fieldMap")} title={ribbonFieldPlanes().ok ? t("ribbon.post.fieldMapTitle") : ribbonFieldPlanes().reason} disabled={!ribbonFieldPlanes().ok} pressed={resultFocus()?.view === "fieldmap"} onClick={() => void openRibbonResult("fieldmap")} />
         </RGroup>
         <RGroup label={t("ribbon.post.report")} icon={FileText}>
-          <RButton icon={FileText} label={t("ribbon.post.pdf")} title={ribbonExportReady() ? t("ribbon.post.pdfTitle") : t("ribbon.post.openRunFirst")} disabled={!ribbonExportReady()} onClick={() => openRibbonResult("report")} />
-          <RButton icon={Package} label={t("ribbon.post.package")} title={ribbonExportReady() ? t("ribbon.post.packageTitle") : t("ribbon.post.openRunFirst")} disabled={!ribbonExportReady()} onClick={() => openRibbonResult("export")} />
+          <RButton icon={FileText} label={t("ribbon.post.pdf")} title={ribbonExportReady() ? t("ribbon.post.pdfTitle") : ribbonExportReason()} disabled={!ribbonExportReady()} onClick={() => openRibbonResult("report")} />
+          <RButton icon={Package} label={t("ribbon.post.package")} title={ribbonExportReady() ? t("ribbon.post.packageTitle") : ribbonExportReason()} disabled={!ribbonExportReady()} onClick={() => openRibbonResult("export")} />
           <RButton icon={FileCode} label={t("ribbon.post.python")} action="open-python" title={t("ribbon.post.pythonTitle")} onClick={() => { setRunOpen(false); setSidePanelCollapsed(false); void openPythonPanel(); }} />
         </RGroup>
         {/* while a pattern is shown (the Pattern tab or the 3D pattern): the quantity it draws. It comes
