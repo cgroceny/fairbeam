@@ -19,6 +19,7 @@ import { compareCuts, compareLines, compareSParamQuantities, compareTable, SERIE
 import { createSParamSelection, SParamSmithCompare, SParamTools } from "../components/SParamView";
 import { cutPhi, setCutPhi, setZPart, zPart } from "../compare/store";
 import { radioGroupKeys } from "../lib/a11y";
+import { bandTexts } from "../lib/bands";
 import { freqText, ghzText, num, withUnit } from "../lib/format";
 import { nearestIndex, patternCut, sweep } from "../lib/rf";
 import { pairLabel, sMatrix } from "../lib/sparams";
@@ -42,7 +43,7 @@ import { exportNotice, registerSurfaceExports } from "../components/exportContex
 import { saveVisibleFigure, visibleFigureSvgs } from "../components/visibleFigure";
 import FieldMapView from "./FieldMapView";
 import { ResultSummary } from "./RunSummaryView";
-import { t } from "../i18n";
+import { fmt, t } from "../i18n";
 import "../styles/designer-sim.css";
 
 const COLORS = SERIES_COLORS;
@@ -117,14 +118,21 @@ function ResultSParams(props: { b: Bundle; format: ResultDataFormat }) {
       <Show when={!cmp()} fallback={<div class="rdk-side"><SpTools show={mp()} format={props.format} /></div>}>
         <div class="rdk-side"><SpTools show={mp()} format={props.format} /><dl class="kv">
           <Show when={bands().length} fallback={<><dt>{t("results.sparams.band10")}</dt><dd>{t("results.sparams.noBand")}</dd></>}>
-            <For each={bands()}>{(b, i) => (
-              <>
-                <dt>{bands().length > 1 ? t("results.sparams.bandN", { n: i() + 1 }) : t("results.sparams.band")}</dt>
-                <dd class="mono">{num(b.f_center / 1e9, 3)} GHz</dd>
-                <dt>|S11| min</dt><dd class="mono">{num(b.s11_min_db, 1)} dB</dd>
-                <dt>{t("results.sparams.bandwidth")}</dt><dd class="mono">{num((b.f_hi - b.f_lo) / 1e6, 0)} MHz<Show when={b.edge_lo || b.edge_hi}><span class="kv-sub">{t("results.sparams.atEdge")}</span></Show></dd>
-              </>
-            )}</For>
+            <For each={bands()}>{(b, i) => {
+              // the band's edges, its centre (the middle of the edges) and its best match (the |S11| minimum)
+              const c = bandTexts(b, (hz) => ghzText(hz / 1e9), fmt.fixed);
+              return (
+                <>
+                  {/* the resonance is the band's best match (the |S11| minimum); its centre is the middle of the edges */}
+                  <dt title={t("spec.bestMatch.title")}>{bands().length > 1 ? t("results.sparams.bandN", { n: i() + 1 }) : t("results.sparams.band")}</dt>
+                  <dd class="mono">{withUnit(c.best, "GHz")}</dd>
+                  <dt>|S11| min</dt><dd class="mono">{withUnit(minusSign(num(b.s11_min_db, 1)), "dB")}</dd>
+                  <dt title={t("spec.centre.title")}>{t("spec.centre")}</dt><dd class="mono">{withUnit(c.centre, "GHz")}</dd>
+                  <dt>{t("summary.range")}</dt><dd class="mono">{withUnit(c.range, "GHz")}</dd>
+                  <dt>{t("results.sparams.bandwidth")}</dt><dd class="mono">{withUnit(c.bwMhz, "MHz")}<Show when={c.open}><span class="kv-sub">{t("spec.bandOpen")}</span></Show></dd>
+                </>
+              );
+            }}</For>
           </Show>
           <dt>{t("results.sparams.points")}</dt><dd class="mono">{props.b.results?.frequency.length ?? 0}</dd>
         </dl></div>

@@ -796,7 +796,7 @@ without the dialog.
     thinner plates (35 µm copper) stay sheets there too, because cells across them make the timestep 30 to 60 times smaller
     and the run last 5 to 25 minutes or never converge.
 - **Monitors**:
-  - **Far field** (on or off) and its frequencies (empty: the centers of the matched bands), and an
+  - **Far field** (on or off) and its frequencies (empty: the |S11| minimum of each matched band), and an
     optional **Set phase center (mm)**. A design file can also set `far_field.faces`, six true/false
     flags (x−, x+, y−, y+, z−, z+) for the faces of the near-to-far-field box that record; a face
     a feed waveguide crosses is left out, as in the pyramidal horn example. There is no dialog
@@ -955,7 +955,7 @@ Post-processing tab; the dock's **Runs** tab lists the design's runs and **Log**
 openEMS output. Each run row in the tree carries its headline numbers (resonance, |S11|
 minimum and Dmax) under its name, and the Runs table has columns for the resonance, |S11| minimum,
 −10 dB bandwidth, Dmax and total efficiency (from the run's bundle; a run not read yet shows the
-band center from the project index):
+frequency of its band's |S11| minimum from the project index):
 
 - **Summary** (tree: Tables › Summary, or Post-processing › Summary): the run card. The converged
   banner (a run that is not clean shows the quality banner above it), the headline numbers
@@ -971,7 +971,10 @@ band center from the project index):
   edge)", and a mesh convergence study of such runs reports its steps as not comparable instead of
   converged.
 - **S-parameters**: |S11| with the −10 dB bands, or the driven column of the S-matrix for
-  several ports. The side panel lists the band center, the minimum |S11| and the bandwidth.
+  several ports. The side panel lists each matched band: its best match (the frequency of the |S11|
+  minimum), the minimum |S11|, its center (the middle of the band edges), its range and its
+  bandwidth. A band that continues past the simulated range is marked ≤ / ≥ at its open edge, and
+  its width is a lower bound.
 - **Impedance**, **VSWR** and **Smith**: the input impedance, the VSWR (2:1 marked) and the
   reflection on a Smith chart.
 - **Efficiency**: the mismatch efficiency 1 − |S11|² over the band (% or dB), with the radiation

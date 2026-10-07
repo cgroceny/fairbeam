@@ -143,6 +143,28 @@ class IndexField(unittest.TestCase):
         self.assertEqual(rows["stopped.json"]["quality"], "not-converged")
         self.assertNotIn("quality", rows["preview.json"])
 
+    def test_band_ranges_for_the_picker(self):
+        # each band's edges in GHz and whether it runs into the edge of the simulated range
+        # (src/lib/bands.ts pickerBands: the middle of a closed band, the range of an open one)
+        b = patch_bundle()
+        band = b["results"]["bands"][0]
+        horn = patch_bundle()
+        horn["results"]["bands"] = [{**band, "f_lo": 8e9, "f_hi": 12e9, "f_center": 11.16e9, "edge_lo": True, "edge_hi": True}]
+        with tempfile.TemporaryDirectory() as d:
+            (Path(d) / "patch.json").write_text(json.dumps(b), encoding="utf-8")
+            (Path(d) / "horn.json").write_text(json.dumps(horn), encoding="utf-8")
+            entry = cli._read_index_entry(Path(d) / "patch.json")
+            open_band = cli._read_index_entry(Path(d) / "horn.json")
+        self.assertEqual(entry["band_ranges"], [{"lo": round(band["f_lo"] / 1e9, 4), "hi": round(band["f_hi"] / 1e9, 4),
+                                                 "edge_lo": False, "edge_hi": False}])
+        self.assertEqual(open_band["band_ranges"], [{"lo": 8.0, "hi": 12.0, "edge_lo": True, "edge_hi": True}])
+        self.assertEqual(open_band["bands"], [11.16], "the band list keeps the |S11| minimum")
+        committed = json.loads((PROJECTS / "index.json").read_text("utf-8"))["projects"]
+        for e in committed:
+            if e.get("simulated"):
+                bundle = json.loads((PROJECTS / e["file"]).read_text("utf-8"))
+                self.assertEqual(e.get("band_ranges"), cli._index_band_ranges(bundle["results"]["bands"]) or None, e["file"])
+
     def test_the_mtime_cache_keeps_the_field_and_follows_a_rewritten_bundle(self):
         with tempfile.TemporaryDirectory() as d:
             f = Path(d) / "run.json"

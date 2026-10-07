@@ -2008,8 +2008,8 @@
   "pointTools.vertex": "Vertex",
   "progress.aria": "Simulation progress",
   "progress.bandCentres": {
-    "one": "Band center",
-    "other": "Band centers"
+    "one": "|S11| minimum of the matched band at",
+    "other": "|S11| minima of the matched bands at"
   },
   "progress.cells": "{cells} cells",
   "progress.chartAria": "Field energy versus timestep, with the end criterion",
@@ -3288,10 +3288,15 @@
   "spec.allThreads": "all",
   "spec.aria": "Simulation details",
   "spec.band": "Band",
+  "spec.bandOpen": "band continues past the simulated range",
+  "spec.bandOpenNote": "≤ / ≥: the band continues past the simulated range; its width is at least the one shown.",
   "spec.bandsCaption": "Matched bands, |S11| below −10 dB",
+  "spec.bestMatch": "Best match",
+  "spec.bestMatch.title": "Frequency of the |S11| minimum in the band",
   "spec.boundaries": "Boundary conditions",
   "spec.bw": "BW",
   "spec.centre": "Center",
+  "spec.centre.title": "Middle of the band edges, (f low + f high) / 2",
   "spec.dcFree": "DC-free",
   "spec.empty": "Open an example or a result file to see its setup and results.",
   "spec.endCriterion": "End criterion",

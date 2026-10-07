@@ -1971,7 +1971,7 @@
   "pointTools.vertex": "Köşe",
   "progress.aria": "Simülasyon ilerlemesi",
   "progress.bandCentres": {
-    "other": "Bant merkezi"
+    "other": "Uyumlu bantlarda |S11| minimumu:"
   },
   "progress.cells": "{cells} hücre",
   "progress.chartAria": "Zaman adımına göre alan enerjisi ve durdurma ölçütü",
@@ -3229,10 +3229,15 @@
   "spec.allThreads": "tüm",
   "spec.aria": "Simülasyon ayrıntıları",
   "spec.band": "Bant",
+  "spec.bandOpen": "bant, simüle edilen aralığın ötesine uzanıyor",
+  "spec.bandOpenNote": "≤ / ≥: bant, simüle edilen aralığın ötesine uzanıyor; genişliği en az gösterilen kadardır.",
   "spec.bandsCaption": "Uyumlu bantlar, |S11| −10 dB altında",
+  "spec.bestMatch": "En iyi uyum",
+  "spec.bestMatch.title": "Banttaki |S11| minimumunun frekansı",
   "spec.boundaries": "Sınır koşulları",
   "spec.bw": "BG",
   "spec.centre": "Merkez",
+  "spec.centre.title": "Bant kenarlarının ortası, (f alt + f üst) / 2",
   "spec.dcFree": "DC'siz",
   "spec.empty": "Kurulumunu ve sonuçlarını görmek için bir örnek ya da sonuç dosyası açın.",
   "spec.endCriterion": "Durdurma ölçütü",

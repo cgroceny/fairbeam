@@ -9,7 +9,15 @@
       "bands": [
         0.904
       ],
-      "cells": 136500
+      "cells": 136500,
+      "band_ranges": [
+        {
+          "lo": 0.7372,
+          "hi": 1.05,
+          "edge_lo": false,
+          "edge_hi": true
+        }
+      ]
     },
     {
       "file": "branchline-coupler.json",
@@ -20,7 +28,15 @@
       "bands": [
         2.414
       ],
-      "cells": 75684
+      "cells": 75684,
+      "band_ranges": [
+        {
+          "lo": 2.0612,
+          "hi": 2.86,
+          "edge_lo": false,
+          "edge_hi": false
+        }
+      ]
     },
     {
       "file": "collinear-867.json",
@@ -31,7 +47,15 @@
       "bands": [
         0.935
       ],
-      "cells": 3461598
+      "cells": 3461598,
+      "band_ranges": [
+        {
+          "lo": 0.8216,
+          "hi": 0.9688,
+          "edge_lo": false,
+          "edge_hi": false
+        }
+      ]
     },
     {
       "file": "dipole.json",
@@ -42,7 +66,15 @@
       "bands": [
         2.415
       ],
-      "cells": 185024
+      "cells": 185024,
+      "band_ranges": [
+        {
+          "lo": 2.275,
+          "hi": 2.5875,
+          "edge_lo": false,
+          "edge_hi": false
+        }
+      ]
     },
     {
       "file": "helix-axial.json",
@@ -54,7 +86,21 @@
         2.67,
         2.88
       ],
-      "cells": 1352700
+      "cells": 1352700,
+      "band_ranges": [
+        {
+          "lo": 1.8,
+          "hi": 2.742,
+          "edge_lo": true,
+          "edge_hi": false
+        },
+        {
+          "lo": 2.841,
+          "hi": 2.913,
+          "edge_lo": false,
+          "edge_hi": false
+        }
+      ]
     },
     {
       "file": "inset-patch.json",
@@ -65,7 +111,15 @@
       "bands": [
         2.401
       ],
-      "cells": 164604
+      "cells": 164604,
+      "band_ranges": [
+        {
+          "lo": 2.3687,
+          "hi": 2.4337,
+          "edge_lo": false,
+          "edge_hi": false
+        }
+      ]
     },
     {
       "file": "lowpass-stepped.json",
@@ -76,7 +130,15 @@
       "bands": [
         2.027
       ],
-      "cells": 126000
+      "cells": 126000,
+      "band_ranges": [
+        {
+          "lo": 0.2,
+          "hi": 2.172,
+          "edge_lo": true,
+          "edge_hi": false
+        }
+      ]
     },
     {
       "file": "meander-dipole-867.json",
@@ -87,7 +149,15 @@
       "bands": [
         0.878
       ],
-      "cells": 966084
+      "cells": 966084,
+      "band_ranges": [
+        {
+          "lo": 0.8438,
+          "hi": 0.9156,
+          "edge_lo": false,
+          "edge_hi": false
+        }
+      ]
     },
     {
       "file": "microstrip-line.json",
@@ -98,7 +168,15 @@
       "bands": [
         2.666
       ],
-      "cells": 49600
+      "cells": 49600,
+      "band_ranges": [
+        {
+          "lo": 0.5,
+          "hi": 6,
+          "edge_lo": true,
+          "edge_hi": true
+        }
+      ]
     },
     {
       "file": "minkowski-patch.json",
@@ -109,7 +187,15 @@
       "bands": [
         2.324
       ],
-      "cells": 115351
+      "cells": 115351,
+      "band_ranges": [
+        {
+          "lo": 2.316,
+          "hi": 2.334,
+          "edge_lo": false,
+          "edge_hi": false
+        }
+      ]
     },
     {
       "file": "patch-antenna.json",
@@ -120,7 +206,15 @@
       "bands": [
         2.453
       ],
-      "cells": 263568
+      "cells": 263568,
+      "band_ranges": [
+        {
+          "lo": 2.4325,
+          "hi": 2.47,
+          "edge_lo": false,
+          "edge_hi": false
+        }
+      ]
     },
     {
       "file": "patch-array-2x1.json",
@@ -131,7 +225,15 @@
       "bands": [
         2.434
       ],
-      "cells": 48672
+      "cells": 48672,
+      "band_ranges": [
+        {
+          "lo": 2.418,
+          "hi": 2.451,
+          "edge_lo": false,
+          "edge_hi": false
+        }
+      ]
     },
     {
       "file": "patch-array-4x1.json",
@@ -142,7 +244,15 @@
       "bands": [
         2.453
       ],
-      "cells": 433152
+      "cells": 433152,
+      "band_ranges": [
+        {
+          "lo": 2.436,
+          "hi": 2.4705,
+          "edge_lo": false,
+          "edge_hi": false
+        }
+      ]
     },
     {
       "file": "pyramidal-horn.json",
@@ -153,22 +263,38 @@
       "bands": [
         11.16
       ],
-      "cells": 1103856
+      "cells": 1103856,
+      "band_ranges": [
+        {
+          "lo": 8,
+          "hi": 12,
+          "edge_lo": true,
+          "edge_hi": true
+        }
+      ]
     },
     {
       "file": "sierpinski-monopole--iterations-0.json",
-      "name": "Sierpinski gasket monopole \u00b7 iterations=0",
+      "name": "Sierpinski gasket monopole · iterations=0",
       "model": "sierpinski-monopole",
       "created": "2026-09-24T22:36:46+0300",
       "simulated": true,
       "bands": [
         3.65
       ],
-      "cells": 1833552
+      "cells": 1833552,
+      "band_ranges": [
+        {
+          "lo": 3.3969,
+          "hi": 3.8656,
+          "edge_lo": false,
+          "edge_hi": false
+        }
+      ]
     },
     {
       "file": "sierpinski-monopole--iterations-3.json",
-      "name": "Sierpinski gasket monopole \u00b7 iterations=3",
+      "name": "Sierpinski gasket monopole · iterations=3",
       "model": "sierpinski-monopole",
       "created": "2026-09-24T22:37:02+0300",
       "simulated": true,
@@ -177,7 +303,27 @@
         6.219,
         7.297
       ],
-      "cells": 1964256
+      "cells": 1964256,
+      "band_ranges": [
+        {
+          "lo": 3.125,
+          "hi": 3.4531,
+          "edge_lo": false,
+          "edge_hi": false
+        },
+        {
+          "lo": 5.975,
+          "hi": 6.5656,
+          "edge_lo": false,
+          "edge_hi": false
+        },
+        {
+          "lo": 6.95,
+          "hi": 7.5406,
+          "edge_lo": false,
+          "edge_hi": false
+        }
+      ]
     },
     {
       "file": "sleeve-dipole-867.json",
@@ -188,7 +334,15 @@
       "bands": [
         0.877
       ],
-      "cells": 442800
+      "cells": 442800,
+      "band_ranges": [
+        {
+          "lo": 0.8175,
+          "hi": 0.9537,
+          "edge_lo": false,
+          "edge_hi": false
+        }
+      ]
     },
     {
       "file": "wideband-dipole-867.json",
@@ -199,7 +353,15 @@
       "bands": [
         0.889
       ],
-      "cells": 830576
+      "cells": 830576,
+      "band_ranges": [
+        {
+          "lo": 0.8168,
+          "hi": 0.9866,
+          "edge_lo": false,
+          "edge_hi": false
+        }
+      ]
     },
     {
       "file": "wilkinson-divider.json",
@@ -210,7 +372,15 @@
       "bands": [
         2.451
       ],
-      "cells": 105560
+      "cells": 105560,
+      "band_ranges": [
+        {
+          "lo": 1.585,
+          "hi": 3.2125,
+          "edge_lo": false,
+          "edge_hi": false
+        }
+      ]
     },
     {
       "file": "yagi-867.json",
@@ -221,7 +391,15 @@
       "bands": [
         0.865
       ],
-      "cells": 714840
+      "cells": 714840,
+      "band_ranges": [
+        {
+          "lo": 0.8444,
+          "hi": 0.8831,
+          "edge_lo": false,
+          "edge_hi": false
+        }
+      ]
     }
   ],
   "updated": "2026-10-03T18:06:14+0300"

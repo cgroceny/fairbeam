@@ -9,6 +9,7 @@
 // and the reference are summaryMode.ts, and the Δ view adds Δ columns to Copy data and CSV.
 import { createMemo, For, type JSX, Show } from "solid-js";
 import { CircleCheck } from "lucide-solid";
+import { bandTexts } from "../lib/bands";
 import { columnDecimals, compact, ghzText, num, seconds } from "../lib/format";
 import { efficiencyWarningUi } from "../lib/runText";
 import { farfieldSummary } from "../lib/farfieldQuantity";
@@ -80,23 +81,29 @@ function RunCard(props: { b: Bundle }) {
           <table class="table rs-table">
             <thead><tr>
               <th scope="col">#</th>
-              <th scope="col" class="num">{t("spec.centre")}<span class="th-unit">GHz</span></th>
+              <th scope="col" class="num" title={t("spec.centre.title")}>{t("spec.centre")}<span class="th-unit">GHz</span></th>
+              <th scope="col" class="num" title={t("spec.bestMatch.title")}>{t("spec.bestMatch")}<span class="th-unit">GHz</span></th>
               <th scope="col" class="num">|S11| min<span class="th-unit">dB</span></th>
               <th scope="col" class="num">{t("summary.bandwidth")}<span class="th-unit">MHz</span></th>
               <th scope="col" class="num">{t("spec.bw")}<span class="th-unit">%</span></th>
               <th scope="col" class="num">{t("summary.range")}<span class="th-unit">GHz</span></th>
             </tr></thead>
-            <tbody><For each={metrics().bands}>{(band, i) => (
-              <tr>
-                <td>{i() + 1}</td>
-                <td class="num">{ghz(band.f_center)}</td>
-                <td class="num">{signed(band.s11_min_db, 1)}</td>
-                <td class="num">{mhz(band.f_hi - band.f_lo)}{band.edge_lo || band.edge_hi ? <span title={t("results.sparams.atEdge")}> *</span> : ""}</td>
-                <td class="num">{percent(band.fractional_bw)}</td>
-                <td class="num">{ghz(band.f_lo)}–{ghz(band.f_hi)}</td>
-              </tr>
-            )}</For></tbody>
+            <tbody><For each={metrics().bands}>{(band, i) => {
+              const c = bandTexts(band, (hz) => ghzText(hz / 1e9), fmt.fixed);
+              return (
+                <tr title={c.open ? t("spec.bandOpen") : undefined}>
+                  <td>{i() + 1}</td>
+                  <td class="num">{c.centre}</td>
+                  <td class="num">{c.best}</td>
+                  <td class="num">{signed(band.s11_min_db, 1)}</td>
+                  <td class="num">{c.bwMhz}</td>
+                  <td class="num">{c.percent}</td>
+                  <td class="num rs-range">{c.range}</td>
+                </tr>
+              );
+            }}</For></tbody>
           </table>
+          <Show when={metrics().bands.some((b) => b.edge_lo || b.edge_hi)}><p class="note">{t("spec.bandOpenNote")}</p></Show>
         </Show>
 
         <Show when={farfields().length}>
