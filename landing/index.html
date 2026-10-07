@@ -4,10 +4,10 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="color-scheme" content="light dark">
-  <title>Fairbeam: antenna simulation with openEMS</title>
-  <meta name="description" content="Fairbeam is a desktop workbench for antennas, microstrip circuits and arrays: model them in a ribbon-based 3D designer or import a CST-compatible VBA macro, simulate with openEMS FDTD on the CPU or a Metal or CUDA GPU, then read S-parameters with markers, far fields and surface currents, sweep and optimize, and export Touchstone, drawings, reports and fabrication files.">
-  <meta property="og:title" content="Fairbeam: antenna simulation with openEMS">
-  <meta property="og:description" content="A ribbon-based 3D designer, VBA macro import, the openEMS FDTD solver on CPU or GPU, and results in one window: S-parameters with markers, far field, surface currents, sweeps, an optimizer and exports.">
+  <title>Fairbeam: the open electromagnetic workbench</title>
+  <meta name="description" content="Fairbeam is an open-source desktop workbench for antennas and RF circuits. Design in 3D or Python, simulate with openEMS, and create plots, drawings and reports.">
+  <meta property="og:title" content="Fairbeam: the open electromagnetic workbench">
+  <meta property="og:description" content="Fairbeam is an open-source desktop workbench for antennas and RF circuits. Design in 3D or Python, simulate with openEMS, and create plots, drawings and reports.">
   <meta property="og:type" content="website">
   <meta property="og:url" content="https://fairbeam.org/">
   <link rel="canonical" href="https://fairbeam.org/">
@@ -48,6 +48,7 @@
         <a href="#roadmap">Roadmap</a>
         <a href="#download">Download</a>
         <a href="#status">What to expect</a>
+        <a href="#about">About</a>
       </nav>
       <div class="header-actions">
         <a class="text-link" href="guide.html">Guide</a>
@@ -77,12 +78,10 @@
       <section class="hero" id="top" aria-labelledby="hero-title">
         <div class="shell hero-inner">
           <div class="hero-copy">
-            <p class="eyebrow">Antenna simulation workbench · openEMS FDTD</p>
-            <h1 id="hero-title">Design antennas. See the fields.</h1>
+            <p class="eyebrow">Open-source electromagnetic workbench</p>
+            <h1 id="hero-title">Design antennas and RF circuits.</h1>
             <p class="lede">
-              Draw an antenna, a microstrip circuit or an array in a ribbon-based 3D designer, or import a CST-compatible VBA macro. Fairbeam meshes it, runs the open-source openEMS solver on the CPU or the GPU, and
-              shows the results next to the model: S-parameters with markers, radiation patterns, surface
-              currents, sweeps, an optimizer, and exports for Touchstone, CST-compatible VBA macros and PCB fabrication.
+              Design in 3D or Python, simulate with openEMS on the CPU or GPU, and explore the results. Create plots, drawings and reports from the same model.
             </p>
             <div class="actions">
               <a class="button" href="#download">Download Fairbeam</a>
@@ -255,7 +254,7 @@
           </li>
           <li>
             <h3>Automatic meshing</h3>
-            <p>Auto mode picks the mesh settings for each design, and every field can be overridden. Thin PCB copper is meshed as sheets, converted examples keep their own mesh lines, and the mesher lands within 0.1&nbsp;% of converged hand meshes.</p>
+            <p>Auto mode picks the mesh settings for each design, and every field can be overridden. Thin PCB copper is meshed as sheets, and converted examples keep their own mesh lines. In the dipole and patch checks below, resonance differs from converged hand-tuned meshes by about 0.1% or less.</p>
           </li>
           <li>
             <h3>Mesh convergence</h3>
@@ -334,7 +333,7 @@
                   <tr><th scope="row">Patch resonance</th><td class="num">2.455&nbsp;GHz</td><td class="num">2.513&nbsp;GHz (TL model), −2.3&nbsp;%</td></tr>
                 </tbody>
               </table>
-              <p class="note">Dipole: three lengths, 50 to 66 mm, end criterion −60 dB. Patch: converged mesh, against a transmission-line model. Details and commands in the validation notes of the repository.</p>
+              <p class="note">Dipole: three lengths, 50 to 66 mm, end criterion −60 dB. Patch: converged mesh, against a transmission-line model. <a href="https://github.com/ismailakdag/fairbeam/blob/main/docs/VALIDATION.md">Validation methods and commands</a>.</p>
             </div>
 
             <div class="table-block">
@@ -351,7 +350,7 @@
                   <tr><th scope="row">Sierpinski monopole</th><td class="num">2.0&nbsp;M</td><td class="num">12.0</td><td class="num">2.7</td><td class="num">61.1</td><td class="num">65.7</td><td class="num">3.4</td></tr>
                 </tbody>
               </table>
-              <p class="note">The same models give the same results on both platforms. Runs that stop at the same timestep agree within 0.1&nbsp;dB in every S-parameter and 0.004&nbsp;dB in D<sub>max</sub>. The older Mac CPU runs checked the end criterion on a wall-clock schedule and stop at a different timestep, which moves only very deep |S11| nulls. The GPU engine is a separate openEMS fork (SeanMollet/openEMS, GPL-3.0, beta) built side by side; the CPU build stays the reference. The M5 Pro CPU time of the patch was re-measured on 2026-09-25 with the current model. Details and commands in the benchmark notes of the repository.</p>
+              <p class="note">For the compared models that stop at the same timestep, S-parameters above −30&nbsp;dB agree within 0.1&nbsp;dB, and maximum directivity within 0.004&nbsp;dB (D<sub>max</sub>). Older Mac CPU runs stop at different timesteps, which can move deep |S11| nulls. The optional GPU engine is a separate openEMS fork (SeanMollet/openEMS, GPL-3.0, beta); the CPU build stays the reference. The M5 Pro patch CPU time was re-measured on 2026-09-25 with the current model. <a href="https://github.com/ismailakdag/fairbeam/blob/main/docs/BENCHMARKS.md">Hardware, benchmark methods and commands</a>.</p>
             </div>
           </div>
         </div>
@@ -523,7 +522,7 @@
             <dd>With the textbook 100 Ω resistor the divider's output match and isolation fall short of theory. The resistor model is exact, so the cause is either the layout or the staircase mesh at the resistor node; a finer mesh at the resistor node will tell.</dd>
           </div>
           <div>
-            <dt>Unsigned installers, macOS 27+</dt>
+            <dt>Platform requirements and installer signing</dt>
             <dd>The macOS app is signed and notarized by Apple. The Windows installer is not code-signed, so Windows SmartScreen warns (More info › Run anyway). The macOS openEMS build needs macOS 27 or newer on Apple silicon. Linux has no installer yet; the Python package works with any openEMS installation whose Python bindings import.</dd>
           </div>
           <div>
@@ -578,12 +577,20 @@ npm run desktop:build</code></pre>
         </div>
       </div>
     </section>
+    <section class="section" id="about" aria-labelledby="about-title">
+      <div class="shell about-copy">
+        <h2 id="about-title">About Fairbeam</h2>
+        <p>Fairbeam is an independent open-source project for engineers, researchers and students working with antennas and RF circuits. It brings modeling, openEMS simulation and documented results into one workspace.</p>
+        <p><span>Maintained by</span> <a href="https://akdag.dev" rel="author">İsmail Akdağ</a><span>, with contributions from</span> <a href="https://github.com/cgroceny">Cem Göçen</a> <span>and the open-source community.</span> <a href="https://github.com/ismailakdag/fairbeam#credits">Project credits</a>.</p>
+        <p><span>Contact:</span> <a href="mailto:ismail@fairbeam.org">ismail@fairbeam.org</a> · <a href="https://github.com/ismailakdag/fairbeam-releases/issues/new/choose">Report a problem</a></p>
+      </div>
+    </section>
   </main>
 
   <footer class="site-footer">
     <div class="shell footer-row">
       <p>Simulations by <a href="https://openems.de" rel="noreferrer">openEMS</a> and CSXCAD. Fairbeam is GPL-3.0-or-later; <a href="https://github.com/ismailakdag/fairbeam-releases/releases/latest">downloads</a>, <a href="https://github.com/ismailakdag/fairbeam">source code</a>. <a href="privacy.html">Privacy</a>.</p>
-      <p>by <a href="https://akdag.dev" rel="author">İsmail Akdağ</a></p>
+      <p><a href="#about">About Fairbeam</a> · <a href="mailto:ismail@fairbeam.org">ismail@fairbeam.org</a></p>
       <p class="footer-trademark">CST and CST Studio Suite are trademarks or registered trademarks of Dassault Systèmes or its subsidiaries. Fairbeam is an independent open-source project and is not affiliated with, sponsored by or endorsed by Dassault Systèmes.</p>
     </div>
   </footer>

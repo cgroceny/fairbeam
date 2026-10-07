@@ -336,6 +336,99 @@
   ];
 
   pairs.push(["macOS 0.7.0: macOS 27 or newer; the app is signed and notarized. Windows 0.7.0: Windows 10/11, per-user install; SmartScreen warns because the installer has no Authenticode certificate (More info → Run anyway). Checksums are in", "macOS 0.7.0: macOS 27 veya üzeri; uygulama imzalı ve noter onaylıdır. Windows 0.7.0: Windows 10/11, kullanıcıya özel kurulum; Authenticode sertifikası olmadığından SmartScreen uyarır (Daha fazla bilgi → Yine de çalıştır). Sağlama toplamları şu dosyada:"]);
+  pairs.push(...[
+  [
+    "Fairbeam: the open electromagnetic workbench",
+    "Fairbeam: açık kaynak elektromanyetik çalışma ortamı"
+  ],
+  [
+    "Open-source electromagnetic workbench",
+    "Açık kaynak elektromanyetik çalışma ortamı"
+  ],
+  [
+    "Design antennas and RF circuits.",
+    "Antenleri ve RF devrelerini tasarlayın."
+  ],
+  [
+    "Design in 3D or Python, simulate with openEMS on the CPU or GPU, and explore the results. Create plots, drawings and reports from the same model.",
+    "3B ortamda veya Python ile tasarlayın, CPU veya GPU üzerinde openEMS ile benzetin ve sonuçları inceleyin. Aynı modelden grafikler, çizimler ve raporlar oluşturun."
+  ],
+  [
+    "Platform requirements and installer signing",
+    "Platform gereksinimleri ve kurulum imzaları"
+  ],
+  [
+    "Dipole: three lengths, 50 to 66 mm, end criterion −60 dB. Patch: converged mesh, against a transmission-line model.",
+    "Dipol: −60 dB sonlandırma ölçütüyle 50–66 mm arasında üç uzunluk. Yama: yakınsamış ağ, iletim hattı modeline karşı."
+  ],
+  [
+    "For the compared models that stop at the same timestep, S-parameters above −30 dB agree within 0.1 dB, and maximum directivity within 0.004 dB (D",
+    "Karşılaştırılan modellerde aynı zaman adımında duran çalışmaların −30 dB üzerindeki S-parametreleri 0,1 dB, en yüksek yönlülükleri ise 0,004 dB içinde uyuşur (D"
+  ],
+  [
+    "). Older Mac CPU runs stop at different timesteps, which can move deep |S11| nulls. The optional GPU engine is a separate openEMS fork (SeanMollet/openEMS, GPL-3.0, beta); the CPU build stays the reference. The M5 Pro patch CPU time was re-measured on 2026-09-25 with the current model.",
+    "). Eski Mac CPU çalışmaları farklı zaman adımlarında durur; bu durum derin |S11| çukurlarını kaydırabilir. İsteğe bağlı GPU motoru ayrı bir openEMS çatallamasıdır (SeanMollet/openEMS, GPL-3.0, beta); CPU derlemesi referans olarak kalır. M5 Pro yama CPU süresi, güncel modelle 2026-09-25 tarihinde yeniden ölçüldü."
+  ],
+  [
+    "Auto mode picks the mesh settings for each design, and every field can be overridden. Thin PCB copper is meshed as sheets, and converted examples keep their own mesh lines. In the dipole and patch checks below, resonance differs from converged hand-tuned meshes by about 0.1% or less.",
+    "Otomatik mod her tasarım için ağ ayarlarını seçer; tüm alanlar değiştirilebilir. İnce PCB bakırı levha olarak ağlanır ve dönüştürülen örnekler kendi ağ çizgilerini korur. Aşağıdaki dipol ve yama denetimlerinde rezonans, elle ayarlanmış yakınsamış ağlardan yaklaşık %0,1 veya daha az farklıdır."
+  ],
+  [
+    "About Fairbeam",
+    "Fairbeam hakkında"
+  ],
+  [
+    "Fairbeam is an independent open-source project for engineers, researchers and students working with antennas and RF circuits. It brings modeling, openEMS simulation and documented results into one workspace.",
+    "Fairbeam, antenler ve RF devreleriyle çalışan mühendisler, araştırmacılar ve öğrenciler için bağımsız bir açık kaynak projesidir. Modellemeyi, openEMS benzetimini ve belgelenmiş sonuçları tek çalışma ortamında birleştirir."
+  ],
+  [
+    "Maintained by",
+    "Bakımcı:"
+  ],
+  [
+    ", with contributions from",
+    "; katkıda bulunanlar:"
+  ],
+  [
+    "and the open-source community.",
+    "ve açık kaynak topluluğu."
+  ],
+  [
+    "Project credits",
+    "Katkılar"
+  ],
+  [
+    "Contact:",
+    "İletişim:"
+  ],
+  [
+    "Report a problem",
+    "Sorun bildirin"
+  ],
+  [
+    "Validation methods and commands",
+    "Doğrulama yöntemleri ve komutları"
+  ],
+  [
+    "Hardware, benchmark methods and commands",
+    "Donanım, ölçüm yöntemleri ve komutları"
+  ],
+  [
+    "2.11 dBi (theory)",
+    "2,11 dBi (teori)"
+  ],
+  [
+    "−3.01 dB each",
+    "her biri −3,01 dB"
+  ],
+  [
+    "4 GPU runs, 18 s",
+    "4 GPU çalışması, 18 sn"
+  ]
+]);
+
+  pairs.push(["About", "Hakkında"], ["The FDTD mesh is built from the geometry. In the dipole and patch checks, resonance differs from converged hand-tuned meshes by about 0.1% or less.", "FDTD ağı geometriden oluşturulur. Dipol ve yama denetimlerinde rezonans, elle ayarlanmış yakınsamış ağlardan yaklaşık %0,1 veya daha az farklıdır."]);
+
   const TEXT = new Map([...pairs, ...roadmapPairs].map(([en, tr]) => [normalize(en), tr]));
   const ATTRIBUTE_TEXT = new Map([
     ["Fairbeam, back to top", "Fairbeam, başa dön"], ["English", "English"], ["Türkçe", "Türkçe"],
@@ -343,6 +436,8 @@
     ["Fairbeam demo viewer", "Fairbeam demo görüntüleyicisi"],
   ]);
   const META_TEXT = new Map([
+    ["Fairbeam: the open electromagnetic workbench", "Fairbeam: açık kaynak elektromanyetik çalışma ortamı"],
+    ["Fairbeam is an open-source desktop workbench for antennas and RF circuits. Design in 3D or Python, simulate with openEMS, and create plots, drawings and reports.", "Fairbeam, antenler ve RF devreleri için açık kaynak masaüstü çalışma ortamıdır. 3B ortamda veya Python ile tasarlayın, openEMS ile benzetin; grafik, çizim ve rapor oluşturun."],
     ["Fairbeam: antenna simulation with openEMS", "Fairbeam: openEMS ile anten benzetimi"],
     ["Fairbeam is a desktop workbench for antennas, microstrip circuits and arrays: model them in a ribbon-based 3D designer or import a CST-compatible VBA macro, simulate with openEMS FDTD on the CPU or a Metal or CUDA GPU, then read S-parameters with markers, far fields and surface currents, sweep and optimize, and export Touchstone, drawings, reports and fabrication files.", "Fairbeam; antenler, mikroşerit devreler ve diziler için masaüstü çalışma ortamıdır. Şerit menülü 3B tasarım aracında modelleyin veya CST uyumlu VBA makrosu içe aktarın; CPU'da ya da Metal/CUDA GPU'da openEMS FDTD ile benzetin. İşaretçili S-parametrelerini, uzak alanları ve yüzey akımlarını inceleyin; tarama ve eniyileme yapın, Touchstone, çizim, rapor ve üretim dosyalarını dışa aktarın."],
     ["A ribbon-based 3D designer, VBA macro import, the openEMS FDTD solver on CPU or GPU, and results in one window: S-parameters with markers, far field, surface currents, sweeps, an optimizer and exports.", "Şerit menülü 3B tasarım aracı, VBA makrosu içe aktarma, CPU veya GPU üzerinde openEMS FDTD çözücüsü ve tek pencerede sonuçlar: işaretçili S-parametreleri, uzak alan, yüzey akımları, taramalar, eniyileyici ve dışa aktarımlar."],
@@ -378,6 +473,8 @@
     if (language === "tr" && /^\d+\.\d+\.\d+ · next$/.test(key)) value = key.replace(" · next", " · sonraki sürüm");
     if (language === "tr" && key === "Next release") value = "Sonraki sürüm";
     if (language === "tr" && key.startsWith("4 × 1 patch array · ") && key.endsWith(" GHz")) value = key.replace("4 × 1 patch array · ", "4 × 1 yama dizisi · ");
+    const summary = key.match(/^(\d+) features available, (\d+) in development and (\d+) planned, from the project's issues and pull requests\. Updated$/);
+    if (language === "tr" && summary) value = `Projenin issue ve PR kayıtlarına göre ${summary[1]} özellik hazır, ${summary[2]} özellik geliştiriliyor ve ${summary[3]} özellik planlandı. Güncelleme:`;
     const leading = original.match(/^\s*/u)?.[0] ?? "";
     const trailing = original.match(/\s*$/u)?.[0] ?? "";
     const next = value ? `${leading}${value}${trailing}` : original;
@@ -415,8 +512,9 @@
     }
   }
 
+  const originalTitle = document.title;
   function updateMetadata() {
-    document.title = language === "tr" ? "Fairbeam: openEMS ile anten benzetimi" : META_TEXT.keys().next().value;
+    document.title = language === "tr" ? (META_TEXT.get(originalTitle) ?? originalTitle) : originalTitle;
     for (const meta of document.querySelectorAll('meta[name="description"],meta[property="og:title"],meta[property="og:description"]')) {
       const original = meta.dataset.languageOriginal ?? meta.content;
       meta.dataset.languageOriginal = original;
@@ -426,7 +524,7 @@
   }
 
   function updateRoadmapDates() {
-    document.querySelectorAll("#roadmap-board time[datetime]").forEach((element) => {
+    document.querySelectorAll("#roadmap time[datetime]").forEach((element) => {
       const date = new Date(`${element.dateTime}T12:00:00Z`);
       if (Number.isFinite(date.valueOf())) {
         const formatted = new Intl.DateTimeFormat(language === "tr" ? "tr-TR" : "en-GB", { day: "numeric", month: "long", year: "numeric", timeZone: "UTC" }).format(date);
