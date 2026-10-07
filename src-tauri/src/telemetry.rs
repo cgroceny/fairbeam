@@ -62,12 +62,13 @@ fn spawn_sender(app: AppHandle) {
 }
 #[cfg(not(feature = "telemetry"))]
 fn spawn_sender(_app: AppHandle) {}
-#[tauri::command]
+// Off the main thread: these wait for the file lock while a weekly request (up to 20 s) is in flight.
+#[tauri::command(async)]
 pub fn telemetry_status(app: AppHandle) -> Value {
     let _g = FILES.lock().unwrap_or_else(|e| e.into_inner());
     status_json(&if enabled_here() { State::load(&dir(&app)) } else { State::default() })
 }
-#[tauri::command]
+#[tauri::command(async)]
 pub fn telemetry_set_consent(app: AppHandle, granted: bool) -> Result<Value, String> {
     if !enabled_here() { return Err("Usage statistics are not active in this build".into()); }
     let _g = FILES.lock().unwrap_or_else(|e| e.into_inner());
@@ -79,7 +80,7 @@ pub fn telemetry_set_consent(app: AppHandle, granted: bool) -> Result<Value, Str
     state.save(&dir)?;
     Ok(status_json(&state))
 }
-#[tauri::command]
+#[tauri::command(async)]
 pub fn telemetry_preview(app: AppHandle) -> Value {
     let _g = FILES.lock().unwrap_or_else(|e| e.into_inner());
     let state = if enabled_here() { State::load(&dir(&app)) } else { State::default() };
