@@ -1,7 +1,7 @@
 {
   "name": "fairbeam",
   "private": true,
-  "version": "0.7.0",
+  "version": "0.7.1",
   "type": "module",
   "description": "Antenna simulation workbench: openEMS models, a three.js viewer and CST macro export.",
   "scripts": {

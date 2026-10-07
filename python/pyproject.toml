@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "fairbeam"
-version = "0.7.0"
+version = "0.7.1"
 description = "Fairbeam: run openEMS antenna models and export self-contained project bundles for the Fairbeam viewer."
 readme = "README.md"
 requires-python = ">=3.10"
