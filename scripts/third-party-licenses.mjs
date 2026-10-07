@@ -10,7 +10,15 @@ import { renderNotices } from './licenses/render.mjs';
 const root = fileURLToPath(new URL('../', import.meta.url));
 process.chdir(root);
 export const inputs = ['package.json', 'package-lock.json', 'src-tauri/Cargo.toml', 'src-tauri/Cargo.lock', 'runtime/pins.json', 'runtime/requirements.txt', 'runtime/install.py', 'runtime/setup-runtime.sh', 'runtime/setup-runtime.ps1', 'scripts/build-openems-macos-pack.py', 'scripts/install-openems-macos.sh', 'vite.config.ts', 'scripts/third-party-licenses.py', 'scripts/third-party-licenses.mjs', 'scripts/licenses/render.mjs', 'scripts/licenses/exceptions.json', 'scripts/build-site.mjs', 'scripts/licenses/solver-components.json', 'scripts/licenses/crate-sources.json'];
-const hash = f => createHash('sha256').update(readFileSync(f)).digest('hex');
+// The app's own version changes on every release and does not affect third-party notices, so it is
+// blanked before hashing the manifests that carry it. Dependency versions are still fingerprinted.
+const ownVersion = {
+  'package.json': t => t.replace(/^(  "version": ")[^"]*(")/m, '$1$2'),
+  'package-lock.json': t => t.replace(/^(  "version": ")[^"]*(")/m, '$1$2').replace(/^(      "name": "fairbeam",\n      "version": ")[^"]*(")/m, '$1$2'),
+  'src-tauri/Cargo.toml': t => t.replace(/^(\[package\]\nname = "fairbeam"\nversion = ")[^"]*(")/m, '$1$2'),
+  'src-tauri/Cargo.lock': t => t.replace(/^(name = "fairbeam"\nversion = ")[^"]*(")/m, '$1$2')
+};
+const hash = f => createHash('sha256').update(ownVersion[f] ? ownVersion[f](readFileSync(f, 'utf8')) : readFileSync(f)).digest('hex');
 // The rendered module graph changes when the viewer imports a different npm package, not on
 // every source edit. Fingerprint the package specifiers imported by viewer and site sources.
 const lockedPackages = new Set(Object.keys(JSON.parse(readFileSync('package-lock.json')).packages).map(k => k.replace(/^.*node_modules\//, '')));

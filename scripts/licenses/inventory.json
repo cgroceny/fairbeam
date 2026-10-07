@@ -7558,8 +7558,8 @@
     }
   ],
   "inputs": {
-    "package-lock.json": "eb26dd2522a492ff057a2a8012736fbe7d2ce713b81ab9ac377f020e6b03f6c3",
-    "package.json": "7630c05e6f15fbef4014f6f05a425da2701891d025b8cfc22d5f3ac8bc29c7a6",
+    "package-lock.json": "28e9e417008e35d0985a434ffaa4697030684cbe5c086925b0070d9ce724adf4",
+    "package.json": "cf8f62e2568928fce7a552dc080ee4cfec347e1919006cb97f72c118f8a4fdb1",
     "runtime/install.py": "8f6711bb88b550aafb682b874d97e65794e39ca9ce731afd04c0a137c241f696",
     "runtime/pins.json": "c6230e4adca699c6c9aae970b0f748b60cca3783cf6ddc344ded08db4ec9cd84",
     "runtime/requirements.txt": "8a06a606ca2adec73b5c4448003c94eacbb71afc95ab1297ee1bd584648a1e52",
@@ -7572,10 +7572,10 @@
     "scripts/licenses/exceptions.json": "c99e21b13cc46239456c35603e0b0a423ec6c21ea7fb657305ed78447c089334",
     "scripts/licenses/render.mjs": "4dba0be35aede3efcad2ee37f3c4b0eae6bd9681bb5811c1fd648f360b689579",
     "scripts/licenses/solver-components.json": "3a0b894e5f477c87e364b1205755f2c01bcacb073cff88d25579fadea364a5fe",
-    "scripts/third-party-licenses.mjs": "fd66789b5f0f727606f5371a44aeb61e8adfa70093640d76040888aef49cce5d",
+    "scripts/third-party-licenses.mjs": "e6e1b9b95d0d0a3ebfb3013a44898c4ac5d9b6071ed9af19f26a6181f4c9fc24",
     "scripts/third-party-licenses.py": "e154fbb04e5d5a9c3325b2db5ed84c4391fa02cb92e2a618bcd7728586162214",
-    "src-tauri/Cargo.lock": "4949bbae321cb3cb77d0553275c4a5104ceabd0d75c512c629bf8195d5d34999",
-    "src-tauri/Cargo.toml": "ef52b64b5e2e2c922a6390cccca2d6cc9620141d44a71709930813e340760c0f",
+    "src-tauri/Cargo.lock": "3190269af8f181773c8426d7fe7e6d8bd3b6c614d85853d6d769773c71b7f1e2",
+    "src-tauri/Cargo.toml": "aa0e6a8acc8cdfa19f1f3f6bb64046a9d34ee23fd7f39856e28db2f658f64839",
     "vite.config.ts": "ca5cb3909da097442d8bbf9850f099264f48e63ccc79c96c9ce7cbe2c4351050",
     "viewerImports": "7becea9a6e90194a7c75d14e7707a6d442748620f99db39af943845109f9b187"
   }
