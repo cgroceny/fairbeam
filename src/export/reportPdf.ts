@@ -16,6 +16,7 @@ import { esc, FONT, group, line, n, rect, text } from "../drawing/svg.ts";
 import { svgPagesToPdf, type PdfFonts } from "../drawing/pdfdoc.ts";
 import { engineText, meshText, reproduceCommand, reproduceNote, simulated, type ModelFileRef } from "./report.ts";
 import { APP_VERSION, bundleWriter } from "../lib/appVersion.ts";
+import { bandTexts } from "../lib/bands.ts";
 
 const W = 210;
 const H = 297;
@@ -277,9 +278,12 @@ export function reportPages(bundle: Bundle, opt: ReportOptions): string[] {
     d.y += FS_S * 1.8;
     if (r.bands.length)
       d.table(
-        ["Centre (GHz)", "Range (GHz)", "Bandwidth (MHz)", "Fractional BW (%)", "|S11| min (dB)"],
-        r.bands.map((x) => [f3(x.f_center), `${f3(x.f_lo)} – ${f3(x.f_hi)}`, fx((x.f_hi - x.f_lo) / 1e6, 1), fx(x.fractional_bw * 100, 2), fx(x.s11_min_db, 2)]),
-        [1, 1.5, 1.1, 1.1, 1], ["r", "r", "r", "r", "r"],
+        ["Center (GHz)", "Best match (GHz)", "Range (GHz)", "Bandwidth (MHz)", "Fractional BW (%)", "|S11| min (dB)"],
+        r.bands.map((x) => {
+          const bt = bandTexts(x, f3, fx);
+          return [bt.centre, bt.best, bt.range.replace("–", " – "), bt.bwMhz, bt.percent, fx(x.s11_min_db, 2)];
+        }),
+        [1, 1.1, 1.5, 1.1, 1.1, 1], ["r", "r", "r", "r", "r", "r"],
       );
     else d.para("No band reaches −10 dB.", FS_S);
     d.page.push(text(d.ml, d.y + FS_S, "Far field", { "font-size": FS_S, "font-weight": 600 }));
