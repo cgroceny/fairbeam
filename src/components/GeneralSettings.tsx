@@ -8,7 +8,7 @@ import { applyAppearance, APPEARANCE_DEFAULTS } from "../lib/appearance";
 import { APPEARANCE_OPTIONS, CUSTOM_COLORS } from "../lib/appearanceOptions";
 import { resetDesignerLayout } from "../designer/layoutState";
 import { resetRibbonLayout } from "../designer/DesignWorkspace";
-import { setEngine, health } from "../runner/store";
+import { followSettingsEngine, followSettingsThreads, health } from "../runner/store";
 import { setConfirmShapes } from "../designer/draw";
 import AccountSettings from "./AccountSettings";
 import { setLanguage, t, type LanguageChoice, setDecimalChoice } from "../i18n";
@@ -101,7 +101,9 @@ export default function GeneralSettingsDialog(props: { open: boolean; close: () 
       writeGeneralSettings(next); setValue(next); setMessage("");
       if (patch.theme) applyTheme(patch.theme);
       applyAppearance(next);
-      if (patch.engine) setEngine(patch.engine === "gpu" && !health()?.engines?.includes("gpu") ? "cpu" : patch.engine);
+      if (patch.engine) followSettingsEngine(patch.engine === "gpu" && !health()?.engines?.includes("gpu") ? "cpu" : patch.engine);
+      // the Run dialog follows a changed default at once (no reload)
+      if (patch.threads !== undefined) followSettingsThreads(patch.threads);
       if (patch.confirmShapes !== undefined) setConfirmShapes(patch.confirmShapes);
       if (patch.units) document.documentElement.dataset.unitDisplay = patch.units;
       if (patch.language) setLanguage(patch.language);
@@ -257,7 +259,7 @@ export default function GeneralSettingsDialog(props: { open: boolean; close: () 
         <label class="dz-field"><span class="dz-label">{t("settings.decimals")}</span><select class="rp-select dz-input" value={value().decimals} onChange={e => save({ decimals: e.currentTarget.value as GeneralSettings["decimals"] })}><option value="language">{t("settings.decimals.language")}</option><option value="point">{t("settings.decimals.point")}</option><option value="comma">{t("settings.decimals.comma")}</option></select><span class="note">{t("settings.decimals.note")}</span></label>
         <label class="dz-field"><span class="dz-label">{t("settings.engine")}</span><select class="rp-select dz-input" value={value().engine} onChange={e => save({ engine: e.currentTarget.value as GeneralSettings["engine"] })}><option value="cpu">CPU</option><option value="gpu">{t("settings.engine.gpu")}</option></select></label>
         <div class="dz-field"><span class="dz-label">{t("settings.threads")} <span class="dz-unit">1–{health()?.cpu_count ?? t("settings.threads.available")}</span></span><label class="gs-check"><input type="checkbox" checked={value().threads === 0} onChange={e => save({ threads: e.currentTarget.checked ? 0 : (health()?.default_threads ?? 4) })}/> {t("settings.threads.auto")}</label><Show when={value().threads !== 0}><NumberField class="rp-input dz-input" min="1" max={health()?.cpu_count} step="1" value={value().threads} onChange={e => { const n = Number(e.currentTarget.value); if (Number.isInteger(n) && n > 0 && n <= (health()?.cpu_count ?? 1024)) save({ threads: n }); }} /></Show><span class="note">{t("settings.threads.note", { n: health()?.default_threads ?? 1, cores: health()?.physical_cores ?? health()?.cpu_count ?? 1 })}</span></div>
-        <label class="dz-field"><span class="dz-label">{t("settings.mesh")}</span><select class="rp-select dz-input" value={value().meshMode} onChange={e => save({ meshMode: e.currentTarget.value as GeneralSettings["meshMode"] })}><option value="legacy">{t("settings.mesh.legacy")}</option><option value="auto">{t("settings.mesh.auto")}</option></select></label>
+        <label class="dz-field"><span class="dz-label">{t("settings.mesh")}</span><select class="rp-select dz-input" value={value().meshMode} onChange={e => save({ meshMode: e.currentTarget.value as GeneralSettings["meshMode"] })}><option value="design">{t("sim.mesh.mode.design")}</option><option value="auto">{t("sim.mesh.mode.auto")}</option></select></label>
         <label class="gs-check"><input type="checkbox" checked={value().confirmShapes} onChange={e => save({ confirmShapes: e.currentTarget.checked })}/> {t("settings.confirmShapes")}</label>
         <label class="dz-field"><span class="dz-label">{t("settings.units")}</span><select class="rp-select dz-input" value={value().units} onChange={e => save({ units: e.currentTarget.value as GeneralSettings["units"] })}><option value="standard">{t("settings.units.standard")}</option><option value="compact">{t("settings.units.compact")}</option></select></label>
         <div class="dz-field gs-blender">

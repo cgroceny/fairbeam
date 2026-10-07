@@ -7,14 +7,16 @@
 import { onCleanup, onMount, Show } from "solid-js";
 import { CircleAlert, CircleCheck, Clock, Info, LoaderCircle, LocateFixed, RotateCw, TriangleAlert, X } from "lucide-solid";
 import { num } from "../lib/format";
-import { bundle, viewCursor } from "../state";
+import { viewCursor } from "../state";
 import { isTerminal } from "../runner/api";
-import { health, liveProgress, meshFreshness, previewFailure, previewMs, previewState, recheckServer, serverActivity, serverState } from "../runner/store";
+import { health, liveInfo, liveProgress, meshFreshness, previewFailure, previewMs, previewState, recheckServer, serverActivity, serverState } from "../runner/store";
+import { runFraction } from "../runner/liveRun";
 import { designJob, setDesignDockTab } from "../runner/designRun";
 import { localFrame, plane, resetWcsToGlobal, snap, tool, wcs, wcsIsGlobal, worldToWcs } from "./draw";
 import { shown as fmt } from "./displayNumber.ts";
 import { evaluate } from "./expr";
-import { cellsText, meshStats } from "./meshStats";
+import { cellsText } from "./meshStats";
+import { draftMeshStats } from "./draftMesh";
 import { meshView, toggleMeshView } from "./MeshView";
 import { checks, names, retryPreview } from "./store";
 import { setBottomDockCollapsed } from "./layoutState";
@@ -24,7 +26,7 @@ export default function StatusBar() {
   const c = () => viewCursor();
   const fresh = meshFreshness;
   // no numbers of another project or design once a preview failed without one of this design
-  const stats = () => fresh() === "unknown" ? null : meshStats(bundle());
+  const stats = () => fresh() === "unknown" ? null : draftMeshStats();
   const meshText = () => {
     const s = stats();
     if (!s) return t(fresh() === "unknown" ? "status.mesh.unknown" : "status.mesh.none");
@@ -54,9 +56,10 @@ export default function StatusBar() {
     if (!a.otherRunning) return t("status.queue", { count: a.queued });
     return a.queued ? t("status.queue.busyQueued", { count: a.queued }) : t("status.queue.busy");
   };
+  // the phase and the solver's progress (runner/liveRun.ts), as the dock's progress bar shows it
   const pct = () => {
-    const p = liveProgress();
-    return Math.round(100 * Math.max(0, Math.min(1, p?.energy_fraction ?? p?.timestep_fraction ?? 0)));
+    const j = running();
+    return j ? Math.round(100 * runFraction(j, liveProgress(), liveInfo())) : 0;
   };
   /** The cursor in the active WCS: x y z for the global one, u v w for a local one. */
   const cursorText = () => {
@@ -85,7 +88,7 @@ export default function StatusBar() {
   return (
     <footer class="sb" role="group" aria-label={t("status.label")}>
       <span class="sb-item sb-cursor mono" title={t("status.cursor.title")}>
-        {cursorText()}
+        <span class="sb-text">{cursorText()}</span>
       </span>
       <Show when={wcsIsGlobal()} fallback={
         <button class="sb-item sb-btn sb-wcs-local" type="button" onClick={resetWcsToGlobal}
@@ -101,7 +104,7 @@ export default function StatusBar() {
       </Show>
       <span class="sb-item sb-t1" title={t("status.units.title")}>mm · GHz</span>
       <button class="sb-item sb-btn sb-mesh" aria-pressed={meshView()} onClick={toggleMeshView} data-fresh={fresh()} title={meshTitle()}>
-        <span class="mono">{meshText()}</span>
+        <span class="mono sb-text">{meshText()}</span>
       </button>
       <button class="sb-item sb-btn" onClick={showChecks} title={t("status.checks.title")}>
         <Show when={errs() + warns()} fallback={<><CircleCheck size={12} class="sb-good" aria-hidden="true" /> {t(notes() ? "status.checks.noErrors" : "status.checks.passed")}</>}>
@@ -112,30 +115,30 @@ export default function StatusBar() {
       </button>
       <Show when={running()}>
         <button class="sb-item sb-btn" onClick={() => { setDesignDockTab("run"); setBottomDockCollapsed(false); }} title={t("status.running.title")}>
-          <LoaderCircle size={12} class="rs-spin" aria-hidden="true" /> {t("status.running", { pct: pct() })}
+          <LoaderCircle size={12} class="rs-spin" aria-hidden="true" /> <span class="sb-text">{running()!.status === "queued" ? t("progress.status.queued") : t("status.running", { pct: pct() })}</span>
         </button>
       </Show>
       {/* the server is busy with runs the dock does not show (a terminal, another window, another
           design; #7): say so, and open the dock's Queue tab on a click */}
       <Show when={serverActivity().otherRunning || serverActivity().queued > 0}>
         <button class="sb-item sb-btn sb-queue" data-testid="sb-queue" onClick={() => setDesignDockTab("queue")} title={t("status.queue.title")}>
-          <Clock size={12} aria-hidden="true" /> {queueText()}
+          <Clock size={12} aria-hidden="true" /> <span class="sb-text">{queueText()}</span>
         </button>
       </Show>
       <span class="sb-item sb-grow" />
       <Show when={previewFailure()} fallback={
-        <span class="sb-item sb-t1 muted" title={t("status.preview.title")}>
+        <span class="sb-item sb-t1 sb-fixed muted" title={t("status.preview.title")}>
           {previewState() === "loading" ? t("status.preview.updating") : previewMs() !== null ? t("status.preview.ms", { ms: previewMs() }) : t("status.preview.none")}
         </span>
       }>
         {(why) => (
           <Show when={!paused()} fallback={
-            <button class="sb-item sb-btn sb-fail" onClick={showChecks} title={t("status.preview.paused.title")}>
+            <button class="sb-item sb-btn sb-fail sb-fixed" onClick={showChecks} title={t("status.preview.paused.title")}>
               <CircleAlert size={12} aria-hidden="true" />
               <span>{t("status.preview.paused", { count: errs() })}</span>
             </button>
           }>
-            <button class="sb-item sb-btn sb-fail" onClick={retryPreview}
+            <button class="sb-item sb-btn sb-fail sb-fixed" onClick={retryPreview}
               title={t("status.preview.failed.title", { why: why() })}>
               <Show when={previewState() === "loading"} fallback={<CircleAlert size={12} aria-hidden="true" />}>
                 <LoaderCircle size={12} class="rs-spin" aria-hidden="true" />
@@ -146,7 +149,7 @@ export default function StatusBar() {
           </Show>
         )}
       </Show>
-      <button class="sb-item sb-btn" onClick={() => void recheckServer()} title={serverState() === "online" ? `Fairbeam ${health()?.fairbeam ?? ""} · openEMS ${health()?.openems ?? "?"}` : t("status.server.probe")}>
+      <button class="sb-item sb-btn sb-fixed sb-server" onClick={() => void recheckServer()} title={serverState() === "online" ? `Fairbeam ${health()?.fairbeam ?? ""} · openEMS ${health()?.openems ?? "?"}` : t("status.server.probe")}>
         <span class={`sb-dot sb-dot-${serverState()}`} aria-hidden="true" /> <span class="sb-t3">{server()}</span>
       </button>
     </footer>

@@ -3,10 +3,12 @@ import { APPEARANCE_OPTIONS, CUSTOM_COLORS, COLOR_DEFAULTS, validCustomColor, va
 
 /** language: "system" follows the OS / browser language (src/i18n) */
 /** threads: 0 means Auto (the server picks from the host and the grid size); 1.. is a manual choice */
+/** meshMode: the mesh mode a new design starts with, named like the design's own `mesh.mode`:
+ * "design" is the design-aware Automatic (recommended) mesh, "auto" the Classic (old) one */
 export const AUTO_THREADS = 0;
-export type GeneralSettings = ColorSettings & { theme: Theme; uiFont: "plex" | "system" | "arial"; monoFont: "plex" | "system" | "consolas"; engine: "cpu" | "gpu"; threads: number; meshMode: "legacy" | "auto"; confirmShapes: boolean; units: "standard" | "compact"; language: "system" | "en" | "tr"; decimals: "language" | "point" | "comma"; blenderPath: string };
+export type GeneralSettings = ColorSettings & { theme: Theme; uiFont: "plex" | "system" | "arial"; monoFont: "plex" | "system" | "consolas"; engine: "cpu" | "gpu"; threads: number; meshMode: "design" | "auto"; confirmShapes: boolean; units: "standard" | "compact"; language: "system" | "en" | "tr"; decimals: "language" | "point" | "comma"; blenderPath: string };
 export const GENERAL_SETTINGS_KEY = "fairbeam.generalSettings";
-export const GENERAL_DEFAULTS: GeneralSettings = { ...COLOR_DEFAULTS, theme: "system", uiFont: "plex", monoFont: "plex", engine: "cpu", threads: AUTO_THREADS, meshMode: "legacy", confirmShapes: true, units: "standard", language: "system", decimals: "language", blenderPath: "" };
+export const GENERAL_DEFAULTS: GeneralSettings = { ...COLOR_DEFAULTS, theme: "system", uiFont: "plex", monoFont: "plex", engine: "cpu", threads: AUTO_THREADS, meshMode: "design", confirmShapes: true, units: "standard", language: "system", decimals: "language", blenderPath: "" };
 /** Run's remembered choice is deliberately separate from the legacy Settings key below. */
 export const RUN_THREADS_KEY = "fairbeam.run.threads";
 /** Run's remembered value when the user picked Auto explicitly (a number otherwise). */
@@ -36,7 +38,7 @@ function valid(v: unknown): v is Partial<GeneralSettings> {
     (x.monoFont === undefined || ["plex", "system", "consolas"].includes(String(x.monoFont))) &&
     (x.engine === undefined || ["cpu", "gpu"].includes(String(x.engine))) &&
     (x.threads === undefined || (Number.isInteger(x.threads) && Number(x.threads) >= 0)) &&
-    (x.meshMode === undefined || ["legacy", "auto"].includes(String(x.meshMode))) &&
+    (x.meshMode === undefined || ["design", "auto"].includes(String(x.meshMode))) &&
     (x.confirmShapes === undefined || typeof x.confirmShapes === "boolean") &&
     (x.units === undefined || ["standard", "compact"].includes(String(x.units))) &&
     (x.language === undefined || ["system", "en", "tr"].includes(String(x.language))) &&
@@ -63,6 +65,9 @@ export function readGeneralSettings(storage?: Pick<Storage, "getItem" | "setItem
         if (typeof candidate.blenderPath !== "string") delete candidate.blenderPath;
         for (const [key, options] of Object.entries(APPEARANCE_OPTIONS)) if (!(options as readonly unknown[]).includes(candidate[key])) delete candidate[key];
         for (const key of CUSTOM_COLORS) if (!validCustomColor(candidate[key])) delete candidate[key];
+        // "legacy" was the stored value behind the label "Automatic (recommended)": it is now named
+        // after that mesh mode, "design" (the label the user chose decides, not the old mapping)
+        if (candidate.meshMode === "legacy") candidate.meshMode = "design";
         if (valid(candidate)) saved = candidate;
       }
     }
@@ -70,7 +75,7 @@ export function readGeneralSettings(storage?: Pick<Storage, "getItem" | "setItem
   try { if (!saved.theme) { const t = storage.getItem(legacyKeys.theme); if (["system", "light", "dark"].includes(t ?? "")) saved.theme = t as Theme; } } catch { /* optional storage */ }
   try { if (saved.threads === undefined) { const n = Number(storage.getItem(legacyKeys.threads)); if (Number.isInteger(n) && n > 0) saved.threads = n; } } catch { /* optional storage */ }
   try { const e = storage.getItem(legacyKeys.engine); if (!saved.engine && (e === "cpu" || e === "gpu")) saved.engine = e; } catch { /* optional storage */ }
-  try { const m = storage.getItem(legacyKeys.meshMode); if (!saved.meshMode && (m === "auto" || m === "design")) saved.meshMode = m === "auto" ? "auto" : "legacy"; } catch { /* optional storage */ }
+  try { const m = storage.getItem(legacyKeys.meshMode); if (!saved.meshMode && (m === "auto" || m === "design")) saved.meshMode = m; } catch { /* optional storage */ }
   try { if (saved.confirmShapes === undefined) { const d = JSON.parse(storage.getItem(legacyKeys.draw) ?? "{}"); if (typeof d.confirm === "boolean") saved.confirmShapes = d.confirm; } } catch { /* optional storage */ }
   // One-time migration: Settings used to default to 4 threads, which bypassed the server's adaptive
   // default. A stored 4 cannot be told apart from a deliberate choice of 4, so it becomes Auto once;
@@ -91,7 +96,7 @@ export function writeGeneralSettings(value: GeneralSettings, storage?: Pick<Stor
   if (!valid(value) || Object.keys(GENERAL_DEFAULTS).some((k) => (value as any)[k] === undefined)) throw new Error("Invalid general settings");
   storage.setItem(GENERAL_SETTINGS_KEY, JSON.stringify(value));
   storage.setItem(legacyKeys.theme, value.theme); storage.setItem(legacyKeys.engine, value.engine); storage.setItem(legacyKeys.threads, String(value.threads));
-  storage.setItem(legacyKeys.meshMode, value.meshMode === "auto" ? "auto" : "design");
+  storage.setItem(legacyKeys.meshMode, value.meshMode);
   let old: Record<string, unknown> = {};
   try { const parsed: unknown = JSON.parse(storage.getItem(legacyKeys.draw) ?? "{}"); if (parsed && typeof parsed === "object") old = parsed as Record<string, unknown>; } catch { /* repair malformed legacy preference */ }
   storage.setItem(legacyKeys.draw, JSON.stringify({ ...old, confirm: value.confirmShapes }));

@@ -1385,15 +1385,17 @@ class _Lint:
         total = mesh.get("total_cells")
         if _num(total):
             limit = max_cells()
-            why = self._mostly_air(b)
+            cause, why = self._cells_cause(b, mesh)
             if total > limit:
                 self.error("mesh", "mesh-cells",
-                           f"the mesh has {total / 1e6:.1f} M cells, over the server's {limit / 1e6:g} M limit "
-                           f"(FAIRBEAM_MAX_CELLS): {why or 'coarsen it or lower f max'}")
+                           f"the mesh has {total / 1e6:.1f} M cells, over the server limit of {limit / 1e6:g} M cells: "
+                           f"{why or 'coarsen it or lower f max'}")
             elif total > WARN_CELLS:
+                # below the limit the hint is added only for a clear cause (a wide band, a box of air)
+                hint = why if cause in ("band", "air") else None
                 self.warn("mesh", "mesh-cells",
                           f"the mesh has {total / 1e6:.1f} M cells: a long run and several GB of memory"
-                          + (f"; {why}" if why else ""))
+                          + (f"; {hint}" if hint else ""))
         for w in (mesh.get("auto") or {}).get("warnings") or []:
             self.warn("mesh", "mesh-warning", f"automatic mesh: {w}")
         self._excitation(mesh, parts)
@@ -1424,6 +1426,32 @@ class _Lint:
                       f"a feature {worst[0]:.3g} mm thick along {worst[2]} falls between mesh lines: "
                       "the automatic mesh cannot resolve it and FDTD drops it (make it thicker or a sheet, "
                       "or raise cells per wavelength)")
+
+    def _cells_cause(self, b: dict, mesh: dict) -> tuple[str | None, str | None]:
+        """What drives a large cell count, and the hint that fixes it, by cause:
+
+        - "band": f max far above f min (more than MAX_RATIO). The open boundaries sit a quarter
+          wavelength at f min away while the cells shrink with the wavelength at f max, so the count
+          grows with the cube of the ratio, and a box of air is a symptom of it, not the cause.
+        - "air": a usual band, but the domain is mostly air (the boundaries' distance).
+        - "cells": neither: the cells f max (or the model's fine details) asks for.
+        (None, None) without a band."""
+        if not self.band:
+            return None, None
+        f0, f1 = self.band
+        cell = mesh.get("min_cell")
+        if not _num(cell):
+            steps = [hi - lo for a in AXES for line in [mesh.get(a)] if isinstance(line, list)
+                     for lo, hi in zip(line, line[1:]) if hi > lo]
+            cell = min(steps) if steps else None
+        at = f"cells of {cell:.3g} mm at {f1:g} GHz" if _num(cell) else f"f max {f1:g} GHz"
+        if f0 > 0 and f1 / f0 > MAX_RATIO:
+            return "band", (f"lower f max ({at}): f max / f min = {f1 / f0:.0f} is a very wide band; "
+                            "narrow it to the frequencies you need")
+        air = self._mostly_air(b)
+        if air:
+            return "air", air
+        return "cells", f"lower f max or the cells per wavelength ({at})"
 
     def _mostly_air(self, b: dict) -> str | None:
         """When the domain is mostly air because of the open boundaries' distance (a quarter

@@ -63,6 +63,8 @@
 .rb-frequency { width: 200px; display: grid; gap: 2px; }
 .rb-field-pair { display: grid; grid-template-columns: 1fr 1fr; gap: var(--al-space-2); }
 .rb-mesh-fields { width: 232px; display: grid; grid-template-columns: 84px 1fr; gap: 2px var(--al-space-2); align-content: start; }
+/* the mesh of a design without the Classic density field: one line across the block */
+.rb-mesh-line { grid-column: 1 / -1; align-self: center; }
 .rb-thin-metal { display: grid; gap: 0; font-size: 11px; color: var(--al-text-2); }
 .rb-thin-metal select { width: 100%; }
 .rb-info { font-size: 11px; line-height: 13px; color: var(--al-text-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }

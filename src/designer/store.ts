@@ -5,8 +5,8 @@
 import { batch, createEffect, createMemo, createRoot, createSignal, on } from "solid-js";
 import { reconcile, unwrap } from "solid-js/store";
 import { api, type PcbFile, type PcbOptions } from "../runner/api";
-import { applyModelEntry, forgetPreviewFailure, restoreProject, invalidatePreview, previewActive, previewFailure, previewIsCurrent, previewState, health, modelKey, models, refreshModels, runDesignPreview, selectModel, serverState, setUnsavedDesignCheck, showEmptyDesign, showQuickPreview } from "../runner/store";
-import { bundle, openCount, setCenterView, setHiddenParts } from "../state";
+import { applyModelEntry, draftPreview, forgetPreviewFailure, restoreProject, invalidatePreview, previewActive, previewFailure, previewIsCurrent, previewState, health, modelKey, models, refreshModels, runDesignPreview, selectModel, serverState, setUnsavedDesignCheck, showEmptyDesign, showQuickPreview } from "../runner/store";
+import { openCount, setCenterView, setHiddenParts } from "../state";
 import { quickBundle } from "./geometry";
 import { portFeedEntries } from "../lib/portGroups";
 import { clearBackup, forgetLastDesign, readBackup, readLastDesign, rememberLastDesign, writeBackup } from "./draftBackup";
@@ -143,7 +143,7 @@ export function quickPreview() {
   quickFrame = requestAnimationFrame(() => {
     quickFrame = 0;
     if (appMode() !== "design" || openCount() !== quickOpened || !loaded() || !draft.parts.length) return;
-    const b = quickBundle(unwrap(draft), names().names, bundle());
+    const b = quickBundle(unwrap(draft), names().names, draftPreview());
     if (b) showQuickPreview(b);
   });
 }
@@ -300,10 +300,11 @@ export async function createDesign(body: { id: string; name?: string; from?: str
   setLoading(true);
   try {
     const res = await api.createDesign(body);
-    // The newer design-aware auto mesh is `design`; `auto` is the legacy mesh editor.
-    // Apply this only to newly created designs, then persist it in the created file. An imported
-    // CST macro or PCB artwork keeps the mesh the import chose (an fairbeam export restores its original mesh).
-    const preferredMesh = readGeneralSettings().meshMode === "auto" ? "design" : "auto";
+    // General settings › New design mesh names the mesh mode itself: `design` is the design-aware
+    // Automatic (recommended) mesh, `auto` the Classic (old) mesh editor. Apply it only to newly
+    // created designs, then persist it in the created file. An imported CST macro or PCB artwork
+    // keeps the mesh the import chose (a Fairbeam export restores its original mesh).
+    const preferredMesh = readGeneralSettings().meshMode;
     const { from, python, cst, pcb, design } = body;
     const meshChanged = !from && !python && !cst && !pcb && !design && !!res.design.mesh && res.design.mesh.mode !== "manual" && res.design.mesh.mode !== preferredMesh;
     if (meshChanged) {
@@ -525,7 +526,7 @@ export function selectAddedGeometry(s: Extract<Selection, { type: "part" | "prim
   if (!bounds || !bounds.flat().every(Number.isFinite)) return;
   // Adding before the initial server preview finishes must win over its default model fit.
   if (!previewActive()) {
-    const preview = quickBundle(d, names().names, bundle());
+    const preview = quickBundle(d, names().names, draftPreview());
     if (preview) showQuickPreview(preview);
   }
   setHiddenParts(part.name, false);
@@ -786,7 +787,7 @@ export function focusPath(path: string, options: { frame?: boolean; focus?: bool
     const bounds = frameBounds(s);
     if (bounds) {
       if (!previewActive()) {
-        const preview = quickBundle(unwrap(draft), names().names, bundle());
+        const preview = quickBundle(unwrap(draft), names().names, draftPreview());
         if (preview) showQuickPreview(preview);
       }
       if (s.type === "part" || s.type === "primitive") setHiddenParts(draft.parts[s.i].name, false);

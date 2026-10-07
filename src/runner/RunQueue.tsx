@@ -11,6 +11,16 @@ import { t } from "../i18n";
 
 export const jobName = (j: Job) => j.label ?? j.model_id ?? j.model;
 
+/** A run's engine and threads as its row says it: "GPU" for a GPU run (its solver does not use a
+ * thread count, the job's 1 is a placeholder), else "CPU · 2 threads" ("CPU · Auto" before the run
+ * reports the count Auto chose). `short`: the list rows' "2 thr". */
+export function engineThreadsText(engine: string | null | undefined, threads: number | null | undefined, short = false): string {
+  if (engine === "gpu") return "GPU";
+  const n = typeof threads === "number" && threads > 0 ? threads : null;
+  const count = n === null ? t("run.threads.auto") : short ? t("runHistory.threadsShort", { n }) : t("runDock.threads", { count: n });
+  return `CPU · ${count}`;
+}
+
 /** Queued and running runs: the running one first, then the waiting ones in the order they start. */
 export const activeRuns = () => jobs().filter((j) => !isTerminal(j.status))
   .sort((a, b) => (a.status === "running" ? 0 : 1) - (b.status === "running" ? 0 : 1) || a.created - b.created);
@@ -90,7 +100,7 @@ export function RunQueue(props: { followed: string | null; onFollow: (job: Job) 
                   <StatusBadge status={j.status} compact />
                   <span class="rp-hrow-text">
                     <span class="rp-hrow-name"><span class="mono">{jobName(j)}</span> <span class="muted">{paramSummary(j)}</span></span>
-                    <span class="rp-hrow-sub mono">{j.model}{" · "}{ago(j.created)}{" · "}{t("runHistory.threadsShort", { n: j.threads })}</span>
+                    <span class="rp-hrow-sub mono">{j.model}{" · "}{ago(j.created)}{" · "}{engineThreadsText(j.engine, j.info?.threads ?? j.threads, true)}</span>
                   </span>
                 </span>
                 <Show when={props.followed !== j.id || live.job?.id !== j.id}>

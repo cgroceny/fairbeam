@@ -33,9 +33,11 @@ ok(tr["results.sparams.noBand"] !== "bantta yok", "-10 dB band: no 'bantta yok'"
 // the template names and default labels are translated
 for (const key of ["templates.empty.name", "params.defaultLabel.designFrequency", "params.defaultLabel.newParameter", "pcbImport.f0"]) ok(tr[key] && tr[key] !== en[key], `${key} is translated`);
 // shortened or wrapped: the two strings that were cut off
-ok(tr["run.threads.autoHint"].length <= 80, "the threads hint fits");
+// the threads hint states the Auto rule with its numbers, so it is longer: it wraps (below) and stays short
+ok(tr["run.threads.autoHint"].length <= 160 && en["run.threads.autoHint"].length <= 160, "the threads hint stays short");
 ok(tr["run.name.placeholder"].length <= 30, "the run name placeholder fits");
 const runDialog = read("src/designer/RunDialog.tsx");
+ok(/<span class="dz-value dz-wrap" classList=\{\{ "dz-bad": threadsBad\(\) \}\}>/.test(runDialog), "the threads hint wraps");
 ok((runDialog.match(/class="dz-value dz-wrap"/g) ?? []).length >= 3, "the Run dialog's hints wrap instead of being cut");
 ok(/\.dz-value\.dz-wrap \{[^}]*white-space: normal/.test(read("src/styles/designer.css")), "dz-wrap lets a hint wrap");
 

@@ -15,7 +15,8 @@ const note = "The GPU engine runs on the graphics card; threads only affect the 
 assert.equal(en["run.gpuNote"], note, "the GPU note's English text");
 assert.equal(en["run.threads"], "Threads", "the Threads label's English text");
 assert.match(dialog, /threads:\s*eng\(\)\s*===\s*"gpu"\s*\?\s*1\s*:\s*thr\(\)/);
-assert.match(dialog, /<Show when=\{eng\(\) === "cpu"\} fallback=\{<p class="dz-value">\{t\("run\.gpuNote"\)\}/);
+// the note wraps (and carries the text as its title), never cut off in a narrow dialog
+assert.match(dialog, /<Show when=\{eng\(\) === "cpu"\} fallback=\{<p class="dz-value dz-wrap" title=\{t\("run\.gpuNote"\)\}>\{t\("run\.gpuNote"\)\}/);
 assert.match(panel, /<Show when=\{optEngine\(\) !== "gpu"\}>[\s\S]*?<span>\{t\("run\.threads"\)\}<\/span>[\s\S]*?<\/Show>/);
 assert.ok(panel.includes('t("run.gpuNote")'), "optimizer GPU note is present");
 assert.match(optimizer, /threadsForEngine\(optEngine\(\) \|\| "cpu", threads\(\) \|\| health\(\)\?\.default_threads \|\| 1\)/);

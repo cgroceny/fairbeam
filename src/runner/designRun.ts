@@ -14,7 +14,7 @@ import { bundle, clearProject, lastProject, loadIndex, loadProject, openCount, s
 import { newestResults } from "./resultsIndex";
 import { requireDesignResult, ResultFollow } from "./resultFollow";
 import { exampleEntries } from "./examples";
-import { attach, invalidatePreview, jobs, live, models, notice, refreshModels, refreshRuns, runName, runOpen, selectModel, serverActivity, setEngine, setNotice, setRunName, setThreads, startRun } from "./store";
+import { attach, invalidatePreview, jobs, live, meshSource, models, notice, refreshModels, refreshRuns, runName, runOpen, selectModel, serverActivity, setEngine, setNotice, setRunName, setThreads, startRun } from "./store";
 
 import { designDockTab, setDesignDockTab } from "../designer/dockState";
 import { t } from "../i18n/index.ts";
@@ -87,7 +87,8 @@ export async function startDesignRun(opts: { engine: string; threads: number; po
   setEngine(opts.engine);
   // GPU uses one solver thread; it must not replace the user's remembered CPU choice.
   if (opts.engine !== "gpu") setThreads(opts.threads);
-  const nodes = meshStats(bundle())?.nodes;
+  // the draft's mesh (the server's Auto threads follow it), not a run's results shown in the 3D view
+  const nodes = meshStats(meshSource())?.nodes;
   try {
     localStorage.setItem(POINTS_KEY, String(opts.points));
   } catch {

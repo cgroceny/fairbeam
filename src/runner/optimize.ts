@@ -14,6 +14,7 @@ import {
   health,
   jobs,
   live,
+  meshSource,
   openBundlePath,
   paramPayload,
   refreshRuns,
@@ -299,7 +300,7 @@ export async function startOptimize() {
       params: base,
       threads: threadsForEngine(optEngine() || "cpu", threads() || health()?.default_threads || 1),
       engine: optEngine() || undefined,
-      ...(meshStats(bundle())?.nodes ? { cells: meshStats(bundle())!.nodes } : {}),
+      ...(meshStats(meshSource())?.nodes ? { cells: meshStats(meshSource())!.nodes } : {}),
       ...(runName().trim() ? { name: runName().trim() } : {}),
       vary: vary.map((v) => ({ key: v.key, min: Number(v.min), max: Number(v.max), start: Number(v.start) })),
       goals: goals.map((g) => ({

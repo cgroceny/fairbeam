@@ -30,11 +30,14 @@ export const designRuns = createRoot(() => createMemo(() => {
   if (!f || !model) return [];
   // job history has sub-second completion times; bundle timestamps only have seconds
   const finished = new Map<string, number>();
+  // a sweep's runs are named by their sweep point (navModel.ts runRows)
+  const sweepValues = new Map<string, Record<string, number>>();
   for (const j of jobs()) {
     if (j.status === "done" && j.bundle && j.finished && j.model === f.id)
       finished.set(j.bundle, Math.max(finished.get(j.bundle) ?? 0, j.finished * 1000));
+    if (j.status === "done" && j.bundle && j.model === f.id && j.sweep?.values && j.sweep.kind !== "convergence") sweepValues.set(j.bundle, j.sweep.values);
   }
-  return runRows(index(), model, finished);
+  return runRows(index(), model, finished, sweepValues);
 }));
 
 export const designResultNodes = () => {
