@@ -474,7 +474,9 @@ export default function RunPanel() {
           </section>
         </Show>
 
-        <Show when={live.job}>
+        {/* the run this window follows: while it runs, whatever model it is; once it ended, only under
+            its own model (another model's finished run is not this model's status) */}
+        <Show when={live.job && (!isTerminal(live.job.status) || live.job.model === modelKey())}>
           <Show when={live.job?.kind === "optimize"} fallback={<ProgressCard />}><OptimizeProgress /></Show>
         </Show>
 
