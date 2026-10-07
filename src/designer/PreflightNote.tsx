@@ -1,7 +1,7 @@
 // The memory / CPU check of a run (POST /api/preflight) as a note in a run dialog. Shared by the
 // Run dialog and the batch dialogs (sweep, mesh convergence, optimizer), which pass the largest
 // cell count they expect to simulate.
-import { createResource, Show } from "solid-js";
+import { createResource, Show, Suspense } from "solid-js";
 import { CircleAlert } from "lucide-solid";
 import { api } from "../runner/api";
 import { health, serverState } from "../runner/store";
@@ -12,11 +12,16 @@ export function PreflightNote(props: { cells: number | undefined; engine: string
   // busy part of the answer ("another run is using the CPU") follows it
   const queue = () => { const q = health()?.queue; return q ? `${q.running ?? ""}|${q.queued}|${q.external ?? 0}` : ""; };
   const [pre] = createResource(() => ({ e: props.engine, c: props.cells, ok: serverState() === "online", q: queue() }), (s) => (s.ok && s.c ? api.preflight({ cells: s.c, engine: s.e }).catch(() => null) : null));
+  // Its own Suspense boundary: while the check is asked, only this note waits. Without it the
+  // nearest boundary (the whole ribbon that hosts the Run, Sweep and Optimize dialogs) was swapped
+  // for its loading placeholder, which detached the dialog's opener and dropped keyboard focus.
   return (
-    <Show when={pre() && pre()!.level !== "ok"}>
-      <p class="note" classList={{ "dz-bad": pre()!.level === "refuse" }} role={pre()!.level === "refuse" ? "alert" : "status"}>
-        <CircleAlert size={14} aria-hidden="true" /> {pre()!.level === "unknown" ? t("run.preflight.unknown") : pre()!.messages.join(" ")}
-      </p>
-    </Show>
+    <Suspense>
+      <Show when={pre() && pre()!.level !== "ok"}>
+        <p class="note" classList={{ "dz-bad": pre()!.level === "refuse" }} role={pre()!.level === "refuse" ? "alert" : "status"}>
+          <CircleAlert size={14} aria-hidden="true" /> {pre()!.level === "unknown" ? t("run.preflight.unknown") : pre()!.messages.join(" ")}
+        </p>
+      </Show>
+    </Suspense>
   );
 }

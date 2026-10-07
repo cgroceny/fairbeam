@@ -9,9 +9,7 @@ import { createEffect, createMemo, createSignal, For, onCleanup, Show } from "so
 import { Portal } from "solid-js/web";
 import { Check, ChevronsUpDown, CopyPlus, FolderOpen, Search } from "lucide-solid";
 import { bundle, index, source } from "../state";
-import { labelOf, projectLabels } from "../lib/projectLabels";
-import { EXAMPLE_CATEGORIES, exampleCategory, exampleDetail, filterGroups, flatItems, initialActive, pickerKeyTarget, type PickerGroup } from "../lib/examplePicker";
-import { resultGroups } from "../runner/resultsIndex";
+import { exampleGroups, filterGroups, flatItems, initialActive, pickerKeyTarget, type PickerGroup } from "../lib/examplePicker";
 import { exampleConversionBlocker, exampleEntries, exampleSourceFor, isExample } from "../runner/examples";
 import { models, openExampleCopy, serverState } from "../runner/store";
 import { openUserProject } from "../runner/openProject";
@@ -30,15 +28,10 @@ export default function ExamplePicker() {
   let list: HTMLDivElement | undefined;
 
   const examples = createMemo(() => exampleEntries(index()));
-  const labels = createMemo(() => projectLabels(resultGroups(examples()).flatMap((g) => g.entries)));
   const groups = createMemo<PickerGroup[]>(() => {
-    // grouped by category (867 MHz UAV, patch and printed, ...); groups without examples are left out
-    const models = resultGroups(examples());
-    const out: PickerGroup[] = EXAMPLE_CATEGORIES.map((c) => ({
-      label: t(`examples.group.${c}`),
-      items: models.filter((g) => exampleCategory(g.model) === c).flatMap((g) =>
-        g.entries.map((p) => ({ file: p.file, label: labelOf(labels(), p), detail: exampleDetail(p), results: p.simulated }))),
-    })).filter((g) => g.items.length > 0);
+    // grouped by category (867 MHz UAV, patch and printed, ...), as on the Start screen; groups
+    // without examples are left out
+    const out = exampleGroups(examples(), (c) => t(`examples.group.${c}`));
     // a project opened from a file (or a run) is not an example: it is listed so the picker shows it
     const s = source();
     if (s && !examples().some((p) => p.file === s)) {

@@ -16,7 +16,7 @@ designer.
 
 ## Start screen
 
-![Start screen: a new project, your designs, the Python models and the examples](designer/start.png)
+![Start screen: a new design, your designs, the Python models and the examples](designer/start.png)
 
 The start screen opens when the run server is reachable. It has three parts:
 
@@ -38,12 +38,22 @@ The start screen opens when the run server is reachable. It has three parts:
   the file moves to the model history folder, so it can be restored. A design file that does not
   open (damaged, or made by a newer Fairbeam) stays in the list, grayed, with the reason.
 - **Python models** and **Examples**: open a model in the Run panel, or an example with its
-  results (in Examples mode). **Open as new project…** next to an example makes an editable
+  results (in Examples mode). **Open as new design…** next to an example makes an editable
   design of your own from it. The runs of your designs are not listed here: they open under the
   design (see [Running and results](#running-and-results)).
 
 The footer's **Send feedback** links open the public issue tracker in your browser; see
 [Feedback](#feedback).
+
+Start lists your own Python models first, then the bundled examples' models, marked *example,
+read-only*: a click opens one in the Run panel (a bundled one asks to copy it or to run it as it is),
+and its copy button makes an editable design of it. On Start, the header's **Run a Python model…**
+scrolls to this list. The Examples card groups the examples like the header's picker, with their
+bands and mesh sizes. A new design's file name is the ASCII form of its name; a name that is a
+bundled example's ID gets a number (Patch antenna is saved as `patch_antenna_2.design.json`), as the
+line under the Name field shows. **Save as…** (Home ribbon › Project, the header's More menu,
+Shift+Ctrl+S or ⇧⌘S where the browser leaves it to the page, and File › Save As in the desktop app)
+saves a copy of the open design under a new name.
 
 The header's **Start · Design · Examples** switch moves between the start screen, the designer and
 the examples:
@@ -66,7 +76,7 @@ inner control handles it first.
 - **Examples** is the viewer described in the [README](../README.md) and [RESULTS.md](RESULTS.md),
   on the example projects: the bundled ones, with their results ready, and your runs of the Python
   models. The searchable project picker in the header (type to filter, grouped by model) lists
-  them; the runs of your designs are not among them. **Open as new project…** (next to the picker,
+  them; the runs of your designs are not among them. **Open as new design…** (next to the picker,
   and in the model panel) makes an editable design from the open example; it is disabled, with the
   reason as its tooltip, for an example the design format cannot hold or a project that is not a
   bundled example. **Open in designer** appears in the model panel when the project was simulated
@@ -288,8 +298,17 @@ expression that does not evaluate.
   as you type. A design file that already has one does not load (the server's error names the key,
   as for any invalid design file) until the key is renamed in the file.
 
-Add a parameter with ribbon Modeling › Parameters › Parameter or **Add parameter** in the Parameters dock.
-Every keystroke in the table applies at once (the 3D view follows). **Enter** commits the cell and
+Add a parameter with ribbon Modeling › Parameters › Parameter or **Add parameter** in the Parameters dock:
+it gets the first free key p1, p2, … and no unit (fill the unit cell for a length or a frequency; a ratio
+or εr stays a bare number). Every keystroke in the table applies at once (the 3D view follows), except
+in the Key cell: a new key applies on **Enter** or when the cell is left, and renames the parameter
+everywhere it is used in one undo step (the shapes, transforms, cuts, ports, lumped elements, materials,
+mesh and simulation fields, the other parameters, the operands a Boolean result keeps and the parameter
+sweep), so renaming `fw` to `feed_w` leaves nothing that names `fw`. An invalid or taken key shows
+its error under the cell and is not applied; Escape returns to the key as it was. A parameter that a
+field still uses is not deleted (the trash button, Home › Edit › Delete, the Delete key): the message
+names the places that use it, as for a material in use; **Duplicate** copies it as `key_2`.
+**Enter** commits the cell and
 moves down to the same cell of the next row; **Escape** takes back only what was typed since the
 last commit, never a value already committed; leaving a cell (Tab, a click) commits it.
 The compact table shows Key, Expression / value, Evaluated value, Unit and Description.
@@ -306,6 +325,9 @@ field. The new value can itself be an expression of preceding parameters, such a
 
 A **material** is a metal or a dielectric with εr, a loss tangent tan δ and the frequency where
 tan δ holds (the band center if empty). Add one with ribbon Modeling › Materials › Dielectric or Metal.
+A new dielectric (also one added from the library) gives tan δ at `f0` when the design has an `f0`
+parameter inside its band, else at the band center (the frequency left empty), not at a datasheet's
+1 or 10 GHz.
 
 openEMS applies tan δ as a constant conductivity, so the loss is exact at that frequency only and
 scales as f_ref / f elsewhere: a datasheet value at 10 GHz used at 2.45 GHz gives four times the
@@ -429,8 +451,10 @@ The Modeling tab's Draw on the work plane group draws with the mouse on the work
 - **Polygon**: click the corners; click the first point again, double-click or press Enter to close
   it.
 
-A hint under the ribbon says what to click next and how many points are placed. Escape cancels
-(first the points, then the tool), Backspace removes the last point. A finished shape opens the
+A hint under the ribbon says what to click next and how many points are placed. Escape or Backspace
+removes the last point (the first one too, staying in the tool); Escape with no point placed stops
+drawing, and a tool armed again starts with no points. Enter before the first click opens the tool's
+shape dialog with default values. A finished shape opens the
 shape dialog, prefilled with what you drew, unless "Confirm drawn shapes in a dialog" is off in the
 group's Options panel; then it goes straight into a new part. Finishing a shape also leaves the
 drawing mode: OK in the dialog ends with the new shape selected and no tool left to
@@ -515,8 +539,10 @@ chosen as **Operation**:
 - **Mirror** across the plane through a **Point on plane** whose **Plane normal axis** is x, y or
   z; **Keep original (add mirrored copy)** decides whether the original stays.
 
-**Duplicate** (Home › Edit, or Ctrl/Cmd+D) copies the selected solid, shape or port; **Delete**
-removes the selection.
+**Duplicate** (Home › Edit, or Ctrl/Cmd+D) copies the selected solid, shape, port, lumped element,
+parameter or material; **Delete** removes the selection (a material or a parameter only while nothing
+uses it). A duplicated solid lies on its original on purpose, so it raises no overlap prompt; moving or
+editing it into another solid does.
 
 **Selection in the 3D view.** The selected solid gets a red tint, an outline and an x-ray fill drawn
 over everything. When one shape of a solid is selected in the tree, only that shape gets the full
@@ -565,7 +591,7 @@ on picked geometry:
 
 - **Boolean** combines two parts, A (kept) and B: **Add** (union), **Subtract** (A − B), **Intersect**
   and **Insert** (A − B with B kept). Select A, choose the operation (or press + − * / with A then
-  B selected). With A selected, the Tools › Boolean menu and the right-click › Boolean submenu list the other
+  B selected: the 3D view previews A op B, Enter or the same key again applies it). With A selected, the Tools › Boolean menu and the right-click › Boolean submenu list the other
   solids: **Subtract ›** (or **Add ›**, **Intersect ›**, **Insert ›**) and one pick applies the
   Boolean at once, in one undo step. Without a selection, choose the operation, then pick B.
   The 3D view previews the result with the operands in color; **Apply** (Enter) keeps it,
@@ -1135,7 +1161,13 @@ and the search goes on. Sweeps run every point as it is.
   your models folder, all for UAV telemetry at 867 MHz: a swept blade antenna, a slotted wideband
   planar dipole, a printed meander dipole for airframes without a metal skin, a printed sleeve
   dipole, a printed 2-element collinear and a ground-station 5-element Yagi, each with its results
-  and how to scale it to other bands.
+  and how to scale it to other bands. The desktop app installs them in the workspace's models folder,
+  read-only, as the sources of the 867 MHz examples: **Open as new design…** on one of them makes an
+  editable copy. Their IDs, like those of the bundled Python models, are reserved for them.
+- **Copies of examples**: a copy of a bundled Python example keeps the example's description, the
+  names and labels of its solids and the names of its materials. What the conversion did (the
+  parameters it carried over, the ones it fixed) is in `model.conversion`, shown as **Conversion
+  notes** in the design's Properties.
 - **Command line**: a design runs like a model file:
   `fairbeam run python/models/my_patch.design.json --set W=30` ([CLI.md](CLI.md)).
 - **Python export**: ribbon Post-processing › Report and export › **Python** (also File › Export

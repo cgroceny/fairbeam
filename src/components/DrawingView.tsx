@@ -5,7 +5,8 @@ import { bundle } from "../state";
 import { DEFAULT_DRAWING_OPTIONS, technicalDrawing, type DrawingOptions, type SheetOption } from "../drawing/drawing";
 import { saveBlob, svgSizeMm, svgToPdf, svgToPng } from "../drawing/render";
 import { radioGroupKeys } from "../lib/a11y";
-import { downloadFailedMessage, downloadMessage, revealDownloadedFile } from "../lib/download";
+import { downloadFailedMessage } from "../lib/download";
+import { downloadToast } from "../lib/toast";
 import { exportNotice, geometryAvailable, registerSurfaceExports } from "../components/exportContext";
 import DrawingMoreOptions from "./DrawingMoreOptions";
 import { t } from "../i18n";
@@ -29,7 +30,6 @@ export default function DrawingView() {
   const [view, setView] = createStore({ k: 1, x: 0, y: 0 });
   const [busy, setBusy] = createSignal<string | null>(null);
   const [error, setError] = createSignal<string | null>(null);
-  const [saveNote, setSaveNote] = createSignal<{ text: string; path?: string } | null>(null);
 
   const result = createMemo(() => {
     const b = bundle();
@@ -134,15 +134,12 @@ export default function DrawingView() {
   const run = async (label: string, fn: () => Promise<{ name: string; status: "requested" | "saved" | "cancelled" | "failed"; path?: string }>) => {
     setBusy(label);
     setError(null);
-    setSaveNote(null);
+    // the outcome is one toast (lib/toast.ts), never a second note at the bottom of the sheet
     try {
-      const result = await fn();
-      exportNotice(downloadMessage(result));
-      setSaveNote({ text: downloadMessage(result), path: result.status === "saved" ? result.path : undefined });
+      downloadToast(await fn());
     } catch (e) {
       console.error(e);
-      exportNotice(downloadFailedMessage(label,e));
-      setSaveNote({ text: downloadFailedMessage(label, e) });
+      exportNotice(downloadFailedMessage(label, e), { tone: "error" });
     } finally {
       setBusy(null);
     }
@@ -240,7 +237,6 @@ export default function DrawingView() {
             <TriangleAlert size={13} aria-hidden="true" /> {error() ?? result()?.warnings[0]}
           </span>
         </Show>
-        <Show when={saveNote()}>{(note) => <span class="status" role="status" aria-live="polite">{note().text}{note().path && <button class="linklike" onClick={() => void revealDownloadedFile(note().path!).catch((e) => setSaveNote({ text: t("results.toolbar.showInFolderFailed", { error: String(e) }) }))}>{t("results.toolbar.showInFolder")}</button>}</span>}</Show>
       </div>
 
       <div class="dv-hud dv-hud-br">

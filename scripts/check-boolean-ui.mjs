@@ -4,12 +4,13 @@
 //
 //   node scripts/check-boolean-ui.mjs
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 import { build } from 'vite';
 import solid from 'vite-plugin-solid';
 import { fileURLToPath } from 'node:url';
 
 const root = fileURLToPath(new URL('../', import.meta.url)).replaceAll('\\', '/');
-const modules = ['designer/store.ts', 'designer/booleanUi.ts'];
+const modules = ['designer/store.ts', 'designer/booleanUi.ts', 'designer/checks.ts'];
 const built = await build({
   root, configFile: false, logLevel: 'silent', resolve: { conditions: ['browser'] }, css: { postcss: {} },
   plugins: [solid(), {
@@ -27,7 +28,7 @@ const stub = { addEventListener() {}, removeEventListener() {}, dispatchEvent() 
 globalThis.window = { ...stub, document: stub };
 globalThis.document = stub;
 globalThis.requestAnimationFrame = () => 1;
-const { m0: store, m1: booleans } = await import(`data:text/javascript;base64,${Buffer.from(chunk.code).toString('base64')}`);
+const { m0: store, m1: booleans, m2: checks } = await import(`data:text/javascript;base64,${Buffer.from(chunk.code).toString('base64')}`);
 
 const box = (start, stop) => ({ kind: 'box', start, stop });
 const base = (parts) => ({
@@ -104,13 +105,27 @@ assert.equal(booleans.booleanPending(), null);
 assert.deepEqual(store.draft.parts.map((p) => p.name), ['brick'], 'brick − brick2: brick is what is left');
 assert.deepEqual(store.draft.parts[0].primitives.map((p) => !!p.void), [false, true], 'brick2 is a cut-out of brick');
 assert.match(store.message().text, /^Subtract: brick − brick2/);
-// the order is first selected − picked, whatever was selected before: brick2 selected, then brick, then −
+// A then B selected one after the other: the key previews A op B (as the Boolean menu, and as
+// docs/DESIGNER.md says), the same key again applies it; brick2 selected, then brick, then −
 open([part('brick', [box([0, 0, 0], [10, 10, 4])]), part('brick2', [box([3, 3, 2], [7, 7, 5])])]);
+store.setSelection({ type: 'design' });
 select(1); select(0);
+assert.deepEqual(booleans.selectedPair(), [1, 0]);
 booleans.booleanShortcut('subtract');
-assert.deepEqual({ ...booleans.booleanPending() }, { a: 0, operation: 'subtract' }, 'earlier selections never turn into B');
+assert.deepEqual({ ...booleans.booleanPending() }, { a: 1, b: 0, operation: 'subtract' }, 'A then B selected: A − B is previewed at once');
+booleans.booleanShortcut('subtract');
+assert.equal(booleans.booleanPending(), null, 'the same key again applies it');
+assert.deepEqual(store.draft.parts.map((p) => p.name), ['brick2'], 'brick2 − brick: brick2 is what is left (A first, B second)');
+assert.match(store.message().text, /^Subtract: brick2 − brick/);
+// one solid selected (nothing selected before it): the key arms A and waits for B
+open([part('brick', [box([0, 0, 0], [10, 10, 4])]), part('brick2', [box([3, 3, 2], [7, 7, 5])])]);
+store.setSelection({ type: 'design' });
+select(0);
+booleans.booleanShortcut('intersect');
+assert.deepEqual({ ...booleans.booleanPending() }, { a: 0, operation: 'intersect' }, 'one solid: arm and pick B');
 // a shape of a part stands for its part
 booleans.setBooleanPending(null);
+store.setSelection({ type: 'design' });
 store.setSelection({ type: 'primitive', i: 1, j: 0 });
 booleans.booleanShortcut('subtract');
 assert.equal(booleans.booleanPending().a, 1);
@@ -161,4 +176,74 @@ assert.equal(store.message().tone, 'warn');
   assert.equal(Number(slot.start[0]), 9, 'the slot moved with the parameter');
 }
 
-console.log('Boolean UI: toast, one undo step, refusal before applying, Insert following edits, the Boolean keys, removed volume and parametric cut-outs passed.');
+// ---- the History popover names the operation with its symbol and the solids by their labels
+{
+  open([part('patch', [box([0, 0, 1], [10, 6, 1])], { label: 'Patch' }), part('notch', [box([6, 3, 1], [12, 8, 1])], { label: 'Notch' })]);
+  booleans.runBoolean('subtract', 0, 1);
+  const h = booleans.booleanHistory()[0];
+  assert.deepEqual([h.a, h.b, h.result, booleans.BOOLEAN_SYMBOLS[h.operation]], ['Patch', 'Notch', 'Patch', '−']);
+  const workspace = readFileSync(`${root}src/designer/DesignWorkspace.tsx`, 'utf8');
+  assert.ok(/\{h\.a\} \{BOOLEAN_SYMBOLS\[h\.operation\]\} \{h\.b\} → \{h\.result\}/.test(workspace), 'the popover: Subtract: Patch − Notch → Patch');
+  assert.ok(!/\{h\.a\} \+ \{h\.b\}/.test(workspace), 'no plus sign for every operation');
+}
+
+// ---- Duplicate raises no overlap prompt; moving the copy into an overlap does
+{
+  open([part('patch', [box([0, 0, 1], [10, 6, 1])], { label: 'Patch' }), part('ground', [box([-20, -20, 0], [20, 20, 0])])]);
+  store.setSelection({ type: 'part', i: 0 });
+  store.duplicateSelected();
+  assert.equal(store.draft.parts[1].label, 'Patch copy');
+  assert.equal(booleans.automaticOverlap(), null, 'a plain duplicate: no overlap decision bar');
+  store.setSelection({ type: 'primitive', i: 0, j: 0 });
+  store.duplicateSelected();
+  assert.equal(store.draft.parts[0].primitives.length, 2);
+  assert.equal(booleans.automaticOverlap(), null, 'a duplicated shape adds no volume: no bar either');
+  store.edit((d) => { d.parts[1].primitives[0].start = [5, 0, 1]; d.parts[1].primitives[0].stop = [15, 6, 1]; });
+  assert.deepEqual(booleans.automaticOverlap() && [booleans.automaticOverlap().a, booleans.automaticOverlap().b], [1, 0], 'moving the copy into the original asks');
+  const insert = booleans.overlapChoices(booleans.automaticOverlap()).find(([c]) => c === 'insert')[1];
+  assert.equal(insert, 'Cut Patch out of Patch copy, keep Patch', 'the Insert choice in plain words');
+}
+
+// ---- a live result that cannot be recomputed: a sticky note, re-checked and gone once the cause is
+// gone (after Undo too); a renamed parameter reaches the operands the Boolean history keeps
+{
+  const d = base([
+    part('patch', [box(['-W/2', '-L/2', 1], ['W/2', 'L/2', 1])], { label: 'Patch' }),
+    part('feed', [box(['-fw/2', '-L/2 - 5', 1], ['fw/2', '-L/2', 1])], { label: 'Feed' }),
+    part('notch', [box(['-(fw/2+inset_g)', '-L/2', 1], ['fw/2+inset_g', '-L/2 + 4', 1])], { label: 'Notch' }),
+  ]);
+  d.params = [{ key: 'W', default: 30 }, { key: 'L', default: 24 }, { key: 'fw', default: 3 }, { key: 'inset_g', default: 1 }];
+  store.setDraft(structuredClone(d)); store.setFile({ file: 'check', hash: '3', design: d }); store.setMessage(null);
+  assert.equal(booleans.runBoolean('subtract', 0, 2), true, 'Patch − Notch');
+  assert.equal(store.draft.parts[0].booleanHistory.live, true);
+  // a raw edit that drops fw (the Parameters dock refuses this; an expression typed wrong does the same)
+  store.edit((x) => { x.params.splice(2, 1); });
+  assert.match(store.message().text, /cannot be recomputed/);
+  assert.equal(store.message().sticky, true, 'the note stays while the cause lasts');
+  await new Promise((r) => setTimeout(r, 0));
+  store.setSelection({ type: 'part', i: 1 });
+  assert.match(store.message()?.text ?? '', /cannot be recomputed/, 'a selection change does not hide a lasting problem');
+  store.undo();
+  assert.equal(store.message(), null, 'Undo brought fw back: the note is gone');
+  // the same through an edit that fixes it (a derive that succeeds)
+  store.edit((x) => { x.params[2].default = 'oops'; x.params[2] = { key: 'fw_old', default: 3 }; });
+  assert.match(store.message().text, /cannot be recomputed/);
+  store.edit((x) => { x.params[2].key = 'fw'; });
+  assert.equal(store.message(), null, 'a successful recompute clears the note');
+  // rename fw → feed_w: every expression follows, the operand copies in the history too
+  assert.equal(store.renameParam(2, 'feed_w'), null);
+  const text = JSON.stringify(store.draft);
+  assert.ok(!/\bfw\b/.test(text), 'no expression names fw any more (Feed and the kept Notch operand included)');
+  assert.deepEqual(store.draft.parts[0].booleanHistory.B.primitives[0].start, ['-(feed_w/2+inset_g)', '-L/2', 1], 'the operand copy is renamed as written');
+  assert.deepEqual(store.draft.parts[1].primitives[0].start, ['-feed_w/2', '-L/2 - 5', 1]);
+  assert.equal(store.message(), null, 'and the Boolean still recomputes');
+  const unknown = checks.designChecks(store.draft).filter((c) => /unknown name/.test(c.message));
+  assert.deepEqual(unknown, [], 'no unknown-name errors after the rename');
+  store.edit((x) => { x.params[2].default = 5; });
+  assert.ok(store.draft.parts[0].primitives.length > 0 && store.message() === null, 'Patch still builds from the renamed operands');
+  store.undo(); store.undo();
+  assert.equal(store.draft.params[2].key, 'fw', 'the rename is one undo step');
+  assert.deepEqual(store.draft.parts[0].booleanHistory.B.primitives[0].start, ['-(fw/2+inset_g)', '-L/2', 1]);
+}
+
+console.log('Boolean UI: toast, one undo step, refusal before applying, Insert following edits, the Boolean keys (A then B), removed volume, parametric cut-outs, history symbols, duplicates, recompute notes and renames passed.');

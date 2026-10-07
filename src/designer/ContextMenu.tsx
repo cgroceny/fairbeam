@@ -3,6 +3,7 @@ import { Portal } from "solid-js/web";
 import { openColor } from "./ColorPopover";
 import { ChevronLeft, CircleDot, Copy, Eye, EyeOff, Folder, FolderInput, GitMerge, Move, Palette, Pencil, Trash2, X, Zap } from "lucide-solid";
 import { useModal } from "../lib/dialog";
+import { viewportChangeCloses } from "../lib/menuDismiss";
 import { ExprField, SelectField } from "./DesignPane";
 import { closeContext, contextTarget, setRenaming, type ContextTarget } from "./context";
 import { componentFolders, designScale, normComponent, draft, duplicateSelected, edit, file, moveToComponent, names, removeSelected, selectAddedFeed, setSelection } from "./store";
@@ -151,7 +152,8 @@ function Menu(props: { target: ContextTarget; port: () => void; edge: (j:number)
     setPos({ x: Math.max(8, Math.min(props.target.x, innerWidth - r.width - 8)), y: Math.max(8, Math.min(props.target.y, innerHeight - r.height - 8)) });
     menu.querySelector<HTMLElement>("button")?.focus();
     const away = (e: PointerEvent) => { if (!menu.contains(e.target as Node)) closeContext(false); };
-    const viewport = (e: Event) => { if (!menu.contains(e.target as Node)) closeContext(false); };
+    // a resize or a scroll outside the menu moves what the menu points at (see viewportChangeCloses)
+    const viewport = (e: Event) => { if (viewportChangeCloses(menu, e)) closeContext(false); };
     // Focus leaving the menu (a click elsewhere, a dialog, script focus) or Escape anywhere closes it:
     // an open menu must never keep swallowing keys such as Ctrl+W.
     const blur = (e: FocusEvent) => { if (!menu.contains(e.relatedTarget as Node | null) && e.relatedTarget) closeContext(false); };

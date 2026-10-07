@@ -17,6 +17,6 @@ export default function ContextExportMenu() {
   {/* Action objects are fresh on every availability update; IDs preserve the focused DOM node. */}
   <For each={actions().map(a=>a.id)}>{id=>{
     const action=()=>actions().find(a=>a.id===id);
-    return <button class="menu-item" role="menuitem" data-export-action={id} data-action={id==="geometry"?"export-geometry":undefined} disabled={action()?.disabled} title={action()?.disabled?action()?.reason:action()?.label} onClick={()=>{const a=action();close();if(a)void Promise.resolve(a.run()).catch(error=>exportNotice(t("contextExport.failed",{error:String(error)})));}}>{action()?.label}</button>;
+    return <button class="menu-item" role="menuitem" data-export-action={id} data-action={id==="geometry"?"export-geometry":undefined} disabled={action()?.disabled} title={action()?.disabled?action()?.reason:action()?.label} onClick={()=>{const a=action();close();if(a)void Promise.resolve(a.run()).catch(error=>exportNotice(t("contextExport.failed",{error:String(error)}),{tone:"error"}));}}>{action()?.label}</button>;
   }}</For></div></Portal></Show></>;
 }

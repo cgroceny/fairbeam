@@ -34,7 +34,7 @@ MODEL = {
 }
 
 PARAMS = [
-    Param("f0", 2.4, "Design frequency", "GHz", "C = lambda here", minimum=0.3, maximum=30),
+    Param("f0", 2.4, "Design frequency", "GHz", "C = λ here", minimum=0.3, maximum=30),
     Param("c_lambda", 1.0, "Circumference", "lambda", "In wavelengths at f0 (axial mode: 3/4 to 4/3)", minimum=0.7, maximum=1.4),
     Param("pitch_deg", 13.0, "Pitch angle", "deg", minimum=5, maximum=25),
     Param("turns", 7.0, "Turns", "", minimum=1, maximum=20),

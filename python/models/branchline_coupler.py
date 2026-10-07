@@ -35,7 +35,7 @@ PARAMS = [
     Param("scale", 1.035, "Branch length scale", "",
           "Trims both branch lengths; 1.0 = textbook centre-line quarter waves (centred at 2.49 GHz here, the T-junctions "
           "shorten the electrical length), 1.035 centres the coupler at 2.40 GHz", minimum=0.5, maximum=1.5),
-    Param("feed_len", 10.0, "50 ohm feed length", "mm", minimum=2, maximum=100),
+    Param("feed_len", 10.0, "50 Ω feed length", "mm", minimum=2, maximum=100),
     Param("sub_h", 0.813, "Substrate thickness", "mm", minimum=0.05, maximum=10),
     Param("eps_r", 3.38, "Substrate permittivity", "", minimum=1, maximum=20),
     Param("tan_d", 0.0027, "Loss tangent", "", minimum=0, maximum=0.2),

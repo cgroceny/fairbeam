@@ -1,7 +1,7 @@
 import { commandModifier, isMacPlatform, modifierShortcut } from "../lib/shortcut.ts";
 import { t } from "../i18n/index.ts";
 
-export type ShortcutId = "transform" | "duplicate" | "delete" | "rename" | "save" | "undo" | "redo" | "close" | "fit" | "brick" | "export" | "run" | "cancel" | "help" | "extrudeFace" | "markers" | "tree" | "dock" | "side" | "ribbon" | "mainTabs" | "panes"
+export type ShortcutId = "transform" | "duplicate" | "delete" | "rename" | "save" | "saveAs" | "undo" | "redo" | "close" | "fit" | "brick" | "export" | "run" | "cancel" | "help" | "extrudeFace" | "markers" | "tree" | "dock" | "side" | "ribbon" | "mainTabs" | "panes"
   | "booleanAdd" | "booleanSubtract" | "booleanIntersect" | "booleanInsert";
 
 /** One entry: its label and context are read in the current language each time (getters), so the
@@ -23,6 +23,7 @@ export function shortcutTable(mac = isMacPlatform()) {
     delete: entry("delete", mac ? "⌫" : "Delete"),
     rename: entry("rename", "F2"),
     save: entry("save", m("S")),
+    saveAs: entry("saveAs", mac ? "⇧⌘S" : "Shift+Ctrl+S"),
     undo: entry("undo", m("Z")),
     redo: entry("redo", `${m("Y")} / ${mac ? "⇧⌘Z" : "Shift+Ctrl+Z"}`),
     close: entry("close", m("W")),
@@ -58,6 +59,8 @@ export function matchesShortcut(id: ShortcutId, e: KeyEvent, mac = isMacPlatform
   switch (id) {
     case "transform": case "duplicate": case "save": case "close": case "brick": case "export":
       return mod && !e.altKey && !e.shiftKey && key === ({ transform: "t", duplicate: "d", save: "s", close: "w", brick: "b", export: "e" } as const)[id];
+    // the browser may keep Shift+Ctrl+S for itself (a web capture); the desktop menu has it too
+    case "saveAs": return mod && !e.altKey && e.shiftKey && key === "s";
     case "undo": return mod && !e.altKey && key === "z" && !e.shiftKey;
     case "redo": return mod && !e.altKey && (key === "y" && !e.shiftKey || key === "z" && e.shiftKey);
     // the Mac delete key sends Backspace; Delete is the forward delete (fn+delete)

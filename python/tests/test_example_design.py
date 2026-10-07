@@ -18,6 +18,11 @@ EXPECTED_REFUSALS = {
 }
 
 
+def notes(design):
+    """The English text of a converted design's conversion notes (model.conversion)."""
+    return " ".join(n["text"] for n in design["model"]["conversion"]["notes"])
+
+
 def cell_count(sim):
     return math.prod(max(len(sim.mesh.GetLines(axis)) - 1, 1) for axis in "xyz")
 
@@ -71,7 +76,7 @@ class ExampleDesignTests(unittest.TestCase):
                 self.assertEqual({a: len(v) for a, v in design["mesh"]["lines"].items()},
                                  {a: len(v) for a, v in source_lines.items()}, source.stem)
                 self.assertEqual(design["mesh"]["automatic"]["mode"], "design")
-                self.assertIn("example's own mesh lines", design["model"]["description"])
+                self.assertIn("example's own mesh lines", notes(design))
                 values = {p["key"]: p["default"] for p in design["params"]}
                 built = build(design, values)
                 self.assertEqual(preview["design_cells"], cell_count(built))
@@ -82,9 +87,7 @@ class ExampleDesignTests(unittest.TestCase):
                     self.assertGreaterEqual(preview["design_cells"], 0.7 * preview["source_cells"])
                     self.assertLessEqual(preview["design_cells"], 1.3 * preview["source_cells"])
                 else:
-                    description = design["model"]["description"]
-                    self.assertIn(f"{preview['source_cells']:,}", description)
-                    self.assertIn(f"{preview['design_cells']:,}", description)
+                    self.fail(f"{source.stem}: the converted mesh differs from the example's")
 
                 # Every exposed numeric parameter must occur in a live Design expression and
                 # survive an altered-value build. Compare complete mesh/port/frequency signatures.
@@ -137,10 +140,46 @@ class ExampleDesignTests(unittest.TestCase):
         # the parameter's range and label come along
         by_key = {p["key"]: p for p in design["params"]}
         self.assertEqual((by_key["sub_h"]["unit"], by_key["sub_h"]["min"], by_key["sub_h"]["default"]), ("mm", 0.05, 1.524))
-        self.assertIn("mesh_div=30", design["model"]["description"])
-        # one metal material for the patch and the ground plane, as in the source
-        self.assertEqual([m["kind"] for m in design["materials"]], ["metal", "dielectric"])
-        self.assertEqual({p["material"] for p in design["parts"] if p["name"] in ("patch", "gnd")}, {"metal"})
+        self.assertIn("mesh_div=30", notes(design))
+        # the example's own description, part labels and material names; the conversion log apart
+        self.assertEqual(design["model"]["description"], module.MODEL["description"])
+        self.assertEqual(design["model"]["reference"], module.MODEL["reference"])
+        self.assertEqual([(p["name"], p.get("label"), p["material"]) for p in design["parts"]],
+                         [("patch", "Patch", "patch"), ("substrate", "Substrate", "substrate"), ("gnd", "Ground plane", "gnd")])
+        self.assertEqual([(m["name"], m["kind"]) for m in design["materials"]],
+                         [("patch", "metal"), ("substrate", "dielectric"), ("gnd", "metal")])
+
+    def test_conversion_notes_are_kept_apart_and_translatable(self):
+        from fairbeam.design import check_design, DesignError
+        source = MODELS / "patch_antenna.py"
+        design = conversion_preview(source, "patch_antenna", "Patch copy", None, "patch-antenna.json")["design"]
+        conversion = design["model"]["conversion"]
+        self.assertEqual(conversion["source"], "patch-antenna.json")
+        codes = [n["code"] for n in conversion["notes"]]
+        self.assertEqual(codes, ["source", "meshLines", "carried", "frozen"])
+        self.assertNotIn("Converted", design["model"]["description"])
+        by_code = {n["code"]: n for n in conversion["notes"]}
+        self.assertEqual(by_code["source"]["values"], {"example": "patch-antenna.json", "file": "patch_antenna.py"})
+        self.assertEqual(by_code["carried"]["values"]["params"], "patch_w, patch_l, sub_size, sub_h, eps_r, tan_d, feed_x, f_min, f_max")
+        self.assertIn("mesh_div=30", by_code["frozen"]["values"]["params"])
+        # every note the converter writes has its text in both UI languages, with the same values
+        root = MODELS.parents[1]
+        for lang in ("en", "tr"):
+            table = json.loads((root / "src" / "i18n" / f"{lang}.json").read_text(encoding="utf-8"))
+            for code in ("source", "meshLines", "carried", "partial", "frozen", "currents"):
+                with self.subTest(lang=lang, code=code):
+                    text = table[f"exampleCopy.note.{code}"]
+                    wanted = {"source": {"example", "file"}, "carried": {"params", "count"}, "partial": {"params"},
+                              "frozen": {"params"}}.get(code, set())
+                    self.assertEqual(set(re.findall(r"\{(\w+)\}", text)), wanted)
+        source_text = (root / "python" / "fairbeam" / "example_design.py").read_text(encoding="utf-8")
+        self.assertEqual(set(re.findall(r'_note\("(\w+)"', source_text)), {"source", "meshLines", "carried", "partial", "frozen", "currents"})
+        # the design format holds it, and refuses a malformed one
+        check_design(design)
+        broken = json.loads(json.dumps(design))
+        broken["model"]["conversion"]["notes"][0].pop("text")
+        with self.assertRaises(DesignError):
+            check_design(broken)
 
     def test_a_changed_parameter_moves_the_design_like_the_model(self):
         from fairbeam.design import build
@@ -199,14 +238,15 @@ class ExampleDesignTests(unittest.TestCase):
         bundle = json.loads((MODELS.parents[1] / "public" / "projects" / file).read_text(encoding="utf-8"))
         overrides = {p["key"]: str(p["value"]) for p in bundle["model"]["params"]}
         design = convert_example(MODELS / "sierpinski_monopole.py", "sierpinski_copy", "Sierpinski copy", overrides, file)
-        # structural parameters (iterations, ...) are frozen at the selected values and named in the description
+        # structural parameters (iterations, ...) are frozen at the selected values and named in the notes
         self.assertEqual([p["key"] for p in design["params"]], ["height", "gap", "f_min", "f_max"])
-        self.assertIn("iterations=0", design["model"]["description"])
+        self.assertIn("iterations=0", notes(design))
         model = load_model(MODELS / "sierpinski_monopole.py")
         original = model.build(resolve_params(model.PARAMS, overrides))
         self.assertEqual(sum(len(p["primitives"]) for p in design["parts"]),
                          sum(len(p["primitives"]) for p in read_structure(original.csx, original.materials)[0]))
-        self.assertIn(file, design["model"]["description"])
+        self.assertIn(file, notes(design))
+        self.assertEqual(design["model"]["conversion"]["source"], file)
 
     def test_all_bundled_models_build_or_refuse_specifically(self):
         files = sorted(MODELS.glob("*.py"))
@@ -269,8 +309,14 @@ class ExampleDesignTests(unittest.TestCase):
                                      [p["kind"] for p in after["primitives"]])
                     for old, new in zip(before["primitives"], after["primitives"]):
                         np.testing.assert_allclose(old["bbox"], new["bbox"], rtol=0, atol=1e-8)
-                self.assertIn(source.name, design["model"]["description"])
-                self.assertIn("frozen at example defaults", design["model"]["description"])
+                self.assertIn(source.name, notes(design))
+                self.assertIn("frozen at example defaults", notes(design))
+                self.assertEqual(design["model"].get("description", ""), module.MODEL.get("description", "").strip())
+                # every solid keeps the example's label, every metal its own material named like it
+                labels = {p["name"]: p.get("label") for p in physical}
+                for part in design["parts"]:
+                    if part["name"] in labels and labels[part["name"]]:
+                        self.assertEqual(part.get("label"), labels[part["name"]], f"{source.stem}: {part['name']}")
                 self.assertEqual(design["model"]["id"], source.stem.replace("_", "-"))
                 outcomes.append(f"{source.stem}: built; geometry {original_geometry}->{converted_geometry}, "
                                 f"cells {original_cells}->{converted_cells}")

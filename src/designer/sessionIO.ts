@@ -52,7 +52,7 @@ export function createDesignerIO(core: Core, deps: DesignerIODependencies) {
         core.restoreBackup(b.design, new Date(b.at).getTime());
       });
       const at = new Date(b.at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
-      setMessage({ tone: "warn", text: t("store.restored", { at }) });
+      setMessage({ tone: "warn", text: t("store.restored", { at }), sticky: true });
     }
   }
 
@@ -123,7 +123,7 @@ export function createDesignerIO(core: Core, deps: DesignerIODependencies) {
         setMessage({ tone: "critical", text: t("store.workspaceChanged") });
       } else if (err.status === 409 && typeof err.data.current_hash === "string") {
         setConflict(err.data.current_hash as string);
-        setMessage({ tone: "warn", text: t("store.conflict") });
+        setMessage({ tone: "warn", text: t("store.conflict"), sticky: true });
       } else if (err.status === 422) {
         if (asyncState.isDraftCurrent(ticket)) {
           if (Array.isArray(err.data.checks)) setServerChecks(err.data.checks as Check[]);

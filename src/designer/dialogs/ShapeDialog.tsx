@@ -119,7 +119,8 @@ function ShapeDialog(props: { req: ShapeRequest; onClose: () => void }) {
     if (q.kind === "wire") return [q.radius, ...q.points.flat()];
     return [];
   };
-  const nameTaken = () => into() < 0 && draft.parts.some((x) => x.name === name().trim());
+  // a name the tree already shows (another solid's name or label) would make two rows alike
+  const nameTaken = () => into() < 0 && draft.parts.some((x) => x.name === name().trim() || x.label === name().trim());
   /** what keeps OK from adding the shape */
   const problems = createMemo((): string[] => {
     const out: string[] = [];
@@ -141,8 +142,10 @@ function ShapeDialog(props: { req: ShapeRequest; onClose: () => void }) {
       if (flat > 1) out.push(t("shape.problem.brickFlat"));
     } else if (q.kind === "cylinder" && "axis" in q) {
       const r = val(q.radius), ri = val(q.inner_radius ?? 0), [lo, hi] = q.range.map(val);
+      // the inner radius is measured against a valid outer one: with the outer radius at 0 or below,
+      // only that is said (any inner radius would also be "not below the outer radius")
       if (r !== undefined && r <= 0) out.push(t("shape.problem.outerRadius"));
-      if (r !== undefined && ri !== undefined && (ri < 0 || ri >= r)) out.push(t("shape.problem.innerRadius"));
+      else if (r !== undefined && ri !== undefined && (ri < 0 || ri >= r)) out.push(t("shape.problem.innerRadius"));
       // equal ends are fine: a flat circle (a disc or ring), built as a polygon sheet
       if (lo !== undefined && hi !== undefined && lo > hi) out.push(t("shape.problem.minBelowMax", { axis: L(q.axis) }));
     } else if (q.kind === "sphere") {
@@ -192,7 +195,7 @@ function ShapeDialog(props: { req: ShapeRequest; onClose: () => void }) {
           <Show when={framed() && !frameValid() && !tried()}><p class="note dz-bad" role="alert">{t("draw.localFrame.invalid")}</p></Show>
           <div class="sd-row">
             <label class="dz-field">
-              <span class="dz-label">{t("shape.component")}</span>
+              <span class="dz-label">{t("shape.solid")}</span>
               <select class="rp-select dz-input" value={String(into())} disabled={framed()} onChange={(e) => setInto(Number(e.currentTarget.value))}>
                 <option value="-1">{t("shape.newPart")}</option>
                 <For each={draft.parts}>{(part, i) => <option value={String(i())}>{t("shape.addTo", { name: part.label || part.name })}</option>}</For>
@@ -200,7 +203,7 @@ function ShapeDialog(props: { req: ShapeRequest; onClose: () => void }) {
             </label>
             <label class="dz-field">
               <span class="dz-label">{t("shape.name")}</span>
-              <input autocomplete="off" class="rp-input dz-input mono" type="text" spellcheck={false} value={into() >= 0 ? target()?.name ?? "" : name()} disabled={into() >= 0}
+              <input autocomplete="off" class="rp-input dz-input mono" type="text" spellcheck={false} value={into() >= 0 ? target()?.label || target()?.name || "" : name()} disabled={into() >= 0}
                 aria-invalid={tried() && into() < 0 && (!name().trim() || nameTaken())} onInput={(e) => setName(e.currentTarget.value)} />
             </label>
             <label class="dz-field">

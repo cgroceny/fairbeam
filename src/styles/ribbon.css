@@ -72,7 +72,14 @@
 .rb-shell .rb-extra :is(.dz-input, select.rp-input) { height: 24px; min-height: 24px; padding-block: 0; font-size: var(--al-text-xs); }
 .rb-shell .rb-extra .dz-value { display: none; }
 .rb-result-note { margin: var(--al-space-2); align-self: center; font-size: var(--al-text-xs); color: var(--al-text-3); }
-.rb-shell .rb-result-note { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; }
+/* takes the room the groups leave and wraps to at most three lines inside the ribbon's height instead
+   of being cut to "Sele…"; with too little room fitRibbon hides it (data-room="none"); the tooltip
+   carries the whole text */
+.rb-shell .rb-result-note {
+  flex: 1 1 0; min-width: 0; max-width: 40ch; line-height: 14px; white-space: normal; overflow: hidden;
+  display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 3; line-clamp: 3;
+}
+.rb-shell .rb-result-note[data-room="none"] { display: none; }
 
 .shortcut-list { display: grid; gap: var(--al-space-1); margin: 0; }
 .shortcut-list > div { display: grid; grid-template-columns: 1fr auto; align-items: center; gap: var(--al-space-3); padding: var(--al-space-1) 0; border-bottom: 1px solid var(--al-border); }
@@ -81,6 +88,12 @@
 .shortcut-list dd { margin: 0; }
 .shortcut-list kbd { white-space: nowrap; }
 .shortcut-help-dialog { width: min(560px, calc(100vw - 32px)); }
+/* the sheet's groups (Edit, View, Panels, Tools, Boolean, Mouse and tree) */
+.shortcut-group + .shortcut-group { margin-top: var(--al-space-4); }
+.shortcut-group-title { margin: 0 0 var(--al-space-1); font-size: var(--al-text-xs); font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: var(--al-text-3); }
+/* in the browser: a chord the browser keeps for itself (Ctrl+T, Ctrl+W, Ctrl+Tab) */
+.shortcut-desktop-only kbd { opacity: 0.6; }
+.shortcut-note { display: block; margin-top: 2px; font-size: var(--al-text-xs); color: var(--al-text-3); text-align: right; }
 /* one column that scrolls between the head and the footer (the default .dialog-body is a
    300 px + fluid two-column grid for options and preview) */
 .shortcut-help-dialog .dialog-body { display: block; min-height: 0; overflow: auto; padding: var(--al-space-4) var(--al-pad-panel); }

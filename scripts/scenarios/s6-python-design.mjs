@@ -26,7 +26,7 @@ export default {
     }, { settle: 500 });
 
     await s.step('the existing Python row reopens its linked Design without creating another', async () => {
-      await s.click('header.screen.start', { sel: '[role="radio"]' });
+      await s.click('header.screen.start', { sel: '.mode-switch button' });
       await s.wait('.home');
       // Model-list refreshes can overlap a Design save. Recreate the stale client snapshot that
       // omits the link metadata while retaining the Design row, then verify routing consults the
@@ -51,7 +51,7 @@ export default {
 
     const runPanelSourceId = `rp_${ctx.stamp}_${s.lang}`;
     await s.step('creating a Python model from RunPanel Code opens its editable Design', async () => {
-      await s.click('header.screen.start', { sel: '[role="radio"]' });
+      await s.click('header.screen.start', { sel: '.mode-switch button' });
       await s.wait('.home');
       await s.clickSel(`[data-run-python-model="${sourceId}"]`);
       await s.wait('#run-panel');

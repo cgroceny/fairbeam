@@ -1,7 +1,7 @@
 // Exercise the real browser stores without a DOM or a running solver. Vite is already a dev
 // dependency; bundle in memory so Solid uses its browser signals rather than its SSR stubs.
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
+import { readdirSync, readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { build } from 'vite';
 
@@ -189,4 +189,70 @@ try {
   assert.equal(await openUserProject({ name: 'other.json', text: async () => JSON.stringify({ schema: 'other/1' }) }), false);
   assert.match(state.loadError() ?? '', /result files \(fairbeam\.project\/1\) and design files \(fairbeam\.design\/1\)/);
 }
-console.log('Start checks passed: explicit picks from 4 prior states, same-model reopen, toolbar inference, bundle/file success, failures, stale loads, all four guarded opens during previews, failure banners and offline picks.');
+
+// ------------------------------------------------------------------ the Start screen's sources
+{
+  const read = (path) => readFileSync(`${root}${path}`, 'utf8');
+  const home = read('src/home/Home.tsx'), rename = read('src/home/DesignActions.tsx'), app = read('src/App.tsx');
+  // Enter submits New design and Rename: both are forms with a submit button (a real Enter key
+  // submits them; an automation key event without the "\r" character does not)
+  assert.match(home, /<form class="stack" onSubmit=\{create\}>[\s\S]*?<button class="btn btn-primary" type="submit"/, 'New design is a form: Enter in Name creates');
+  assert.match(home, /const create = async \(e: Event\) => \{\s*e\.preventDefault\(\);/, 'create() handles the submit event');
+  assert.match(rename, /<form ref=\{box\}[^>]*onSubmit=\{save\}>[\s\S]*?type="submit"/, 'Rename is a form: Enter saves');
+  // the starter's name follows the interface language until the user types one
+  assert.match(home, /createEffect\(on\(\[template, online, locale\], \(\) => \{/, 'the default name is re-read when the language changes');
+  // every example has a source for "Open as new design…": a bundled Python model or, for the
+  // 867 MHz designs, an example design shipped read-only into the models folder
+  const index = JSON.parse(read('public/projects/index.json')).projects;
+  const examplesTs = read('src/runner/examples.ts');
+  const files = [...examplesTs.match(/BUNDLED_EXAMPLE_FILES = \[([\s\S]*?)\] as const/)[1].matchAll(/"([^"]+)"/g)].map((m) => m[1]);
+  const python = read('python/fairbeam/modelfiles.py');
+  const pySet = (name) => new Set([...python.match(new RegExp(`${name} = frozenset\\(\\{([^}]*)\\}\\)`))[1].matchAll(/"([^"]+)"/g)].map((m) => m[1]));
+  assert.deepEqual(pySet('BUNDLED_PROJECT_FILES'), new Set(files), 'the server accepts every bundled example as the project of a copy');
+  const tauri = JSON.parse(read('src-tauri/tauri.conf.json'));
+  assert.equal(tauri.bundle.resources['../examples/designs/*_867.design.json'], 'models/', 'the 867 MHz example designs ship into the models folder');
+  assert.equal(tauri.bundle.resources['../python/models/*.py'], 'models/');
+  const shippedDesigns = readdirSync(`${root}examples/designs`).filter((f) => /_867\.design\.json$/.test(f)).map((f) => f.replace('.design.json', ''));
+  assert.deepEqual(new Set(shippedDesigns), pySet('BUNDLED_DESIGNS'), 'the shipped example designs are the read-only ones');
+  assert.ok(!shippedDesigns.includes('ux_inset_patch_24'));
+  const sources = new Map([
+    ...readdirSync(`${root}python/models`).filter((f) => f.endsWith('.py')).map((f) => [f.slice(0, -3), 'py']),
+    ...shippedDesigns.map((id) => [id, 'design']),
+  ]);
+  for (const file of files) {
+    const entry = index.find((p) => p.file === file);
+    assert.ok(entry, `${file} is in the index`);
+    const key = entry.model.replaceAll('-', '_');
+    assert.ok(sources.has(key), `${file}: its source ${key} ships with the app`);
+    if (sources.get(key) === 'design') {
+      const design = JSON.parse(read(`examples/designs/${key}.design.json`));
+      assert.equal(design.model.id, entry.model, `${key}.design.json has the example's model id (exampleSourceFor matches on it)`);
+    }
+  }
+  for (const f of [...shippedDesigns.map((id) => `examples/designs/${id}.design.json`), ...files.filter((f) => f.endsWith('-867.json')).map((f) => `public/projects/${f}`)]) {
+    assert.doesNotMatch(read(f), /README\.md in the fairbeam repository/, `${f}: the description points at no repository file`);
+  }
+  const seed = read('src-tauri/src/seed.rs');
+  assert.match(seed, /add_missing_sources\(&res\.models, &ws\.models\)/, 'existing workspaces get the sources of new examples');
+  // the Start lists: the bundled designs are sources only; the empty states are for users
+  assert.match(home, /models\(\)\.filter\(\(m\) => !m\.readonly && \(m\.error \? m\.file\?\.endsWith\("\.design\.json"\) : m\.kind === "design"\)\)/);
+  assert.match(app, /<p>\{t\(DEMO \|\| isDesktopShell\(\) \? "app\.noProjects\.body" : "app\.noProjects\.bodyServer"\)\}<\/p>/, 'Examples without any project: a user-oriented text');
+  assert.doesNotMatch(app, /fairbeam run python\/models\/patch_antenna\.py/, 'no source-tree command in the empty Examples screen');
+  assert.match(app, /<Show when=\{bundle\(\)\}>\s*<PanelBoundary name="Results dock" class="dock">/, 'no empty dock tabs without a project');
+  // the Run panel follows the model it is showing: choosing a bundled model in its own picker keeps it open
+  const runPanel = read('src/components/RunPanel.tsx');
+  assert.match(runPanel, /batch\(\(\) => \{ selectModel\(select, bundle\(\)\); setStartedPythonModel\(select\); \}\)/, 'the Run panel stays open when its model picker chooses a bundled model');
+  // disabled controls look disabled
+  const ux = read('src/styles/designer-ux.css');
+  assert.match(ux, /\.home-copy:disabled, \.home-row:hover \.home-copy:disabled \{ opacity: 0\.3;/, 'a disabled copy action stays faint on a hovered row');
+  assert.match(ux, /\.menu-item:disabled, \.menu-item\[aria-disabled="true"\] \{ color: var\(--al-text-3\);/, 'disabled menu items look disabled');
+  const panel = read('src/components/ModelPanel.tsx');
+  assert.match(panel, /LAYERS\.filter\(\(l\) => l\.key !== "ground" \|\| !!b\(\)\.half_space\)/, 'the infinite ground layer only for a model that has one');
+  assert.match(panel, /title=\{t\(disabled\(\) \? `model\.layer\.\$\{l\.key\}\.none` : `model\.layer\.\$\{l\.key\}\.hint`\)\}/, 'a layer that is off says why');
+  // the New model dialog names the workspace models folder and says a design is made from the model
+  const nm = read('src/editor/NewModelDialog.tsx');
+  assert.doesNotMatch(nm, /python\/models\//, 'no source-tree path in the New model dialog');
+  assert.match(nm, /props\.opensDesign \? "editor\.newModel\.pythonDesignDesc" : "editor\.newModel\.pythonDesc"/);
+  assert.match(home, /<NewModelDialog opensDesign \/>/);
+}
+console.log('Start checks passed: explicit picks from 4 prior states, same-model reopen, toolbar inference, bundle/file success, failures, stale loads, all four guarded opens during previews, failure banners and offline picks; forms submit on Enter, every example has a shipped source, user-oriented empty states and disabled-control styles.');

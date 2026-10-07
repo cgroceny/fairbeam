@@ -728,7 +728,7 @@ class App:
     def models(self) -> dict:
         items = []
         for m in self.registry.list():
-            public = self._public(m) | {"readonly": modelfiles.is_readonly(m["key"])}
+            public = self._public(m) | {"readonly": modelfiles.is_readonly_file(m.get("file") or m["key"])}
             if m.get("kind") == "design":
                 # The Python model remains editable after conversion. Tell the Home screen which
                 # Design already came from each source so “Open as Design” reuses it instead of
@@ -769,6 +769,7 @@ class App:
 
     def create_model(self, body: dict) -> dict:
         model_id = modelfiles.check_id(body.get("id"))
+        modelfiles.check_free(self.models_dir, model_id)
         name = body.get("name")
         if name is not None and (not isinstance(name, str) or "\n" in name or not name.strip() or len(name) > 80):
             raise ApiError(422, "invalid name", fields={"name": "a single line of 1–80 characters"})
@@ -797,7 +798,7 @@ class App:
         source = found[0]
         if source.is_symlink() or source.resolve().parent != root or not source.is_file():
             raise modelfiles.ModelFileError(403, "source must be a regular file inside the models folder")
-        if not modelfiles.is_readonly(source_id):
+        if not modelfiles.is_readonly_file(source.name):
             raise modelfiles.ModelFileError(403, "source must be a bundled, read-only example")
         overrides = None
         if project is not None:
@@ -852,8 +853,7 @@ class App:
             raise ApiError(422, "invalid name", fields={"name": "a single line of 1–80 characters"})
         source_id = modelfiles.check_id(body.get("from"))
         source, root, overrides = self._example_source(source_id, body.get("project"))
-        if modelfiles._taken(root, model_id):
-            raise modelfiles.ModelFileError(409, f"a model named {model_id} already exists", fields={"id": "already exists"})
+        modelfiles.check_free(root, model_id)
         project = body.get("project")
         if source.suffix == ".py":
             # the same conversion as the preview (without a project, overrides and origin are None
@@ -879,7 +879,7 @@ class App:
             return {"valid": False, "error": {"message": resp.get("error"), "location": resp.get("location"),
                                               "stage": "load"}}
         r = resp["result"]
-        out = {"valid": r["valid"], "model": self._public(r["model"]) | {"readonly": False},
+        out = {"valid": r["valid"], "model": self._public(r["model"]) | {"readonly": modelfiles.is_readonly(model_id, design=True)},
                "checks": r.get("checks", [])}
         if not r["valid"]:
             out["error"] = r["error"]
@@ -940,6 +940,7 @@ class App:
             model_id = modelfiles.check_id(body["id"]) if body.get("id") is not None else self._free_design_id(str(label))
         else:
             model_id = modelfiles.check_id(body.get("id"))
+        modelfiles.check_free(self.models_dir, model_id)
         origin = body.get("from")
         report = None
         if imported is not None:
@@ -1217,7 +1218,8 @@ class App:
         with self.design_name_lock:
             record = modelfiles.read_design_file(self.models_dir, model_id)
             for path in self.models_dir.glob("*.design.json"):
-                if path.name == record["file"]:
+                # the bundled example designs are not the user's: a design may share a name with one
+                if path.name == record["file"] or modelfiles.is_readonly_file(path.name):
                     continue
                 try:
                     other = json.loads(path.read_text(encoding="utf-8"))
