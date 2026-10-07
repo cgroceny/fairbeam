@@ -54,6 +54,25 @@ export function wrap(text: string, size: number, maxWidth: number, weight: 400 |
   return lines;
 }
 
+/** The font size (at most `size`) at which `text` fits `maxWidth` on one line; below `minSize` it is split into two
+ *  lines at a separator (- _ . / space) near the middle, or in the middle, at the size the longer line fits, never
+ *  shortened: a drawing number or an identifier is never cut. `maxHeight` (the room for the text) caps the size of two
+ *  lines. */
+export function fitLines(text: string, size: number, maxWidth: number, minSize = size * 0.6, maxHeight = Infinity, weight: 400 | 600 = 400): { size: number; lines: string[] } {
+  const w = textWidth(text, size, weight);
+  if (w <= maxWidth) return { size, lines: [text] };
+  const one = (size * maxWidth) / w;
+  if (one >= minSize || text.length < 2) return { size: one, lines: [text] };
+  const cuts: number[] = [];
+  for (let i = 1; i < text.length; i++) if (/[-_./ ]/.test(text[i - 1])) cuts.push(i);
+  const pick = (cut: number) => [text.slice(0, cut).trimEnd(), text.slice(cut).trimStart()];
+  const widest = (parts: string[]) => Math.max(...parts.map((p) => textWidth(p, size, weight)));
+  const middle = Math.ceil(text.length / 2);
+  const best = (cuts.length ? cuts : [middle]).map(pick).sort((a, b) => widest(a) - widest(b))[0];
+  const two = Math.min(size, (size * maxWidth) / widest(best), maxHeight / 2.2);
+  return { size: Math.max(two, 0), lines: best };
+}
+
 /** Shorten `text` with an ellipsis so it fits `maxWidth`. */
 export function fit(text: string, size: number, maxWidth: number, weight: 400 | 600 = 400): string {
   if (textWidth(text, size, weight) <= maxWidth) return text;

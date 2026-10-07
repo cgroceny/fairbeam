@@ -5,6 +5,7 @@ import regularUrl from "../assets/fonts/IBMPlexSans-Regular.woff?url";
 import semiboldUrl from "../assets/fonts/IBMPlexSans-SemiBold.woff?url";
 import { toBase64 } from "./font.ts";
 import { svgPagesToPdf, type PdfFonts } from "./pdfdoc.ts";
+import { withPngDpi } from "./png.ts";
 import type { Bundle } from "../types";
 import type { Weight } from "../lib/array";
 import type { RefBundle } from "../import/reference";
@@ -48,7 +49,8 @@ export async function reportPdfFor(b: Bundle, now: Date = new Date(), arrayWeigh
   return reportPdf(b, await fonts(), { generated: `${date} ${p(now.getHours())}:${p(now.getMinutes())}`, date, arrayWeights, reference, ...extra });
 }
 
-/** PNG of an SVG at `dpi` (capped to ~24 Mpx), white background. */
+/** PNG of an SVG at `dpi` (capped to ~24 Mpx), white background; the file states its resolution (pHYs), so it is placed
+ *  at the drawing's size. */
 export async function svgToPng(svg: string, dpi = 300): Promise<Blob> {
   const f = await fonts();
   const face = (b: Uint8Array, wt: number) =>
@@ -69,7 +71,9 @@ export async function svgToPng(svg: string, dpi = 300): Promise<Blob> {
     ctx.fillStyle = "#fff";
     ctx.fillRect(0, 0, canvas.width, canvas.height);
     ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-    return await new Promise<Blob>((res, rej) => canvas.toBlob((b) => (b ? res(b) : rej(new Error("PNG encoding failed"))), "image/png"));
+    const blob = await new Promise<Blob>((res, rej) => canvas.toBlob((b) => (b ? res(b) : rej(new Error("PNG encoding failed"))), "image/png"));
+    // the resolution actually drawn (lower than asked when the picture was capped)
+    return new Blob([withPngDpi(new Uint8Array(await blob.arrayBuffer()), px * 25.4) as Uint8Array<ArrayBuffer>], { type: "image/png" });
   } finally {
     URL.revokeObjectURL(url);
   }

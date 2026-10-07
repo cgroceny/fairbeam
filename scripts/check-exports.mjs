@@ -27,6 +27,8 @@ import { designStem } from "../src/lib/exportNames.ts";
 import { quickBundle } from "../src/designer/geometry.ts";
 import { paramValues } from "../src/designer/expr.ts";
 import { cstMacro, DEFAULT_CST_OPTIONS } from "../src/export/cst.ts";
+import { pngChunks, pngDpi, withPngDpi } from "../src/drawing/png.ts";
+import { zlibSync } from "fflate";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const projects = join(root, "public", "projects");
@@ -220,6 +222,15 @@ for (const entry of index.projects) {
     }
     if (write) writeFileSync(join(outDir, `${stem}_${name}.svg`), r.svg);
     console.log(`  drawing ${name.padEnd(15)} scale ${r.scaleLabel.padEnd(6)} dims ${r.dimensions.join(", ")}`);
+  }
+  // the title block: every value whole (a long one is set smaller, the drawing number on two lines if need be)
+  {
+    const tb = technicalDrawing(b, { sheet: "A3", date }).svg;
+    const block = texts(tb.slice(tb.indexOf('class="title-block"')));
+    // a long parameter description may be shortened; an identifier, a name or a number never
+    const cut = block.filter((s) => s.includes("…") && !/^[A-Z][a-z]+ [a-z]/.test(s));
+    check(!cut.length, `${stem} title block`, `a value is cut: ${cut.join(" | ")}`);
+    check(block.includes(`${b.model.id.toUpperCase()}-01`), `${stem} title block`, "the drawing number is not the whole model id");
   }
   if (stem === "patch-antenna") {
     const r = technicalDrawing(b, { sheet: "A3", date });
@@ -419,6 +430,39 @@ for (const entry of index.projects) {
     const box = /<rect x="([\d.]+)" y="[\d.]+" width="([\d.]+)"[^>]*fill="#f4f4f4"/.exec(pages[0]);
     check(!!box && Number(box[1]) >= 18 - 1e-9 && Number(box[1]) + Number(box[2]) <= 210 - 18 + 1e-9, "report page 1", `the Key results box is outside the text margins (${box?.slice(1)})`);
   }
+}
+
+// --- a drawing number too long for one line goes on two, whole; a 300 dpi PNG says so (pHYs)
+{
+  const where = "drawing number";
+  const b = validateBundle(JSON.parse(readFileSync(join(projects, "patch-antenna.json"), "utf8"))).bundle;
+  const id = "a-very-long-model-id-for-a-colleagues-patch";
+  const block = texts((() => { const s = technicalDrawing({ ...b, model: { ...b.model, id } }, { sheet: "A3", date: "2026-10-06" }).svg; return s.slice(s.indexOf('class="title-block"')); })());
+  const want = `${id.toUpperCase()}-01`;
+  const i = block.findIndex((s) => want.startsWith(s) && s.length > 4);
+  check(i >= 0 && block[i] + block[i + 1] === want, where, `the number is not split into two whole lines: ${block.slice(Math.max(0, i), i + 2).join(" | ")}`);
+  check(!block.some((s) => s.includes("…")), where, "a value is cut");
+
+  const crc = (bytes) => {
+    let c = 0xffffffff;
+    for (const x of bytes) { c ^= x; for (let k = 0; k < 8; k++) c = c & 1 ? 0xedb88320 ^ (c >>> 1) : c >>> 1; }
+    return (c ^ 0xffffffff) >>> 0;
+  };
+  const chunk = (type, data) => {
+    const body = new Uint8Array([...type].map((ch) => ch.charCodeAt(0)).concat([...data]));
+    const out = new Uint8Array(12 + data.length);
+    const v = new DataView(out.buffer);
+    v.setUint32(0, data.length); out.set(body, 4); v.setUint32(8 + data.length, crc(body));
+    return out;
+  };
+  const ihdr = new Uint8Array(13); new DataView(ihdr.buffer).setUint32(0, 1); new DataView(ihdr.buffer).setUint32(4, 1); ihdr.set([8, 6, 0, 0, 0], 8);
+  const png = new Uint8Array([137, 80, 78, 71, 13, 10, 26, 10, ...chunk("IHDR", ihdr), ...chunk("IDAT", zlibSync(new Uint8Array([0, 255, 0, 0, 255]))), ...chunk("IEND", new Uint8Array(0))]);
+  check(pngDpi(png) === null, "png dpi", "a canvas PNG states no resolution");
+  const at300 = withPngDpi(png, 300);
+  const chunks = pngChunks(at300);
+  check(chunks.map((c) => c.type).join() === "IHDR,pHYs,IDAT,IEND" && chunks.every((c) => c.crcOk), "png dpi", `chunks ${chunks.map((c) => c.type)}`);
+  check(Math.abs(pngDpi(at300) - 300) < 0.01, "png dpi", `300 dpi stated as ${pngDpi(at300)}`);
+  check(pngChunks(withPngDpi(at300, 150)).filter((c) => c.type === "pHYs").length === 1 && Math.abs(pngDpi(withPngDpi(at300, 150)) - 150) < 0.05, "png dpi", "a second call replaces the chunk");
 }
 
 // --- the reproduce command of a design's run: the design file in the workspace, the engine the run used (no thread
