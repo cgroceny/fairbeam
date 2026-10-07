@@ -25,14 +25,14 @@ skin. A 50 Ω lumped port bridges the gap `g` from the ground plane to the blade
 the pin of a coax connector through the skin. Above the tab, a taper of height `ht` widens the blade
 to the base width `wb`, and the top edge (`wt` wide) is offset aft by `sweep`. The open boundaries
 are MUR, with a quarter wavelength at 0.7 GHz (107 mm) of air on every side, including below the
-ground plane. The mesh is automatic, 20 cells per wavelength at 1.05 GHz (about 137 000 cells; about 269 000 with
-the example's Refine fine features setting, see [MESHING.md](../../docs/MESHING.md)), with
+ground plane. The mesh is automatic, 20 cells per wavelength at 1.05 GHz, with 269,040 cells
+and Refine fine features enabled (see [MESHING.md](../../docs/MESHING.md)), with
 cells half that size next to the blade and ground sheets, normal to them.
 
 The model uses a plain metal blade rather than a PCB one. Most UAV blades are a metal plate, or a
 copper radiator on a thin board, inside a glass-fiber or polyurethane radome. The metal sheet is
 that radiator without the dielectric, so it has no FR-4 loss and no dependence on the substrate. It
-also needs no mesh through a 1.6 mm board, so a run takes about a second on the GPU engine. The
+also needs no mesh through a 1.6 mm board. The
 radome and a board both lower the frequency by a few per cent, and the wide band below covers that.
 To model a PCB blade, add an FR-4 part (εr 4.3, tan δ 0.02) as a `linpoly` with normal y, 1.6 mm
 thick, beside the sheet. Then re-tune `h`, which should end up about 5–10 % shorter.
@@ -52,28 +52,42 @@ thick, beside the sheet. Then re-tune `h`, which should end up about 5–10 % sh
 Band 0.7–1.05 GHz, end criterion −50 dB, far field and surface current at `f0`, radiation
 efficiency at 21 frequencies across the band.
 
-**Tuning.** `fairbeam optimize --vary h=70:95 --goal "s11_max=-30@0.867" --max-evals 5` and a scan
-with the final mesh put the best match at h = 80 mm. |S11| at 867 MHz was −16.1 dB at h = 72 mm,
+**Earlier tuning (Refine fine features off).** `fairbeam optimize --vary h=70:95 --goal "s11_max=-30@0.867" --max-evals 5` and a scan
+with the unrefined mesh put the best match at h = 80 mm. |S11| at 867 MHz was −16.1 dB at h = 72 mm,
 −20.1 dB at 76, −22.3 dB at 78, −23.1 dB at 80, −22.1 dB at 82, −20.8 dB at 84 and −17.5 dB at
 88 mm, so the value is not critical. (Before the mesh put fine cells next to the blade sheet, the
 same design resonated at 0.843 GHz instead of 0.904 GHz, and the scan gave the same h = 80 mm.)
 
-**Results** (h = 80 mm, GPU engine, 2304 timesteps, 0.4 s solver time):
+**Results** (h = 80 mm, Refine fine features on, CPU engine with four threads on an Apple M5 Pro,
+269,040 mesh cells, 11,904 timesteps, 8.03 s solver time, 8.60 s total run time):
+
+Reproduce the bundled result from the checkout with the standard bundle writer:
+
+```bash
+fairbeam run examples/designs/blade_867.design.json --engine cpu --threads 4 \
+  --no-exact --points 801 --field-plane E y 0 0.867 --out public/projects
+```
+
+The bundled run retained the earlier 60,000-timestep limit; it stopped at −55.07 dB,
+below the −50 dB criterion. The current automatic timestep limit may be higher. To keep the same limit, set
+`simulation.max_timesteps` to `60000` in a temporary design copy and run that copy instead.
+The bundle includes surface currents, the E-field plane at y = 0 and 21 efficiency samples.
 
 | Quantity | Value |
 | --- | --- |
-| \|S11\| at 867 MHz | −23.1 dB (VSWR 1.15); −22.7 / −23.3 dB at 863 / 870 MHz |
-| Input impedance at 867 MHz | 50.9 + j7.1 Ω |
-| Lowest \|S11\| | −24.6 dB at 0.904 GHz |
-| −10 dB band | 0.737 GHz to above 1.05 GHz, the end of the simulated band. A run from 0.7 to 2.0 GHz puts it at 0.750–1.771 GHz (about 80 %) |
-| Dmax / gain / realized gain | 4.08 / 4.06 / 4.03 dBi |
-| Radiation / total efficiency | 99.5 % / 99.0 % (PEC: no metal loss modeled) |
+| \|S11\| at 867 MHz | −14.4 dB (VSWR 1.47); −14.3 / −14.5 dB at 863 / 870 MHz |
+| Input impedance at 867 MHz | 49.5 + j19.3 Ω |
+| Lowest \|S11\| | −14.94 dB at 0.90825 GHz |
+| −10 dB band | 0.75731 GHz to above 1.05 GHz, the end of the simulated band (at least 32.2 % fractional bandwidth); the upper edge is not resolved |
+| Dmax / gain / realized gain | 4.10 / 4.09 / 3.93 dBi |
+| Radiation / total efficiency | 99.7 % / 96.1 % (PEC: no metal loss modeled) |
 | Main lobe | 45° above the skin (θ = 45°), all around |
 | Azimuth, horizon (θ = 90°) | mean −1.4 dBi, ripple 1.5 dB (−0.7 dBi at φ ≈ 70°, −2.2 dBi forward at φ = 180°) |
 | Azimuth, at the main lobe (θ = 45°) | ripple 1.8 dB (2.3 to 4.1 dBi) |
-| Zenith (θ = 0°) / below the skin | −10.8 dBi / up to −1.1 dBi |
+| Zenith (θ = 0°) / below the skin | −10.7 dBi / up to −1.2 dBi |
 
-**Mesh convergence.** The resonance is converged at the default density: the lowest |S11| is at
+**Earlier mesh convergence (Refine fine features off).** These runs do not establish
+convergence for the refined bundle. With refinement off, the lowest |S11| is at
 0.904 GHz at 20 cells per wavelength and at 0.907 and 0.908 GHz at 30 and 40. Before the cells
 next to the blade were refined it was 0.843, 0.890 and 0.906 GHz at 20, 30 and 40, and 0.908 GHz
 only from 50. The 0.7–2.0 GHz run meshes 867 MHz at
@@ -89,14 +103,14 @@ The blade differs in three ways:
 
 - **Impedance and bandwidth.** The blade is 60 mm (0.17 λ) wide. Like a fat monopole or a planar
   UWB monopole, it has a higher radiation resistance (about 50 Ω here, which suits a 50 Ω feed
-  without a matching network) and a nearly flat reactance. Its −10 dB bandwidth is about 80 %; a
-  wire monopole has about 10 %.
+  without a matching network) and a nearly flat reactance. The refined sweep demonstrates at least 32.2 % −10 dB bandwidth; its upper edge
+  lies beyond the sweep. A wire monopole has about 10 %.
 - **Directivity and tilt.** The 300 mm ground plane is only 0.87 λ wide. Currents diffracted at
   its edges tilt the main lobe to about 45° above the skin, cost about 1 dB of peak directivity
   (4.1 dBi instead of 5.15), and put about 5.5 dB less at the horizon than at the peak. They also
   radiate below the skin. On an infinite ground plane the peak would be on the horizon.
 - **Ripple.** The swept blade and the square ground plane are not round, so the azimuth pattern
-  ripples by 1.6 dB. It is weakest forward (−x), strongest near the broadside directions of the
+  ripples by 1.5 dB. It is weakest forward (−x), strongest near the broadside directions of the
   blade.
 
 **Caveats.**
@@ -106,8 +120,8 @@ The blade differs in three ways:
   elevation tilt and the horizon gain (a larger skin lowers the tilt), and moves the match only a
   little. Set `gnd` to your airframe, or model the fuselage.
 - **Radome and materials.** The radome, the paint and the mounting base are not modeled. A thin
-  glass-fiber shell lowers the frequency by a few per cent. The −10 dB band starts at 0.74 GHz and
-  ends at 1.8 GHz, so about 130 MHz of margin remains on the low side and more on the high side.
+  glass-fiber shell lowers the frequency by a few per cent. The refined −10 dB band starts at 0.757 GHz and
+  extends beyond 1.05 GHz, so about 110 MHz of margin remains below 867 MHz; the upper edge is unknown.
   The metal is lossless: aluminum or brass costs a few tenths of a per cent of efficiency at most.
 - **Feed.** The feed is a 2 mm lumped port, not an SMA or N connector. The connector's own
   impedance and length shift the phase of S11 but hardly change |S11|.
@@ -216,10 +230,10 @@ azimuth ripple (0.27 dB).
 | --- | --- | --- | --- |
 | Needs a ground plane | no | no | yes (the metal skin) |
 | Height × width | about 166 mm (0.48 λ) × a wire | 110 × 40 mm (board 116 × 46 mm) | 82 mm above the skin × 60 mm, on a 300 mm skin |
-| Zin | 73 + j42 Ω at 0.5 λ, about 70 Ω at resonance (0.48 λ) | 39.6 + j0.4 Ω at 867 MHz | 50.2 − j4.2 Ω |
-| −10 dB band (50 Ω) | roughly 5–10 %, depending on the wire thickness | 19 % | about 80 % |
-| Dmax | 2.15 dBi | 2.02 dBi | 4.08 dBi, 45° above the skin |
-| Horizon gain, ripple | 2.15 dBi, 0 dB | 1.90 dBi, 0.13 dB | −1.4 dBi, 1.6 dB |
+| Zin | 73 + j42 Ω at 0.5 λ, about 70 Ω at resonance (0.48 λ) | 39.6 + j0.4 Ω at 867 MHz | 49.5 + j19.3 Ω |
+| −10 dB band (50 Ω) | roughly 5–10 %, depending on the wire thickness | 19 % | at least 32.2 % |
+| Dmax | 2.15 dBi | 2.02 dBi | 4.10 dBi, 45° above the skin |
+| Horizon gain, ripple | 2.15 dBi, 0 dB | 1.90 dBi, 0.13 dB | −1.4 dBi, 1.5 dB |
 
 At 0.32 λ tip to tip, the dipole is shorter than a resonant λ/2 dipole. Its directivity lies between
 that of a short dipole (1.76 dBi) and that of a λ/2 dipole. The wide arms keep its resistance near
@@ -351,10 +365,10 @@ the frequency, has the larger side.
 | Height | 0.48 λ (about 165 mm as a thin wire, 140–150 mm printed on FR-4) | 101 mm (0.29 λ) | 82 mm above the skin |
 | Needs | a balun | a balun | a metal skin (ground plane) |
 | Resistance at resonance | 73 Ω | 40 Ω | 50 Ω |
-| −10 dB bandwidth (50 Ω) | about 5–10 %, with the conductor thickness | 8.2 % | about 80 % |
-| Dmax | 2.15 dBi | 1.97 dBi | 4.08 dBi (45° above the skin) |
-| Radiation efficiency | 100 % | 95.5 % (FR-4) | 99.5 % (PEC) |
-| Horizon | 2.15 dBi, omni | 1.95 dBi, 0.04 dB ripple | −1.4 dBi, 1.6 dB ripple |
+| −10 dB bandwidth (50 Ω) | about 5–10 %, with the conductor thickness | 8.2 % | at least 32.2 % |
+| Dmax | 2.15 dBi | 1.97 dBi | 4.10 dBi (45° above the skin) |
+| Radiation efficiency | 100 % | 95.5 % (FR-4) | 99.7 % (PEC) |
+| Horizon | 2.15 dBi, omni | 1.95 dBi, 0.04 dB ripple | −1.4 dBi, 1.5 dB ripple |
 
 The meander dipole gives up 0.2 dB of directivity against a full λ/2 dipole for a third less height.
 It needs no ground plane, and its pattern peaks on the horizon, where the ground station is for
@@ -484,10 +498,10 @@ moves the match by about 11 MHz (1.3 %).
 | Needs a ground plane | no | no | no | yes (the metal skin) |
 | Feed | balanced (needs a balun) | coax, through the sleeve | balanced (needs a balun) | coax through the skin |
 | Height × width | about 166 mm (0.48 λ) × a wire | 139.6 × 16 mm (board 147.6 × 20 mm) | 110 × 40 mm (board 116 × 46 mm) | 82 mm above the skin × 60 mm, on a 300 mm skin |
-| Zin | 73 + j42 Ω at 0.5 λ, about 70 Ω at resonance | 55.8 − j10.7 Ω at 867 MHz, 65 Ω at resonance | 41.8 + j6.4 Ω | 50.2 − j4.2 Ω |
-| −10 dB band (50 Ω) | roughly 5–10 % | 15.4 % | 17.8 % | about 80 % |
-| Dmax | 2.15 dBi | 2.10 dBi | 2.0–2.2 dBi | 4.08 dBi, 45° above the skin |
-| Horizon gain, ripple | 2.15 dBi, 0 dB | 2.08 dBi, 0.04 dB | 2.14 dBi, 0.12 dB | −1.4 dBi, 1.6 dB |
+| Zin | 73 + j42 Ω at 0.5 λ, about 70 Ω at resonance | 55.8 − j10.7 Ω at 867 MHz, 65 Ω at resonance | 41.8 + j6.4 Ω | 49.5 + j19.3 Ω |
+| −10 dB band (50 Ω) | roughly 5–10 % | 15.4 % | 17.8 % | at least 32.2 % |
+| Dmax | 2.15 dBi | 2.10 dBi | 2.0–2.2 dBi | 4.10 dBi, 45° above the skin |
+| Horizon gain, ripple | 2.15 dBi, 0 dB | 2.08 dBi, 0.04 dB | 2.14 dBi, 0.12 dB | −1.4 dBi, 1.5 dB |
 
 The sleeve dipole behaves like a λ/2 dipole: the same pattern (78° beamwidth, 0.05 dB less
 directivity) and a resonant resistance of 65 Ω, close to a thin dipole's 70 Ω. The FR-4 under the
