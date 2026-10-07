@@ -723,3 +723,14 @@ grup hızı yakınsama ölçütünü sağlamadığından Örnek 3.9'un tamamı d
 Bu sınırlı karşılaştırma, başka hiçbir örneğin durumunu doğrulanmış olarak değiştirmez.
 
 Kayıt model parametrelerimizi, denklemleri ve sayısal sonuçları içerir; galeriye yeni paket eklemez.
+
+## 19. Bölüm 3 karşılaştırma kapsamları
+
+[Bölüm 3 kaydı](benchmarks/pozar-chapter-03.md), Örnek 3.1–3.7 için hedefi ve mesh
+ölçütlerini sağlayan büyüklükleri, çoğaltma komutları ve açık model sınırlarıyla toplar.
+Taşınmadan önceki koşu grupları ve yeni Fairbeam taşıma kontrolleri, özgün kaynak
+bilgilerini korur. Kabul yalnızca listelenen büyüklük ve geometri için geçerlidir.
+
+İletken kaybı sapmaları, kabul edilmeyen mikroşerit empedans/kayıp sonuçları, eksik 3.8
+mesh dizisi ve yukarıda belirtilen ayrı grup hızı sınırlaması bu kapsamın dışındadır.
+Hiçbir galeri modeli veya üretilmiş paket değişmez.
