@@ -30,13 +30,22 @@ All editor templates (`python/templates/*.py`) use it. The dipole and patch mode
 | `max_ratio` | 1.4 | Largest ratio between neighboring cells in the graded fill |
 | `min_cell` | 0.45 × the finest requested cell | Lines closer than this are merged (see below). An explicit value also limits how fine the new local feature-size requests may be |
 | `pad` | λ(f_min) / 4 | Air between the structure and absorbing boundaries (PML cells are added on top). A number, or six values (x-, x+, y-, y+, z-, z+); 0 leaves that face on the structure with no PML cells added, for a feed waveguide that runs into the PML (`pyramidal_horn.py`) |
+| `refine_features` | `True` in the Python API | Detect and locally refine fine features. Saved design JSON without `mesh.refine_features` uses `false` |
 | `keep_existing` | `True` | Lines already on the grid (added by the model) are kept as fixed lines |
 | `verbose` | `False` | Print the report |
 
 In a design file the Simulation › Mesh settings dialog has the mode *Auto* (`mesh.mode: "design"`, described below) and *Automatic (legacy)* (`"auto"`, also what a design without `mode` uses); a design with `"manual"` lines shows *Manual lines*. Design JSON in the legacy `auto` mode can set `mesh.edge_rule`, `mesh.max_ratio`, and `mesh.air_cells_per_wavelength`
 alongside the existing cells-per-wavelength and padding fields. Omitting them uses the default
-settings, including local fine-feature refinement. The designer's cell and time estimates use the returned mesh lines and timestep,
+settings. Fine-feature refinement is controlled separately by `mesh.refine_features`. The designer's cell and time estimates use the returned mesh lines and timestep,
 so they include the selected options after preview generation.
+
+**Refine fine features** in Simulation settings › Mesh controls the design-level boolean
+`mesh.refine_features` in both automatic modes. New designs explicitly set it to `true`.
+Existing saved designs without the field use `false`, preserving their mesh after an update;
+opening or exporting them does not opt them in. Enable it to request refinement, then rebuild
+the preview. Manual mesh lines are never refined. With the switch off, feature detection and
+its diagnostics are also off. The Python API defaults to `refine_features=True`; generated
+Python from a design always writes the design's effective value explicitly.
 
 The adaptive *Auto* mode uses `mesh: {"mode":"design", "overrides": {...}}`. It selects about
 30 cells/λ and exact sheet edges for thin patterned sheet metal, otherwise 24 cells/λ and thirds;
@@ -96,11 +105,17 @@ records of the `Simulation`, and the boundary conditions. Per axis:
    - **Fine gaps, notches and slanted strips.** Automatic meshes first check narrow features against
      the mesh produced by the rules above. Parallel sheet edges with finite overlap identify strip
      widths, notches and gaps; lumped feed gaps are checked along their excitation direction. A
-     detected feature with fewer than three cells across it receives a local size limit. For a
-     slanted strip, both axes in its plane are refined using the edge-normal projections, so its
+     detected gap, notch or feed gap with fewer than three cells across receives a local size
+     limit. Slanted strips use a 1.1-cell projected target (at least one projected cell in the
+     resolution check) for connectivity, typically yielding about 1–1.5 cells. For a slanted strip, both axes in its plane are refined using the edge-normal projections, so its
      perpendicular width, rather than its much larger bounding box, sets the cell size. The local
      limit allows for the fill rule's 10 % margin. Sheet-normal cells are also limited near the
-     feature, and grading returns to the global size at `max_ratio`.
+     feature, and grading returns to the normal mesh size at `max_ratio`. Only windows where
+     the refined cap is smaller than the normal mesh's realized cell size are refilled, with
+     a grading fringe. Geometric fixed lines remain; optional cover lines can move inside
+     the window so rows of closely spaced cover lines do not spread refinement. Baseline
+     lines outside the window are retained exactly. Bounding-box prefilters skip distant
+     edge pairs and conductors before the geometric tests.
 
      Refinement changes only automatic meshes with a detected under-resolved feature. Manual
      lines are kept as supplied. The detector covers parallel edges with finite overlap; it does
@@ -108,8 +123,11 @@ records of the `Simulation`, and the boundary conditions. Per axis:
      shape. Inspect the mesh preview, particularly conductor connectivity, before running.
      An explicitly supplied `min_cell` can prevent the three-cell target; the preview then
      reports the remaining under-resolved feature instead of treating it as resolved.
-     If refinement would exceed the configured cell limit, the preview retains the baseline
-     mesh and warns that refinement was skipped and fine features remain unresolved.
+     If refinement would exceed the configured cell limit, the largest estimated Cartesian
+     refinements are dropped first until the remaining set fits. The preview reports counts
+     of dropped and retained requests. It retains the exact baseline if none fit. A single
+     `mesh-fine-feature` warning summarizes the unresolved count and the three worst widths,
+     measured cells and targets; it does not emit a separate warning for every edge pair.
 4. **Dielectrics**: `dielectric_cells` cells across a layer thinner than that many local cells.
    Inside a dielectric's extent along an axis, the maximum cell is λ/(cells · sqrt(ε_r)).
 5. **Domain**: the bounding box of all geometry and ports, plus `pad` (λ(f_min)/4) toward
@@ -147,8 +165,8 @@ records of the `Simulation`, and the boundary conditions. Per axis:
 | `timestep_s`, `timesteps_per_ns` | CFL timestep estimate from the smallest cells |
 | `memory_mb_estimate` | About 90 bytes per cell (fields plus operator) |
 | `warnings` | For example two hard lines closer than `min_cell` |
-| `fine_features` | Detected fine features: kind, width, affected axes and bounds, required cells (3), measured `cells_across`, and `resolved` |
-| `fine_feature_refinement` | Cell-count impact: `baseline_cells` before local refinement, final `total_cells`, `added_cells`, and final/baseline `ratio`. A limit guard also reports `skipped_cell_limit`, `cell_limit` and `required_cells_lower_bound` |
+| `fine_features` | Detected fine features: kind, width, affected axes and bounds, required cells (1 for slanted strips, otherwise 3), measured `cells_across`, and `resolved` |
+| `fine_feature_refinement` | Cell-count impact: `baseline_cells` before local refinement, final `total_cells`, `added_cells`, and final/baseline `ratio`. A limit guard also reports `skipped_cell_limit`, `cell_limit`, `required_cells_lower_bound`, `dropped_features` and `retained_features`; `enabled` records the switch |
 
 The fine-feature cells-across value is conservative: the feature width divided by the sum of
 the largest intersecting cell width on each axis, projected onto the feature's width direction.
@@ -163,88 +181,121 @@ extend through the domain, so refining a long slanted strip can still add many c
 
 ## Fine-feature mesh regression
 
-The synthetic design in `python/tests/fixtures/blade_fine_features.design.json` contains a
-swept sheet with three 1 mm notches, a 0.4 mm slanted parasitic strip and a 1.35 mm lumped feed
-gap. The following measurements use the in-process build and preview paths at the fixture's
-unchanged automatic settings. No field solution was run.
+The reproducible in-process comparison uses main revision
+`63e3550cbb5f07b92dd3c18dd22833ab6366251d` and the revised refinement algorithm. Every saved
+example is explicitly opted in for the comparison; opening an older design normally keeps
+refinement off. Full values are in
+`python/tests/fixtures/automesh_fine_features_comparison.json`. These are mesh measurements,
+not electrical convergence measurements.
 
-| Measurement | Before local refinement | With local refinement |
+The synthetic blade fixture has three 1 mm notches, a 0.4 mm slanted strip and a 1.35 mm feed.
+
+| Measurement | Main | Revised refinement |
 | --- | --- | --- |
-| Cells (x × y × z) | 106 × 28 × 72 | 390 × 58 × 630 |
-| Total cells | 213,696 | 14,250,600 |
-| Minimum cell (mm) | 0.19635 | 0.08333 |
-| Maximum neighbor ratio | 1.400 | 1.354 |
-| Cells across each 1 mm notch | 1.00 | 12.00 |
-| Cells across the 1.35 mm feed gap | 1.00 | 4.00 |
-| Cells across the 0.4 mm strip | 0.12023 | 3.32241 |
-| Strip staircase components | 9 | 1 |
+| Cells (x × y × z) | 106 × 28 × 72 | 206 × 50 × 263 |
+| Total cells | 213,696 | 2,708,900 |
+| Minimum cell (mm) | 0.19635 | 0.1788 |
+| Maximum neighbor ratio | 1.4 | 1.398 |
+| Cells across each 1 mm notch | 1.0, 1.0, 1.0 | 5.0, 5.0, 5.0 |
+| Cells across the feed | 1.0 | 4.0 |
+| Projected cells across the strip | 0.12023 | 1.21603 |
+| Strip midpoint staircase components | 9 | 1 |
+| Cells × timesteps/ns (billions) | 0.337 | 7.002 |
 
-The strip cells-across measurement samples 501 positions along its centerline and projects
-each intersecting Cartesian cell onto the strip's perpendicular direction. Connectivity joins
-grid nodes whose intervening electric-edge midpoint lies inside the strip; this checks the
-geometric staircase. The preview report uses the more conservative axis-wise maximum cell
-widths described above. The refined grid remains below the default 40 M cell limit; its
-14,036,904 additional cells show the cost of resolving a long oblique strip on a Cartesian grid.
+Connectivity joins nodes when their electric-edge midpoint lies inside the strip. It is a
+geometric staircase check. The revised fixture is below 3 M cells (the earlier three-cell
+strip target produced 14,250,600). All three notches and the feed retain at least three cells.
 
-To repeat the mesh measurements, from `python/` with the openEMS Python environment:
+For the 21 bundled variants, the cost column is **cells × estimated timesteps per ns**, in
+billions, followed by its after/before ratio. It compares equal simulated physical durations
+using the CFL estimate, not wall time or a prediction of convergence. Ten meshes remain
+identical. Helix z lines above 25 mm remain exactly the same as the baseline; the feed's small
+cells no longer spread along the whole 200 mm wire. Existing baseline grading violations can
+remain in untouched regions; none of these examples has a worse maximum neighbor ratio.
+
+| Example | Cells, main → refined | Minimum cell (mm), main → refined | Cost (billions), main → refined; ratio |
+| --- | --- | --- | --- |
+| `branchline-coupler` | 81,090 → 81,090 | 0.14417 → 0.14417 | 0.205 → 0.205; 1.00× |
+| `dipole` | 240,120 → 295,200 | 0.16667 → 0.16667 | 0.615 → 0.830; 1.35× |
+| `helix-axial` | 1,360,800 → 1,535,960 | 1.33449 → 0.75000 | 0.463 → 0.984; 2.12× |
+| `inset-patch` | 240,786 → 304,668 | 0.31144 → 0.25000 | 0.290 → 0.495; 1.71× |
+| `lowpass-stepped` | 133,000 → 133,000 | 0.07811 → 0.07811 | 0.724 → 0.724; 1.00× |
+| `microstrip-line` | 3,106,880 → 3,106,880 | 0.13797 → 0.13797 | 7.398 → 7.398; 1.00× |
+| `minkowski-patch` | 143,640 → 143,640 | 0.32354 → 0.32354 | 0.157 → 0.157; 1.00× |
+| `patch-antenna` | 167,040 → 167,040 | 0.33969 → 0.33969 | 0.157 → 0.157; 1.00× |
+| `patch-array-2x1` | 115,872 → 115,872 | 0.33967 → 0.33967 | 0.109 → 0.109; 1.00× |
+| `patch-array-4x1` | 451,200 → 451,200 | 0.33963 → 0.33963 | 0.424 → 0.424; 1.00× |
+| `pyramidal-horn` | 1,103,856 → 1,103,856 | 0.20819 → 0.20819 | 2.121 → 2.121; 1.00× |
+| `sierpinski-monopole--iterations-0` | 9,687,972 → 9,900,352 | 0.18543 → 0.18543 | 22.963 → 24.070; 1.05× |
+| `sierpinski-monopole--iterations-3` | 28,387,072 → 28,908,000 | 0.03289 → 0.03289 | 334.632 → 340.773; 1.02× |
+| `wilkinson-divider` | 756,276 → 756,276 | 0.13046 → 0.13046 | 2.754 → 2.754; 1.00× |
+| `blade-867` | 136,500 → 269,040 | 1.40492 → 0.43767 | 0.038 → 0.283; 7.53× |
+| `collinear-867` | 3,516,544 → 3,713,820 | 0.08953 → 0.08953 | 13.352 → 14.120; 1.06× |
+| `meander-dipole-867` | 976,472 → 1,073,856 | 0.25599 → 0.25599 | 1.782 → 1.960; 1.10× |
+| `sleeve-dipole-867` | 442,800 → 509,733 | 0.26078 → 0.23791 | 0.758 → 0.918; 1.21× |
+| `ux-inset-patch-2-4-ghz` | 123,420 → 166,870 | 0.40000 → 0.25000 | 0.131 → 0.274; 2.09× |
+| `wideband-dipole-867` | 830,576 → 1,112,832 | 0.40000 → 0.40000 | 0.855 → 1.263; 1.48× |
+| `yagi-867` | 714,840 → 714,840 | 0.36511 → 0.36511 | 0.845 → 0.845; 1.00× |
+
+The synthetic dense PCB has 20 mm long, 0.4 mm wide coplanar traces with 0.2 mm gaps,
+a 1–3 GHz band, MUR boundaries and 20 cells/λ. All adjacent gaps meet the three-cell target.
+The counts include the Cartesian cost of refining through the whole domain.
+
+| Traces | Cells, main → refined | Minimum cell (mm), main → refined | Cost (billions), main → refined; ratio |
+| --- | --- | --- | --- |
+| 20 | 692,496 → 876,960 | 0.06200 → 0.04660 | 4.602 → 7.238; 1.57× |
+| 60 | 1,781,136 → 2,306,080 | 0.06200 → 0.04994 | 11.837 → 18.270; 1.54× |
+| 120 | 3,414,096 → 4,449,760 | 0.06200 → 0.04660 | 22.689 → 36.725; 1.62× |
+
+Detector timing uses 20 segmented rectangular trace outlines, 100 mm long, with the same
+width and gap; `max_width=0.25 mm`. This isolates detection from meshing. The prior detector
+is revision `efbbcfa`. Single-run timings are workload-specific, not general performance guarantees.
+
+| Edges | Before prefilter (s) | With prefilter (s) | Features, both versions |
+| --- | --- | --- | --- |
+| 3,200 | 3.062 | 0.185 | 1,501 |
+| 10,000 | 27.611 | 0.661 | 4,731 |
+
+Reproduce from `python/` with an openEMS Python environment:
 
 ```bash
-nice -n 15 env PYTHONPATH=.:tests python tests/mesh_feature_measurements.py --examples
-nice -n 15 env PYTHONPATH=.:tests python tests/mesh_feature_measurements.py --examples --reference-revision 3c5606519e8117ff19e218156fef9c8d33d8e344
+nice -n 15 python -m tests.mesh_feature_measurements --examples --dense-pcb --detection
+nice -n 15 python -m tests.mesh_feature_measurements --examples --dense-pcb --reference-revision 63e3550cbb5f07b92dd3c18dd22833ab6366251d
+nice -n 15 python -m tests.mesh_feature_measurements --detection --detector-revision efbbcfa
 ```
 
-The recorded baseline is `python/tests/fixtures/automesh_fine_features_before.json`, including
-its source revision and per-example settings. The second command loads the earlier mesher from
-that Git revision into the same in-process build. Dipole and patch select their automatic mesh
-option; examples with only manual meshes are rebuilt from geometry with automatic defaults.
-`python/tests/test_mesh_fine_features.py` checks
-the feature resolution, staircase connectivity, grading, cell-count report and warning path.
+Dipole and patch select their automatic option; manual-only examples are remeshed from
+geometry with automatic defaults. This intentionally measures the same inputs on both sides.
 
-The same mesh-only comparison covers the bundled example variants below. Ten retain exactly
-the same axis counts and minimum cell; the others receive refinement for detected features
-that were below the three-cell target. All remain below 40 M cells. The maximum neighbor ratio
-of each changed example is no worse than its baseline; axes that need no new refinement retain
-their existing grading, including any existing ratio above 1.4.
+### Coarse helix field sanity check
 
-| Example | Cells, before → after | Minimum cell (mm), before → after |
-| --- | --- | --- |
-| `branchline-coupler` | 81,090 → 81,090 | 0.14417 → 0.14417 |
-| `dipole` | 240,120 → 288,000 | 0.16667 → 0.16667 |
-| `helix-axial` | 1,360,800 → 4,003,740 | 1.33449 → 0.65660 |
-| `inset-patch` | 240,786 → 330,372 | 0.31144 → 0.17762 |
-| `lowpass-stepped` | 133,000 → 133,000 | 0.07811 → 0.07811 |
-| `microstrip-line` | 3,106,880 → 3,106,880 | 0.13797 → 0.13797 |
-| `minkowski-patch` | 143,640 → 143,640 | 0.32354 → 0.32354 |
-| `patch-antenna` | 167,040 → 167,040 | 0.33969 → 0.33969 |
-| `patch-array-2x1` | 115,872 → 115,872 | 0.33967 → 0.33967 |
-| `patch-array-4x1` | 451,200 → 451,200 | 0.33963 → 0.33963 |
-| `pyramidal-horn` | 1,103,856 → 1,103,856 | 0.20819 → 0.20819 |
-| `sierpinski-monopole--iterations-0` | 9,687,972 → 10,403,176 | 0.18543 → 0.10739 |
-| `sierpinski-monopole--iterations-3` | 28,387,072 → 31,078,400 | 0.03289 → 0.03314 |
-| `wilkinson-divider` | 756,276 → 756,276 | 0.13046 → 0.13046 |
-| `blade-867` | 136,500 → 303,780 | 1.40492 → 0.44308 |
-| `collinear-867` | 3,516,544 → 3,844,896 | 0.08953 → 0.05403 |
-| `meander-dipole-867` | 976,472 → 1,055,808 | 0.25599 → 0.26900 |
-| `sleeve-dipole-867` | 442,800 → 570,768 | 0.26078 → 0.14889 |
-| `ux-inset-patch-2-4-ghz` | 123,420 → 193,930 | 0.40000 → 0.17836 |
-| `wideband-dipole-867` | 830,576 → 1,511,580 | 0.40000 → 0.40000 |
-| `yagi-867` | 714,840 → 714,840 | 0.36511 → 0.36511 |
+Because the helix mesh changes, it was also run sequentially on the CPU with four threads,
+20 cells/λ, a −30 dB stopping criterion and a 60,000-step cap. Both reached the stopping
+criterion. Patterns used 5° theta and 10° phi steps at 2.4 GHz. Temporary solver output was
+removed after each run. The comparison script reports only measurements and run settings.
 
-The changed cases had these under-resolved features in the baseline:
+| At 2.4 GHz | Main | Refined | Difference |
+| --- | --- | --- | --- |
+| Dmax | 12.100 | 11.996 | -0.104 dB |
+| Boresight axial ratio | 1.120 | 0.834 | -0.286 dB |
+| Input resistance | 156.344 | 199.676 | +43.332 Ω |
 
-- Feed gaps: dipole (1.00 cells), helix (1.801), both Sierpinski variants (2.338), blade
-  (1.00), meander (2.00), sleeve (2.315) and wideband dipole (2.00).
-- Gaps between conductors: inset patch (1.788 cells across 1 mm), collinear
-  (2.234 across 1 mm), sleeve (2.602 across 1 mm and 2.315 across 2 mm), and the second
-  inset-patch example (1.775 across 1 mm).
-- The dipole, meander and wideband feed regions also contain detected conductor gaps;
-  the wideband 2 mm gaps had between 1.812 and 2.00 cells across them.
+The input-resistance change is substantial (about +27.7%); it is a remaining convergence
+question, not evidence of electrical equivalence. A thin wire's effective radius depends on
+its staircase mesh, and feed refinement changes that mesh locally. Dmax and axial ratio are
+close in this coarse check. The main run also reported 100.2% raw radiation efficiency,
+consistent with a small numerical power-balance error. These runs do not validate other
+changed examples or establish converged impedance.
+
+```bash
+nice -n 10 env OMP_NUM_THREADS=4 OPENBLAS_NUM_THREADS=1 python -m tests.helix_mesh_sanity --reference-revision 63e3550cbb5f07b92dd3c18dd22833ab6366251d
+```
 
 ## Validation
 
 The field results in this section predate local fine-feature refinement. They are historical
-validation results; changed meshes in the regression table above have not been revalidated with
-a field solution. A mesh-only resolution check does not establish electromagnetic convergence.
+validation results. The coarse helix check above is the only new field comparison in this
+revision; the remaining mesh table does not establish field accuracy. A mesh-only resolution check does not establish electromagnetic convergence.
 
 GPU engine, −60 dB end criterion. Compare with the converged hand-tuned results in VALIDATION.md:
 
