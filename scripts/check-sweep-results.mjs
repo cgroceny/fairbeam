@@ -51,7 +51,7 @@ assert.match(history, /t\("runHistory\.compareAll"\)/);
 assert.equal(enUi["runHistory.compareAll"], "Compare all");
 const trUi = JSON.parse(await readFile(new URL("../src/i18n/tr.json", import.meta.url), "utf8"));
 assert.equal(enUi["runHistory.col.bestMatch"], "Best match");
-assert.equal(trUi["runHistory.col.bestMatch"], "En iyi eşleşme");
+assert.equal(trUi["runHistory.col.bestMatch"], "En iyi uyum");
 assert.match(history, /label: t\("runHistory\.col\.bestMatch"\).*get: \(r: SummaryRow\) => r\.fBest/);
 assert.doesNotMatch(history, /label: t\("spec\.band"\)/);
 assert.match(history, /sweepLongCsv\(props\.group\)/);
