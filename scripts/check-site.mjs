@@ -15,7 +15,9 @@ const normalize = (text) => text.replace(/\s+/gu, " ").trim();
 const translations = new Map();
 for (const [en, tr] of context.tables) {
   assert.ok(en && tr, "both languages have text");
-  assert.ok(!/noter onay|macOS'ta|Smith grafiği|yığılmış|\d,\d/.test(tr), `Turkish terminology and decimal points: ${en}`);
+  assert.ok(!/noter onay|macOS'ta|Smith grafiği|yığılmış/.test(tr), `Turkish terminology: ${en}`);
+  // Turkish running text uses the decimal comma; licence names (GPL-3.0) and versions (0.7.0) keep their points.
+  assert.ok(!/\d\.\d/.test(tr.replace(/[A-Z]+-\d+\.\d+(?:-or-later)?|\d+\.\d+\.\d+/g, "")), `Turkish decimal comma: ${en}`);
   const key = normalize(en);
   if (translations.has(key)) assert.equal(tr, translations.get(key), `consistent translation for ${en}`);
   translations.set(key, tr);

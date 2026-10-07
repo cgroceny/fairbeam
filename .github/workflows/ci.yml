@@ -35,6 +35,7 @@ jobs:
       - run: npm run -s build
       - run: npm run -s check:cst
       - run: npm run -s check:exports
+      - run: npm run -s check:docs-translations
       - run: npm run -s check:docs-highlight
       - run: npm run -s check:state-lifecycle
       - name: Manual browser regressions

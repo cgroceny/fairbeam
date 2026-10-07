@@ -40,7 +40,7 @@
       const button = document.createElement("button");
       button.type = "button";
       button.className = "doc-copy";
-      button.dataset.i18n = "on"; // the page text is English only; this label follows the site language
+      button.dataset.i18n = "on"; // this control follows the site language
       button.setAttribute("aria-live", "polite");
       button.textContent = "Copy";
       let timer = 0;

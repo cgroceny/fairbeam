@@ -121,7 +121,9 @@
     "check:mesh-export": "node --experimental-strip-types scripts/check-mesh-export.mjs",
     "check:blender-export": "node --experimental-strip-types scripts/check-blender-export.mjs",
     "check:export-dialog": "node scripts/check-export-dialog.mjs",
-    "check:reactive-order": "node scripts/check-reactive-order.mjs"
+    "check:reactive-order": "node scripts/check-reactive-order.mjs",
+    "check:docs-translations": "node scripts/check-docs-translations.mjs",
+    "check:docs-language": "node scripts/check-docs-language.mjs"
   },
   "dependencies": {
     "@codemirror/commands": "^6.11.1",
