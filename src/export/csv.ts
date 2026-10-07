@@ -1,6 +1,7 @@
 // CSV exports (RFC 4180, comma separated, "." decimal point, header row, LF line ends).
 
 import type { Bundle, FarField, Signals } from "../types";
+import { bandCentre } from "../lib/bands.ts";
 import { sweep } from "../lib/rf.ts";
 import { magDb, pairLabel, phaseDeg, sMatrix } from "../lib/sparams.ts";
 import { activeReflection, gammaDb, type Weight } from "../lib/array.ts";
@@ -41,8 +42,8 @@ export function patternCsv(ff: FarField): string {
 
 export function bandsCsv(b: Bundle): string {
   return toCsv(
-    ["f_lo_GHz", "f_hi_GHz", "f_center_GHz", "s11_min_dB", "fractional_bw", "bandwidth_MHz", "edge_lo", "edge_hi"],
-    (b.results?.bands ?? []).map((x) => [r(x.f_lo / 1e9, 6), r(x.f_hi / 1e9, 6), r(x.f_center / 1e9, 6), x.s11_min_db, x.fractional_bw, r((x.f_hi - x.f_lo) / 1e6, 3), x.edge_lo, x.edge_hi]),
+    ["f_lo_GHz", "f_hi_GHz", "f_center_GHz", "f_best_GHz", "s11_min_dB", "fractional_bw", "bandwidth_MHz", "edge_lo", "edge_hi"],
+    (b.results?.bands ?? []).map((x) => [r(x.f_lo / 1e9, 6), r(x.f_hi / 1e9, 6), r(bandCentre(x) / 1e9, 6), r(x.f_center / 1e9, 6), x.s11_min_db, (x.f_hi - x.f_lo) / bandCentre(x), r((x.f_hi - x.f_lo) / 1e6, 3), x.edge_lo, x.edge_hi]),
   );
 }
 
