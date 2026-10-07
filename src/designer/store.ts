@@ -11,7 +11,8 @@ import { quickBundle } from "./geometry";
 import { portFeedEntries } from "../lib/portGroups";
 import { clearBackup, forgetLastDesign, readBackup, readLastDesign, rememberLastDesign, writeBackup } from "./draftBackup";
 import type { Axis, Design, DesignCut, DesignParam, DesignPart, DesignPrimitive, DesignTransform, Expr, Selection, Vec3 } from "./types";
-import { nameMap, namesIn, paramValues, RESERVED, tryEvaluate } from "./expr";
+import { nameMap, namesIn, paramKeyError, paramValues, RESERVED, tryEvaluate } from "./expr";
+import { parameterUses, pathOwner, renameParameter } from "./paramRefs";
 import { openParametersTab, setParameterRanges } from "./dockState";
 import { appMode, setAppMode } from "../workspace";
 import { designChecks, mergeChecks, type Check, type CheckFix } from "./checks";
@@ -893,9 +894,16 @@ export function setPortType(i: number, type: "lumped" | "waveguide") {
 
 export function addResistor() { setFeedCreation("element"); }
 
+/** The first free key of the form p1, p2, … */
+const freeParamKey = (taken: string[]) => {
+  for (let n = 1; ; n++) if (!taken.includes(`p${n}`)) return `p${n}`;
+};
+
+/** A new parameter: key p1, p2, … and no unit (a ratio, a count, εr or a frequency is as likely as
+ * a length; the unit cell says what it is once filled). */
 export function addParam() {
   edit((d) => {
-    d.params.push({ key: unique("p", d.params.map((p) => p.key)), default: 1, unit: "mm" });
+    d.params.push({ key: freeParamKey(d.params.map((p) => p.key)), default: 1 });
   });
   focusPath(`params[${draft.params.length - 1}].key`);
 }
@@ -934,14 +942,96 @@ export function setColors(kind: "parts" | "materials", indices: number[], color:
   }, `${kind}[${indices[0] ?? 0}].color`);
 }
 
-/** Remove the selected item (a material only when no part uses it). */
+// ------------------------------------------------------------------ parameters: rename, delete, duplicate
+
+/** Why `key` cannot be the new key of parameter `i` (the inline error under the key cell), or null. */
+export function paramKeyProblem(i: number, key: string): string | null {
+  const bad = paramKeyError(key);
+  if (bad) return `${bad[0].toUpperCase()}${bad.slice(1)}.`;
+  return (draft.params ?? []).some((q, j) => j !== i && q.key === key) ? t("params.keyTwice") : null;
+}
+
+/** Rename parameter `i` to `to` in one undo step, with every expression that uses it: the shapes,
+ * transforms, cuts, ports, lumped elements, materials, mesh and simulation fields, the other
+ * parameters, the operands a Boolean history keeps and the parameter sweep (paramRefs.ts). An
+ * invalid or taken key is not applied: the reason is returned (null when renamed or unchanged). */
+export function renameParam(i: number, to: string): string | null {
+  const p = draft.params?.[i];
+  const key = to.trim();
+  if (!p || key === p.key) return null;
+  const problem = paramKeyProblem(i, key);
+  if (problem) return problem;
+  const from = p.key;
+  edit((d) => renameParameter(d, from, key), "", t("history.renameParam", { from, to: key }));
+  return null;
+}
+
+/** The place a field path belongs to, in words: the solid (by the name the tree shows), "Port 1",
+ * "Parameter L", "Mesh" … */
+function ownerText(path: string): string {
+  const o = pathOwner(path);
+  if (!o) return path;
+  switch (o.kind) {
+    case "part": { const p = draft.parts[o.index]; return p ? p.label || p.name : path; }
+    case "port": return t("checks.place.port", { n: draft.ports[o.index]?.number ?? o.index + 1 });
+    case "resistor": return t("checks.place.resistor", { n: draft.resistors[o.index]?.label || draft.resistors[o.index]?.name || o.index + 1 });
+    case "param": return t("checks.place.param", { name: draft.params[o.index]?.key ?? "" });
+    case "material": return t("checks.place.material", { name: draft.materials[o.index]?.name ?? "" });
+    case "simulation": return t("checks.place.simulation");
+    case "mesh": return t("checks.place.mesh");
+    case "far_field": return t("checks.place.farField");
+    case "monitors": return t("checks.place.monitors");
+    case "wcs": return t("checks.place.wcs");
+    case "parameter_sweep": return t("sweep.title");
+  }
+}
+
+/** The fields that use parameter `key`: how many, and the first few places they belong to. */
+export function paramUsers(key: string): { count: number; places: string[] } {
+  const uses = parameterUses(unwrap(draft) as Design, key);
+  return { count: uses.length, places: [...new Set(uses.map(ownerText))] };
+}
+
+/** Delete parameter `i`, unless a field uses it: like a material in use, it is refused with the
+ * places that use it ("W is used by 3 fields (Feed, Port 1, …); change those first"). */
+export function removeParam(i: number): boolean {
+  const p = draft.params?.[i];
+  if (!p) return false;
+  const { count, places } = paramUsers(p.key);
+  if (count) {
+    const shown = places.slice(0, 3).join(", ") + (places.length > 3 ? ", …" : "");
+    setMessage({ tone: "warn", text: t("store.paramInUse", { key: p.key, count, places: shown }) });
+    return false;
+  }
+  const s = selection();
+  edit((d) => { d.params.splice(i, 1); }, "", t("history.deleteParam"));
+  if (s.type === "param" && s.i === i) setSelection({ type: "design" });
+  else if (s.type === "param" && s.i > i) setSelection({ type: "param", i: s.i - 1 });
+  return true;
+}
+
+/** A copy of parameter `i` below it, as key_2 (key_3, … when taken); selected. */
+export function duplicateParam(i: number) {
+  const p = draft.params?.[i];
+  if (!p) return;
+  const copy: DesignParam = JSON.parse(JSON.stringify(unwrap(p)));
+  let n = 2;
+  while (draft.params.some((q) => q.key === `${p.key}_${n}`)) n++;
+  copy.key = `${p.key}_${n}`;
+  edit((d) => { d.params.splice(i + 1, 0, copy); }, "", t("history.addParam"));
+  setSelection({ type: "param", i: i + 1 });
+}
+
+/** Remove the selected item (a material only when no part uses it, a parameter only when no field does). */
 export function removeSelected() {
   const s = selection();
   if (s.type === "material" && draft.parts.some((p) => p.material === draft.materials[s.i]?.name)) {
     setMessage({ tone: "warn", text: t("store.materialInUse", { material: draft.materials[s.i].name }) });
     return;
   }
-  const list = { param: "params", material: "materials", part: "parts", port: "ports", resistor: "resistors" } as const;
+  if (s.type === "param") { removeParam(s.i); return; }
+  const list = { material: "materials", part: "parts", port: "ports", resistor: "resistors" } as const;
+  if (s.type !== "primitive" && !(s.type in list)) return;
   edit((d) => {
     if (s.type === "primitive") {
       d.parts[s.i].primitives.splice(s.j, 1);
@@ -955,6 +1045,7 @@ export function removeSelected() {
 
 export function duplicateSelected() {
   const s = selection();
+  if (s.type === "param") { duplicateParam(s.i); return; }
   edit((d) => {
     if (s.type === "part") {
       const p = structuredClone(unwrap(d.parts[s.i]));
@@ -972,6 +1063,14 @@ export function duplicateSelected() {
       const p = structuredClone(unwrap(d.ports[s.i]));
       p.number = Math.max(...d.ports.map((q) => q.number)) + 1;
       d.ports.push(p);
+    } else if (s.type === "resistor") {
+      const r = structuredClone(unwrap(d.resistors[s.i]));
+      if (r.name) r.name = unique(r.name, d.resistors.map((q) => q.name ?? ""));
+      d.resistors.splice(s.i + 1, 0, r);
+    } else if (s.type === "material") {
+      const m = structuredClone(unwrap(d.materials[s.i]));
+      m.name = unique(m.name, d.materials.map((q) => q.name));
+      d.materials.splice(s.i + 1, 0, m);
     }
   }, "", `Duplicate ${s.type}`);
   // the copy lies exactly on the original, so say where it went: otherwise nothing seems to happen
@@ -984,11 +1083,18 @@ export function duplicateSelected() {
   } else if (s.type === "port") {
     selectAddedFeed({ type: "port", i: draft.ports.length - 1 });
     setMessage({ tone: "good", text: t("store.duplicatedPort", { number: draft.ports.at(-1)!.number }) });
+  } else if (s.type === "resistor") {
+    selectAddedFeed({ type: "resistor", i: s.i + 1 });
+  } else if (s.type === "material") {
+    setSelection({ type: "material", i: s.i + 1 });
   }
 }
 
-export const canRemove = () => !["design", "simulation"].includes(selection().type);
-export const canDuplicate = () => ["part", "primitive", "port"].includes(selection().type);
+/** Items Delete and Duplicate act on (Home › Edit, the keys, the menus): the same list, so the two
+ * buttons are enabled together and their shared hint is only shown when neither applies. */
+const EDITABLE = ["param", "material", "part", "primitive", "port", "resistor"];
+export const canRemove = () => EDITABLE.includes(selection().type);
+export const canDuplicate = () => EDITABLE.includes(selection().type);
 
 /** A part picked in the 3D view; a click on empty space (null) clears the selection. */
 export function pickPart(name: string | null) {
@@ -1028,10 +1134,6 @@ export function askParams(asks: ParamAsk[]) {
   const fresh = asks.filter((a) => !queued.has(a.key) && unknownNames(a.key).length > 0);
   if (fresh.length) setParamAsks((q) => [...q, ...fresh]);
 }
-
-/** Every whole-word use of `from` in an expression replaced by `to`. */
-export const renameInExpr = (e: string, from: string, to: string) =>
-  e.replace(new RegExp(`(?<![\\w.])${from.replace(/[^\w]/g, "")}(?!\\w)`, "g"), to);
 
 /** Add a parameter (at `at`, default the end) in one undo step; a selected parameter below it stays selected. */
 export function createParam(p: DesignParam, at?: number) {

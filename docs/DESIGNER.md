@@ -284,8 +284,17 @@ expression that does not evaluate.
   as you type. A design file that already has one does not load (the server's error names the key,
   as for any invalid design file) until the key is renamed in the file.
 
-Add a parameter with ribbon Modeling › Parameters › Parameter or **Add parameter** in the Parameters dock.
-Every keystroke in the table applies at once (the 3D view follows). **Enter** commits the cell and
+Add a parameter with ribbon Modeling › Parameters › Parameter or **Add parameter** in the Parameters dock:
+it gets the first free key p1, p2, … and no unit (fill the unit cell for a length or a frequency; a ratio
+or εr stays a bare number). Every keystroke in the table applies at once (the 3D view follows), except
+in the Key cell: a new key applies on **Enter** or when the cell is left, and renames the parameter
+everywhere it is used in one undo step (the shapes, transforms, cuts, ports, lumped elements, materials,
+mesh and simulation fields, the other parameters, the operands a Boolean result keeps and the parameter
+sweep), so renaming `fw` to `feed_w` leaves nothing that names `fw`. An invalid or taken key shows
+its error under the cell and is not applied; Escape returns to the key as it was. A parameter that a
+field still uses is not deleted (the trash button, Home › Edit › Delete, the Delete key): the message
+names the places that use it, as for a material in use; **Duplicate** copies it as `key_2`.
+**Enter** commits the cell and
 moves down to the same cell of the next row; **Escape** takes back only what was typed since the
 last commit, never a value already committed; leaving a cell (Tab, a click) commits it.
 The compact table shows Key, Expression / value, Evaluated value, Unit and Description.
