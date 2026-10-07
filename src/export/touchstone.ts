@@ -7,6 +7,7 @@
 import type { Bundle } from "../types";
 import { sweep } from "../lib/rf.ts";
 import { sMatrix } from "../lib/sparams.ts";
+import { APP_VERSION } from "../lib/appVersion.ts";
 
 const ascii = (s: string) => s.replace(/Ω/g, "Ohm").replace(/[·•]/g, "-").replace(/[^\x20-\x7e]/g, "?");
 
@@ -16,7 +17,7 @@ export function touchstoneS1p(b: Bundle, exported: string = new Date().toISOStri
   const port = b.ports.find((p) => p.excite) ?? b.ports[0];
   const z0 = s.zRef;
   const lines = [
-    `! Touchstone v1 file written by Fairbeam ${b.generator.version}`,
+    `! Touchstone v1 file written by Fairbeam ${APP_VERSION}`,
     `! Project:   ${ascii(b.name)}`,
     `! Model:     ${ascii(b.model.id)}`,
     `! Simulated: ${b.created} (${ascii(b.solver.engine)}${b.generator.openems ? ` ${ascii(b.generator.openems)}` : ""}, ${ascii(b.solver.method)})`,
@@ -48,7 +49,7 @@ export function touchstoneNPort(b: Bundle, exported: string = new Date().toISOSt
   const z0 = S.zRef[0];
   if (S.zRef.some((z) => Math.abs(z - z0) > 1e-9)) return null;
   const lines = [
-    `! Touchstone v1 file written by Fairbeam ${b.generator.version}`,
+    `! Touchstone v1 file written by Fairbeam ${APP_VERSION}`,
     `! Project:   ${ascii(b.name)}`,
     `! Model:     ${ascii(b.model.id)}`,
     `! Simulated: ${b.created} (${ascii(b.solver.engine)}${b.generator.openems ? ` ${ascii(b.generator.openems)}` : ""}, ${ascii(b.solver.method)})`,

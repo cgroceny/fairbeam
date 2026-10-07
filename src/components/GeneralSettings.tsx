@@ -221,7 +221,7 @@ export default function GeneralSettingsDialog(props: { open: boolean; close: () 
   };
   createEffect(() => { if (props.open) { setValue(readGeneralSettings()); setUpdateStatus(null); void loadDesktop(); void checkBlender(readGeneralSettings().blenderPath); } });
   return <Show when={props.open}><div class="scrim" onPointerDown={(e) => e.target === e.currentTarget && props.close()}>
-    <div class="dialog dialog-sm" role="dialog" aria-modal="true" aria-labelledby="gs-title" ref={box} tabindex={-1}>
+    <div class="dialog dialog-sm gs-dialog" role="dialog" aria-modal="true" aria-labelledby="gs-title" ref={box} tabindex={-1}>
       <div class="dialog-head"><div><h2 id="gs-title"><Settings size={17} /> {t("settings.title")}</h2><p class="muted">{t("settings.subtitle")}</p></div><button class="icon-btn" onClick={props.close} aria-label={t("common.close")}><X size={16}/></button></div>
       <div class="gs-tabs" role="tablist" aria-label={t("settings.title")}>
         <For each={["general", "appearance"] as const}>{name => <button type="button" id={`gs-tab-${name}`} role="tab" aria-selected={tab() === name} aria-controls={`gs-panel-${name}`} tabindex={tab() === name ? 0 : -1} class="btn btn-ghost" onClick={() => setTab(name)} onKeyDown={e => {

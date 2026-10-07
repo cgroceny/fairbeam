@@ -608,7 +608,7 @@ function showPreview(b: Bundle): boolean {
   setKeepCamera(sameModel);
   previewOpenCount = openCount() + 1;
   try {
-    openBundle(b, b.name); // the server names it "<model> · <overrides> (preview)"
+    openBundle(b, b.name); // the server names it "<model> · <overrides>"; b.preview marks it
   } catch (e) {
     previewOpenCount = -1;
     if (first) saved = null;

@@ -13,6 +13,7 @@ import { runQualityOf, runMetricsOf, designRuns } from "./runResults";
 import { verdictLabel } from "./RunQualityView";
 import { index } from "../state";
 import { fmt, t } from "../i18n";
+import { num } from "../lib/format";
 import type { DesignParam } from "./types";
 import { isTerminal } from "../runner/api";
 import { jobs } from "../runner/store";
@@ -114,7 +115,8 @@ export function RunInspector(props: { file: string }) {
     else if (x?.f0 != null) out.push([t("summary.f0"), ghz(x.f0)]);
     if (x?.s11MinDb != null) out.push(["|S11| min", `${fmt.fixed(x.s11MinDb, 1)} dB`]);
     if (x?.bwHz != null) out.push([t("summary.bandwidth"), `${fmt.fixed(x.bwHz / 1e6, 0)} MHz`]);
-    if (x?.farfield) out.push(["Dmax", `${fmt.fixed(x.farfield.dmaxDbi, 1)} dBi`]);
+    // the same 2-decimal value as the Runs table and the far-field card (2.25 dBi)
+    if (x?.farfield) out.push(["Dmax", `${num(x.farfield.dmaxDbi, 2)} dBi`]);
     if (x?.totalEff != null) out.push([t("props.run.efficiency"), t("format.percent", { value: fmt.fixed(x.totalEff * 100, 1) })]);
     return out;
   };

@@ -1,5 +1,5 @@
 import type { Bundle, Vec3 } from "../types";
-import { fmt } from "../i18n/index.ts";
+import { fmt, t } from "../i18n/index.ts";
 
 /** One measured run of an example model (public/benchmarks.json, written by scripts/build-benchmarks.mjs). */
 export interface BenchRow {
@@ -142,6 +142,9 @@ export function shortMachine(name: string): string {
     .replace(/\s+CPU\s*@.*$/i, "")
     .replace(/\s+/g, " ")
     .trim();
+  // a GPU row names the host it ran in: "RTX 3060 (on the 7900X)", in the UI language
+  const host = s.match(/^(.+?) \(on the (.+)\)$/);
+  if (host) return t("measured.gpuOnHost", { gpu: host[1], host: host[2] });
   return s || name;
 }
 

@@ -6,7 +6,7 @@
 import * as THREE from "three";
 import { createEffect, createRoot, on } from "solid-js";
 import {
-  alignWcsWithFace, axisName, cancel, commit, drawEscapeAction, drawingPlaneWorldValue, drawPointToWorld, faceElevation, facePicking, extrudeFacePicking,
+  alignWcsWithFace, axisName, cancel, commit, drawEnterAction, drawEscapeAction, drawingPlaneWorldValue, toolShape, drawPointToWorld, faceElevation, facePicking, extrudeFacePicking,
   ghost, ghostFrameTransforms, localFrame, parseTyped, place, placeTyped, plane, planeAxes, points, startTool, wcsIsGlobal, wcsVisible,
   heightStep, heightDraft, setHeightDraft, finishHeight,
   setFacePicking, setExtrudeFacePicking, snap, snapTo, tool, undoPoint, worldPointToDrawLocal,
@@ -904,16 +904,18 @@ export function attachDrawOverlay(ctx: Ctx): () => void {
     if (e.key.toLowerCase() === "s" && typing && !e.shiftKey) return;
     if (/^[\w.@=(-]$/.test(e.key) && typing) { e.preventDefault(); e.stopPropagation(); openTyped(e.key); return; }
     if (e.key === "Escape") {
+      // with no point: leave the tool; else step back one point (drawEscapeAction)
       e.preventDefault(); e.stopPropagation();
-      const action = drawEscapeAction(tool(), points().length, heightStep());
-      if (action === "open-dialog") {
-        const activeTool = tool();
-        const kind = activeTool === "brick" ? "box" : activeTool === "cylinder" ? "cylinder" : "polygon";
-        openShapeDialog(kind);
-        startTool(null);
-      } else if (action === "step-back") cancel();
+      if (drawEscapeAction(tool(), points().length, heightStep()) !== "none") cancel();
     }
-    else if (e.key === "Enter" && tool() === "polygon" && points().length >= 3) { e.preventDefault(); commit(); }
+    else if (e.key === "Enter") {
+      // before the first point: the tool's shape dialog with default values; a polygon: close it
+      const active = tool()!, action = drawEnterAction(active, points().length);
+      if (action === "none") return;
+      e.preventDefault(); e.stopPropagation();
+      if (action === "finish") commit();
+      else { openShapeDialog(toolShape(active)); startTool(null); }
+    }
     else if (e.key === "Backspace" || e.key === "Delete") {
       // while drawing these edit the points, never delete the selected item
       e.preventDefault(); e.stopPropagation();

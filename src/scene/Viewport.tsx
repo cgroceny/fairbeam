@@ -10,9 +10,11 @@ import { CAMERA_VIEWS, VIEW_DIRECTIONS, cameraShortcut, isViewCommand, nearestAx
 import { CameraViewIcon } from "./CameraViewIcon";
 import { bundle, centerView, farfieldIndex, setFarfieldIndex, hiddenParts, hoverPart, layers, meshPlane, selectedPart, selectedShape, setHoverPart, setViewCursor, solidFade, theme } from "../state";
 import { keepCamera } from "../state";
+import { designStem } from "../lib/exportNames";
 import { previewGeometry } from "../designer/transforms";
 import { cssVar } from "../lib/cssvar";
-import { downloadFailedMessage, downloadMessage, revealDownloadedFile, saveDownloadUrl } from "../lib/download";
+import { downloadFailedMessage, saveDownloadUrl } from "../lib/download";
+import { downloadToast } from "../lib/toast";
 import { dims, GHz, num } from "../lib/format";
 import { fmt, t } from "../i18n";
 import type { Bundle, Part } from "../types";
@@ -118,9 +120,6 @@ export default function Viewport() {
   const [phaseDeg, setPhaseDeg] = createSignal(0);
   const [phasePlaying, setPhasePlaying] = createSignal(false);
   let applyCurrentPhase: ((phase: number) => void) | undefined;
-  /** a short visible notice (the screenshot's download request and file name) */
-  const [notice, setNotice] = createSignal<{ text: string; path?: string } | null>(null);
-  let noticeTimer: ReturnType<typeof setTimeout> | undefined;
   /** set when the mesh plane shows only every k-th line (very fine meshes) */
   const [meshNote, setMeshNote] = createSignal<string | null>(null);
   let announcedText = "";
@@ -1250,24 +1249,15 @@ export default function Viewport() {
     const onShot = async () => {
       if (activeExportSurface() !== "viewport" || !geometryAvailable() || !bundle()?.parts.some(p=>p.primitives.length) || !host.getClientRects().length || host.closest("[inert],[hidden]")) { exportNotice(t("contextExport.noView")); return; }
       renderNow();
-      const name = `${(bundle()?.name ?? "fairbeam").replace(/[^a-z0-9._-]+/gi, "_")}.png`;
+      const name = `${designStem(bundle()?.model.id)}.png`;
       // the browser or WebView may save, ask, block or cancel without telling the page: say
-      // "requested", not "saved" (src/lib/download.ts)
-      let text: string;
-      let path: string | undefined;
+      // "requested", not "saved" (src/lib/download.ts). One toast reports it (lib/toast.ts).
       try {
-        const result = await saveDownloadUrl(name, renderer.domElement.toDataURL("image/png"));
-        text = downloadMessage(result);
-        path = result.status === "saved" ? result.path : undefined;
+        downloadToast(await saveDownloadUrl(name, renderer.domElement.toDataURL("image/png")));
       } catch (e) {
         console.error(e);
-        text = downloadFailedMessage(name, e);
+        exportNotice(downloadFailedMessage(name, e), { tone: "error" });
       }
-      say(text);
-      exportNotice(text);
-      setNotice({ text, path });
-      clearTimeout(noticeTimer);
-      noticeTimer = setTimeout(() => setNotice(null), 6000);
     };
     const unregisterExport = registerSurfaceExports("viewport", {ready:()=>geometryAvailable() && !!bundle()?.parts.some(p=>p.primitives.length),screenshot:onShot,actions:()=>[]});
     // PNG of the current view for the export package: detail.resolve(dataUrl)
@@ -1294,7 +1284,6 @@ export default function Viewport() {
       mq.removeEventListener("change", onScheme);
       window.removeEventListener("fairbeam:appearance", onScheme);
       unregisterExport();
-      clearTimeout(noticeTimer);
       window.removeEventListener("fairbeam:capture", onCapture);
       host.removeEventListener("fairbeam:view", onViewEvent);
       host.removeEventListener("fairbeam:zoom", onMenuZoom);
@@ -1355,15 +1344,6 @@ export default function Viewport() {
         <Show when={appMode() === "design"}> {t("viewport.keysDesign")}</Show>
       </p>
       <div class="visually-hidden" aria-live="polite" aria-atomic="true">{announce()}</div>
-      <Show when={notice()}>{(n) =>
-        <div class="vp-notice" role="status" aria-live="polite">
-          {n().text}
-          <Show when={n().path}>{(path) =>
-            <button class="linklike" onClick={() => void revealDownloadedFile(path())
-              .catch((e) => setNotice({ text: t("results.toolbar.showInFolderFailed", { error: String(e) }) }))}>{t("results.toolbar.showInFolder")}</button>
-          }</Show>
-        </div>
-      }</Show>
       <div class="vp-hud vp-hud-tl" role="toolbar" aria-label={t("viewport.cameraViews")}>
         <div class="seg">
           <For each={CAMERA_VIEWS}>

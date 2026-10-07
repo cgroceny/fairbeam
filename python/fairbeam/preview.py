@@ -186,7 +186,8 @@ def build_preview(model_path: str | None, overrides: dict, design: dict | None =
     params = [p.describe(values[p.key]) for p in module.PARAMS]
     label = module.MODEL["name"] + ("" if not overrides else " · " + ", ".join(
         f"{k}={v}" for k, v in sorted(overrides.items())))
-    bundle = sim.to_bundle(module.MODEL, params, name=label + " (preview)")
+    # the model's own name: drawings, reports and macros made from a preview carry it; "preview" marks it as not simulated
+    bundle = sim.to_bundle(module.MODEL, params, name=label)
     bundle["preview"] = True
     json.dumps(bundle, allow_nan=False)  # fail here, not in the server, on NaN/inf
     return {"bundle": bundle, "build_s": round(time.time() - t0, 3)}

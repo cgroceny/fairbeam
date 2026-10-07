@@ -1,7 +1,8 @@
 import regularUrl from "../assets/fonts/IBMPlexSans-Regular.woff?url";
 import semiboldUrl from "../assets/fonts/IBMPlexSans-SemiBold.woff?url";
 import { toBase64 } from "../drawing/font";
-import { saveDownload, downloadMessage } from "../lib/download";
+import { saveDownload } from "../lib/download";
+import { downloadToast } from "../lib/toast";
 import { exportNotice } from "./exportContext";
 import { cssVar } from "../lib/cssvar";
 import { t } from "../i18n";
@@ -42,5 +43,5 @@ export async function saveVisibleFigure(root:HTMLElement|null,base:string,format
   svg=svg.replace(/(<svg[^>]*>)/,`$1<style>${await embeddedFontFaces()}</style>`);
   const name=`${base.replace(/[^a-z0-9._-]+/gi,"_")}.${format}`;
   const data=format==="svg" ? svg : await (await import("../drawing/render")).svgToPng(svg,96);
-  exportNotice(downloadMessage(await saveDownload(name,data,format==="svg"?"image/svg+xml":"image/png")));
+  downloadToast(await saveDownload(name,data,format==="svg"?"image/svg+xml":"image/png"));
 }

@@ -1,5 +1,5 @@
-Fabrication files (preview): Rectangular patch antenna
-Model patch-antenna, exported 2026-09-25T00:00:00+00:00 by Fairbeam 0.1.0
+Fabrication files: Rectangular patch antenna (a preview feature of Fairbeam)
+Model patch-antenna, exported 2026-09-25T00:00:00+00:00 by Fairbeam 0.7.0
 
 READ THIS FIRST
 These files are generated from the simulation model. The simulation treats copper as a
@@ -38,11 +38,11 @@ Files
 -----
   Gerber: RS-274X with X2 attributes, mm, format 4.6, copper as regions (G36/G37).
   Protel-style names if your fab asks: F_Cu = .GTL, B_Cu = .GBL, Edge_Cuts = .GKO, drill = .TXT/.DRL.
-  patch-antenna-F_Cu.gbr       Gerber X2, copper F_Cu (L1, top): Patch
-  patch-antenna-B_Cu.gbr       Gerber X2, copper B_Cu (L2, bottom): Ground plane
-  patch-antenna-Edge_Cuts.gbr  Gerber X2, board outline (Profile / Edge.Cuts / GKO)
-  patch-antenna-PTH.drl        Excellon drill, plated holes (1)
-  patch-antenna-F_Cu.dxf       DXF R12, F_Cu copper outlines (closed polylines; holes as inner polylines), anti-pads and drills as circles
-  patch-antenna-B_Cu.dxf       DXF R12, B_Cu copper outlines (closed polylines; holes as inner polylines), anti-pads and drills as circles
-  patch-antenna-Edge_Cuts.dxf  DXF R12, board outline and drills
+  patch_antenna-F_Cu.gbr       Gerber X2, copper F_Cu (L1, top): Patch
+  patch_antenna-B_Cu.gbr       Gerber X2, copper B_Cu (L2, bottom): Ground plane
+  patch_antenna-Edge_Cuts.gbr  Gerber X2, board outline (Profile / Edge.Cuts / GKO)
+  patch_antenna-PTH.drl        Excellon drill, plated holes (1)
+  patch_antenna-F_Cu.dxf       DXF R12, F_Cu copper outlines (closed polylines; holes as inner polylines), anti-pads and drills as circles
+  patch_antenna-B_Cu.dxf       DXF R12, B_Cu copper outlines (closed polylines; holes as inner polylines), anti-pads and drills as circles
+  patch_antenna-Edge_Cuts.dxf  DXF R12, board outline and drills
   README.txt                   this file

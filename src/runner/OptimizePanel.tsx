@@ -40,6 +40,7 @@ import { health, meshSource, runName, setRunName, specs, submitError, submitting
 import { t } from "../i18n";
 import NumberField from "../components/NumberField";
 import { PreflightNote } from "../designer/PreflightNote";
+import { methodName } from "../designer/optimizationResults";
 import { meshStats } from "../designer/meshStats";
 
 /** The target field's label: an i18n key, or a symbol that stays as it is */
@@ -250,7 +251,7 @@ export default function OptimizePanel(props: { onStarted?: (job: import("./api")
         <label class="rp-inline-field" title={methodTitle(optPlan().method)}>
           <span>{t("opt.method")}</span>
           <select class="rp-select rp-select-sm" aria-describedby="op-method-hint" value={method()} onChange={(e) => setMethod(e.currentTarget.value as import("./optimize").OptimizeMethod)}>
-            <option value="auto" title={t("opt.method.auto.title")}>{t("opt.method.auto", { method: optPlan().method })}</option>
+            <option value="auto" title={t("opt.method.auto.title")}>{t("opt.method.auto", { method: methodName(optPlan().method) })}</option>
             <option value="secant" title={methodTitle("secant")} disabled={!(vary.length === 1 && goals.some((g) => g.kind === "f0"))}>{t("opt.method.secant")}</option>
             <option value="nelder-mead" title={methodTitle("nelder-mead")}>Nelder–Mead</option>
             <option value="bayesian" title={methodTitle("bayesian")}>{t("opt.method.bayesian")}</option>

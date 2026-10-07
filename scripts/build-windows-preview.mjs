@@ -236,6 +236,8 @@ async function copyResources(root) {
   const specs = [
     { prefix: 'python/fairbeam/', destination: 'python/fairbeam', extension: '.py' },
     { prefix: 'python/models/', destination: 'models', extension: '.py' },
+    // the 867 MHz example designs: read-only sources of their examples (tauri.conf.json resources)
+    { prefix: 'examples/designs/', destination: 'models', extension: '_867.design.json' },
     { prefix: 'python/templates/', destination: 'templates', extension: '.py' },
     { prefix: 'public/projects/', destination: 'projects' },
   ];

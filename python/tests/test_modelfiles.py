@@ -140,6 +140,56 @@ class Files(unittest.TestCase):
             modelfiles.save_model(self.models, self.hist, "dipole", "x = 2\n", h)
         self.assertEqual(cm.exception.status, 403)
 
+    def test_bundled_example_ids_are_reserved(self):
+        # Start named a design "Patch antenna": patch_antenna is the bundled example's id, so the
+        # file would be read-only from the start. Refused up front, whether or not the example's
+        # file is in the folder, for designs and models, Python examples and example designs.
+        from fairbeam.design import template_design
+        self.assertFalse((self.models / "patch_antenna.py").exists())
+        for model_id in ("patch_antenna", "yagi_867"):
+            with self.subTest(model_id):
+                with self.assertRaises(modelfiles.ModelFileError) as cm:
+                    modelfiles.create_design(self.models, model_id, template_design("patch", "x", "Patch antenna"))
+                self.assertEqual((cm.exception.status, cm.exception.extra["fields"]), (409, {"id": "reserved for a bundled example"}))
+                with self.assertRaises(modelfiles.ModelFileError) as cm:
+                    modelfiles.create_model(self.models, model_id, "MODEL = {}\n", None)
+                self.assertEqual(cm.exception.status, 409)
+                self.assertEqual(list(self.models.iterdir()), [])
+        # a free id with a suffix is fine, and editable
+        modelfiles.create_design(self.models, "patch_antenna_2", template_design("patch", "x", "Patch antenna"))
+        record = modelfiles.read_design_file(self.models, "patch_antenna_2")
+        self.assertFalse(record["readonly"])
+        modelfiles.save_design(self.models, self.hist, "patch_antenna_2", {**record["design"], "params": record["design"]["params"]}, record["hash"])
+        # the TS mirror for Start and Save As (src/lib/designId.ts) lists the same ids
+        import re
+        mirror = (HERE.parents[1] / "src" / "lib" / "designId.ts").read_text(encoding="utf-8")
+        listed = re.search(r"BUNDLED_EXAMPLE_IDS = \[([^\]]*)\]", mirror)
+        self.assertIsNotNone(listed)
+        self.assertEqual(set(re.findall(r'"([a-z0-9_]+)"', listed.group(1))), set(modelfiles.BUNDLED))
+
+    def test_example_designs_are_readonly_and_older_user_designs_stay_editable(self):
+        from fairbeam.design import template_design
+        bundled = HERE.parents[1] / "examples" / "designs" / "yagi_867.design.json"
+        shutil.copy(bundled, self.models / "yagi_867.design.json")
+        record = modelfiles.read_design_file(self.models, "yagi_867")
+        self.assertTrue(record["readonly"])
+        self.assertTrue(modelfiles.is_readonly_file("yagi_867.design.json"))
+        for action in (lambda: modelfiles.save_design(self.models, self.hist, "yagi_867", record["design"], record["hash"]),
+                       lambda: modelfiles.delete_design(self.models, self.hist, "yagi_867")):
+            with self.assertRaises(modelfiles.ModelFileError) as cm:
+                action()
+            self.assertEqual(cm.exception.status, 403)
+        # a design saved under a bundled model's id before the ids were reserved is the user's own
+        legacy = template_design("patch", "patch-antenna", "Patch antenna")
+        (self.models / "patch_antenna.design.json").write_text(json.dumps(legacy), encoding="utf-8")
+        record = modelfiles.read_design_file(self.models, "patch_antenna")
+        self.assertFalse(record["readonly"])
+        self.assertFalse(modelfiles.is_readonly_file("patch_antenna.design.json"))
+        self.assertTrue(modelfiles.is_readonly_file("patch_antenna.py"))
+        changed = {**record["design"], "model": {**record["design"]["model"], "name": "Patch antenna (mine)"}}
+        saved = modelfiles.save_design(self.models, self.hist, "patch_antenna", changed, record["hash"])
+        self.assertIsNotNone(saved["backup"])
+
 
 class ErrorLines(unittest.TestCase):
     def setUp(self):
@@ -277,6 +327,52 @@ class Api(unittest.TestCase):
         self.assertTrue(restored["validation"]["valid"])
         self.assertEqual([p["key"] for p in restored["validation"]["model"]["params"]][:2], ["post_h", "post_w"])
 
+    def test_reserved_ids_over_the_api(self):
+        before = sorted(p.name for p in self.models.iterdir())
+        for path, body in (("/api/designs", {"id": "patch_antenna", "name": "Patch antenna", "template": "patch"}),
+                           ("/api/designs", {"id": "blade_867", "name": "Blade", "template": "patch"}),
+                           ("/api/models", {"id": "inset_patch", "name": "x", "template": "blank"}),
+                           ("/api/examples/copy", {"from": "dipole", "id": "sierpinski_monopole", "name": "Copy"})):
+            with self.subTest(path=path, id=body["id"]):
+                status, err = self.request("POST", path, body)
+                self.assertEqual(status, 409, err)
+                self.assertEqual(err["fields"], {"id": "reserved for a bundled example"})
+        self.assertEqual(sorted(p.name for p in self.models.iterdir()), before)
+        status, created = self.request("POST", "/api/designs", {"id": "patch_antenna_2", "name": "Patch antenna", "template": "patch"})
+        self.assertEqual(status, 201, created)
+        try:
+            self.assertFalse(created["readonly"])
+            changed = {**created["design"], "model": {**created["design"]["model"], "name": "Patch antenna 2"}}
+            status, saved = self.request("PUT", "/api/designs/patch_antenna_2", {"design": changed, "base_hash": created["hash"]})
+            self.assertEqual(status, 200, saved)
+        finally:
+            (self.models / "patch_antenna_2.design.json").unlink(missing_ok=True)
+
+    def test_example_design_sources_are_listed_read_only_and_copy(self):
+        shutil.copy(HERE.parents[1] / "examples" / "designs" / "sleeve_dipole_867.design.json", self.models)
+        projects = self.app.projects_dir
+        shutil.copy(HERE.parents[1] / "public" / "projects" / "sleeve-dipole-867.json", projects)
+        try:
+            status, body = self.request("GET", "/api/models")
+            self.assertEqual(status, 200)
+            entry = next(m for m in body["models"] if m["key"] == "sleeve_dipole_867")
+            self.assertEqual((entry["kind"], entry["readonly"], entry["model"]["id"]), ("design", True, "sleeve-dipole-867"))
+            self.assertTrue(next(m for m in body["models"] if m["key"] == "dipole")["readonly"])
+            status, result = self.request("POST", "/api/examples/copy", {"from": "sleeve_dipole_867", "id": "my_sleeve",
+                                                                        "name": "My sleeve", "project": "sleeve-dipole-867.json"})
+            self.assertEqual(status, 201, result)
+            copy = modelfiles.read_design_file(self.models, "my_sleeve")
+            self.assertFalse(copy["readonly"])
+            self.assertEqual(copy["design"]["model"]["name"], "My sleeve")
+            self.assertNotIn("README", copy["design"]["model"]["description"])
+            source = modelfiles.read_design_file(self.models, "sleeve_dipole_867")
+            status, _ = self.request("PUT", "/api/designs/sleeve_dipole_867", {"design": copy["design"], "base_hash": source["hash"]})
+            self.assertEqual(status, 403)
+        finally:
+            for name in ("sleeve_dipole_867.design.json", "my_sleeve.design.json"):
+                (self.models / name).unlink(missing_ok=True)
+            (projects / "sleeve-dipole-867.json").unlink(missing_ok=True)
+
     def test_duplicate_and_readonly(self):
         status, src = self.request("GET", "/api/models/dipole/source")
         self.assertEqual(status, 200)
@@ -381,7 +477,7 @@ class Api(unittest.TestCase):
         from fairbeam.design import template_design
         modelfiles.create_design(self.models, "demo_design", template_design("patch", "demo-design", "Demo"))
         original = (self.models / "demo_design.design.json").read_bytes()
-        with mock.patch.object(modelfiles, "BUNDLED", modelfiles.BUNDLED | {"demo_design"}):
+        with mock.patch.object(modelfiles, "BUNDLED_DESIGNS", modelfiles.BUNDLED_DESIGNS | {"demo_design"}):
             status, result = self.request("POST", "/api/examples/copy",
                                           {"from": "demo_design", "id": "design_copy", "name": "Design Copy"})
         self.assertEqual(status, 201, result)
@@ -403,7 +499,7 @@ class Api(unittest.TestCase):
             self.assertEqual(status, 201, result)
             self.assertEqual(result["kind"], "design")
             design = modelfiles.read_design_file(self.models, "dipole_selected")["design"]
-            self.assertIn("dipole.json", design["model"]["description"])
+            self.assertIn("dipole.json", " ".join(n["text"] for n in design["model"]["conversion"]["notes"]))
             bundle = json.loads(source.read_text(encoding="utf-8"))
             expected = {p["key"]: p["value"] for p in bundle["model"]["params"] if isinstance(p["value"], (int, float))}
             self.assertEqual(design["mesh"]["mode"], "manual")
@@ -415,7 +511,7 @@ class Api(unittest.TestCase):
                 if key in carried:
                     self.assertEqual(carried[key], value)
                 else:
-                    self.assertIn(f"{key}={value}", design["model"]["description"])
+                    self.assertIn(f"{key}={value}", " ".join(n["text"] for n in design["model"]["conversion"]["notes"]))
             status, preview = self.request("POST", "/api/examples/conversion-preview",
                                            {"from": "dipole", "project": "dipole.json"})
             self.assertEqual(status, 200, preview)

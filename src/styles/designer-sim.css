@@ -45,8 +45,6 @@
 .rdk-compare-control { position: relative; }
 .rdk-compare-popover { position: fixed; z-index: 30; display: grid; gap: var(--al-space-1); width: min(320px, calc(100vw - 16px)); max-height: min(280px, calc(100vh - 16px)); overflow: auto; padding: var(--al-space-2) var(--al-space-3); border: 1px solid var(--al-border); border-radius: var(--al-radius); background: var(--al-surface); box-shadow: var(--al-shadow-pop); font-size: var(--al-text-xs); }
 .rdk-compare-popover label { display: flex; gap: var(--al-space-2); align-items: center; padding: 2px 0; }
-.rdk-action-feedback { display: inline-flex; align-items: center; gap: var(--al-space-1); font-size: var(--al-text-xs); color: var(--al-text-2); }
-.rdk-action-feedback.is-problem { color: var(--al-warn); }
 .rdk-copy.copied { color: var(--al-good); }
 .rdk-run-chart { min-height: 0; min-width: 0; position: relative; }
 .rdk-phases { display: flex; flex-wrap: wrap; gap: 2px; margin: 0; padding: 0; list-style: none; font-size: var(--al-text-xs); }

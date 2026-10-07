@@ -26,7 +26,8 @@ import { efficiencyIssue, efficiencyWarningUi } from "../lib/runText";
 import { efficiencyData, effectiveQuantity, farfieldSummary, QUANTITY_LABEL, quantityGrid, quantityMax, toDb, type PortEfficiency } from "../lib/farfieldQuantity";
 import { efficiencyUnit, patternQuantity, setEfficiencyUnit } from "../lib/patternQuantityStore";
 import { lobeText, PatternQuantitySelect, quantityFallbackNote } from "../components/FarfieldCard";
-import { downloadMessage, revealDownloadedFile, type DownloadResult } from "../lib/download";
+import type { DownloadResult } from "../lib/download";
+import { downloadToast } from "../lib/toast";
 import { isTerminal } from "../runner/api";
 import { clearDesignResult, designJob, designResult } from "../runner/designRun";
 import type { Bundle } from "../types";
@@ -471,10 +472,6 @@ export function ResultBody(props: { view: MainResultView; b: Bundle; format: Res
 export function ResultToolbar(props: { view: MainResultView }) {
   let bar!: HTMLDivElement;
   const barSize = useSize(() => bar); // a narrow bar folds its labelled buttons to icons
-  const [dataAction, setDataAction] = createSignal("");
-  // the feedback line: a failure (warning icon and colour), or a saved file (Show in folder)
-  const [problem, setProblem] = createSignal(false);
-  const [savedPath, setSavedPath] = createSignal<string | null>(null);
   const [openingResult, setOpeningResult] = createSignal<string | null>(null);
   const [failedResult, setFailedResult] = createSignal<string | null>(null);
   const openForeignResult = async (file: string) => {
@@ -519,24 +516,15 @@ export function ResultToolbar(props: { view: MainResultView }) {
     const names = traceLabels(good.map((x) => x.bundle), good.map((x) => runLabel(x.file)));
     return Object.fromEntries(good.map((x, i) => [x.file, `${runShortLabel(x.file)} · ${names[i]}`]));
   });
-  let feedbackTimer: ReturnType<typeof setTimeout> | undefined;
-  // the Copy data button itself says "Copied" for a moment; failures go to the feedback line
+  // the Copy data button itself says "Copied" for a moment; failures, limits and downloads are
+  // toasts (lib/toast.ts): one message per action, shown once and outside the layout
   const [copied, setCopied] = createSignal(false);
   let copiedTimer: ReturnType<typeof setTimeout> | undefined;
   const flashCopied = () => { clearTimeout(copiedTimer); setCopied(true); copiedTimer = setTimeout(() => setCopied(false), 1600); };
-  // a saved file's "Saved to … · Show in folder" stays long enough to click
-  const feedback = (message: string, ms = 3500, failed = false, path: string | null = null) => {
-    clearTimeout(feedbackTimer);
-    exportNotice(message);
-    setDataAction(message); setProblem(failed); setSavedPath(path);
-    feedbackTimer = setTimeout(() => { setDataAction(""); setProblem(false); setSavedPath(null); }, ms);
-  };
-  const saved = (result: DownloadResult) => {
-    if (result.status === "saved" && result.path) feedback(t("results.toolbar.savedTo", { path: result.path }), 30_000, false, result.path);
-    else feedback(downloadMessage(result), 3500, result.status === "failed" || result.status === "cancelled");
-  };
-  const toggleCompare = (file: string) => { if (!selectRun(file, true, "main")) feedback(t("results.toolbar.compareLimit", { count: MAX_COMPARE }), 3500, true); };
-  onCleanup(() => { clearTimeout(feedbackTimer); clearTimeout(copiedTimer); });
+  const feedback = (message: string, failed = false) => exportNotice(message, failed ? { tone: "error" } : undefined);
+  const saved = (result: DownloadResult) => { downloadToast(result); };
+  const toggleCompare = (file: string) => { if (!selectRun(file, true, "main")) feedback(t("results.toolbar.compareLimit", { count: MAX_COMPARE })); };
+  onCleanup(() => { clearTimeout(copiedTimer); });
   // Copy data and CSV follow the plot (the picked S_ij, dB or phase, the Smith port) and name
   // compared runs by their full run labels
   const dataOptions = (runs?: { file: string }[]): ResultDataOptions => ({
@@ -567,8 +555,8 @@ export function ResultToolbar(props: { view: MainResultView }) {
       const frequency = resultFocus()?.f, options = dataOptions(selectedRuns().map(file => ({ file })));
       const runs = await comparedBundles(run);
       const result = await copyResultData(run.bundle, props.view, frequency, runs, options);
-      if (result.ok) flashCopied(); else feedback(t("results.toolbar.copyFailed", { error: result.message }), 3500, true);
-    } catch (error) { feedback(t("results.toolbar.copyFailed", { error: error instanceof Error ? error.message : String(error) }), 3500, true); }
+      if (result.ok) flashCopied(); else feedback(t("results.toolbar.copyFailed", { error: result.message }), true);
+    } catch (error) { feedback(t("results.toolbar.copyFailed", { error: error instanceof Error ? error.message : String(error) }), true); }
   };
   const exportData = async () => {
     const run = designResult();
@@ -577,7 +565,7 @@ export function ResultToolbar(props: { view: MainResultView }) {
       const frequency = resultFocus()?.f, options = dataOptions(selectedRuns().map(file => ({ file })));
       const runs = await comparedBundles(run);
       saved(await exportResultCsv(run.bundle, props.view, `${baseName(run.file)}-${props.view}.csv`, frequency, runs, options));
-    } catch (error) { feedback(error instanceof Error ? error.message : t("results.toolbar.exportFailed"), 3500, true); }
+    } catch (error) { feedback(error instanceof Error ? error.message : t("results.toolbar.exportFailed"), true); }
   };
   const exportTouchstone = async () => {
     const run = designResult();
@@ -585,7 +573,7 @@ export function ResultToolbar(props: { view: MainResultView }) {
     try {
       const runs = await comparedBundles(run);
       saved(await exportResultTouchstone(run.bundle, baseName(run.file), runs));
-    } catch (error) { feedback(t("results.toolbar.touchstoneFailed", { error: error instanceof Error ? error.message : String(error) }), 3500, true); }
+    } catch (error) { feedback(t("results.toolbar.touchstoneFailed", { error: error instanceof Error ? error.message : String(error) }), true); }
   };
   onMount(()=> {
     const plot=()=>bar.closest(".dw-result")?.querySelector<HTMLElement>(".dw-result-plot")??null;
@@ -692,17 +680,6 @@ export function ResultToolbar(props: { view: MainResultView }) {
       <button class="btn btn-ghost btn-sm" onClick={exportData} title={t("results.toolbar.csvTitle")}><Download size={14} aria-hidden="true" /> CSV</button>
       <Show when={designResult()?.bundle.results && props.view !== "summary"}>
         <button class="btn btn-ghost btn-sm" onClick={exportTouchstone} title={t("results.toolbar.touchstoneTitle")}><Download size={14} aria-hidden="true" /> Touchstone</button>
-      </Show>
-      <Show when={dataAction()}>
-        {/* Neutral feedback; failures use the warning icon and colour. */}
-        <span class="rdk-action-feedback" classList={{ "is-problem": problem() }} role="status" aria-live="polite">
-          <Show when={problem()}><TriangleAlert size={12} aria-hidden="true" /></Show>
-          {dataAction()}
-          <Show when={savedPath()}>{(path) => (
-            <button class="linklike" onClick={() => void revealDownloadedFile(path())
-              .catch((error) => feedback(t("results.toolbar.showInFolderFailed", { error: String(error) }), 3500, true))}>{t("results.toolbar.showInFolder")}</button>
-          )}</Show>
-        </span>
       </Show>
       <Show when={!running()}>
         <button class="icon-btn icon-btn-sm dw-result-close" onClick={clearDesignResult} aria-label={t("results.toolbar.closeRun")} title={t("results.toolbar.closeRunTitle")}><X size={13} /></button>

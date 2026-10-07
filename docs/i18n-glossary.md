@@ -44,12 +44,13 @@ Turkish students and Teknofest teams are welcome.
 | English | Türkçe | Note |
 |---|---|---|
 | Start (screen) | Ana ekran | "Başlangıç" is only the start of a range, a sweep or a port (the coordinate); a starting design is a "şablon" and a run setup choice a "hazır ayar" (below), never "başlangıç" |
+| Home (ribbon tab) | Giriş | as in the Turkish Office ribbon; it holds the "Ana ekran" button, so the tab never repeats that name |
 | 3D view / 2D-3D | 3B görünüm / 2B/3B | "3B" everywhere; "3D" stays only in file or product names |
 | Design / the designer | Tasarım / tasarımcı | |
 | Examples | Örnekler | |
 | Results | Sonuçlar | tab, tree folder, dock; "2B/3B Sonuçlar" is the tree's field-map folder |
 | Post (ribbon tab, run step) | Son işlem | processing after the solver |
-| Result file (a run's saved `.json`) | Sonuç dosyası | what "Open result file…" opens; "Proje" is no longer used in the interface (see UI terms) |
+| Result file (a run's saved `.json`) | Sonuç dosyası | what "Open result or design file…" opens (a design file becomes a new design); "Proje" is no longer used in the interface (see UI terms) |
 | Workspace (folder) | Çalışma klasörü / çalışma alanı | |
 | Ribbon | Şerit | as in Office |
 | Tab | Sekme | |
@@ -67,8 +68,9 @@ Turkish students and Teknofest teams are welcome.
 | Save / Save As… | Kaydet / Farklı Kaydet… | |
 | Open / Close | Aç / Kapat | |
 | Import / Export | İçe aktar / Dışa aktar | |
-| Package | Paket | |
+| Export package (the zip of a result: header button, dialog title, ribbon tooltip) | Paketi dışa aktar | one name everywhere; the ribbon button may use the short form "Paket" when its tooltip says "Paketi dışa aktar" |
 | Preview | Önizleme | "Mesh önizlemesi" (not "Önizleme mesh'i") |
+| Rendered (the View toggle) / Render image… / Rendered image (PNG)… | Render / Render görüntüsü… / Render görüntüsü (PNG)… | one term for the feature; its ribbon group is "Render", apart from the "Görünüm" tab |
 | Run (verb / button, noun, list) | Çalıştır / Çalıştırma / Çalıştırmalar | one term for a simulation run, in every text ("Bu çalıştırma", "yeniden çalıştırın", the Çalıştırmalar tab); "koşu" and "koşturmak" are not used. Its saved file is the result file |
 | Job | İş | |
 | Run server | Çalıştırma sunucusu | `fairbeam serve` |
@@ -84,6 +86,7 @@ Turkish students and Teknofest teams are welcome.
 |---|---|---|
 | Component (a group of solids) | Bileşen | the tree's folders |
 | Solid (a named part with one material) | Katı | "part" and "parça" are no longer used in the interface |
+| Solids (the tree heading over the solids and their components) | Katılar | the heading names its rows, like the Examples panel |
 | Shape / primitive | Şekil | one brick, cylinder, polygon… inside a solid |
 | Brick | Kutu | |
 | Cylinder / Sphere / Cone / Torus | Silindir / Küre / Koni / Torus | |
@@ -125,8 +128,9 @@ Turkish students and Teknofest teams are welcome.
 | Frequency / band | Frekans / bant | |
 | Bandwidth | Bant genişliği | |
 | Boundary conditions | Sınır koşulları | PML, PEC, PMC, MUR stay |
+| Mur absorbing boundary | Mur emici sınır | the Examples solver card; never "Mur ABC" |
 | Mesh / mesh line / cell | Mesh / mesh çizgisi / hücre | "ağ" is understood, "mesh" is what engineers say |
-| Cells per wavelength | Dalga boyu başına hücre | |
+| Cells per wavelength (at f max) / Cells / λ | Dalga boyu başına hücre (f max'ta) / Hücre / λ | one mesh-density term; the short form is for the ribbon and tables |
 | Mesh convergence | Mesh yakınsaması | |
 | Run limit (mesh convergence: most densities run) / Within tolerance | Çalıştırma sınırı / Tolerans içinde | "Maximum runs" and "Within" before |
 | End criterion | Durdurma ölçütü | energy decay in dB |
@@ -134,6 +138,7 @@ Turkish students and Teknofest teams are welcome.
 | Energy decay | Enerji sönümü | |
 | Parameter sweep | Parametre taraması | |
 | Optimization / optimizer / goal | Optimizasyon / optimizasyon aracı / hedef | |
+| Secant (method) | Sekant | "Otomatik (Sekant)"; never "secant" or "Kesen" |
 | Monitor / field plane | Monitör / alan düzlemi | |
 | Checks (the list, dock tab, status) | Denetimler | the feature; "Tasarım denetimleri" in running text |
 | to check (user instruction) | kontrol edin | "denetle" only where the app checks something (buttons, progress) or in fixed menu names (Güncellemeleri denetle) |
@@ -175,8 +180,9 @@ The English interface uses one word per thing. The Turkish texts follow the same
 |---|---|---|---|
 | The editable model file (`*.design.json`) | design: "New design", "Close design", "Your designs", "Open as new design…", "Design ID" | project | tasarım |
 | One simulation and what it produced | run: "Runs" tab, "Compare runs", "Run server" | project, simulation cell | çalıştırma |
-| The saved `.json` of a run | result file: "Open result file…", "Result file" | project bundle, project | sonuç dosyası |
+| The saved `.json` of a run | result file: "Open result or design file…", "Result file" | project bundle, project | sonuç dosyası |
 | A bundled read-only design with results | example: "Example: Patch antenna", "Open as new design…" | example project | örnek |
+| The copy action on an example (app, docs and website) | "Open as new design…" | Open as new project | Yeni tasarım olarak aç |
 | Parameter sweep (dialog title, ribbon button and docs) | "Parameter sweep", sentence case | Parametric sweep, Parameter Sweep | parametre taraması |
 | The size of a sweep | runs ("12 runs · max 500"); mesh "cells" are only mesh cells | simulation cells | çalıştırma |
 | Check button of the sweep dialog | "Validate" | Check (it repeats the live run count) | Doğrula |
@@ -200,6 +206,11 @@ and `src/designer/checks.ts`, not here.
   menus (`src-tauri/src/i18n.rs`) and the settings dialog names are the source for "Yardım › …" and
   "Ayarlar › Genel › …". `scripts/check-i18n.mjs` cannot verify these; re-read them when a label changes.
 - "Denetimler" is the Checks list; "kontrol edin" is the instruction "check X"; "kontroller" are UI controls.
+- Tooltips and help texts address the user with the polite imperative ("seçin", "kaydedin", "açın");
+  button and menu labels stay bare imperatives ("Kaydet", "Aç"), and so does an icon button's name.
+- A criterion and its value never break apart: a no-break space follows "≤" and separates a number from
+  its unit ("≤ −60 dB"). A timestep count is a count ("29.073 zaman adımından sonra"), never an ordinal
+  ("29.073. zaman adımında" reads as one number with a point).
 - Numbers shown as text use the decimal comma; lists of coordinates and frequencies then separate with
   a semicolon ("0,5; 1,2; 3"), so a comma is never both a decimal and a separator.
 

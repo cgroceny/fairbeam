@@ -152,7 +152,9 @@ export function InlineParam(props: { ask: ParamAsk; onCreated?: () => void }) {
   };
   return <div class="param-create" onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); e.stopPropagation(); submit(); } }}>
     <span><WithKey id="newParam.inline" name={props.ask.key} bold /></span>
+    {/* wide enough for its whole placeholder in the UI language ("Değer ya da ifade"), never wider than the row */}
     <input autocomplete="off" class="rp-input" aria-label={t("newParam.inlineAria", { key: props.ask.key })} value={value()}
+      style={{ "min-width": `min(${t("newParam.inlinePlaceholder").length + 3}ch, 100%)` }}
       aria-invalid={tried() && !!result().error} placeholder={t("newParam.inlinePlaceholder")} onInput={(e) => setValue(e.currentTarget.value)} />
     <span>{props.ask.unit}</span><button type="button" class="btn btn-sm" onClick={submit}>{t("newParam.create")}</button>
     <Show when={tried() && result().error}><span class="dz-bad" role="alert">{result().error}</span></Show>

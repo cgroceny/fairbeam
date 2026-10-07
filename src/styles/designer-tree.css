@@ -85,6 +85,8 @@
   font-size: var(--al-text-xs); font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: var(--al-text-3);
 }
 .nt-section .dz-node-sub { text-transform: none; letter-spacing: 0; font-weight: 400; }
+/* an empty section: "none yet" and an info icon; the whole hint is the row's tooltip and description */
+.nt-section .dz-node-sub .nt-hint-icon { width: 12px; height: 12px; margin-left: var(--al-space-1); vertical-align: -2px; color: var(--al-text-3); }
 .nt-section:first-child { margin-top: 0; border-top: 0; }
 /* a run row with its headline numbers: they wrap onto a second line under the name, past the twisty and icon */
 .nt-row.nt-has-metrics { height: auto; flex-wrap: wrap; padding-bottom: 3px; }

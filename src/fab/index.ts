@@ -9,11 +9,14 @@ import { gerberCopper, gerberProfile } from "./gerber.ts";
 import { excellon } from "./excellon.ts";
 import { dxf, regionRings } from "./dxf.ts";
 import { regionArea } from "./polygon.ts";
+import { APP_VERSION } from "../lib/appVersion.ts";
+import { designStem } from "../lib/exportNames.ts";
 
 export { fabModel, DEFAULT_FAB_OPTIONS, type FabModel, type FabOptions } from "./layers.ts";
 
-/** Fairbeam version written into the X2 GenerationSoftware attribute (package.json) */
-export const FAB_VERSION = "0.1.0";
+/** Fairbeam version written into the X2 GenerationSoftware attribute, the drill header and the README: the
+ * running app's (package.json), which generates the files now, whatever build wrote the bundle */
+export const FAB_VERSION = APP_VERSION;
 
 export interface FabFile {
   path: string;
@@ -21,7 +24,6 @@ export interface FabFile {
   data: string;
 }
 
-const safe = (s: string) => s.replace(/[^A-Za-z0-9_-]+/g, "_") || "board";
 const r3 = (v: number) => Number(v.toFixed(3));
 const r4 = (v: number) => Number(v.toFixed(4));
 
@@ -35,7 +37,7 @@ export function isoLocal(d: Date): string {
 
 /** Stable file names of the set (without the fab/ prefix). */
 export function fabNames(b: Bundle, m: FabModel) {
-  const id = safe(b.model.id);
+  const id = designStem(b.model.id, "board");
   return {
     copper: (layer: string) => `${id}-${layer}.gbr`,
     profile: `${id}-Edge_Cuts.gbr`,
@@ -89,7 +91,7 @@ export function fabReadme(b: Bundle, m: FabModel, files: FabFile[], created: str
   const [x0, y0, x1, y1] = m.board;
   const L: string[] = [];
   const h = (t: string) => L.push("", t, "-".repeat(t.length));
-  L.push(`Fabrication files (preview): ${b.name}`, `Model ${b.model.id}, exported ${created} by Fairbeam ${FAB_VERSION}`);
+  L.push(`Fabrication files: ${b.name} (a preview feature of Fairbeam)`, `Model ${b.model.id}, exported ${created} by Fairbeam ${FAB_VERSION}`);
   L.push("", "READ THIS FIRST", "These files are generated from the simulation model. The simulation treats copper as a", "zero-thickness perfect conductor. Clearances, minimum track/gap, tolerances, the connector", "footprint and the stack-up must be checked by you against your fab's rules. Open every", "file in a Gerber viewer (e.g. KiCad GerbView) before ordering. No solder mask, silkscreen", "or paste layers are generated.");
   h("Board");
   L.push(`Outline:       ${r3(x1 - x0)} x ${r3(y1 - y0)} mm (x ${r3(x0)} … ${r3(x1)}, y ${r3(y0)} … ${r3(y1)}; model coordinates, mm)`);

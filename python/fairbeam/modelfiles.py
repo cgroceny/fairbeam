@@ -2,8 +2,9 @@
 concurrency, keep a version history.
 
 Used by the run server (``server.py``); no openEMS import here. Model files live in one folder
-(``python/models``); nothing outside it is ever written. The bundled demo models are read-only
-in the editor (duplicate them to change them).
+(``python/models``); nothing outside it is ever written. The bundled examples' sources are
+read-only in the editor (duplicate them to change them), and their ids are reserved: no new model
+or design may take one.
 """
 
 from __future__ import annotations
@@ -22,17 +23,29 @@ ID_RE = re.compile(r"^[a-z][a-z0-9_]{1,40}$")
 # extension), so no platform accepts them as ids (a model folder may move between systems)
 RESERVED_ID_RE = re.compile(r"^(con|prn|aux|nul|com[0-9]|lpt[0-9])$")
 RESERVED_ID_MSG = "a name Windows reserves for devices (con, prn, aux, nul, com0–9, lpt0–9)"
-BUNDLED = frozenset({
+# The sources of the bundled examples, copied into the workspace's models folder: Python models
+# (python/models/<id>.py) and the 867 MHz example designs (examples/designs/<id>.design.json).
+BUNDLED_MODELS = frozenset({
     "branchline_coupler", "dipole", "helix_axial", "inset_patch", "lowpass_stepped",
     "microstrip_line", "minkowski_patch", "patch_antenna", "patch_array_2x1",
     "patch_array_4x1", "pyramidal_horn", "sierpinski_monopole", "wilkinson_divider",
 })
+BUNDLED_DESIGNS = frozenset({
+    "blade_867", "collinear_867", "meander_dipole_867", "sleeve_dipole_867", "wideband_dipole_867", "yagi_867",
+})
+# Every id a bundled example uses (src/lib/designId.ts BUNDLED_EXAMPLE_IDS mirrors it). A model and a
+# design share one key space, so no new file of either kind may take one, whether or not the
+# example's file is in the models folder at the moment (it comes back with the next start or update).
+BUNDLED = BUNDLED_MODELS | BUNDLED_DESIGNS
+RESERVED_EXAMPLE_MSG = "reserved for a bundled example"
 BUNDLED_PROJECT_FILES = frozenset({
     "branchline-coupler.json", "dipole.json", "helix-axial.json", "inset-patch.json",
     "lowpass-stepped.json", "microstrip-line.json", "minkowski-patch.json", "patch-antenna.json",
     "patch-array-2x1.json", "patch-array-4x1.json", "pyramidal-horn.json",
     "sierpinski-monopole--iterations-0.json", "sierpinski-monopole--iterations-3.json",
     "wilkinson-divider.json",
+    "blade-867.json", "collinear-867.json", "meander-dipole-867.json", "sleeve-dipole-867.json",
+    "wideband-dipole-867.json", "yagi-867.json",
 })
 MAX_SOURCE = 256 * 1024
 HISTORY_KEEP = 50
@@ -87,8 +100,26 @@ def _taken(models_dir: Path, model_id: str) -> bool:
     return model_path(models_dir, model_id).exists() or design_path(models_dir, model_id).exists()
 
 
-def is_readonly(model_id: str) -> bool:
-    return model_id in BUNDLED
+def check_free(models_dir: Path, model_id: str) -> None:
+    """Refuse an id for a new model or design (409): a bundled example's id, or one in use."""
+    if model_id in BUNDLED:
+        raise ModelFileError(409, f"{model_id} is {RESERVED_EXAMPLE_MSG}", fields={"id": RESERVED_EXAMPLE_MSG})
+    if _taken(models_dir, model_id):
+        raise ModelFileError(409, f"a model named {model_id} already exists", fields={"id": "already exists"})
+
+
+def is_readonly(model_id: str, design: bool = False) -> bool:
+    """A bundled example's own file: its Python model (``design`` False) or one of the example
+    designs. A design made with a bundled model's id before the ids were reserved stays editable."""
+    if design:
+        return model_id in BUNDLED_DESIGNS
+    return model_id in BUNDLED and model_id not in BUNDLED_DESIGNS
+
+
+def is_readonly_file(name: str) -> bool:
+    """is_readonly for a file name of the models folder (``dipole.py``, ``yagi_867.design.json``)."""
+    design = name.endswith(DESIGN_SUFFIX)
+    return is_readonly(name[: -len(DESIGN_SUFFIX)] if design else name.rsplit(".", 1)[0], design)
 
 
 def set_model_identity(source: str, model_id: str, name: str | None) -> str:
@@ -156,8 +187,7 @@ def _replace(tmp: Path, path: Path):
 
 def create_model(models_dir: Path, model_id: str, source: str, name: str | None) -> Path:
     path = model_path(models_dir, model_id)
-    if _taken(models_dir, model_id):
-        raise ModelFileError(409, f"a model named {model_id} already exists", fields={"id": "already exists"})
+    check_free(models_dir, model_id)
     try:
         text = set_model_identity(source, model_id, name)
     except SyntaxError:
@@ -271,8 +301,7 @@ def _design_text(design) -> str:
 
 def create_design(models_dir: Path, model_id: str, design: dict) -> Path:
     path = design_path(models_dir, model_id)
-    if _taken(models_dir, model_id):
-        raise ModelFileError(409, f"a model named {model_id} already exists", fields={"id": "already exists"})
+    check_free(models_dir, model_id)
     design = {**design, "model": {**design.get("model", {}), "id": model_id.replace("_", "-")}}
     try:
         _write_atomic(path, _design_text(design), exclusive=True)
@@ -290,7 +319,8 @@ def read_design_file(models_dir: Path, model_id: str) -> dict:
         design = json.loads(text)
     except json.JSONDecodeError as e:
         raise ModelFileError(422, f"{path.name} is not valid JSON: {e.msg} (line {e.lineno})") from None
-    return {"id": model_id, "file": path.name, "design": design, "hash": source_hash(text), "readonly": False}
+    return {"id": model_id, "file": path.name, "design": design, "hash": source_hash(text),
+            "readonly": is_readonly(model_id, design=True)}
 
 
 def save_design(models_dir: Path, history_dir: Path, model_id: str, design, base_hash) -> dict:
@@ -298,7 +328,7 @@ def save_design(models_dir: Path, history_dir: Path, model_id: str, design, base
     path = design_path(models_dir, model_id)
     if not path.exists():
         raise ModelFileError(404, f"no design {model_id}")
-    if is_readonly(model_id):
+    if is_readonly(model_id, design=True):
         raise ModelFileError(403, f"{model_id} is a bundled example and read-only; duplicate it to edit")
     text = _design_text(design)
     current = path.read_text(encoding="utf-8")
@@ -318,7 +348,7 @@ def delete_design(models_dir: Path, history_dir: Path, model_id: str) -> dict:
     path = design_path(models_dir, model_id)
     if not path.exists():
         raise ModelFileError(404, f"no design {model_id}")
-    if is_readonly(model_id):
+    if is_readonly(model_id, design=True):
         raise ModelFileError(403, f"{model_id} is a bundled example and read-only")
     folder = Path(history_dir) / check_id(model_id)
     folder.mkdir(parents=True, exist_ok=True)

@@ -244,8 +244,9 @@ export function renderWithBlender(options: RenderOptions, design: Design | null,
   };
 }
 
-/** Ask the server to open the images' folder, or the saved .blend in Blender (GUI), on this computer. */
-export function openRenderFolder(design: string): Promise<{ ok: true }> {
+/** Ask the server to open the images' folder (its answer: the folder's absolute path), or the saved .blend in Blender
+ *  (GUI), on the computer it runs on. */
+export function openRenderFolder(design: string): Promise<{ id: string; dir: string }> {
   return api("POST", `/renders/${encodeURIComponent(design)}/open`, { what: "folder" });
 }
 export function openBlendInBlender(design: string, file: string, blenderPath = ""): Promise<{ ok: true }> {

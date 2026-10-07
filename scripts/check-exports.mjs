@@ -18,10 +18,17 @@ import { sMatrix } from "../src/lib/sparams.ts";
 import { bandsCsv, parseCsv, patternCsv, signalsCsv, sweepCsv } from "../src/export/csv.ts";
 import { packageFiles, packageName, zipPackage } from "../src/export/package.ts";
 import { reproduceCommand } from "../src/export/report.ts";
+import { fileFormats } from "../src/export/reportPdf.ts";
 import { sweep } from "../src/lib/rf.ts";
 import { reportPages, reportPdf } from "../src/export/reportPdf.ts";
 import { svgPagesToPdf } from "../src/drawing/pdfdoc.ts";
 import { validateBundle } from "../src/lib/validate.ts";
+import { designStem } from "../src/lib/exportNames.ts";
+import { quickBundle } from "../src/designer/geometry.ts";
+import { paramValues } from "../src/designer/expr.ts";
+import { cstMacro, DEFAULT_CST_OPTIONS } from "../src/export/cst.ts";
+import { pngChunks, pngDpi, withPngDpi } from "../src/drawing/png.ts";
+import { zlibSync } from "fflate";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const projects = join(root, "public", "projects");
@@ -216,6 +223,15 @@ for (const entry of index.projects) {
     if (write) writeFileSync(join(outDir, `${stem}_${name}.svg`), r.svg);
     console.log(`  drawing ${name.padEnd(15)} scale ${r.scaleLabel.padEnd(6)} dims ${r.dimensions.join(", ")}`);
   }
+  // the title block: every value whole (a long one is set smaller, the drawing number on two lines if need be)
+  {
+    const tb = technicalDrawing(b, { sheet: "A3", date }).svg;
+    const block = texts(tb.slice(tb.indexOf('class="title-block"')));
+    // a long parameter description may be shortened; an identifier, a name or a number never
+    const cut = block.filter((s) => s.includes("…") && !/^[A-Z][a-z]+ [a-z]/.test(s));
+    check(!cut.length, `${stem} title block`, `a value is cut: ${cut.join(" | ")}`);
+    check(block.includes(`${b.model.id.toUpperCase()}-01`), `${stem} title block`, "the drawing number is not the whole model id");
+  }
   if (stem === "patch-antenna") {
     const r = technicalDrawing(b, { sheet: "A3", date });
     check(r.notes.some((n) => /Ground plane = Substrate/.test(n)), `${stem} notes`, "missing 'Ground plane = Substrate' note");
@@ -299,7 +315,9 @@ for (const entry of index.projects) {
 
   // --- PDF report (pages as SVG, then the vector PDF with embedded IBM Plex Sans)
   const now = new Date(b.created.replace(/(\d{2})(\d{2})$/, "$1:$2"));
-  const ropt = { generated: b.created.slice(0, 16).replace("T", " "), date, pdfDate: now };
+  // the report of a full package lists its files ("Files and formats")
+  const packaged = packageFiles(b, { project: true, readme: true, report: true, data: true, drawings: true, figures: true, cst: true, image: true }, { reportPdf: new Uint8Array(1), drawingPdf: new Uint8Array(1) }, now).map((f) => f.path);
+  const ropt = { generated: b.created.slice(0, 16).replace("T", " "), date, pdfDate: now, files: packaged };
   const pages = reportPages(b, ropt);
   pages.forEach((p, i) => checkSvg(`${stem} report page ${i + 1}`, p, [`Page ${i + 1} / ${pages.length}`]));
   const allText = pages.map((p) => texts(p).join(" ")).join(" ");
@@ -326,7 +344,7 @@ for (const entry of index.projects) {
   const paths = Object.keys(un).map((p) => p.split("/").slice(1).join("/"));
   // port time signals exist for lumped ports only (a waveguide port has no scalar reference impedance)
   const hasSignals = !!b.results.signals?.time_ns;
-  const want = ["README.md", "project.json", "data/s11.s1p", "data/sweep.csv", "data/bands.csv", ...(hasSignals ? ["data/port_signals.csv"] : []), "drawings/drawing_A3.svg", "drawings/drawing_A3.pdf", "drawings/figure.svg", "figures/s11.svg", "figures/zin.svg", "figures/smith.svg", "report.pdf", `cst/${b.model.id}.bas`,
+  const want = ["README.md", "project.json", "data/s11.s1p", "data/sweep.csv", "data/bands.csv", ...(hasSignals ? ["data/port_signals.csv"] : []), "drawings/drawing_A3.svg", "drawings/drawing_A3.pdf", "drawings/figure.svg", "figures/s11.svg", "figures/zin.svg", "figures/smith.svg", "report.pdf", `cst/${designStem(b.model.id)}.bas`,
     ...b.results.farfield.flatMap((_, i, ffs) => [`data/pattern_${ffTag(ffs, i)}.csv`, `figures/pattern_${ffTag(ffs, i)}.svg`])];
   for (const w of want) check(paths.includes(w), `${stem} package`, `missing ${w}`);
   const readme = strFromU8(un[Object.keys(un).find((p) => p.endsWith("README.md"))]);
@@ -355,18 +373,118 @@ for (const entry of index.projects) {
     let files = null;
     try { files = packageFiles(b, all, {}, now); } catch (e) { fail(where, `packageFiles threw: ${e.message}`); }
     if (files) {
-      const bas = files.find((f) => f.path === `cst/${b.model.id}.bas`);
+      const bas = files.find((f) => f.path === `cst/${designStem(b.model.id)}.bas`);
       check(!!bas, where, "the CST macro is still in the package");
       check(!!bas && !bas.data.includes("DiscretePort") && /grouped ports cannot be written as independent CST discrete ports/.test(bas.data), where, "the macro carries no port and says why");
       check(!!bas && /^CST-compatible VBA macro, geometry only/.test(bas.description), where, "the file list describes the macro as geometry only");
       const readme = files.find((f) => f.path === "README.md")?.data ?? "";
-      check(readme.includes(`cst/${b.model.id}.bas`) && readme.includes("geometry only"), where, "the README index says the macro is geometry only");
+      check(readme.includes(`cst/${designStem(b.model.id)}.bas`) && readme.includes("geometry only"), where, "the README index says the macro is geometry only");
       check(JSON.parse(files.find((f) => f.path === "project.json").data).ports[0].group?.members.length === 1, where, "project.json keeps the group");
     }
     const plain = packageFiles(JSON.parse(readFileSync(join(projects, "dipole.json"), "utf8")), all, {}, now).find((f) => f.path.endsWith(".bas"));
     check(!!plain && plain.data.includes("DiscretePort") && plain.description === "CST-compatible VBA macro (default options)", where, "an ungrouped design keeps the default macro with its ports");
     console.log(`grouped-port package: ${files?.length ?? 0} files, CST macro geometry only`);
   }
+}
+
+// --- a design's instant preview (src/designer/geometry.ts quickBundle) exported as it is (Export package of a design
+// without a run, Export > CST macro): the deliverables carry the design's own name, never an internal "(preview)" tag,
+// and every file of one design shares one stem, the workspace id (export_patch.py, export_patch.design.json)
+{
+  const where = "design preview exports";
+  const d = JSON.parse(readFileSync(join(root, "examples", "designs", "ux_inset_patch_24.design.json"), "utf8"));
+  d.model = { ...d.model, id: "export-patch", name: "Export patch" };
+  const v = validateBundle(quickBundle(d, paramValues(d.params).names, null));
+  const b = v.bundle;
+  check(!!b && b.preview === true && b.name === "Export patch", where, `the preview bundle is named after the design (${b?.name})`);
+  if (b) {
+    check(designStem(b.model.id) === "export_patch" && designStem("Patch antenna (v2)") === "Patch_antenna_v2" && designStem("") === "fairbeam", where, "designStem");
+    const now = new Date(2026, 9, 6, 23, 38);
+    const all = { project: true, readme: true, report: true, data: true, drawings: true, figures: true, cst: true, fab: true, image: true };
+    const files = packageFiles(b, all, { reportPdf: new Uint8Array(1), drawingPdf: new Uint8Array(1) }, now);
+    for (const f of files.filter((x) => typeof x.data === "string")) check(!f.data.includes("(preview)"), where, `${f.path} carries "(preview)"`);
+    check(files.some((f) => f.path === "cst/export_patch.bas"), where, `the macro is cst/export_patch.bas (${files.filter((f) => f.path.startsWith("cst/")).map((f) => f.path)})`);
+    const fab = files.filter((f) => f.path.startsWith("fab/") && f.path !== "fab/README.txt");
+    check(fab.length > 0 && fab.every((f) => f.path.startsWith("fab/export_patch-")), where, `fab files share the stem (${fab.map((f) => f.path).join(", ")})`);
+    check(packageName(b, now) === "export_patch_20261006-2338.zip", where, `package name ${packageName(b, now)}`);
+    const drawing = technicalDrawing(b, { sheet: "A3", date: "2026-10-06" }).svg;
+    check(texts(drawing).includes("Export patch") && !drawing.includes("(preview)"), where, "the drawing's title is the design name");
+    const pages = reportPages(b, { generated: "2026-10-06 23:38", date: "2026-10-06" });
+    check(!pages.some((pg) => pg.includes("(preview)")), where, "the PDF report carries (preview)");
+    check(cstMacro(b, DEFAULT_CST_OPTIONS).text.split(/\r?\n/)[0] === "' Export patch", where, "the macro's first line is the design name");
+    console.log(`design preview exports: ${files.length} files named export_patch*, no "(preview)" in any of them`);
+
+    // geometry only: no simulation time stamp anywhere, only "Geometry only: not simulated"; the file lists name only
+    // the files in the zip; every mm value rounded
+    const readme = files.find((f) => f.path === "README.md").data;
+    check(readme.includes("Geometry only: not simulated") && !/simulation ran on/i.test(readme), "geometry-only README", "a simulation time stamp in a geometry-only README");
+    check(!readme.includes("data/s11.s1p") && !readme.includes("figures/"), "geometry-only README", "the README names files that are not in the package");
+    check(!/built-in model layout/.test(readme) && !/-?\d+\.\d{4,}\b(?! mm²)/.test(readme.split("## Mesh")[1].split("## Run")[0]), "geometry-only README", "the Mesh section prints unrounded numbers or the model-layout text");
+    const pdfText = pages.map((pg) => texts(pg).join(" ")).join(" ");
+    check(pdfText.includes("Geometry only: not simulated") && !/Simulated \d{4}-/.test(pdfText), "geometry-only report", "a simulation time stamp in a geometry-only PDF report");
+    check(!pdfText.includes("Files and formats"), "geometry-only report", "a report without its package lists package files");
+    const listed = reportPages(b, { generated: "2026-10-06 23:38", date: "2026-10-06", files: files.map((f) => f.path) }).map((pg) => texts(pg).join(" ")).join(" ");
+    check(listed.includes("Files and formats") && listed.includes("cst/*.bas") && listed.includes("fab/") && !listed.includes("data/s11.s1p") && !listed.includes("figures/"), "geometry-only report", "Files and formats does not follow the package's files");
+    check(fileFormats(["README.md", "report.pdf"]).map((r) => r[0]).join() === "README.md" && fileFormats([]).length === 0, "fileFormats", "rows for files the package lacks");
+    // the Key results box sits within the text margins (18 mm on each side of the A4 page)
+    const box = /<rect x="([\d.]+)" y="[\d.]+" width="([\d.]+)"[^>]*fill="#f4f4f4"/.exec(pages[0]);
+    check(!!box && Number(box[1]) >= 18 - 1e-9 && Number(box[1]) + Number(box[2]) <= 210 - 18 + 1e-9, "report page 1", `the Key results box is outside the text margins (${box?.slice(1)})`);
+  }
+}
+
+// --- a drawing number too long for one line goes on two, whole; a 300 dpi PNG says so (pHYs)
+{
+  const where = "drawing number";
+  const b = validateBundle(JSON.parse(readFileSync(join(projects, "patch-antenna.json"), "utf8"))).bundle;
+  const id = "a-very-long-model-id-for-a-colleagues-patch";
+  const block = texts((() => { const s = technicalDrawing({ ...b, model: { ...b.model, id } }, { sheet: "A3", date: "2026-10-06" }).svg; return s.slice(s.indexOf('class="title-block"')); })());
+  const want = `${id.toUpperCase()}-01`;
+  const i = block.findIndex((s) => want.startsWith(s) && s.length > 4);
+  check(i >= 0 && block[i] + block[i + 1] === want, where, `the number is not split into two whole lines: ${block.slice(Math.max(0, i), i + 2).join(" | ")}`);
+  check(!block.some((s) => s.includes("…")), where, "a value is cut");
+
+  const crc = (bytes) => {
+    let c = 0xffffffff;
+    for (const x of bytes) { c ^= x; for (let k = 0; k < 8; k++) c = c & 1 ? 0xedb88320 ^ (c >>> 1) : c >>> 1; }
+    return (c ^ 0xffffffff) >>> 0;
+  };
+  const chunk = (type, data) => {
+    const body = new Uint8Array([...type].map((ch) => ch.charCodeAt(0)).concat([...data]));
+    const out = new Uint8Array(12 + data.length);
+    const v = new DataView(out.buffer);
+    v.setUint32(0, data.length); out.set(body, 4); v.setUint32(8 + data.length, crc(body));
+    return out;
+  };
+  const ihdr = new Uint8Array(13); new DataView(ihdr.buffer).setUint32(0, 1); new DataView(ihdr.buffer).setUint32(4, 1); ihdr.set([8, 6, 0, 0, 0], 8);
+  const png = new Uint8Array([137, 80, 78, 71, 13, 10, 26, 10, ...chunk("IHDR", ihdr), ...chunk("IDAT", zlibSync(new Uint8Array([0, 255, 0, 0, 255]))), ...chunk("IEND", new Uint8Array(0))]);
+  check(pngDpi(png) === null, "png dpi", "a canvas PNG states no resolution");
+  const at300 = withPngDpi(png, 300);
+  const chunks = pngChunks(at300);
+  check(chunks.map((c) => c.type).join() === "IHDR,pHYs,IDAT,IEND" && chunks.every((c) => c.crcOk), "png dpi", `chunks ${chunks.map((c) => c.type)}`);
+  check(Math.abs(pngDpi(at300) - 300) < 0.01, "png dpi", `300 dpi stated as ${pngDpi(at300)}`);
+  check(pngChunks(withPngDpi(at300, 150)).filter((c) => c.type === "pHYs").length === 1 && Math.abs(pngDpi(withPngDpi(at300, 150)) - 150) < 0.05, "png dpi", "a second call replaces the chunk");
+}
+
+// --- the reproduce command of a design's run: the design file in the workspace, the engine the run used (no thread
+// count for a GPU run), and no text about a fixed model layout
+{
+  const where = "reproduce";
+  const b = validateBundle(JSON.parse(readFileSync(join(projects, "patch-antenna.json"), "utf8"))).bundle;
+  const design = { file: "export_patch.design.json", kind: "design" };
+  const gpu = { ...b, model: { ...b.model, id: "export-patch" }, run: { ...b.run, engine: "gpu", threads: 1 } };
+  const cmd = reproduceCommand(gpu, design);
+  check(cmd.startsWith("fairbeam run '<workspace>/models/export_patch.design.json'") && cmd.includes("--engine gpu") && !cmd.includes("--threads"), where, `GPU design run: ${cmd}`);
+  const cpu = reproduceCommand({ ...gpu, run: { ...b.run, engine: "cpu", threads: 2 } }, design);
+  check(cpu.includes("--threads 2") && !cpu.includes("--engine"), where, `CPU design run: ${cpu}`);
+  check(reproduceCommand(b, { file: "patch_antenna.py", kind: "python" }).startsWith("fairbeam run '<workspace>/models/patch_antenna.py'"), where, "Python model run");
+  const files = packageFiles(gpu, { project: true, readme: true }, { model: design }, new Date(2026, 9, 6, 23, 53));
+  const readme = files.find((f) => f.path === "README.md").data;
+  check(readme.includes(cmd) && !/built-in model layout/.test(readme) && !/threads 1/.test(readme) && readme.includes("GPU engine"), where, "README: the GPU run's command and throughput line");
+  check(!readme.includes("data/s11.s1p"), where, "the README names a Touchstone file the package does not hold");
+  const pdf = reportPages(gpu, { generated: "2026-10-06 23:53", date: "2026-10-06", model: design }).map((pg) => texts(pg).join(" ")).join(" ");
+  check(pdf.includes("export_patch.design.json") && pdf.includes("--engine gpu") && !/threads 1/.test(pdf) && !/built-in model layout/.test(pdf), where, "PDF report: the GPU run's command and solver line");
+  check(!/\d\.\d{6,}/.test(pdf.split("Domain")[1]?.split("Converged")[0] ?? ""), where, "the PDF's Domain line is not rounded");
+  console.log(`reproduce: ${cmd}`);
 }
 
 console.log(`\n${checks} checks, ${failures} failed. Examples in ${outDir}`);

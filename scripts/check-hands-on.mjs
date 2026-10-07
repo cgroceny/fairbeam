@@ -32,19 +32,25 @@ const { m0: store, m1: booleans, m2: colors, m3: runner, m4: start, m5: workspac
   await import(`data:text/javascript;base64,${Buffer.from(chunk.code).toString('base64')}`);
 const source = (path) => readFileSync(`${root}src/${path}`, 'utf8');
 
-// ---- (a) Run a Python model on Start: only the user's own models have a Run panel
+// ---- (a) Run a Python model on Start: the user's own models, then the bundled ones (read-only)
 runner.setModels([
   { key: 'dipole', file: 'dipole.py', kind: 'python', readonly: true, model: { id: 'dipole', name: 'Dipole' }, params: [] },
   { key: 'broken', file: 'broken.py', kind: 'python', error: 'boom', readonly: false, params: [] },
   { key: 'x.design', file: 'x.design.json', kind: 'design', readonly: false, model: { id: 'x', name: 'X' }, params: [] },
   { key: 'mine', file: 'mine.py', kind: 'python', readonly: false, model: { id: 'mine', name: 'Mine' }, params: [] },
 ]);
-assert.deepEqual(start.runnablePythonModels().map((m) => m.key), ['mine'], 'bundled, broken and design entries are not runnable from Start');
-runner.setModels([{ key: 'dipole', file: 'dipole.py', kind: 'python', readonly: true, model: { id: 'dipole', name: 'Dipole' }, params: [] }]);
+assert.deepEqual(start.runnablePythonModels().map((m) => m.key), ['mine', 'dipole'], 'the user\'s model first, then the bundled one; broken and design entries are not listed');
+runner.setModels([]);
 workspace.setAppMode('home');
 await start.runPythonFromStart();
-assert.equal(start.pythonHint(), true, 'no model of the user: Start explains instead of doing nothing');
+assert.equal(start.pythonHint(), true, 'no Python model at all: Start explains instead of doing nothing');
 assert.equal(workspace.appMode(), 'home', 'and stays on Start');
+runner.setModels([{ key: 'dipole', file: 'dipole.py', kind: 'python', readonly: true, model: { id: 'dipole', name: 'Dipole' }, params: [] }]);
+start.setPythonHint(false);
+await start.runPythonFromStart();
+assert.equal(workspace.appMode(), 'home', 'only bundled models: still none is opened by itself');
+assert.match(source('runner/startPython.ts'), /document\.querySelector<HTMLButtonElement>\("#home-python-list \[data-run-python-model\]:not\(:disabled\)"\)/, 'the header button focuses the first listed model');
+assert.match(source('home/Home.tsx'), /<Show when=\{!pythonModels\(\)\.length\} fallback=\{<Show when=\{pythonHint\(\)\}>\s*<p id="home-python-hint" tabIndex=\{-1\} class="muted"/, 'with models, the choose line is plain text, not the highlighted note');
 runner.setModels([
   { key: 'blade', file: 'blade.py', kind: 'python', readonly: false, model: { id: 'blade', name: 'Blade' }, params: [] },
   { key: 'mine', file: 'mine.py', kind: 'python', readonly: false, model: { id: 'mine', name: 'Mine' }, params: [] },

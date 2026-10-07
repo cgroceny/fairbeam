@@ -26,14 +26,14 @@ MODEL = {
 
 PARAMS = [
     Param("length", 40.0, "Line length", "mm", minimum=2, maximum=500),
-    Param("width", 0.0, "Strip width", "mm", "0 = 50 ohm width from the Hammerstad formula", minimum=0, maximum=50),
+    Param("width", 0.0, "Strip width", "mm", "0 = 50 Ω width from the Hammerstad formula", minimum=0, maximum=50),
     Param("sub_h", 0.813, "Substrate thickness", "mm", minimum=0.05, maximum=10),
     Param("eps_r", 3.38, "Substrate permittivity", "", minimum=1, maximum=20),
     Param("tan_d", 0.0027, "Loss tangent", "", minimum=0, maximum=0.2),
     Param("board_w", 20.0, "Board width", "mm", minimum=2, maximum=500),
     Param("strip_cells", 8, "Cells across the strip", "", minimum=1, maximum=16),
     Param("sub_cells", 8, "Cells across the substrate", "", minimum=1, maximum=16),
-    Param("mesh_div", 20, "Max cell = lambda(f_max) / mesh_div", "", minimum=8, maximum=80),
+    Param("mesh_div", 20, "Mesh: cells per λ at f max", "", minimum=8, maximum=80),
     Param("f_min", 0.5, "Band start", "GHz", minimum=0.01),
     Param("f_max", 6.0, "Band stop", "GHz", minimum=0.02),
 ]

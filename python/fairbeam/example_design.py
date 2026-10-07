@@ -5,6 +5,10 @@ bundle's values).  That makes the export faithful to the actual model.  Python e
 be read back, so the example is rebuilt with each parameter moved and every number of the design
 that is an exact linear function of the parameters becomes an expression over them; the rest stay
 numbers, and the parameters that drive nothing are left out.
+
+The copy keeps the example's name for each part (and its label and color), its materials' names
+and its description. What the conversion did is in ``model.conversion`` (shown as the conversion
+notes in the designer's Properties), as notes with a code the app translates.
 """
 
 from __future__ import annotations
@@ -298,9 +302,10 @@ def _read_design(module, values: dict, source_path: Path):
     """Build the example at ``values`` and read it back as the parts of a design.
 
     Returns ``(sim, core)``; ``core`` holds simulation, materials, parts, ports, resistors,
-    far_field and monitors (no model, params or mesh), with plain numbers throughout.  Metals and
-    dielectrics that are identical in the source share one design material (the parts keep their
-    own names)."""
+    far_field and monitors (no model, params or mesh), with plain numbers throughout.  Every metal
+    of the source keeps its own material, named like the source's metal ("patch", "gnd"); identical
+    dielectrics share one design material, named after the first.  The parts keep their names,
+    labels ("Patch", "Ground plane") and colors."""
     try:
         sim = module.build(values)
     except ExampleConversionError:
@@ -323,12 +328,13 @@ def _read_design(module, values: dict, source_path: Path):
         typ = entry["type"]
         if typ in ("Metal", "ConductingSheet"):
             conductor = entry.get("conductor") or {}
-            item = {"name": "metal", "kind": "metal"}
+            # a metal is a part of the source (its CSXCAD property): its own material, named like it
+            item = {"name": entry["name"], "kind": "metal"}
             if conductor.get("conductivity") is not None:
                 item["conductivity"] = str(conductor["conductivity"])
                 if conductor.get("thickness") is not None:
                     item["thickness"] = str(conductor["thickness"])
-            key = ("metal", conductor.get("conductivity"), conductor.get("thickness"))
+            key = ("metal", entry["name"])
         elif typ == "Material":
             m = entry.get("material", {})
             if m.get("dispersion"):
@@ -353,15 +359,20 @@ def _read_design(module, values: dict, source_path: Path):
         else:
             raise ExampleConversionError(f"CSXCAD property type {typ!r} is not representable")
         if key not in shared:
-            # a second, different metal (a lossy one) must not reuse the first one's name
-            if item["kind"] == "metal" and any(m["name"] == item["name"] for m in materials):
-                item["name"] = f"metal {sum(1 for m in materials if m['kind'] == 'metal') + 1}"
+            # material names are unique in a design (a metal and a dielectric of the same name)
+            base, n = item["name"], 2
+            while any(m["name"] == item["name"] for m in materials):
+                item["name"], n = f"{base} {n}", n + 1
             shared[key] = item["name"]
             materials.append(item)
         source_counts[entry["name"]] += 1
         for index, group in enumerate(_group_primitives(entry["primitives"])):
             part = {"name": _unique_split_name(entry["name"], index, used_part_names),
                     "material": shared[key], "primitives": group["primitives"]}
+            if entry.get("label"):
+                part["label"] = entry["label"] if index == 0 else f"{entry['label']} [{index + 1}]"
+            if entry.get("color"):
+                part["color"] = entry["color"]
             if group["transforms"]:
                 part["transforms"] = group["transforms"]
             parts.append(part)
@@ -757,6 +768,12 @@ def _fit_parameters(module, source_path: Path, values: dict, base_core: dict, ba
     return {"expressions": expressions, "carried": carried, "partial": partial, "skipped": skipped}
 
 
+def _note(code: str, text: str, **values) -> dict:
+    """A conversion note: ``code`` names its text in the app (i18n key ``exampleCopy.note.<code>``,
+    filled in with ``values``); ``text`` is the same sentence in English, for any other reader."""
+    return {"code": code, "text": text, **({"values": values} if values else {})}
+
+
 def _convert_example(source_path: Path, model_id: str, name: str,
                      overrides: dict[str, str] | None = None, origin: str | None = None) -> tuple[dict, int, int, dict]:
     """Build a Python example at the selected bundle's values or its defaults."""
@@ -785,8 +802,10 @@ def _convert_example(source_path: Path, model_id: str, name: str,
                 mesh[key] = settings[key]
     else:
         mesh = {"mode": "auto", "cells_per_wavelength": 20}
-    notes = []
-    notes.append("This design uses the example's own mesh lines, rounded to 1e-6 mm.")
+    source_name = origin or source_path.name
+    notes = [_note("source", f"Converted from the bundled example {source_name} ({source_path.name}).",
+                   example=source_name, file=source_path.name),
+             _note("meshLines", "This design uses the example's own mesh lines, rounded to 1e-6 mm.")]
 
     carried, partial, skipped = fit["carried"], fit["partial"], fit["skipped"]
     expressions = fit["expressions"]
@@ -805,22 +824,29 @@ def _convert_example(source_path: Path, model_id: str, name: str,
             params.append(item)
     if carried:
         count = sum(1 for path in expressions if path[0] != "mesh")
-        notes.append(f"Parameters carried from the example: {', '.join(carried)}. {count} coordinates and values that "
-                     "are an exact linear function of them are expressions, so the design can be swept and optimized by them; "
-                     "the other numbers are fixed. Mesh lines follow the geometry they sit on and stretch with it; after a large "
-                     "change of a geometry parameter switch to the automatic mesh.")
+        notes.append(_note("carried", f"Parameters carried from the example: {', '.join(carried)}. {count} coordinates and values that "
+                           "are an exact linear function of them are expressions, so the design can be swept and optimized by them; "
+                           "the other numbers are fixed. Mesh lines follow the geometry they sit on and stretch with it; after a large "
+                           "change of a geometry parameter switch to the automatic mesh.", params=", ".join(carried), count=count))
         if partial:
-            notes.append("Only partly followed (the example also derives other geometry from them by a rule that is not "
-                         "a formula the design can hold, and that geometry stays at its default size): " + ", ".join(partial) + ".")
+            notes.append(_note("partial", "Only partly followed (the example also derives other geometry from them by a rule that is not "
+                               "a formula the design can hold, and that geometry stays at its default size): " + ", ".join(partial) + ".",
+                               params=", ".join(partial)))
     frozen = [f"{p.key}={values[p.key]}" for p in module.PARAMS if p.key not in carried]
     if frozen:
-        notes.append("Source parameters not carried (frozen at example defaults or resolved override values): " + ", ".join(frozen) + ".")
+        notes.append(_note("frozen", "Source parameters not carried (frozen at example defaults or resolved override values): "
+                           + ", ".join(frozen) + ".", params=", ".join(frozen)))
     if sim.current_freqs:
-        notes.append("The example's surface-current monitors are preserved at their resolved frequencies.")
+        notes.append(_note("currents", "The example's surface-current monitors are preserved at their resolved frequencies."))
+    model = {"id": model_id.replace("_", "-"), "name": name}
+    for key in ("description", "reference"):
+        text = module.MODEL.get(key)
+        if isinstance(text, str) and text.strip():
+            model[key] = text.strip()
+    model["conversion"] = {"source": source_name, "notes": notes}
     design = {
         "schema": "fairbeam.design/1",
-        "model": {"id": model_id.replace("_", "-"), "name": name,
-                  "description": f"Converted from bundled example {origin or source_path.name} ({source_path.name}). " + " ".join(notes)},
+        "model": model,
         "params": params,
         "simulation": core["simulation"],
         "materials": materials, "parts": parts, "ports": ports, "resistors": resistors,

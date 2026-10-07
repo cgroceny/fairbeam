@@ -12,7 +12,7 @@ import { dims, num } from "../lib/format";
 import { partKind } from "../scene/partKind";
 import { radioGroupKeys } from "../lib/a11y";
 import { fmt, t } from "../i18n";
-import { paramLabelText } from "../lib/paramLabel";
+import { paramLabelText, paramTooltip } from "../lib/paramLabel";
 
 /** label and hint: i18n keys model.layer.<key> and model.layer.<key>.hint */
 const LAYERS: { key: keyof Layers }[] = [
@@ -57,7 +57,8 @@ export default function ModelPanel() {
         {(b) => (
           <>
             <section class="section">
-              <h2 class="section-title">{b().model.name}</h2>
+              {/* the one h1 of the Examples screen: the example's name */}
+              <h1 class="section-title">{b().model.name}</h1>
               <p class="section-lede">{b().model.description}</p>
               <Show when={b().model.reference}>
                 <p class="section-ref">{b().model.reference}</p>
@@ -145,17 +146,18 @@ export default function ModelPanel() {
             <section class="section">
               <h3 class="section-label">{t("model.layers")}</h3>
               <div class="toggle-list">
-                <For each={LAYERS}>
+                {/* the infinite ground plane exists only in a model with a PEC half-space: elsewhere the
+                    layer is left out; a layer this result has no data for is off and says why */}
+                <For each={LAYERS.filter((l) => l.key !== "ground" || !!b().half_space)}>
                   {(l) => {
                     const disabled = () =>
                       (l.key === "pattern" && !(b().results?.farfield?.length)) ||
-                      (l.key === "current" && !(b().fields?.planes?.length)) ||
-                      (l.key === "ground" && !b().half_space);
+                      (l.key === "current" && !(b().fields?.planes?.length));
                     return (
-                      <label class="toggle" classList={{ disabled: disabled() }} title={t(`model.layer.${l.key}.hint`)}>
+                      <label class="toggle" classList={{ disabled: disabled() }} title={t(disabled() ? `model.layer.${l.key}.none` : `model.layer.${l.key}.hint`)}>
                         <input
                           type="checkbox"
-                          checked={layers[l.key]}
+                          checked={layers[l.key] && !disabled()}
                           disabled={disabled()}
                           onChange={(e) => setLayers(l.key, e.currentTarget.checked)}
                         />
@@ -217,7 +219,7 @@ export default function ModelPanel() {
                 <For each={b().model.params}>
                   {(p) => (
                     <>
-                      <dt title={p.description || p.key}>{paramLabelText(p.label)}</dt>
+                      <dt title={paramTooltip(p)}>{paramLabelText(p.label)}</dt>
                       <dd class="mono" classList={{ changed: p.value !== p.default }}>
                         {typeof p.value === "number" ? fmt.num(p.value, 6) : String(p.value)}
                         <Show when={p.unit}> {p.unit}</Show>

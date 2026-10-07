@@ -3,14 +3,15 @@
 //
 //   node --experimental-strip-types scripts/check-render.mjs
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import * as THREE from "three";
 import { quickBundle } from "../src/designer/geometry.ts";
 import { MATERIAL_LOOKS, lookFor, materialClass, partInfo } from "../src/render/materials.ts";
 import {
   DEFAULT_RENDER_OPTIONS, RENDER_ANGLES, normalizeRenderOptions, renderFileName, renderFolder, renderFolderId, renderStem,
-  renderTimestamp, resolutionPreset, supersampling,
+  parseRenderSide, renderTimestamp, resolutionPreset, supersampling,
 } from "../src/render/options.ts";
-import { SMA_MM, buildPorts, markerBead, placeSma, portMarker, smdElement, waveguideFlange } from "../src/render/ports.ts";
+import { MARKER_MIN_PX, SMA_MM, buildPorts, markerBead, markerScale, placeSma, portMarker, smdElement, updateMarkerSizes, waveguideFlange, worldPerPixel } from "../src/render/ports.ts";
 import { FRAME_MARGIN, angleDirection, cameraFromFraming, frameBox, frameFromView } from "../src/render/frame.ts";
 import { buildModel, makeMaterial } from "../src/render/scene.ts";
 
@@ -105,6 +106,11 @@ const vnear = (a, b, tol, what) => a.forEach((x, i) => near(x, b[i], tol, `${wha
   eq(Object.keys(DEFAULT_RENDER_OPTIONS).sort(), ["angles", "background", "engine", "groundShadow", "height", "ports", "projection", "quality", "solderMask", "width"], "the one options object");
   eq([DEFAULT_RENDER_OPTIONS.width, DEFAULT_RENDER_OPTIONS.height, DEFAULT_RENDER_OPTIONS.ports, DEFAULT_RENDER_OPTIONS.solderMask, DEFAULT_RENDER_OPTIONS.engine], [1920, 1080, "connector", "none", "app"], "defaults: Full HD, connector where it fits, no mask, in the app");
   eq(normalizeRenderOptions(), DEFAULT_RENDER_OPTIONS, "nothing in, defaults out");
+  // a size typed in the dialog: within 64…8192 px or an error the dialog shows (it never clamps silently)
+  eq(parseRenderSide("1920"), { value: 1920 }, "a size in range");
+  eq(parseRenderSide(" 1000,6 "), { value: 1001 }, "a decimal (comma or point) is rounded: the field then shows it");
+  for (const bad of ["50", "63", "8193", "99999", "", "abc", "-100"]) eq(parseRenderSide(bad), { error: "range" }, `"${bad}" is refused`);
+  eq(parseRenderSide(64), { value: 64 }); eq(parseRenderSide("8192"), { value: 8192 }, "both ends are allowed");
   eq(normalizeRenderOptions({ angles: ["bottom", "iso", "iso", "current", "nope"] }).angles, ["iso", "bottom", "current"], "angles are deduplicated and ordered; unknown ones dropped");
   eq(normalizeRenderOptions({ angles: [] }).angles, ["iso"], "at least one angle");
   eq(normalizeRenderOptions({ angles: "iso" }).angles, ["iso"], "a non-list falls back");
@@ -258,6 +264,7 @@ const solidsOf = (b) => b.parts.map((p) => {
   eq(Object.values(marker.drawn), ["marker", "marker"], "marker mode never draws a connector");
   const conn = buildPorts(b.ports, solids, { ...base, mode: "connector" });
   eq(Object.values(conn.drawn), ["sma", "sma"], "connector mode draws an SMA where one fits");
+  ok(!conn.group.children.some((c) => c.name.startsWith("marker-")), "an edge-launch connector shows itself: no marker");
   eq(conn.placements.length, 2, "both placements are reported");
   const dip = bundleOf(dipole);
   eq(Object.values(buildPorts(dip.ports, solidsOf(dip), { ...base, mode: "connector" }).drawn), ["marker"], "connector mode falls back to the marker where none fits");
@@ -289,6 +296,26 @@ const solidsOf = (b) => b.parts.map((p) => {
   near(markerBead(100, 1), 1.2, 1e-9, "a big scene: a bead of 1.2 % of its radius");
   near(markerBead(1, 1), 0.3, 1e-9, "the marker bead never goes below 0.3 mm");
   near(markerBead(1, 0.1), 3, 1e-9, "0.3 mm in 0.1 mm units");
+  // the marker keeps a minimum size on screen whatever the zoom: at least MARKER_MIN_PX pixels across
+  eq(markerScale(0.3, 0.01), 1, "a bead large enough on screen keeps its size");
+  near(markerScale(0.3, 0.3), (MARKER_MIN_PX / 2) * 0.3 / 0.3, 1e-9, "a bead that would be 2 px across grows to the minimum");
+  eq(markerScale(0, 1), 1, "no bead, no scale");
+  const cam = new THREE.PerspectiveCamera(30, 16 / 9, 0.1, 10000);
+  cam.position.set(0, 0, 600);
+  cam.lookAt(0, 0, 0);
+  cam.updateMatrixWorld();
+  const far = portMarker(b.ports[0], 0.3, mk);
+  updateMarkerSizes(far, cam, 360);
+  const beads = far.children.filter((c) => c.userData.markerPart === "bead");
+  const px = (2 * 0.3 * beads[0].scale.x) / worldPerPixel(cam, beads[0].position, 360);
+  ok(px >= MARKER_MIN_PX - 0.1 && px <= MARKER_MIN_PX + 0.5, `a marker seen from afar is ${MARKER_MIN_PX} px across (${px.toFixed(2)})`);
+  ok(far.children.find((c) => c.userData.markerPart === "rod").scale.x === beads[0].scale.x, "the rod thickens with the beads");
+  cam.position.set(0, 0, 5);
+  cam.updateMatrixWorld();
+  updateMarkerSizes(far, cam, 360);
+  eq(beads[0].scale.x, 1, "close up the marker has its own size again");
+  const ortho = new THREE.OrthographicCamera(-50, 50, 28, -28, 0.1, 1000);
+  near(worldPerPixel(ortho, new THREE.Vector3(), 560), 0.1, 1e-12, "orthographic: the view height over the picture height");
   // a waveguide flange and an SMD body
   const wg = waveguideFlange({ number: 1, type: "waveguide", direction: "x", start: [0, -5, -2], stop: [4, 5, 2] }, mk);
   eq(wg.children.length, 4, "four flange bars round the opening");
@@ -330,6 +357,15 @@ const solidsOf = (b) => b.parts.map((p) => {
   const noR = mk(lumped, { ports: "hidden" });
   ok(!noR.group.children.some((c) => c.name === "smd-r1"), "hidden ports hide them too");
   withR.dispose(); noR.dispose();
+  // a probe feed: its connector sits under the ground plane, so a marker shows the feed from above; the ground shadow
+  // falls on the board's underside (the floor), not under the connector hanging below it
+  const probe = mk(bundleOf(patch), { ports: "connector" });
+  eq(probe.ports.drawn[1], "sma", "the probe gets a bottom-mount connector");
+  ok(probe.ports.group.children.some((c) => c.name === "marker-1"), "and a marker, seen from the top");
+  const partsLow = Math.min(...bundleOf(patch).parts.flatMap((p) => p.primitives.length ? [p.bbox[0][2]] : []));
+  near(probe.floor, partsLow, 1e-6, "the floor is the parts' lowest face");
+  ok(probe.bounds.min.z < probe.floor - 5, "the connector reaches below the floor (it stays in the framing)");
+  probe.dispose();
   // a part hidden in the tree is left out, and a connector that needs it is too
   const hiddenGround = mk(bundleOf(microstrip), { hidden: new Set(["gnd"]) });
   eq(hiddenGround.drawn, ["substrate", "line"], "a hidden part is not drawn");
@@ -377,6 +413,21 @@ const solidsOf = (b) => b.parts.map((p) => {
   eq(fp.position.toArray(), [100, -100, 80], "perspective keeps the camera where it is");
   const dist = new THREE.Vector3(...view.position).distanceTo(new THREE.Vector3(...view.target));
   near(frameFromView(view, box3, "orthographic").halfHeight, dist * Math.tan(THREE.MathUtils.degToRad(16)), 1e-9, "orthographic shows the same picture height at the target");
+}
+
+// ---------------------------------------------------------------- (h) the Render image dialog
+{
+  const read = (path) => readFileSync(new URL(`../${path}`, import.meta.url), "utf8");
+  const dialog = read("src/render/RenderDialog.tsx"), panel = read("src/render/BlenderRenderPanel.tsx"), css = read("src/styles/render.css");
+  ok(/\.render-custom \{[^}]*grid-template-columns: minmax\(0, 1fr\) minmax\(0, 1fr\)/.test(css) && /\.render-custom input \{[^}]*width: 100%/.test(css),
+    "the custom size fields share the options column without overflowing it");
+  ok(/disabled=\{locked\(\) \|\| !bundle\(\) \|\| sizeBlocked\(\)\}/.test(dialog), "an invalid size disables Render");
+  ok(/blocked=\{sizeBlocked\(\) \? sizeMessage\(\) : undefined\}/.test(dialog) && /disabled=\{detecting\(\) \|\| !info\(\)\?\.ok \|\| !!props\.blocked\}/.test(panel),
+    "and the Blender render");
+  ok(/onBlur=\{sizeBlur\("width"\)\}/.test(dialog) && /onBlur=\{sizeBlur\("height"\)\}/.test(dialog), "on blur a field shows the size that will be used");
+  ok(!/Math\.min\(MAX_SIDE/.test(dialog), "no silent clamp in the dialog");
+  ok(/data-action="render-download"/.test(dialog), "every picture can be downloaded");
+  ok(/render\.folder\.opened/.test(dialog) && /render\.folder\.opened/.test(panel) && /downloadMessage\(r\)/.test(panel), "Open folder and Save as… answer with a status line");
 }
 
 console.log(`check-render: ${n} checks passed`);

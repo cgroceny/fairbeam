@@ -31,7 +31,7 @@ PARAMS = [
     Param("ripple", 0.5, "Passband ripple", "dB", "0 = maximally flat (Butterworth)", minimum=0, maximum=3),
     Param("z_high", 110.0, "High impedance", "ohm", minimum=60, maximum=150),
     Param("z_low", 20.0, "Low impedance", "ohm", minimum=8, maximum=40),
-    Param("feed_len", 10.0, "50 ohm feed length", "mm", minimum=2, maximum=100),
+    Param("feed_len", 10.0, "50 Ω feed length", "mm", minimum=2, maximum=100),
     Param("sub_h", 0.813, "Substrate thickness", "mm", minimum=0.05, maximum=10),
     Param("eps_r", 3.38, "Substrate permittivity", "", minimum=1, maximum=20),
     Param("tan_d", 0.0027, "Loss tangent", "", minimum=0, maximum=0.2),

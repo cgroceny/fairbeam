@@ -13,6 +13,8 @@ export interface HistoryStep { index: number; label: string; at: number; target:
 export interface HistoryMark { text: string; undo: string[]; redo: string[]; history: HistoryEntry[]; position: number; file: string | undefined; metadataRevision: number; sessionId: string; documentRevision: number }
 
 export interface DesignerSessionEffects { edited?: () => void; restored?: () => void; disposed?: () => void }
+/** How long a note (a success or a warning that is not sticky) stays at the top of Properties. */
+export const NOTE_MS = 6000;
 export function createDesignerSession(effects: DesignerSessionEffects = {}) {
   const sessionId = newDesignerSessionId();
   let disposed = false;
@@ -22,21 +24,31 @@ export function createDesignerSession(effects: DesignerSessionEffects = {}) {
     const [selection, setSelection] = createSignal<Selection>({ type: "design" });
     const [loading, setLoading] = createSignal(false);
     const [saving, setSaving] = createSignal(false);
-    const [message, setMessageRaw] = createSignal<{ tone: "good" | "warn" | "critical"; text: string } | null>(null);
-    // A banner belongs to the moment it was shown: the next edit, undo or redo retires a success or an
-    // error banner, and a change of the selection retires a success banner (a warning stays until it is
-    // dealt with). "The same moment" is the same task: an action may set its banner before or after its
-    // own edit or selection change, and a later user action (another task) retires it.
+    /** `sticky`: a warning about a condition that lasts (a save conflict, a live Boolean that cannot be
+     * recomputed): it stays until its owner clears or replaces it, when the condition is gone. */
+    const [message, setMessageRaw] = createSignal<{ tone: "good" | "warn" | "critical"; text: string; sticky?: boolean } | null>(null);
+    // A banner belongs to the moment it was shown: a note (success or warning) goes after NOTE_MS or
+    // with the next change of the selection, the next edit, undo or redo retires a success or an error
+    // banner, and an error stays until that edit. "The same moment" is the same task: an action may set
+    // its banner before or after its own edit or selection change, and a later user action (another
+    // task) retires it.
     let task = 0, ticking = false;
     const currentTask = () => {
       if (!ticking) { ticking = true; queueMicrotask(() => { task++; ticking = false; }); }
       return task;
     };
     let messageTask = -1;
-    const setMessage = (next: ReturnType<typeof message>) => { messageTask = next ? currentTask() : -1; setMessageRaw(next); };
+    let noteTimer: ReturnType<typeof setTimeout> | undefined;
+    const setMessage = (next: ReturnType<typeof message>) => {
+      messageTask = next ? currentTask() : -1;
+      clearTimeout(noteTimer);
+      noteTimer = undefined;
+      setMessageRaw(next);
+      if (next && next.tone !== "critical" && !next.sticky) noteTimer = setTimeout(() => { if (message() === next) setMessageRaw(null); }, NOTE_MS);
+    };
     function retireMessage(tones: readonly ("good" | "warn" | "critical")[]) {
       const m = message();
-      if (!m || !tones.includes(m.tone) || messageTask === currentTask()) return;
+      if (!m || m.sticky || !tones.includes(m.tone) || messageTask === currentTask()) return;
       setMessage(null);
     }
     /** field errors from the last server build, keyed by JSON path ("parts[0].primitives[1].stop[2]") */
@@ -52,7 +64,7 @@ export function createDesignerSession(effects: DesignerSessionEffects = {}) {
     const notifyHistory = () => setHistoryRevision((n) => n + 1);
     let savedMetadataRevision = 0;
     const asyncState = new DesignerAsyncState(sessionId);
-    createEffect(on(selection, () => retireMessage(["good"]), { defer: true }));
+    createEffect(on(selection, () => retireMessage(["good", "warn"]), { defer: true }));
     const [checksTicket, setChecksTicket] = createSignal<ReturnType<typeof asyncState.ticket> | null>(null);
     const canUndo = () => undoStack().length > 0;
     const canRedo = () => redoStack().length > 0;
@@ -350,7 +362,7 @@ export function createDesignerSession(effects: DesignerSessionEffects = {}) {
     }
     function dispose() {
       if (disposed) return;
-      disposed = true; asyncState.dispose(); forgetSaveNote();
+      disposed = true; asyncState.dispose(); forgetSaveNote(); clearTimeout(noteTimer);
       postEditObserver = null; documentChangeObserver = null; deriveHook = null; observedHistory = null;
       setUndoStack([]); setRedoStack([]); history = []; historyPosition = 0;
       notifyHistory();
