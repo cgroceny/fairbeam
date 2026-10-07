@@ -881,8 +881,9 @@ def main(argv=None):
     p.add_argument("--id", help="model id (default: from the first file name)")
     p.add_argument("--name", help="display name (default: the id)")
     p.add_argument("--layer-map", metavar="NAME=ROLE,...",
-                   help="layer or file name (patterns allowed) to top_copper, bottom_copper, outline or ignore, e.g. "
-                        "TOP=top_copper,BOT=bottom_copper; layers not listed are recognised by name")
+                   help="layer or file name (patterns allowed) to top_copper, bottom_copper, outline, ignore, or "
+                        "top_clearance / bottom_clearance (cut out of that copper), e.g. TOP=top_copper,BOT=bottom_copper; "
+                        "layers not listed are recognised by name")
     p.add_argument("--substrate", default="FR4", help="substrate: a library id (fr4, ro4003c, rt5880 ...) or a name (default FR4)")
     p.add_argument("--thickness", type=float, default=1.6, help="substrate thickness in mm (default 1.6)")
     p.add_argument("--eps-r", type=float, help="relative permittivity (default: the library value, else 4.3)")

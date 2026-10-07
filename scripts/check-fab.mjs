@@ -13,8 +13,8 @@
 // Writes examples/fab/<bundle-stem>/ (all fab files + render.svg, a picture drawn from the parsed
 // Gerbers and drill file) for the patch antenna and the Wilkinson divider.
 
-import { mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
-import { dirname, join, resolve } from "node:path";
+import { mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { basename, dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { fabFiles } from "../src/fab/index.ts";
 import { packageFiles } from "../src/export/package.ts";
@@ -264,6 +264,9 @@ function readDxf(text, where) {
   check(pairs.length && pairs[pairs.length - 1][0] === 0 && pairs[pairs.length - 1][1] === "EOF", where, "missing EOF");
   const version = pairs.find((p, i) => p[0] === 9 && p[1] === "$ACADVER" && pairs[i + 1]?.[1] === "AC1009");
   check(!!version, where, "$ACADVER is not AC1009 (R12)");
+  // the unit is stated (4 = mm): an importer need not assume it
+  const insunits = pairs.findIndex((p) => p[0] === 9 && p[1] === "$INSUNITS");
+  check(insunits >= 0 && pairs[insunits + 1]?.[0] === 70 && pairs[insunits + 1][1].trim() === "4", where, "$INSUNITS is not 4 (mm)");
   const layers = new Set();
   const polylines = [];
   const circles = [];
@@ -347,7 +350,7 @@ const bundles = [
 ];
 
 for (const file of bundles) {
-  const stem = file.split("/").pop().replace(/\.json$/, "");
+  const stem = basename(file).replace(/\.json$/, "");
   const b = JSON.parse(readFileSync(file, "utf8"));
   const geo = bundleGeometry(b);
   const { model: m, files } = fabFiles(b, {}, DATE);
@@ -449,6 +452,8 @@ for (const file of bundles) {
 
   if (EXAMPLES.includes(stem)) {
     const dir = join(outRoot, stem);
+    // written afresh: a file of an earlier export under another name does not stay behind
+    rmSync(dir, { recursive: true, force: true });
     mkdirSync(dir, { recursive: true });
     for (const f of files) writeFileSync(join(dir, f.path), f.data);
     writeFileSync(join(dir, "render.svg"), renderSvg(`${b.name.replace(/&/g, "&amp;").replace(/</g, "&lt;")}: fabrication preview`, parsedLayers, loops, drills));

@@ -136,13 +136,15 @@ export interface PcbLayer {
   holes: number;
   entities: number;
 }
-export type PcbRole = "top_copper" | "bottom_copper" | "outline" | "ignore";
+/** top_clearance / bottom_clearance: a layer of anti-pads cut out of that copper (Fairbeam's fab export writes <copper>_Antipad) */
+export type PcbRole = "top_copper" | "bottom_copper" | "outline" | "ignore" | "top_clearance" | "bottom_clearance";
 
 /** What a PCB artwork import made and every note about it (pcb_import.py import_pcb). */
 export interface PcbImportReport {
   created: { kind: "material" | "part"; name: string; detail: string }[];
   /** refused first, then warnings, then info */
-  notes: { severity: "refused" | "warning" | "info"; where: string; line: number; message: string; count?: number; lines?: number[] }[];
+  /** `message` is worded for the command line; a row with a `key` is worded by the app (pcbImport.note.<key>, with `params`) */
+  notes: { severity: "refused" | "warning" | "info"; where: string; line: number; message: string; count?: number; lines?: number[]; key?: string; params?: Record<string, string> }[];
   counts: Record<"material" | "part" | "polygon" | "hole" | "via" | "port", number>;
   refused: number;
   warnings: number;
