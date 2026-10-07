@@ -187,7 +187,7 @@ export async function cancelSweep(id: string) {
 export interface SummaryRow {
   job: Job;
   values: Record<string, number>;
-  fCenter: number | null;
+  fBest: number | null;
   s11Min: number | null;
   dmax: number | null;
   eff: number | null;
@@ -201,7 +201,7 @@ export function summaryRows(g: SweepGroup): SummaryRow[] {
     return {
       job: j,
       values: j.sweep!.values,
-      fCenter: band?.f_center_ghz ?? null,
+      fBest: band?.f_center_ghz ?? null,
       s11Min: band?.s11_min_db ?? null,
       dmax: ff?.dmax_dbi ?? null,
       eff: ff?.rad_efficiency ?? null,
@@ -211,13 +211,14 @@ export function summaryRows(g: SweepGroup): SummaryRow[] {
 
 /** Stable long-form comparison data. One row for every job, including unfinished/failed jobs. */
 export function sweepLongTable(g: SweepGroup) {
-  const columns = ["run_index", "sequence_index", "sequence_name", "status", ...g.keys, "band_center_ghz", "s11_min_db", "dmax_dbi", "radiation_efficiency_pct"];
+  const columns = ["run_index", "sequence_index", "sequence_name", "status", ...g.keys, "band_lo_ghz", "band_hi_ghz", "band_center_ghz", "band_best_ghz", "s11_min_db", "dmax_dbi", "radiation_efficiency_pct"];
   const rows = g.jobs.map((j) => {
     const meta = sequenceMeta(j);
     const band = j.stats.bands?.[0];
     const ff = j.stats.farfield?.[0];
+    const center = band?.f_lo_ghz != null && band.f_hi_ghz != null ? (band.f_lo_ghz + band.f_hi_ghz) / 2 : "";
     return [j.sweep!.index, meta.sequence_index ?? 0, meta.sequence_name ?? "", j.status,
-      ...g.keys.map((key) => j.sweep!.values[key] ?? ""), band?.f_center_ghz ?? "", band?.s11_min_db ?? "", ff?.dmax_dbi ?? "", ff?.rad_efficiency == null ? "" : ff.rad_efficiency * 100];
+      ...g.keys.map((key) => j.sweep!.values[key] ?? ""), band?.f_lo_ghz ?? "", band?.f_hi_ghz ?? "", center, band?.f_center_ghz ?? "", band?.s11_min_db ?? "", ff?.dmax_dbi ?? "", ff?.rad_efficiency == null ? "" : ff.rad_efficiency * 100];
   });
   return { columns, rows };
 }

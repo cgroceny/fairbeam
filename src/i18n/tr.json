@@ -2803,6 +2803,7 @@
   "runHistory.allRunsNote": {
     "other": "Tüm {count} çalıştırma · grafik bindirmeleri 8 eğriyle sınırlı kalır."
   },
+  "runHistory.col.bestMatch": "En iyi uyum",
   "runHistory.col.radEff": "η ışıma",
   "runHistory.radEffOver": "%100'ün üzerinde: ışıma verimliliği %100'ü aşamaz, bu yüzden bu çalıştırmanın uzak alanı fiziksel değil. Mesh'i inceltin ya da portu kontrol edin.",
   "runHistory.alsoDelete": {

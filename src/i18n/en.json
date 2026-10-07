@@ -2859,6 +2859,7 @@
     "one": "All {count} run · chart overlays remain limited to 8 traces.",
     "other": "All {count} runs · chart overlays remain limited to 8 traces."
   },
+  "runHistory.col.bestMatch": "Best match",
   "runHistory.col.radEff": "η rad",
   "runHistory.radEffOver": "Above 100 %: a radiation efficiency cannot exceed 100 %, so this run's far field is not physical. Refine the mesh or check the port.",
   "runHistory.alsoDelete": {
