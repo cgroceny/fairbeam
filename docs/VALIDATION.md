@@ -1106,3 +1106,14 @@ pass at the tolerances declared before the runs. The full Example 3.9 remains un
 the separately measured group velocity did not meet its convergence criterion. No other example is upgraded to validated by this limited comparison.
 
 The record contains our model parameters, equations and numerical results, and adds no gallery bundles.
+
+## 19. Chapter 3 comparison scopes
+
+The [Chapter 3 record](benchmarks/pozar-chapter-03.md) collects matching, mesh-qualified
+quantities for Examples 3.1–3.7, with reproduction commands and explicit model limits.
+The retained pre-migration cohorts and fresh Fairbeam migration controls keep their
+original provenance. Qualification applies only to each listed quantity and geometry.
+
+It excludes conductor-loss discrepancies, the unqualified microstrip impedance/loss
+results, the incomplete 3.8 mesh sequence and the separate group-velocity limitation
+noted above. No gallery model or generated bundle is changed.
