@@ -206,6 +206,8 @@ export function readmeReport(bundle: Bundle, opt: ReportOptions): string {
   push(table(["File", "Contents"], opt.files.map((f) => [`\`${f.path}\``, f.description])), "");
   if (opt.files.some((f) => f.path === "data/s11.s1p"))
     push("Touchstone: `data/s11.s1p` is Touchstone v1 (`# GHz S RI R <port impedance>`): frequency in GHz, then Re and Im of S11. Most RF tools read it directly, so it can be overlaid on other S11 results.", "");
+  if (opt.files.some((f) => f.path === "data/bands.csv"))
+    push("Matched-band CSV: `f_center_GHz` is the middle of the edges; `f_best_GHz` is the frequency of minimum |S11|. `fractional_bw` divides the width by the middle. `edge_lo=true` marks the low edge as an upper bound (≤); `edge_hi=true` marks the high edge as a lower bound (≥). Either flag makes bandwidth and fractional bandwidth lower bounds. With only one open edge, the center has the same bound as that edge; with both open, it has no directional bound. Frequency and bandwidth cells stay numeric.", "");
   push("## Reproduce", "");
   push("```bash", reproduceCommand(b, opt.model), "```", "");
   push(reproduceNote(b, opt.model), "");
