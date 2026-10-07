@@ -30,7 +30,7 @@ All editor templates (`python/templates/*.py`) use it. The dipole and patch mode
 | `max_ratio` | 1.4 | Largest ratio between neighboring cells in the graded fill |
 | `min_cell` | 0.45 × the finest requested cell | Lines closer than this are merged (see below). An explicit value also limits how fine the new local feature-size requests may be |
 | `pad` | λ(f_min) / 4 | Air between the structure and absorbing boundaries (PML cells are added on top). A number, or six values (x-, x+, y-, y+, z-, z+); 0 leaves that face on the structure with no PML cells added, for a feed waveguide that runs into the PML (`pyramidal_horn.py`) |
-| `refine_features` | `True` in the Python API | Detect and locally refine fine features. Saved design JSON without `mesh.refine_features` uses `false` |
+| `refine_features` | `False` | Locally refine the mesh across fine features (narrow gaps, notches, thin or slanted strips). Off by default; see below. Design JSON without `mesh.refine_features` also uses `false` |
 | `keep_existing` | `True` | Lines already on the grid (added by the model) are kept as fixed lines |
 | `verbose` | `False` | Print the report |
 
@@ -40,12 +40,24 @@ settings. Fine-feature refinement is controlled separately by `mesh.refine_featu
 so they include the selected options after preview generation.
 
 **Refine fine features** in Simulation settings › Mesh controls the design-level boolean
-`mesh.refine_features` in both automatic modes. New designs explicitly set it to `true`.
-Existing saved designs without the field use `false`, preserving their mesh after an update;
-opening or exporting them does not opt them in. Enable it to request refinement, then rebuild
-the preview. Manual mesh lines are never refined. With the switch off, feature detection and
-its diagnostics are also off. The Python API defaults to `refine_features=True`; generated
-Python from a design always writes the design's effective value explicitly.
+`mesh.refine_features` in both automatic modes. **It is off by default**, for new designs
+(`"refine_features": false`), for saved designs without the field and in the Python API
+(`refine_features=False`). Opening or exporting a design never turns it on, so an update keeps
+its mesh. Manual mesh lines are never refined. Generated Python from a design always writes the
+design's effective value explicitly.
+
+When to turn it on: the design has thin gaps, notches, feed gaps or slanted thin strips that the
+automatic mesh covers with fewer than three cells (one cell for a slanted strip). With the
+setting off, the mesh does not change, but the Checks list still reports such features as
+`mesh-fine-feature` (an info, with the count and the worst widths) and suggests turning the
+setting on. After turning it on, rebuild the preview and compare the cell count and the checks.
+
+The cost and the accuracy caveat: refinement adds cells and timesteps: up to about 2× the cells in the bundled examples, and
+7.5× the cells × timesteps cost for the blade (see the tables below). It also changes the grid around the feed, which
+shifts the input impedance of wire antennas: the coarse helix check below moved the input
+resistance by +27.7 %. Geometric resolution is not electromagnetic convergence, so compare a run
+with and without the setting, or run the [convergence study](#convergence-study), before you
+trust the impedance. The bundled UAV blade antenna example (`blade_867`) ships with the setting on.
 
 The adaptive *Auto* mode uses `mesh: {"mode":"design", "overrides": {...}}`. It selects about
 30 cells/λ and exact sheet edges for thin patterned sheet metal, otherwise 24 cells/λ and thirds;
@@ -171,8 +183,10 @@ records of the `Simulation`, and the boundary conditions. Per axis:
 The fine-feature cells-across value is conservative: the feature width divided by the sum of
 the largest intersecting cell width on each axis, projected onto the feature's width direction.
 It measures geometric resolution,
-not electromagnetic convergence. After preview generation, the design checks warn with
-`mesh-fine-feature` if a reported feature still falls below its required resolution. The report
+not electromagnetic convergence. The features are measured with the setting off too. After
+preview generation, the design checks report `mesh-fine-feature` if a reported feature falls below
+its required resolution: an info that suggests turning on the setting when it is off, and a warning
+when it is on and the cell limit left a feature under-resolved. The report
 and cell-count comparison use the in-process mesh preview; they do not run the solver. A manual
 mesh or an older preview without this report has no fine-feature resolution assessment.
 When refinement adds cells, the Checks list shows the baseline and refined totals, the added
@@ -183,8 +197,8 @@ extend through the domain, so refining a long slanted strip can still add many c
 
 The reproducible in-process comparison uses main revision
 `63e3550cbb5f07b92dd3c18dd22833ab6366251d` and the revised refinement algorithm. Every saved
-example is explicitly opted in for the comparison; opening an older design normally keeps
-refinement off. Full values are in
+example is explicitly opted in for the comparison, although the setting is off by default and
+only the blade example ships with it on. Full values are in
 `python/tests/fixtures/automesh_fine_features_comparison.json`. These are mesh measurements,
 not electrical convergence measurements.
 
@@ -280,8 +294,8 @@ removed after each run. The comparison script reports only measurements and run 
 | Boresight axial ratio | 1.120 | 0.834 | -0.286 dB |
 | Input resistance | 156.344 | 199.676 | +43.332 Ω |
 
-The input-resistance change is substantial (about +27.7%); it is a remaining convergence
-question, not evidence of electrical equivalence. A thin wire's effective radius depends on
+The input-resistance change is substantial (about +27.7%); this is why the setting is off by
+default. It is a remaining convergence question, not evidence of electrical equivalence. A thin wire's effective radius depends on
 its staircase mesh, and feed refinement changes that mesh locally. Dmax and axial ratio are
 close in this coarse check. The main run also reported 100.2% raw radiation efficiency,
 consistent with a small numerical power-balance error. These runs do not validate other

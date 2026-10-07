@@ -3015,7 +3015,7 @@ class _Importer:
             extra = (f", {len(pt.get('transforms', []))} transform(s)" if pt.get("transforms") else "") + \
                     (f", Boolean {pt['booleanHistory']['operation']}" if pt.get("booleanHistory") else "")
             self.made("part", pt["name"], f"{len(prims)} x {'/'.join(kinds)} in {pt['material']}{extra}")
-        mesh = {"mode": "auto", "cells_per_wavelength": DEFAULT_CPW, "refine_features": True}
+        mesh = {"mode": "auto", "cells_per_wavelength": DEFAULT_CPW}
         restored = self._meta_mesh() if self.meta_mesh and not self.cpw else None
         lines = self._meta_lines() if self.meta_lines and not self.cpw else None
         self.exact_lines = _lines_on_ports(lines, self.ports + self.resistors) if lines else None

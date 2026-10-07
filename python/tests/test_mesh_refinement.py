@@ -38,7 +38,7 @@ class RefinementBoundTest(unittest.TestCase):
         points = np.array([np.zeros(2), 100 * tangent, 100 * tangent + 1e-7 * normal, 1e-7 * normal])
         sim.metal("strip").AddPolygon(points.T, "z", 0, priority=10)
         with patch("fairbeam.automesh.fill", wraps=fill) as calls:
-            report = sim.auto_mesh()
+            report = sim.auto_mesh(refine_features=True)
         self.assertEqual(calls.call_count, 3)  # Baseline only; the bound rejects refinement.
         impact = report["fine_feature_refinement"]
         self.assertTrue(impact["skipped_cell_limit"])
@@ -65,16 +65,15 @@ class RefinementBoundTest(unittest.TestCase):
         sim.auto_mesh(keep_existing=False, refine_features=False)
         baseline = [np.asarray(sim.mesh.GetLines(a)) for a in range(3)]
         with patch.dict("os.environ", {"FAIRBEAM_MAX_CELLS": "213696"}):
-            report = sim.auto_mesh(keep_existing=False)
+            report = sim.auto_mesh(keep_existing=False, refine_features=True)
         self.assertEqual(report["fine_feature_refinement"]["retained_features"], 0)
         for a in range(3):
             np.testing.assert_array_equal(sim.mesh.GetLines(a), baseline[a])
 
     def test_helix_refinement_does_not_spread_down_wire_cover(self):
-        from fairbeam.model import load_model, resolve_params
         from pathlib import Path
-        module = load_model(Path(__file__).parents[1] / "models" / "helix_axial.py")
-        sim = module.build(resolve_params(module.PARAMS, {}))
+        from tests.mesh_feature_measurements import build_measured
+        sim = build_measured(Path(__file__).parents[1] / "models" / "helix_axial.py", {})
         refined = [np.asarray(sim.mesh.GetLines(a)) for a in range(3)]
         report = sim.mesh_report
         sim.auto_mesh(cells_per_wavelength=30, keep_existing=False, refine_features=False)

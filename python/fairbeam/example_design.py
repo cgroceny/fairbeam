@@ -801,7 +801,7 @@ def _convert_example(source_path: Path, model_id: str, name: str,
             if settings.get(key) is not None:
                 mesh[key] = settings[key]
     else:
-        mesh = {"mode": "auto", "cells_per_wavelength": 20, "refine_features": True}
+        mesh = {"mode": "auto", "cells_per_wavelength": 20, "refine_features": False}
     source_name = origin or source_path.name
     notes = [_note("source", f"Converted from the bundled example {source_name} ({source_path.name}).",
                    example=source_name, file=source_path.name),

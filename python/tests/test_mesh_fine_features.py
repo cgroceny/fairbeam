@@ -3,6 +3,8 @@
 import json
 import unittest
 
+import numpy as np
+
 from fairbeam.design_checks import lint
 from fairbeam.preview import handle
 from tests.mesh_feature_measurements import FIXTURE, blade_measurements, build_blade, example_measurements
@@ -42,19 +44,31 @@ class BladeFineFeaturesTest(unittest.TestCase):
         self.assertFalse(any(c["code"] == "mesh-fine-feature" for c in checks))
         self.assertFalse(any(c["code"] == "mesh-cells" and c["severity"] == "error" for c in checks))
 
+    def test_refinement_is_off_by_default_but_features_are_still_measured(self):
+        sim = build_blade()
+        sim.auto_mesh(keep_existing=False, refine_features=False)
+        baseline = [sim.mesh.GetLines(a).copy() for a in range(3)]
+        report = sim.auto_mesh(keep_existing=False)
+        self.assertIs(report["settings"]["refine_features"], False)
+        self.assertIs(report["fine_feature_refinement"]["enabled"], False)
+        self.assertEqual(report["fine_feature_refinement"]["added_cells"], 0)
+        for a in range(3):
+            np.testing.assert_array_equal(sim.mesh.GetLines(a), baseline[a])
+        self.assertTrue(any(not f["resolved"] for f in report["fine_features"]))
+
     def test_requested_grading_ratios(self):
         for ratio in (1.2, 1.6):
             with self.subTest(max_ratio=ratio):
                 sim = build_blade()
                 baseline = sim.auto_mesh(max_ratio=ratio, keep_existing=False, refine_features=False)
-                sim.auto_mesh(max_ratio=ratio, keep_existing=False)
+                sim.auto_mesh(max_ratio=ratio, keep_existing=False, refine_features=True)
                 self.assertLessEqual(sim.mesh_report["max_neighbour_ratio"],
                                      max(ratio, baseline["max_neighbour_ratio"]))
                 self.assertTrue(all(f["resolved"] for f in sim.mesh_report["fine_features"]))
 
     def test_explicit_minimum_cell_reports_unresolved_strip(self):
         sim = build_blade()
-        sim.auto_mesh(min_cell=1.0, keep_existing=False)
+        sim.auto_mesh(min_cell=1.0, keep_existing=False, refine_features=True)
         features = sim.mesh_report["fine_features"]
         self.assertTrue(any(not f["resolved"] and f["width"] < 0.41 for f in features))
         bundle = sim.to_bundle(self.design["model"], [], name="Fine-feature diagnostics")

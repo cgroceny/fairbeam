@@ -25,7 +25,8 @@ skin. A 50 Ω lumped port bridges the gap `g` from the ground plane to the blade
 the pin of a coax connector through the skin. Above the tab, a taper of height `ht` widens the blade
 to the base width `wb`, and the top edge (`wt` wide) is offset aft by `sweep`. The open boundaries
 are MUR, with a quarter wavelength at 0.7 GHz (107 mm) of air on every side, including below the
-ground plane. The mesh is automatic, 20 cells per wavelength at 1.05 GHz (about 137 000 cells), with
+ground plane. The mesh is automatic, 20 cells per wavelength at 1.05 GHz (about 137 000 cells; about 269 000 with
+the example's Refine fine features setting, see [MESHING.md](../../docs/MESHING.md)), with
 cells half that size next to the blade and ground sheets, normal to them.
 
 The model uses a plain metal blade rather than a PCB one. Most UAV blades are a metal plate, or a

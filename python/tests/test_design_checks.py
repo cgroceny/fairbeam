@@ -319,10 +319,20 @@ class MeshChecks(unittest.TestCase):
                    "required_cells": 3, "resolved": False}
         b["mesh"].setdefault("auto", {})["fine_features"] = [feature]
         checks = [c for c in lint(d, None, b) if c["code"] == "mesh-fine-feature"]
+        # refinement off (the default): an info that suggests the setting
+        auto = b["mesh"]["auto"]
+        self.assertIs(auto["fine_feature_refinement"]["enabled"], False)
+        self.assertEqual(keys(checks), ["info|mesh-fine-feature|mesh"])
+        self.assertEqual(checks[0]["message"],
+                         "under-resolved fine features: 1; worst widths (mm): 0.4; cells across: 1.25; required: 3"
+                         '. To fix: turn on "Refine fine features" in Simulation settings › Mesh')
+        self.assertEqual(checks[0]["explain"], EXPLANATIONS["mesh-fine-feature"])
+        # refinement on and still under-resolved (cell limit): a warning without the suggestion
+        auto["fine_feature_refinement"]["enabled"] = True
+        checks = [c for c in lint(d, None, b) if c["code"] == "mesh-fine-feature"]
         self.assertEqual(keys(checks), ["warning|mesh-fine-feature|mesh"])
         self.assertEqual(checks[0]["message"],
                          "under-resolved fine features: 1; worst widths (mm): 0.4; cells across: 1.25; required: 3")
-        self.assertEqual(checks[0]["explain"], EXPLANATIONS["mesh-fine-feature"])
         b["mesh"]["auto"]["fine_features"] = [dict(feature, width=i / 10) for i in range(1, 21)]
         summary = [c for c in lint(d, None, b) if c["code"] == "mesh-fine-feature"]
         self.assertEqual(len(summary), 1)
@@ -912,7 +922,7 @@ class OneClickFixes(unittest.TestCase):
                     self.assertEqual(keys(lint(d)), ["warning|port-floating|ports[0].start", "warning|port-floating|ports[0].stop"])
                     # with the preview bundle too, as the server runs it for the designer
                     bundle = build_preview(None, {}, design=d)["bundle"]
-                    refinement = ["info|mesh-fine-refinement|mesh"] if angle != 90 else []
+                    refinement = ["info|mesh-fine-feature|mesh"] if angle != 90 else []
                     self.assertEqual(keys(lint(d, None, bundle)),
                                      refinement + ["warning|port-floating|ports[0].start", "warning|port-floating|ports[0].stop"])
         # the arms mirrored (not kept) leave the port just as well
@@ -1123,7 +1133,7 @@ class ChecksApi(unittest.TestCase):
         st, pv = self.request("POST", "/api/preview", {"design": air})
         self.assertEqual(st, 200, pv)
         self.assertTrue(all(c["explain"] == EXPLANATIONS[c["code"]] for c in pv["checks"]))
-        self.assertEqual(keys(pv["checks"]), ["info|mesh-fine-refinement|mesh",
+        self.assertEqual(keys(pv["checks"]), ["info|mesh-fine-feature|mesh",
                                               "warning|port-floating|ports[0].start", "warning|port-floating|ports[0].stop"])
 
         # a design that does not build: 422, and the checks all the same
@@ -1150,7 +1160,7 @@ class ChecksApi(unittest.TestCase):
         st, saved = self.request("PUT", "/api/designs/chk", {"design": air, "base_hash": saved["hash"]})
         self.assertEqual(st, 200, saved)
         self.assertEqual(keys(saved["validation"]["checks"]),
-                         ["info|mesh-fine-refinement|mesh",
+                         ["info|mesh-fine-feature|mesh",
                           "warning|port-floating|ports[0].start", "warning|port-floating|ports[0].stop"])
         st, job = self.request("POST", "/api/runs", {"model": "chk", "params": {}, "threads": 1})
         self.assertEqual(st, 201, job)

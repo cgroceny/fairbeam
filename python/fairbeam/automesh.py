@@ -414,11 +414,13 @@ def generate(sim, f_max: float | None = None, cells_per_wavelength: float = 20, 
              max_ratio: float = 1.4, min_cell: float | None = None, dielectric_cells: int = 4,
              pad: float | None = None, metal_cells: int = 6, edge_res: float | None = None,
              keep_existing: bool = True, air_cells_per_wavelength: float | None = None,
-             refine_features: bool = True) -> dict:
+             refine_features: bool = False) -> dict:
     """Mesh ``sim`` (an :class:`fairbeam.Simulation`) and return a report dict.
 
     Lengths are in drawing units (``sim.unit`` metres). ``f_max`` defaults to the simulation's.
     ``edge_res`` overrides the metal edge cell (default: half the local maximum cell).
+    ``refine_features`` (off by default) refines the mesh locally across narrow gaps, notches and
+    thin strips; the report lists the fine features either way (``fine_features``).
     """
     if edge_rule not in ("thirds", "edge"):
         raise ValueError("edge_rule must be 'thirds' or 'edge'")
@@ -778,8 +780,9 @@ def generate(sim, f_max: float | None = None, cells_per_wavelength: float = 20, 
     # same mesh, and this also gives the cell-count impact without a solver run.
     from .mesh_refinement import (collect_features, measure_features, refinement_caps, cap_sizes,
                                   refinement_cell_lower_bound, refine_axis)
-    features = (collect_features(metals, feeds + list(getattr(sim, "lumped_elements", [])), 2 * res_feature)
-                if refine_features else [])
+    # The features are measured even when refinement is off, so the checks can say that some are
+    # under-resolved and suggest turning the setting on.
+    features = collect_features(metals, feeds + list(getattr(sim, "lumped_elements", [])), 2 * res_feature)
     baseline_lines = [np.asarray(grid.GetLines(a), float) for a in range(3)]
     before = measure_features(features, baseline_lines)
     unresolved = [f for f in before if not f["resolved"]]

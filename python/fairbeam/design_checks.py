@@ -135,7 +135,7 @@ EXPLANATIONS = {
     "mesh-cells": "A large mesh needs more memory and time and may exceed the server's cell limit. Reduce cells per wavelength, lower the maximum frequency, or simplify fine details while checking accuracy.",
     "mesh-warning": "The automatic mesher found geometry or spacing that may make the grid costly or inaccurate. Review the detail in this message and adjust the nearby geometry or mesh settings before running again.",
     "mesh-feature": "This feature falls between mesh lines and may disappear from the simulated geometry. Thicken it, model thin metal as a sheet, or refine the mesh until it is resolved.",
-    "mesh-fine-feature": "A narrow gap, notch or strip has fewer cells across its width than the automatic mesh requires. Refine the local mesh or simplify the feature, then rebuild the preview and inspect its resolution and total cell count before running.",
+    "mesh-fine-feature": "A narrow gap, notch or strip has fewer cells across its width than the automatic mesh requires. Turn on \"Refine fine features\" in Simulation settings or simplify the feature, then rebuild the preview and inspect its resolution and total cell count before running.",
     "mesh-fine-refinement": "The preview compares the automatic mesh before and after local refinement of narrow features. Fine cells extend across each Cartesian mesh plane, so review the total cell count and the remaining resolution warnings before running.",
     "mesh-fine-limit": "Some fine-feature refinement would exceed the configured cell limit. The preview drops the largest estimated refinements first and keeps the ones that fit. Simplify the fine geometry or reduce the simulation domain, then rebuild the preview and resolve its feature warnings before running.",
     "mesh-lines": "Manual mesh lines need at least two finite, strictly increasing coordinates on each axis. Correct the line list or switch to automatic mesh.",
@@ -1430,9 +1430,16 @@ class _Lint:
             widths = ", ".join(f"{w:.3g}" for _, w, _, _ in worst)
             cells = ", ".join(f"{c:.3g}" for _, _, c, _ in worst)
             targets = ", ".join(f"{r:g}" for _, _, _, r in worst)
-            self.warn("mesh", "mesh-fine-feature",
-                      f"under-resolved fine features: {len(unresolved_features)}; worst widths (mm): {widths}; "
-                      f"cells across: {cells}; required: {targets}")
+            # With the setting off (the default) this is a suggestion, not a warning: most designs
+            # have a feed gap or a thin strip, and the user chose not to refine.
+            off = impact.get("enabled") is False
+            hint = '. To fix: turn on "Refine fine features" in Simulation settings › Mesh' if off else ""
+            text = (f"under-resolved fine features: {len(unresolved_features)}; worst widths (mm): {widths}; "
+                    f"cells across: {cells}; required: {targets}{hint}")
+            if off:
+                self.info("mesh", "mesh-fine-feature", text)
+            else:
+                self.warn("mesh", "mesh-fine-feature", text)
         self._excitation(mesh, parts)
         self._ringdown(mesh, parts)
         lines = [mesh.get(a) for a in "xyz"]

@@ -85,6 +85,8 @@ const SAMPLES = [
   ["mesh-cells", "the mesh has 21.5 M cells: a long run and several GB of memory", null],
   ["mesh-warning", "automatic mesh: a gap of 0.01 mm between lines", null],
   ["mesh-fine-feature", "under-resolved fine features: 3; worst widths (mm): 0.2, 0.4, 1; cells across: 0.5, 1.25, 2; required: 3, 3, 3", null],
+  ["mesh-fine-feature", "under-resolved fine features: 3; worst widths (mm): 0.2, 0.4, 1; cells across: 0.5, 1.25, 2; required: 3, 3, 3. To fix: turn on \"Refine fine features\" in Simulation settings › Mesh",
+    "3 ince ayrıntının çözünürlüğü yetersiz; en kötü genişlikler (mm): 0.2, 0.4, 1; enine hücre sayıları: 0.5, 1.25, 2; gereken: 3, 3, 3. Çözüm: Simülasyon ayarları › Mesh bölümünde \"İnce ayrıntıları sıklaştırın\" seçeneğini açın"],
   ["expr", "refine features must be true or false", null],
   ["mesh-fine-refinement", "local fine-feature refinement adds 150,000 cells (100,000 → 250,000; 2.5×)",
     "ince ayrıntılar için yerel sıklaştırma 150.000 hücre ekliyor (100.000 → 250.000; 2,5×)"],

@@ -10,10 +10,10 @@ from tests.mesh_feature_measurements import FIXTURE
 
 
 class FeatureSettingTest(unittest.TestCase):
-    def test_new_templates_enable_refinement(self):
+    def test_new_templates_leave_refinement_off(self):
         for name in TEMPLATES:
             with self.subTest(template=name):
-                self.assertIs(template_design(name, "new", "New")["mesh"]["refine_features"], True)
+                self.assertIs(template_design(name, "new", "New")["mesh"]["refine_features"], False)
 
     def test_saved_design_and_python_export_preserve_the_switch(self):
         for mode in ("auto", "design"):

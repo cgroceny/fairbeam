@@ -165,6 +165,8 @@ One entry per release, newest first. The installers are on the
 
 ### Unreleased
 
+- New setting Refine fine features (Simulation settings › Mesh, `mesh.refine_features`) refines the automatic mesh locally across narrow gaps, notches, feed gaps and slanted thin strips. It is off by default for every design, because it adds cells and can shift the input impedance of wire antennas; the Checks list suggests it when fine features are under-resolved. The UAV blade example turns it on. See [MESHING.md](MESHING.md).
+
 - Sweep CSV now exports band edges, their middle as `band_center_ghz`, and the |S11| minimum as `band_best_ghz`; RunHistory labels that minimum frequency Best match.
 
 - Matched-band CSV `f_center_GHz` now means the band middle; `f_best_GHz` holds the |S11| minimum, and fractional bandwidth uses the middle, matching the tables and Summary CSV/TSV.

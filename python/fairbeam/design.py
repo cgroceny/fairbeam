@@ -23,7 +23,7 @@ The geometry maps one to one onto CSXCAD primitives, the same ones Python models
                 {"type": "waveguide", "number": 2, "mode": "TE10", "a": "22.86", "b": "10.16",
                  "start": [...], "stop": [...], "direction": "z"}],
       "resistors": [{"name": "r1", "R": "100", "start": [...], "stop": [...], "direction": "y"}],
-      "mesh": {"mode": "auto", "cells_per_wavelength": 20, "refine_features": true},
+      "mesh": {"mode": "auto", "cells_per_wavelength": 20, "refine_features": false},
       "far_field": {"enabled": true, "frequencies": ["f0"]},   # optional "faces": 6 flags x- x+ y- y+ z- z+
       "monitors": {"currents": ["f0"],              # optional: surface-current maps (GHz)
                    "efficiency": {"points": 21},     # optional: radiation efficiency over the band
@@ -3815,7 +3815,7 @@ def empty_design(id_: str, name: str) -> dict:
         "parts": [],
         "ports": [],
         "resistors": [],
-        "mesh": {"mode": "auto", "cells_per_wavelength": 20, "refine_features": True},
+        "mesh": {"mode": "auto", "cells_per_wavelength": 20, "refine_features": False},
         "far_field": {"enabled": True, "frequencies": ["f0"]},
     }
 
@@ -3873,6 +3873,6 @@ def blank_design(id_: str, name: str) -> dict:
         "ports": [{"type": "lumped", "number": 1, "R": "50", "start": ["feed", "0", "0"], "stop": ["feed", "0", "h"],
                    "direction": "z"}],
         "resistors": [],
-        "mesh": {"mode": "auto", "cells_per_wavelength": 20, "refine_features": True},
+        "mesh": {"mode": "auto", "cells_per_wavelength": 20, "refine_features": False},
         "far_field": {"enabled": True, "frequencies": ["f0"]},
     }
