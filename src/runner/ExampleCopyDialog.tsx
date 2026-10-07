@@ -4,6 +4,7 @@ import { copyExampleFile, copyExampleKey, models, refreshModels, setCopyExampleK
 import { enterDesign } from "../designer/store";
 import { setAppMode } from "../workspace";
 import { fmt, t } from "../i18n";
+import { DESIGN_ID_RE, isReservedDesignId } from "../lib/designId";
 
 const slug = (s: string) => s.toLowerCase().normalize("NFKD").replace(/[^a-z0-9]+/g, "_").replace(/^_+|_+$/g, "").replace(/^[^a-z]+/, "").slice(0, 41);
 export default function ExampleCopyDialog() {
@@ -41,7 +42,8 @@ export default function ExampleCopyDialog() {
       const keys = new Set(models().map((m) => m.key));
       const baseId = slug(n);
       let candidate = baseId;
-      for (let suffix = 2; keys.has(candidate); suffix++) {
+      // a bundled example's id is reserved too, whether or not its file is in the models folder
+      for (let suffix = 2; keys.has(candidate) || isReservedDesignId(candidate); suffix++) {
         const ending = `_${suffix}`;
         candidate = `${baseId.slice(0, 41 - ending.length)}${ending}`;
       }
@@ -51,7 +53,7 @@ export default function ExampleCopyDialog() {
   });
   const uniqueId = () => {
     const base = id();
-    if (!/^[a-z][a-z0-9_]{1,40}$/.test(base) || /^(con|prn|aux|nul|com[0-9]|lpt[0-9])$/.test(base)) return "";
+    if (!DESIGN_ID_RE.test(base) || isReservedDesignId(base)) return "";
     return models().some((m) => m.key === base) ? "" : base;
   };
   const close = () => { if (!busy()) setCopyExampleKey(null); };

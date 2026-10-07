@@ -18,11 +18,13 @@ export const isExample = (entry: Pick<ProjectIndexEntry, "file">) => bundledExam
 
 export const exampleEntries = (entries: readonly ProjectIndexEntry[]) => entries.filter(isExample);
 
-/** The design a bundle's model was made from, for "Open in designer"; only designs can be edited there. */
+/** The user's design that a bundle's model was made from, for "Open in designer"; only designs can be
+ * edited there, and a bundled example design (read-only) is only the source of its example's copy. */
 export const designFor = (models: readonly ModelEntry[], modelId: string | undefined): ModelEntry | undefined =>
-  modelId ? models.find((m) => m.kind === "design" && !m.error && m.model?.id === modelId) : undefined;
+  modelId ? models.find((m) => m.kind === "design" && !m.error && !m.readonly && m.model?.id === modelId) : undefined;
 
-/** The read-only source shipped with a bundled example. */
+/** The read-only source shipped with a bundled example: its Python model, or for the 867 MHz
+ * examples its example design (examples/designs, copied into the workspace's models folder). */
 export const exampleSourceFor = (models: readonly ModelEntry[], modelId: string | undefined): ModelEntry | undefined =>
   modelId ? models.find((m) => m.readonly && !m.error && m.model?.id === modelId) : undefined;
 

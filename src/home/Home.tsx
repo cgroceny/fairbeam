@@ -19,7 +19,7 @@ import { DEMO } from "../env";
 import FeedbackLink from "../components/FeedbackLink";
 import { setCstImportOpen } from "../lib/cstImport";
 import { setPcbImportOpen } from "../lib/pcbImport";
-import { designIdError, suggestDesignId } from "../lib/designId";
+import { designFileHint, designIdError, freeDesignId } from "../lib/designId";
 import { TEMPLATE_GROUPS, type TemplateKey } from "../designer/templates";
 import { openPythonModelAsDesign } from "../designer/pythonModel";
 import { t } from "../i18n";
@@ -72,13 +72,15 @@ export default function Home() {
   const online = () => serverState() === "online";
   // The name field starts filled in from the chosen starter ("Half-wave dipole", or "… 2" when a
   // design has that name), and follows the starter until the user types a name of their own. The
-  // name is in the interface language; the file name is its ASCII form (suggestDesignId).
+  // name is in the interface language; the file name is its ASCII form, with a suffix when that is
+  // a bundled example's id (freeDesignId: "Patch antenna" is saved as patch_antenna_2).
   const [autoName, setAutoName] = createSignal("");
+  const modelKeys = () => models().map((m) => m.key);
   const starterName = (key: TemplateKey) => {
     const tpl = TEMPLATE_GROUPS.flatMap((g) => g.templates).find((x) => x.key === key);
     const base = tpl ? t(tpl.name) : "";
     let n = base, k = 2;
-    while (base && models().some((m) => m.key === suggestDesignId(n)) && k < 100) n = `${base} ${k++}`;
+    while (base && models().some((m) => m.key === freeDesignId(n, modelKeys()).id) && k < 100) n = `${base} ${k++}`;
     return n;
   };
   createEffect(on([template, online], () => {
@@ -87,11 +89,13 @@ export default function Home() {
     setAutoName(n);
     setName(n);
   }));
-  const id = () => suggestDesignId(name());
-  const idError = () => (!name().trim() ? "" : designIdError(id(), models().map((m) => m.key)));
+  const id = () => freeDesignId(name(), modelKeys()).id;
+  const idError = () => (!name().trim() ? "" : designIdError(id(), modelKeys()));
   // designs that do not load stay listed (greyed, with the reason) rather than vanishing: a file
-  // made by a newer fairbeam, or a hand edit, would otherwise look lost. A failed entry has no kind.
-  const designs = createMemo(() => models().filter((m) => m.error ? m.file?.endsWith(".design.json") : m.kind === "design"));
+  // made by a newer Fairbeam, or a hand edit, would otherwise look lost. A failed entry has no kind.
+  // The bundled example designs (read-only) are not the user's: they are only the sources of
+  // "Open as new design…" for their examples.
+  const designs = createMemo(() => models().filter((m) => !m.readonly && (m.error ? m.file?.endsWith(".design.json") : m.kind === "design")));
   const designActions = createDesignActions(designs);
   const shownDesigns = createMemo(() => visibleProjects(designs(), designQuery(), designSort(), favoritesOnly(), favoriteKeys()));
   const showUnknownModifiedNote = () => designSort() === "modified" && hasUndatedProjects(designs());
@@ -231,7 +235,7 @@ export default function Home() {
                     <input autocomplete="off" class="field-text" type="text" maxLength={80} value={name()} placeholder={t("home.newProject.placeholder")} aria-invalid={!!idError()}
                       aria-describedby={error() ? "home-name-hint home-create-error" : "home-name-hint"}
                       onInput={(e) => { setName(e.currentTarget.value); setError(""); }} />
-                    <span id="home-name-hint" class={idError() ? "rp-error nm-hint" : "rp-hint nm-hint"} aria-live="polite">{idError() || (name().trim() ? `${id()}.design.json` : t("home.newProject.fileHint"))}</span>
+                    <span id="home-name-hint" class={idError() ? "rp-error nm-hint" : "rp-hint nm-hint"} aria-live="polite">{idError() || (name().trim() ? designFileHint(name(), modelKeys()) : t("home.newProject.fileHint"))}</span>
                   </label>
                   <div class="home-templates" role="radiogroup" aria-label={t("home.newProject.startFrom")}>
                     <For each={TEMPLATE_GROUPS}>{(g, i) => (

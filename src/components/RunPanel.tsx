@@ -320,7 +320,8 @@ export default function RunPanel() {
             })();
           }}>
             <Show when={!modelKey()}><option value="">{t("runPanel.chooseModel")}</option></Show>
-            <For each={models()}>
+            {/* the bundled example designs are only the sources of their examples' copies */}
+            <For each={models().filter((m) => !(m.kind === "design" && m.readonly) || m.key === modelKey())}>
               {(m) => (
                 <option value={m.key} disabled={!!m.error}>
                   {m.model?.name ?? m.file}{m.error ? ` ${t("runPanel.doesNotLoad")}` : ""} · {m.file}
