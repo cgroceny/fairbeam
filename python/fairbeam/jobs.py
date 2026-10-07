@@ -348,8 +348,6 @@ class JobManager:
         self.command_factory = command_factory or self.default_command
         self.grace_s = grace_s
         self.on_finished = on_finished
-        # called once a job's process has started (usage statistics, fairbeam.telemetry)
-        self.on_started: Callable[[Job], None] | None = None
         self.jobs: dict[str, Job] = {}
         self.queue: "queue.Queue[str | None]" = queue.Queue()
         self.lock = threading.RLock()
@@ -807,12 +805,6 @@ class JobManager:
         job.publish({"type": "phase", "phase": "building"})
         job.save()
         self._changed()
-        if self.on_started is not None:
-            try:
-                self.on_started(job)
-            except Exception:  # noqa: BLE001 - a hook never stops a run
-                pass
-
         stderr_tail: list[str] = []
         write_lock = threading.Lock()
 

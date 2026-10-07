@@ -57,7 +57,7 @@ public/projects/<slug>.json  +  index.json     atomic write (.json.tmp -> rename
 - `geometry.py` walks the CSXCAD structure and writes every primitive exactly. Nothing is tessellated. Unknown primitive types fall back to a bounding box marked `exact: false`.
 - `design.py` (with `design_checks.py`, `automesh.py`, `materials.py`, `starters.py`, `example_design.py`) handles designer files: a model described as data (`<id>.design.json`) instead of Python, built into the same `Simulation`. `cst_import.py` turns a CST-compatible VBA macro into such a design.
 - `cli.py` provides `run`, `geometry` (export without solving), `params`, `import-cst`, `index`, `serve`, `app` and `clean-sim`. `study.py` adds `sweep`, `converge` and `touchstone`, and `optimize.py` adds `optimize`.
-- `server.py`, `jobs.py`, `progress.py` and `preview.py` make up the local run server (see [Run server](#run-server-fairbeam-serve)). `telemetry.py` holds the usage counts of the server (off unless the desktop shell was built with the telemetry switch, see [TELEMETRY.md](TELEMETRY.md)).
+- `server.py`, `jobs.py`, `progress.py` and `preview.py` make up the local run server (see [Run server](#run-server-fairbeam-serve)). Usage counting is confined to the desktop shell, with no run-server counters (see [TELEMETRY.md](TELEMETRY.md)).
 
 ### Browser side (`src/`)
 
@@ -172,7 +172,6 @@ fairbeam/
 │   │   ├── array.py         array patterns from embedded element patterns, steering, active reflection
 │   │   ├── touchstone.py    Touchstone .s1p/.sNp writer/reader
 │   │   ├── network.py       opt-in ideal circuit references (TEM lines, lumped elements), matched-feed plane shifts
-│   │   ├── telemetry.py     opt-in usage counts of the run server (off in every build so far)
 │   │   └── cli.py           fairbeam run | params | geometry | import-cst | index | serve | app | clean-sim | sweep | converge | touchstone | optimize
 │   ├── models/              models (dipole, patch_antenna, inset_patch, sierpinski_monopole, microstrip_line,
 │   │                        wilkinson_divider, patch_array_2x1/4x1, branchline_coupler, lowpass_stepped,

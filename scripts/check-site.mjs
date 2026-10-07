@@ -32,8 +32,8 @@ const privacy = read("landing/privacy.html");
 assert.match(privacy, /src="language\.js"/);
 assert.match(privacy, /data-site-language="tr"/);
 assert.match(privacy, /Usage counts and sign-in are built but OFF in Fairbeam 0\.7\.0/);
-for (const required of ["GitHub (fairbeam-releases)", "upstream hosts", "Vercel", "IP address", "hosting provider", "controller", "retention", "rights", "transfer", "ismail@fairbeam.org", "pseudonymous install ID"]) {
-  assert.ok(privacy.includes(required), `privacy disclosure: ${required}`);
+for (const required of ["GitHub (fairbeam-releases)", "upstream hosts", "Vercel", "IP address", "hosting provider", "controller", "retention", "rights", "transfer", "ismail@fairbeam.org", "No install ID", "Draft KVKK", "GDPR", "Article 9", "seven days", "No raw event log"]) {
+  assert.ok(privacy.toLowerCase().includes(required.toLowerCase()), `privacy disclosure: ${required}`);
 }
 for (const match of privacy.matchAll(/<(?:p|h1|h2|td|th)\b[^>]*>([^<]+)<\//g)) {
   const text = normalize(match[1].replaceAll("&amp;", "&"));
