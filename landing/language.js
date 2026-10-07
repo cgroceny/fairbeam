@@ -242,8 +242,8 @@
     ["Right-hand circular, 11.6 dBi at 2.4 GHz, 0.9 dB axial ratio on boresight.", "Sağ el dairesel polarizasyon, 2,4 GHz'de 11,6 dBi, ana doğrultuda 0,9 dB eksen oranı."],
     ["Three ports and a 100 Ω resistor: an equal split, S21 = S31 = −3.09 dB.", "Üç port ve 100 Ω direnç: eşit bölme, S21 = S31 = −3,09 dB."],
     ["Free for macOS and Windows. On first start the app installs Python and openEMS for your user account, once and without admin rights: about 120–155 MB.", "macOS ve Windows için ücretsiz. İlk açılışta uygulama, Python'u ve openEMS'i kullanıcı hesabınıza bir kez ve yönetici yetkisi olmadan kurar: yaklaşık 120–155 MB."],
-    ["0.7.0 · Apple silicon · macOS 27+ · .dmg · 11.7 MB", "0.7.0 · Apple silicon · macOS 27+ · .dmg · 11,7 MB"],
-    ["0.7.0 · x64 · Windows 10/11 · installer · 8.6 MB", "0.7.0 · x64 · Windows 10/11 · kurulum dosyası · 8,6 MB"],
+    ["0.7.1 · Apple silicon · macOS 27+ · .dmg · 12.3 MB", "0.7.1 · Apple silicon · macOS 27+ · .dmg · 12,3 MB"],
+    ["0.7.1 · x64 · Windows 10/11 · installer · 8.7 MB", "0.7.1 · x64 · Windows 10/11 · kurulum dosyası · 8,7 MB"],
     ["Download ↓", "İndirin ↓"],
 
     ["The Windows installer is not code-signed. If SmartScreen warns, choose More info › Run anyway.", "Windows kurulum dosyası kod imzalı değildir. SmartScreen uyarı verirse “Ek bilgi › Yine de çalıştır” seçeneğini seçin."],
