@@ -8,7 +8,7 @@ import { applyAppearance, APPEARANCE_DEFAULTS } from "../lib/appearance";
 import { APPEARANCE_OPTIONS, CUSTOM_COLORS } from "../lib/appearanceOptions";
 import { resetDesignerLayout } from "../designer/layoutState";
 import { resetRibbonLayout } from "../designer/DesignWorkspace";
-import { setEngine, health } from "../runner/store";
+import { followSettingsEngine, followSettingsThreads, health } from "../runner/store";
 import { setConfirmShapes } from "../designer/draw";
 import AccountSettings from "./AccountSettings";
 import { setLanguage, t, type LanguageChoice, setDecimalChoice } from "../i18n";
@@ -101,7 +101,9 @@ export default function GeneralSettingsDialog(props: { open: boolean; close: () 
       writeGeneralSettings(next); setValue(next); setMessage("");
       if (patch.theme) applyTheme(patch.theme);
       applyAppearance(next);
-      if (patch.engine) setEngine(patch.engine === "gpu" && !health()?.engines?.includes("gpu") ? "cpu" : patch.engine);
+      if (patch.engine) followSettingsEngine(patch.engine === "gpu" && !health()?.engines?.includes("gpu") ? "cpu" : patch.engine);
+      // the Run dialog follows a changed default at once (no reload)
+      if (patch.threads !== undefined) followSettingsThreads(patch.threads);
       if (patch.confirmShapes !== undefined) setConfirmShapes(patch.confirmShapes);
       if (patch.units) document.documentElement.dataset.unitDisplay = patch.units;
       if (patch.language) setLanguage(patch.language);
