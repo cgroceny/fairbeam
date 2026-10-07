@@ -207,6 +207,17 @@ function DesignInspector() {
         <AutoGrowTextarea class="rp-input dz-input dz-autogrow" value={draft.model.description ?? ""}
           onInput={(v) => edit((d) => { d.model.description = v; }, "model.description")} />
       </label>
+      {/* a copy of a bundled example: what the conversion kept and fixed, collapsed under the description */}
+      <Show when={draft.model.conversion?.notes?.length}>
+        <details class="dz-conversion">
+          <summary class="dz-label">{t("props.conversionNotes", { count: draft.model.conversion!.notes.length })}</summary>
+          <ul class="dz-conversion-notes">
+            <For each={draft.model.conversion!.notes}>{(n) => (
+              <li>{hasKey(`exampleCopy.note.${n.code}`) ? t(`exampleCopy.note.${n.code}`, n.values) : n.text}</li>
+            )}</For>
+          </ul>
+        </details>
+      </Show>
       <p class="note">{t("props.design.note")} <span class="mono">W/2</span> {t("props.design.noteOr")} <span class="mono">wavelength(f0)/4</span>.</p>
       <p class="note">{t("props.design.decimalNote")}</p>
       <p class="note">{[t("props.count.parts", { count: draft.parts.length }), t("props.count.ports", { count: draft.ports.length }), t("props.count.params", { count: draft.params.length })].join(", ")}.</p>

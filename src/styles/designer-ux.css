@@ -101,6 +101,9 @@
 .dz-color-popover { position: fixed; z-index: 60; min-width: 0; padding: var(--al-space-2); display: grid; gap: var(--al-space-1); }
 .home-python-hint { color: var(--al-text-1, inherit); border-left: 2px solid var(--al-accent, currentColor); padding-left: var(--al-space-2); }
 .home-python-hint:focus-visible { outline: 2px solid var(--al-accent, currentColor); outline-offset: 2px; }
+/* Design Properties: a copied example's conversion notes, collapsed under the description */
+.dz-conversion summary { cursor: pointer; }
+.dz-conversion-notes { margin: var(--al-space-1) 0 0; padding-inline-start: var(--al-space-4); display: grid; gap: var(--al-space-1); font-size: var(--al-text-xs); color: var(--al-text-2); }
 
 /* F6 pane cycling (src/designer/panes.ts): a visible ring on the pane the focus was moved to */
 [data-pane].pane-ring:focus-within { outline: 2px solid var(--accent, #2563eb); outline-offset: -2px; }
