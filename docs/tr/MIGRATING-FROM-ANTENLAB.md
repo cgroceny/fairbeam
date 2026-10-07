@@ -34,7 +34,7 @@ sayıldığından, sonraki açılışta eski çalışma alanınız yine içe akt
 - **Ayarlar.** Dil, güncelleme denetimi, GPU tercihi ve son tasarımlar listesi. Harici bir Python
   seçtiyseniz ve bu Python antenlab'ın kendi klasörlerinin dışındaysa seçim korunur.
 - **Çalışma alanınız.** Varsayılan alanı kullandıysanız aynı diskte `Documents/antenlab` klasörünün
-  adı `Documents/Fairbeam` olur; büyük benzetim klasörleri de bu işlemle taşınır. İş kayıtlarındaki
+  adı `Documents/Fairbeam` olur; büyük simülasyon klasörleri de bu işlemle taşınır. İş kayıtlarındaki
   (`jobs/*/job.json`) yollar yeni klasöre göre yazılır; yeniden çalıştırma ve eski çalışmaları
   temizleme işlemleri bu yolları kullanır. Yeniden adlandırma yapılamazsa Fairbeam eski klasörü
   kullanmayı sürdürür ve nedenini bildirir:
@@ -61,7 +61,7 @@ sayıldığından, sonraki açılışta eski çalışma alanınız yine içe akt
 
 - **Kaydedilmemiş taslaklar.** İçe aktarmadan önce tasarımlarınızı antenlab'da kaydedin.
 - **GitHub oturumu** ve diğer hesaplar. Fairbeam'de bu özellik sunulduğunda yeniden oturum açın.
-- **Benzetim çalışma ortamı.** Fairbeam ilk açılıştaki kurulum ekranından kendi çalışma ortamını
+- **Simülasyon çalışma ortamı.** Fairbeam ilk açılıştaki kurulum ekranından kendi çalışma ortamını
   yeniden indirip kurar. İki uygulama aynı çalışma ortamını paylaşmaz.
 - **Sunucu portu** ve eski kuruluma ait diğer ayarlar.
 
