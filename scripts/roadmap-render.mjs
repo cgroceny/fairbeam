@@ -2,6 +2,8 @@
 // without JavaScript. scripts/build-site.mjs puts it between the roadmap markers of roadmap.html;
 // landing/script.js adds the mobile tabs and the motion. The data is refreshed by scripts/roadmap.mjs.
 
+import { externalLinksInHtml } from "./site-links.mjs";
+
 const STATES = [
   { id: "available", label: "Available", note: "In a release, or merged for the next one" },
   { id: "development", label: "In development", note: "Open pull requests and work under way" },
@@ -103,11 +105,11 @@ export function renderRoadmap(data) {
   const date = new Date(`${data.updated}T12:00:00Z`);
   const day = date.toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric", timeZone: "UTC" });
 
-  return `<p class="rm-intro">${count("available")} features available, ${count("development")} in development and ${count("planned")} planned. Availability refers to the stated release; future plans may change. Updated <time datetime="${esc(data.updated)}">${day}</time>.</p>
+  return externalLinksInHtml(`<p class="rm-intro">${count("available")} features available, ${count("development")} in development and ${count("planned")} planned. Availability refers to the stated release; future plans may change. Updated <time datetime="${esc(data.updated)}">${day}</time>.</p>
     <div class="rm-board" id="roadmap-board">
       <div class="rm-tabs" role="tablist" aria-label="Roadmap by state" hidden>${tabs}
       </div>
       <div class="rm-cols">${columns}
       </div>
-    </div>`;
+    </div>`);
 }

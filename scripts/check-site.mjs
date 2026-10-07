@@ -1,8 +1,13 @@
 // Check website translations and bundled-example links. Optional browser checks use a built site.
 // FAIRBEAM_SITE_URL=http://127.0.0.1:5342 node --experimental-strip-types scripts/check-site.mjs
 import assert from "node:assert/strict";
-import { mkdirSync, readFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { runInNewContext } from "node:vm";
+import { fileURLToPath } from "node:url";
+import { renderDocsSite } from "./docs-render.mjs";
+import { isExternalSiteLink, externalLinksInHtml } from "./site-links.mjs";
 import { renderRoadmap } from "./roadmap-render.mjs";
 import { linkedExample } from "../src/runner/examples.ts";
 
@@ -75,6 +80,83 @@ assert.match(read("scripts/build-site.mjs"), /"import.meta.env.VITE_FAIRBEAM_DEM
 const featureLinks = [...read("landing/features.html").matchAll(/href="app\/\?example=([^"]+)"/g)];
 assert.equal(featureLinks.length, 6);
 for (const [, id] of featureLinks) assert.equal(linkedExample(index, `?example=${id}`)?.file, `${id}.json`);
+// Check source pages and every generated documentation and roadmap link before building.
+function checkExternalLinks(html, where, language = "en") {
+  let count = 0;
+  for (const [, attributes, text] of html.matchAll(/<a\b([^>]*)>([\s\S]*?)<\/a>/gi)) {
+    const href = attributes.match(/\bhref=["']([^"']*)["']/i)?.[1];
+    if (!href || !isExternalSiteLink(href)) continue;
+    count++;
+    assert.match(attributes, /\btarget="_blank"/, `${where}: target for ${href}`);
+    const rel = attributes.match(/\brel="([^"]*)"/)?.[1].split(/\s+/) ?? [];
+    for (const token of ["noopener", "noreferrer"]) assert.ok(rel.includes(token), `${where}: ${token} for ${href}`);
+    assert.ok(text.includes(language === "tr" ? "(yeni sekmede açılır)" : "(opens in a new tab)"), `${where}: accessible hint for ${href}`);
+  }
+  return count;
+}
+for (const href of ["https://github.com/example", "http://openems.de", "//example.org/page", "https://fairbeam.org.example.org", "https://example.org/file.dmg", "https://github.com/repo/blob/main/NOTICE.md"]) {
+  assert.equal(isExternalSiteLink(href), true, href);
+}
+for (const href of ["https://fairbeam.org/docs/", "https://www.fairbeam.org/app/", "//fairbeam.org/docs/", "#anchor", "/docs/", "app/", "../guide.html", "mailto:ismail@fairbeam.org"]) {
+  assert.equal(isExternalSiteLink(href), false, href);
+  const link = `<a href="${href}">Local</a>`;
+  assert.equal(externalLinksInHtml(link), link, "same-site and email links stay unchanged");
+}
+const authorLink = externalLinksInHtml('<a href="https://example.org" rel="author">Author</a>');
+assert.match(authorLink, /rel="author noopener noreferrer"/);
+assert.equal(externalLinksInHtml(authorLink), authorLink, "processing does not duplicate hints");
+// Exercise rewriting and hint placement through the actual Markdown renderer.
+const fixture = mkdtempSync(join(tmpdir(), "fairbeam-site-links-"));
+try {
+  mkdirSync(join(fixture, "landing"));
+  mkdirSync(join(fixture, "landing-src"));
+  writeFileSync(join(fixture, "landing/docs.json"), JSON.stringify({
+    site: "https://fairbeam.org", repo: "https://github.com/example/project", branch: "main",
+    groups: [{ title: "Reference", pages: [{ source: "sample.md", slug: "sample", title: "Sample", description: "Sample" }] }],
+  }));
+  writeFileSync(join(fixture, "landing-src/docs-page.html"), read("landing-src/docs-page.html"));
+  writeFileSync(join(fixture, "landing/language.js"), language);
+  writeFileSync(join(fixture, "NOTICE.md"), "Notice");
+  writeFileSync(join(fixture, "sample.md"), `# Sample
+
+## [External heading](https://example.org)
+
+## Second heading
+
+## Third heading
+
+[Published](sample.md#external-heading) [Repository notice](NOTICE.md)
+[Local](https://fairbeam.org/app/) [Email](mailto:example@example.org)
+[Formatted **label**](https://example.org/page?a=1&b=2 "Title")
+<https://example.org/auto>
+<a href="//example.org/raw" rel="author">Raw HTML</a>
+`);
+  const rendered = renderDocsSite(fixture);
+  assert.deepEqual(rendered.problems, []);
+  for (const file of rendered.files.filter((file) => file.path.endsWith("sample.html"))) {
+    checkExternalLinks(file.html, file.path, file.path.startsWith("docs/tr/") ? "tr" : "en");
+    assert.match(file.html, /id="external-heading"/, "hints do not change heading IDs");
+    assert.match(file.html, /href="sample.html#external-heading">Published<\/a>/);
+    assert.match(file.html, /href="https:\/\/fairbeam.org\/app\/">Local<\/a>/);
+    assert.match(file.html, /href="mailto:example@example.org">Email<\/a>/);
+    assert.match(file.html, /title="Title"[^>]*>Formatted <strong>label<\/strong>/);
+    assert.match(file.html, /rel="author noopener noreferrer"/);
+    const toc = file.html.match(/<ol class="doc-toc-list"[^>]*>([\s\S]*?)<\/ol>/)[1];
+    assert.ok(!toc.includes("opens in a new tab") && !toc.includes("yeni sekmede açılır"), "internal contents links have no new-tab hint");
+  }
+} finally { rmSync(fixture, { recursive: true, force: true }); }
+let externalCount = 0;
+for (const name of readdirSync(new URL("../landing/", import.meta.url)).filter((name) => name.endsWith(".html"))) {
+  externalCount += checkExternalLinks(read(`landing/${name}`), `landing/${name}`);
+}
+externalCount += checkExternalLinks(read("landing-src/docs-page.html"), "docs template");
+externalCount += checkExternalLinks(renderedRoadmap, "roadmap board");
+const docs = renderDocsSite(fileURLToPath(new URL("../", import.meta.url)));
+assert.deepEqual(docs.problems, [], "docs render successfully");
+for (const file of docs.files) externalCount += checkExternalLinks(file.html, file.path, file.path.startsWith("docs/tr/") ? "tr" : "en");
+assert.ok(externalCount > 0, "checked external links");
+console.log(`site external-link checks passed: ${externalCount} links across sources and generated pages`);
+
 console.log(`site checks passed: ${translations.size} translation keys, 3 cards, 6 feature links, valid and unknown demo links`);
 
 if (process.env.FAIRBEAM_SITE_URL) {

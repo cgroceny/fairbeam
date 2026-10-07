@@ -6,6 +6,7 @@
   // Exact source strings keep translations attached to copy while preserving inline markup,
   // equations, links, measured values, version numbers and commands.
   const pairs = [
+    ["(opens in a new tab)", "(yeni sekmede açılır)"],
     ["Full third-party license texts", "Üçüncü taraf lisanslarının tam metinleri"],
     ["Optional install counts", "İsteğe bağlı kurulum sayımı"],
     ["Questions about this notice: ismail@fairbeam.org.", "Bu bildirimle ilgili sorularınız için: ismail@fairbeam.org."],
