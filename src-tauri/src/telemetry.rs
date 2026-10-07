@@ -1,4 +1,4 @@
-// Anonymous, opt-in usage statistics (docs/TELEMETRY.md). Built and wired, but OFF: without the
+// Pseudonymous, opt-in usage statistics (docs/TELEMETRY.md). Built and wired, but OFF: without the
 // Cargo feature `telemetry` nothing is counted, no file is written, no consent dialog is shown and
 // no code that could send a request is compiled in.
 //
