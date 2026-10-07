@@ -1217,6 +1217,15 @@ axis-aligned local working coordinate systems; the frequency range, boundaries, 
 H-field monitors. Coordinates are converted to mm and rounded to 1e-6 mm, the precision of the
 mesh lines, so ports sit on mesh lines. VBA code itself (variables, `If`, `For`) is not run.
 
+Mesh density is read from `Mesh.LinesPerWavelength` and from `MeshSettings` blocks explicitly
+marked `SetMeshType "Hex"` or `"HexTLM"`. In those blocks, `StepsPerWaveNear` sets cells per
+wavelength and `StepsPerWaveFar` sets air cells per wavelength only when positive and lower than
+the near density. Tetrahedral, surface, unknown and unspecified mesh types do not set FDTD density:
+their steps per wavelength are ignored. Without a supported density, Fairbeam uses its automatic
+mesh default of 20 cells per wavelength. A supported hexahedral density is retained even if an
+unsupported block appears later in the VBA macro. The import report explains the mapping or the
+ignored density settings; review the mesh and design checks before running a simulation.
+
 A macro exported by Fairbeam carries comments starting with `fairbeam-data:` with the exact
 openEMS port boxes, the boundary types and the automatic mesh settings (other readers ignore them), so
 exporting a design and importing the macro gives the same model back
