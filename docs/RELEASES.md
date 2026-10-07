@@ -169,6 +169,10 @@ editing them, or the prefill stops working.
 One entry per release, newest first. The installers are on the
 [release page](https://github.com/ismailakdag/fairbeam-releases/releases) of each version.
 
+### 0.7.2, 2026-10-07
+
+- **Install counts (optional):** on first start Fairbeam asks whether it may count installs. If you allow it, it sends at most once a week a random install ID (created on your computer, not derived from it), the app version, the operating system and the CPU architecture; nothing about your designs, files or results. You can turn it off or reset the ID in Settings at any time. The server keeps only weekly totals. See the [privacy page](https://fairbeam.org/privacy.html) and [TELEMETRY.md](TELEMETRY.md).
+
 ### 0.7.1, 2026-10-07
 
 - **VBA macro import:** degree trig functions (sind, cosd, tand, atnd and inverses), ThickenSheetAdvanced and Loft between two planar profiles; unsupported items are reported by name instead of being dropped. A tetrahedral or surface mesh setting no longer sets the FDTD density.
