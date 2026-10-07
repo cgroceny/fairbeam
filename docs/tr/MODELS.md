@@ -8,7 +8,7 @@ Model, üç öğe tanımlayan düz bir Python dosyasıdır:
 - `PARAMS`: `fairbeam.Param(key, default, label, unit, description, minimum, maximum)` listesi. `default` türü, `--set` değerlerinin nasıl ayrıştırılacağını belirler (int, float veya str).
 - `build(p: dict) -> Simulation`: çözülmüş parametre değerlerini alır; geometri, portlar, mesh ve isteğe bağlı NF2FF kutusuyla tamamen yapılandırılmış `fairbeam.Simulation` döndürür.
 
-**Mesh oluşturma**: geometri ve portlardan sonra (`add_nf2ff_box` öncesinde) `sim.auto_mesh()` çağırarak tüm mesh'i geometriden üretin: metal kenarlarında üçte bir kuralı, dar şeritler boyunca ince hücreler, çözümlenmiş dielektrik katmanları, kademeli hava ve λ/4 pay. Yakınsamış, elle ayarlanmış mesh'lerle %0.1 içinde uyuşur ([MESHING.md](MESHING.md)). Düzenleyici şablonları bunu kullanır.
+**Mesh oluşturma**: geometri ve portlardan sonra (`add_nf2ff_box` öncesinde) `sim.auto_mesh()` çağırarak tüm mesh'i geometriden üretin: metal kenarlarında üçte bir kuralı, dar şeritler boyunca ince hücreler, çözümlenmiş dielektrik katmanları, kademeli hava ve λ/4 pay. Yakınsamış, elle ayarlanmış mesh'lerle %0,1 içinde uyuşur ([MESHING.md](MESHING.md)). Düzenleyici şablonları bunu kullanır.
 
 `Simulation`, olağan openEMS/CSXCAD nesnelerini sarar (`sim.fdtd`, `sim.csx`, `sim.mesh`). Normal CSXCAD çağrılarını kullanabilirsiniz. `metal`, `dielectric`, `lumped_port`, `waveguide_port`, `lumped_resistor` (ideal R/L/C için ayrıca `lumped_element`, `lumped_inductor`, `lumped_capacitor`; bkz. [BUNDLE.md](BUNDLE.md#lumped_elements)), `add_nf2ff_box`, `smooth_mesh` ve `set_focus` yardımcıları, görüntüleyici ve VBA makro dışa aktarıcısının gerektirdiği üst verileri de kaydeder (kayıp tanjantı, port tanımları, faz merkezi, varsayılan kadraj). `sim.metal(name)` mükemmel iletkendir; `sim.metal(name, conductivity=5.8e7, thickness=0.035)` (S/m, mm) kayıplı metaldir: levhalar belirtilen kalınlıkta openEMS iletken levhası, hacimler ise belirtilen iletkenliğe sahip malzeme olur.
 
@@ -63,7 +63,7 @@ Yapı ile emici sınırlar arasında `f_min` frekansında en az λ/4 boşluk bı
 
 | Model | Açıklama | Gösterdiği özellikler | Doğrulama |
 | --- | --- | --- | --- |
-| `dipole.py` | Yarım dalga şerit dipol, 2.4 GHz | Üçte bir kuralıyla kenarlar, PML, mesh incelemesi | §1 |
+| `dipole.py` | Yarım dalga şerit dipol, 2,4 GHz | Üçte bir kuralıyla kenarlar, PML, mesh incelemesi | §1 |
 | `patch_antenna.py` | Dikdörtgen yama, RO4003C, sonda beslemesi | Dielektrik mesh'i, `--set mesh=auto` | §2 |
 | `inset_patch.py` | FR4 üzerinde içeri beslemeli yama | Mikroşerit besleme, çentikler | §2b |
 | `minkowski_patch.py` | Minkowski fraktal yama | Çokgen geometri | §2c |
@@ -74,7 +74,7 @@ Yapı ile emici sınırlar arasında `f_min` frekansında en az λ/4 boşluk bı
 | `branchline_coupler.py` | 90° hibrit | Dört port, `auto_mesh` | §11 |
 | `lowpass_stepped.py` | 5. dereceden basamaklı empedanslı alçak geçiren | Dar hatlar, `auto_mesh` | §12 |
 | `pyramidal_horn.py` | Optimum 16 dBi horn, WR-90, 10 GHz | Çokyüzlü duvarlar, **dalga kılavuzu portu**, bir yüzü atlanan NF2FF | §13 |
-| `helix_axial.py` | Kraus eksenel mod helis, 2.4 GHz | İnce tel `Curve`, **dairesel polarizasyon çıktıları** | §14 |
+| `helix_axial.py` | Kraus eksenel mod helis, 2,4 GHz | İnce tel `Curve`, **dairesel polarizasyon çıktıları** | §14 |
 
 ## Düzlemsel olmayan geometri, dalga kılavuzu portları ve dairesel polarizasyon
 
@@ -86,18 +86,18 @@ Yapı ile emici sınırlar arasında `f_min` frekansında en az λ/4 boşluk bı
 
 ## Malzeme kütüphanesi
 
-`fairbeam.materials`, yaygın anten malzemelerinin nominal değerlerini kaynaklarıyla içerir. Tasarımcıdaki **Malzeme kütüphanesi** penceresi (Modelleme şeridi, Malzemeler grubu, **Kütüphane**) aynı listeyi (`src/designer/materials.ts`) gösterir ve seçilen değerleri tasarıma kopyalar; böylece tasarım dosyası bağımsız kalır. Python modelinde `ro = fairbeam.materials.get("ro4003c")`, ardından `sim.dielectric("sub", ro["eps_r"], tan_d=ro["tan_d"], tan_d_freq=ro["tan_d_freq"] * 1e9)` kullanın. Laminatlar üretim partisi, kalınlık ve frekansa göre değişir; kritik tasarımlarda satın aldığınız laminatın veri sayfasını kullanın. openEMS kaybı sabit iletkenlikle modeller; tan δ belirtilen frekansta doğrudur (boşsa bant merkezi). Kütüphanedeki PEC mükemmel iletkendir; iletken kaybı için tasarım metaline `conductivity` (S/m, boş = PEC), levhalara ayrıca `thickness` (mm; varsayılan 0.035) verin.
+`fairbeam.materials`, yaygın anten malzemelerinin nominal değerlerini kaynaklarıyla içerir. Tasarımcıdaki **Malzeme kütüphanesi** penceresi (Modelleme şeridi, Malzemeler grubu, **Kütüphane**) aynı listeyi (`src/designer/materials.ts`) gösterir ve seçilen değerleri tasarıma kopyalar; böylece tasarım dosyası bağımsız kalır. Python modelinde `ro = fairbeam.materials.get("ro4003c")`, ardından `sim.dielectric("sub", ro["eps_r"], tan_d=ro["tan_d"], tan_d_freq=ro["tan_d_freq"] * 1e9)` kullanın. Laminatlar üretim partisi, kalınlık ve frekansa göre değişir; kritik tasarımlarda satın aldığınız laminatın veri sayfasını kullanın. openEMS kaybı sabit iletkenlikle modeller; tan δ belirtilen frekansta doğrudur (boşsa bant merkezi). Kütüphanedeki PEC mükemmel iletkendir; iletken kaybı için tasarım metaline `conductivity` (S/m, boş = PEC), levhalara ayrıca `thickness` (mm; varsayılan 0,035) verin.
 
 | Malzeme | Tür | εr | tan δ | Frekans | Kaynak ve notlar |
 | --- | --- | --- | --- | --- | --- |
 | PEC (bakır) | metal | | | | Mükemmel elektrik iletkeni (openEMS metali). Bakırın sonlu iletkenliği (5.8e7 S/m) ve yüzey pürüzlülüğü modellenmez; baskı antenlerde iletken kaybı küçüktür. |
-| FR4 | dielektrik | 4.3 | 0.02 | 1 GHz | Genel cam-epoksi laminat. εr 4.2–4.7 ve tan δ 0.015–0.025; reçine oranı, tedarikçi ve frekansa göre değişir. Laminatınızın veri sayfasını kullanın. |
-| Rogers RO4003C | dielektrik | 3.38 | 0.0027 | 10 GHz | Rogers RO4003C veri sayfası: 10 GHz, 23 °C'de proses εr 3.38 ± 0.05 ve tan δ 0.0027 (Rogers devre tasarımı için tasarım εr değeri 3.55'i önerir). |
-| Rogers RO4350B | dielektrik | 3.48 | 0.0037 | 10 GHz | Rogers RO4350B veri sayfası: 10 GHz, 23 °C'de proses εr 3.48 ± 0.05 ve tan δ 0.0037 (tasarım εr 3.66). |
-| Rogers RT/duroid 5880 | dielektrik | 2.2 | 0.0009 | 10 GHz | Rogers RT/duroid 5880 veri sayfası: 10 GHz'de εr 2.20 ± 0.02 ve tan δ 0.0009. |
-| Taconic TLY-5 | dielektrik | 2.2 | 0.0009 | 10 GHz | Taconic (AGC) TLY-5 veri sayfası: 10 GHz'de εr 2.20 ± 0.02 ve tan δ 0.0009. |
-| %99.5 alümina | dielektrik | 9.8 | 0.0001 | 10 GHz | %99.5 alümina ince film alttaşları için tipik değerler (mikrodalga frekanslarında εr 9.7–9.9, tan δ yaklaşık 0.0001); tedarikçi değerini kontrol edin. |
-| PTFE (Teflon) | dielektrik | 2.1 | 0.0002 | 10 GHz | Kütlesel PTFE, tipik: 1–10 GHz arasında εr 2.0–2.1, tan δ 0.0001–0.0003. |
+| FR4 | dielektrik | 4,3 | 0,02 | 1 GHz | Genel cam-epoksi laminat. εr 4,2–4,7 ve tan δ 0,015–0,025; reçine oranı, tedarikçi ve frekansa göre değişir. Laminatınızın veri sayfasını kullanın. |
+| Rogers RO4003C | dielektrik | 3,38 | 0,0027 | 10 GHz | Rogers RO4003C veri sayfası: 10 GHz, 23 °C'de proses εr 3,38 ± 0,05 ve tan δ 0,0027 (Rogers devre tasarımı için tasarım εr değeri 3,55'i önerir). |
+| Rogers RO4350B | dielektrik | 3,48 | 0,0037 | 10 GHz | Rogers RO4350B veri sayfası: 10 GHz, 23 °C'de proses εr 3,48 ± 0,05 ve tan δ 0,0037 (tasarım εr 3,66). |
+| Rogers RT/duroid 5880 | dielektrik | 2,2 | 0,0009 | 10 GHz | Rogers RT/duroid 5880 veri sayfası: 10 GHz'de εr 2,20 ± 0,02 ve tan δ 0,0009. |
+| Taconic TLY-5 | dielektrik | 2,2 | 0,0009 | 10 GHz | Taconic (AGC) TLY-5 veri sayfası: 10 GHz'de εr 2,20 ± 0,02 ve tan δ 0,0009. |
+| %99,5 alümina | dielektrik | 9,8 | 0,0001 | 10 GHz | %99,5 alümina ince film alttaşları için tipik değerler (mikrodalga frekanslarında εr 9,7–9,9, tan δ yaklaşık 0,0001); tedarikçi değerini kontrol edin. |
+| PTFE (Teflon) | dielektrik | 2,1 | 0,0002 | 10 GHz | Kütlesel PTFE, tipik: 1–10 GHz arasında εr 2,0–2,1, tan δ 0,0001–0,0003. |
 | Hava / vakum | dielektrik | 1 | 0 | | Serbest uzay. Arka plan zaten vakumdur; başka dielektrikte hava boşluğu veya delik açmak için daha yüksek öncelikle kullanın. |
 
 Tasarımcıda bu yerleşik listenin yanında kişisel **Malzemelerim** listesi de vardır (tasarım malzemelerinden kaydedilir, çalışma klasörünün `materials.json` dosyasında saklanır; bkz. [DESIGNER.md](DESIGNER.md#materials-and-parts)). `fairbeam.usermaterials` bu dosyayı doğrular; Python modelleri okumaz, tasarım da bu dosyaya başvurmaz.

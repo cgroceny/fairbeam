@@ -14,12 +14,12 @@ Apple M5 Pro üzerinde ölçülmüştür; iki motorun sonuçları aynıdır (dur
 
 | Model | Hücre | CPU (4 iş parçacığı) | Metal GPU |
 | --- | --- | --- | --- |
-| Yama anten, −60 dB | 0.26 M | 10.6 s¹ | 1.6 s |
-| Yama anten, −40 dB | 0.1 M | 8.0 s | 0.72 s |
-| Sierpinski monopol, 3. yineleme | 2.0 M | 12.0 s | 2.7 s (2650 MCells/s) |
+| Yama anten, −60 dB | 0,26 M | 10,6 s¹ | 1,6 s |
+| Yama anten, −40 dB | 0,1 M | 8,0 s | 0,72 s |
+| Sierpinski monopol, 3. yineleme | 2,0 M | 12,0 s | 2,7 s (2650 MCells/s) |
 
-¹ Güncel modelle 2026-09-25 tarihinde yeniden ölçülmüştür (12628 zaman adımı; 10.59 ve 10.75 s süren iki çalıştırmanın en iyisi).
-Depodaki `public/projects/patch-antenna.json`, 16.06 s bildirir: sabit durdurma ölçütü kontrol aralığından önce üretilmiştir ve 18468 zaman adımı sürmüştür.
+¹ Güncel modelle 2026-09-25 tarihinde yeniden ölçülmüştür (12628 zaman adımı; 10,59 ve 10,75 s süren iki çalıştırmanın en iyisi).
+Depodaki `public/projects/patch-antenna.json`, 16,06 s bildirir: sabit durdurma ölçütü kontrol aralığından önce üretilmiştir ve 18468 zaman adımı sürmüştür.
 
 Aynı modellerin Windows masaüstü sistemindeki (Ryzen 9 7900X, CPU motoru) sonuçları ve Apple M5 Pro (Metal) paketleriyle karşılaştırması: [BENCHMARKS.md](BENCHMARKS.md).
 
@@ -44,15 +44,15 @@ Ryzen 9 7900X ve NVIDIA GeForce RTX 3060 (12 GB, sürücü 591.74) üzerinde, ay
 
 | Model | Hücre | CPU, 4 iş parçacığı | RTX 3060, CUDA | Hızlanma | MCells/s (CUDA) |
 | --- | ---: | ---: | ---: | ---: | ---: |
-| Yama anten | 276,138 | 52.9 s (3 çalıştırmanın medyanı) | 2.56 s (3 çalıştırmanın medyanı) | 21 × | 1376 |
-| 4 × 1 yama dizisi (4 çalıştırma) | 452,270 | 873.8 s | 25.1 s | 35 × | 1424 |
-| Piramidal horn | 1,136,520 | 224.6 s | 6.3 s | 36 × | 1948 |
-| Sierpinski monopol, 3. yineleme | 2,012,304 | 61.1 s | 3.4 s | 18 × | 3052 |
-| Wilkinson bölücü (3 çalıştırma) | 113,103 | 41.1 s | 4.4 s | 9 × | 825 |
+| Yama anten | 276,138 | 52,9 s (3 çalıştırmanın medyanı) | 2,56 s (3 çalıştırmanın medyanı) | 21 × | 1376 |
+| 4 × 1 yama dizisi (4 çalıştırma) | 452,270 | 873,8 s | 25,1 s | 35 × | 1424 |
+| Piramidal horn | 1,136,520 | 224,6 s | 6,3 s | 36 × | 1948 |
+| Sierpinski monopol, 3. yineleme | 2,012,304 | 61,1 s | 3,4 s | 18 × | 3052 |
+| Wilkinson bölücü (3 çalıştırma) | 113,103 | 41,1 s | 4,4 s | 9 × | 825 |
 
 Sonuçlar `scripts/bench_compare.py` ile karşılaştırılmıştır:
-- **Aynı sistemin CPU motoruyla.** İkisi aynı zaman adımında durduğunda (yama anten, 4 × 1 dizi, Wilkinson) tüm değerler 0.000 dB hassasiyetinde uyuşur. Horn ve Sierpinski monopol, GPU sürümü durdurma ölçütünü cihazda denetlediği için 50–480 zaman adımı farkla durur. Buna rağmen Dmax farkı 0.009 dB, |S11| farkı 0.1 dB içindedir.
-- **Apple M5 Pro Metal paketleriyle** (horn, 4 × 1 dizi ve Wilkinson; hepsi aynı zaman adımında durur): −30 dB üzerindeki tüm S-parametrelerinde 0.1 dB, Dmax değerinde 0.005 dB içinde uyuşur.
+- **Aynı sistemin CPU motoruyla.** İkisi aynı zaman adımında durduğunda (yama anten, 4 × 1 dizi, Wilkinson) tüm değerler 0,000 dB hassasiyetinde uyuşur. Horn ve Sierpinski monopol, GPU sürümü durdurma ölçütünü cihazda denetlediği için 50–480 zaman adımı farkla durur. Buna rağmen Dmax farkı 0,009 dB, |S11| farkı 0,1 dB içindedir.
+- **Apple M5 Pro Metal paketleriyle** (horn, 4 × 1 dizi ve Wilkinson; hepsi aynı zaman adımında durur): −30 dB üzerindeki tüm S-parametrelerinde 0,1 dB, Dmax değerinde 0,005 dB içinde uyuşur.
 
 Tüm sayılar [BENCHMARKS.md](BENCHMARKS.md) sayfasındadır.
 

@@ -33,7 +33,7 @@ Kurulum dosyasını [fairbeam.org](https://fairbeam.org) veya [sürümler sayfas
 
 Şeritte **Simülasyon** sekmesini açın:
 
-- **Frekans bandı**: GHz cinsinden `f min` ve `f max`. Şablonda tasarım frekansı `f0` = 2.45 GHz çevresinde `f0 * 0.6` ile `f0 * 1.3` kullanılır.
+- **Frekans bandı**: GHz cinsinden `f min` ve `f max`. Şablonda tasarım frekansı `f0` = 2,45 GHz çevresinde `f0 * 0.6` ile `f0 * 1.3` kullanılır.
 - **Sınırlar**: simülasyon kutusunun altı yüzü; her biri açık (MUR veya PML), elektrik duvarı (PEC) veya manyetik duvar (PMC) olabilir. Yama şablonunda altı yüzün tamamında MUR kullanılır.
 - **Mesh**: **Hücre / λ** otomatik mesh yoğunluğunu ayarlar; ayrıntılar **Mesh ayarları** bölümündedir. **Mesh yakınsaması…**, mesh'in yeterince ince olup olmadığını kontrol eder (aşağıya bakın); **Mesh görünümü** mesh'i 3B görünümde çizer. Durum çubuğu hücre sayısını ve en küçük hücreyi gösterir.
 - **Portlar**: **Ayrık**, **Dalga kılavuzu** ve **Direnç** bir port veya yük ekler.
@@ -89,7 +89,7 @@ Alt panelin **Denetimler** sekmesi çalıştırmayı engelleyen sorunları liste
 **Optimizasyon › Optimizasyon aracı**, **Tasarımı optimize et** penceresini açar:
 
 - **Değişkenler**: başlangıç değeri ve Min / Maks sınırlarıyla değiştirilecek parametreler;
-- **Hedefler**: örneğin 2.45 GHz'e **Rezonansı ayarla**, **Frekansta uyum**, **Bant genişliğini büyüt** veya **Yönlülük en az**; her hedefin bir ağırlığı vardır;
+- **Hedefler**: örneğin 2,45 GHz'e **Rezonansı ayarla**, **Frekansta uyum**, **Bant genişliğini büyüt** veya **Yönlülük en az**; her hedefin bir ağırlığı vardır;
 - **Değerlendirme ≤**, **İş parçacığı** ve **Yöntem** (Otomatik, tek parametreyi bir frekansa ayarlarken sekant yöntemini; daha fazlası için Nelder–Mead, Bayes, CMA-ES ve diğer yöntemleri kullanır).
 
 **Optimizasyonu başlat**, her değerlendirmede bir simülasyon çalıştırır; ilerleme alt panelde görünür. Optimizasyon daha sonra Sonuçlar altında **Optimizasyon geçmişi**, **En iyiyi aç**, **En iyiyi çalıştırma olarak kaydet** ve **En iyi parametreleri tasarıma uygula** seçenekleriyle görünür. Bkz. [OPTIMIZE.md](OPTIMIZE.md).

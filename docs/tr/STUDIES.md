@@ -47,7 +47,7 @@ fairbeam sweep python/models/inset_patch.py --param inset=6,8,10 --param feed_w=
 fairbeam converge python/models/my_patch.design.json --densities 15,20,30,40 --max-runs 4 --engine gpu
 ```
 
-`.design.json` ile `--param` verilmezse tasarım her otomatik mesh yoğunluğunda sırayla çalışır (`mesh.cells_per_wavelength`; Otomatik modda `cells_per_wavelength` alan ayarı). Her çalıştırmadan sonra rezonansı (S11 minimumu), oradaki |S11|'i, Dmax'ı (uzak alan varsa) ve giriş empedansını önceki çalıştırmayla karşılaştırır. Değişikliklerin tümünün `--tol-f` (%0.5), `--tol-s11` (1 dB) ve `--tol-dmax` (0.2 dB) değerlerinin kesin olarak altında kaldığı ilk adımda veya `--max-runs` (4) çalıştırmadan sonra durur. Kod `python/fairbeam/convergence.py`, seçenekler [CLI.md](CLI.md) içindedir. Çıktı:
+`.design.json` ile `--param` verilmezse tasarım her otomatik mesh yoğunluğunda sırayla çalışır (`mesh.cells_per_wavelength`; Otomatik modda `cells_per_wavelength` alan ayarı). Her çalıştırmadan sonra rezonansı (S11 minimumu), oradaki |S11|'i, Dmax'ı (uzak alan varsa) ve giriş empedansını önceki çalıştırmayla karşılaştırır. Değişikliklerin tümünün `--tol-f` (%0,5), `--tol-s11` (1 dB) ve `--tol-dmax` (0,2 dB) değerlerinin kesin olarak altında kaldığı ilk adımda veya `--max-runs` (4) çalıştırmadan sonra durur. Kod `python/fairbeam/convergence.py`, seçenekler [CLI.md](CLI.md) içindedir. Çıktı:
 
 ```
  cells/λ      cells   f_res GHz     df %   S11 dB    dS11  Dmax dBi   dD dB           Zin ohm   time s  ok
@@ -85,7 +85,7 @@ Tasarımcının Mesh yakınsaması… penceresi aynı çalışmayı çalıştır
 - `converged_at`, ilk yakınsayan adımın daha kaba yoğunluğudur; daha ince çalıştırma bunu doğrular.
 - `reason`: `converged`, `exhausted` (yoğunluk kalmadı: “yakınsamadı: daha da inceltin veya modeli kontrol edin”), `failed`, `cancelled` veya `running` (bu durumda `next`, sıradaki yoğunluktur).
 - Çalıştırmada uzak alan yoksa `ok.dmax`, `null` olur; Dmax hesaba katılmaz.
-- Rezonans frekans örnekleri arasında iyileştirilir (S11 minimumu ve dB cinsinden komşularından geçen parabol); böylece ızgara aralığı %0.5 toleransa baskın olmaz.
+- Rezonans frekans örnekleri arasında iyileştirilir (S11 minimumu ve dB cinsinden komşularından geçen parabol); böylece ızgara aralığı %0,5 toleransa baskın olmaz.
 
 ### Python modeli: mesh parametresi
 
@@ -99,7 +99,7 @@ Bu, `sweep` komutunun tam bir eksenli ve değerlerini **kabadan inceye** sırala
 - **ilk rezonansın** değişimi: −10 dB altındaki ilk bandın merkezi (S11 minimumu), uyumlu bant yoksa global S11 minimumu
 - bu rezonansa en yakın uzak alan frekansındaki **Dmax** değişimi
 
-|Δf| < `--tol-f` (varsayılan %0.5) ve |ΔDmax| < `--tol-d` (varsayılan 0.1 dB) olduğunda adım yakınsamış sayılır. Çalışma, **son** adımı yakınsamışsa yakınsamıştır. Çıktı:
+|Δf| < `--tol-f` (varsayılan %0,5) ve |ΔDmax| < `--tol-d` (varsayılan 0,1 dB) olduğunda adım yakınsamış sayılır. Çalışma, **son** adımı yakınsamışsa yakınsamıştır. Çıktı:
 
 ```
   mesh_div      cells   f_res GHz      df %  Dmax dBi    dD dB  ok

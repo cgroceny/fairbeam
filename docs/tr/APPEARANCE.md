@@ -1,6 +1,6 @@
 # Görünümü özelleştirme
 
-Genel ayarlar → Tema ve yazı tipi, arayüz yüzeyleri için beş hazır ayar sunar: Mevcut, Okyanus, Orman, Erik ve Yüksek kontrast. Vurgu rengi bağımsızdır (Bakır, Mavi, Yeşil mavi, Mor). Grafik kontrollerinden ortak sekiz seri paletini ve çizgi kalınlığını (1.5, 2 veya 3) seçebilirsiniz. Görünüm kontrollerinden arka plan ve ızgara paletini seçebilirsiniz.
+Genel ayarlar → Tema ve yazı tipi, arayüz yüzeyleri için beş hazır ayar sunar: Mevcut, Okyanus, Orman, Erik ve Yüksek kontrast. Vurgu rengi bağımsızdır (Bakır, Mavi, Yeşil mavi, Mor). Grafik kontrollerinden ortak sekiz seri paletini ve çizgi kalınlığını (1,5; 2 veya 3) seçebilirsiniz. Görünüm kontrollerinden arka plan ve ızgara paletini seçebilirsiniz.
 
 Vurgu, birincil grafik çizgisi, görünüm arka planı veya ızgara rengini değiştirmek için Özel renkler bölümünü genişletin. Seçili hazır ayara dönmek için ilgili özel rengi kapatın. Özel vurgu renginde düğme metni okunaklı kontrast için siyah veya beyaz olur; özel çizgi ve ızgara renklerini siz seçersiniz, bu nedenle arka planda görünür kalan renkler kullanın. Bu kontroller ortak görüntüleme değerlerini etkiler; geometriyi, malzemeleri, simülasyon girdilerini veya dışa aktarılan model verilerini değiştirmez.
 
