@@ -145,9 +145,9 @@ ok(/\.dw-hints \{[^}]*top: calc\(var\(--al-pad-hud\) \+ var\(--al-control-h\) \+
 const post = ws.slice(ws.indexOf('tab.key === "post"'));
 ok(post.indexOf('t("ribbon.post.report")') > 0 && post.indexOf('t("ribbon.post.report")') < post.indexOf('t("ribbon.post.farfield")'), "Post-processing: the far-field quantity comes after PDF report, Package and Python (they keep their x)");
 const ribbonCss = read("src/styles/ribbon.css");
-ok(/\.rb-shell \.rb-result-note \{[^}]*min-width: 160px;[^}]*white-space: normal;[^}]*-webkit-line-clamp: 3;/.test(ribbonCss), "the Post-processing note wraps (up to three lines) instead of 'Sele…'");
+ok(/\.rb-shell \.rb-result-note \{[^}]*min-width: 0;[^}]*white-space: normal;[^}]*-webkit-line-clamp: 3;/.test(ribbonCss) && /\.rb-result-note\[data-room="none"\] \{ display: none; \}/.test(ribbonCss), "the Post-processing note wraps (up to three lines) instead of 'Sele…', or is hidden without room");
 ok(/<p class="rb-result-note" title=\{resultNote\(\)\}>\{resultNote\(\)\}<\/p>/.test(ws), "the note's tooltip carries the whole text");
-ok(/:scope > :not\(\.rb-group\)[\s\S]{0,120}minWidth[\s\S]{0,80}const room = toolbar\.clientWidth - reserved;/.test(ws), "fitRibbon keeps the note's min-width free");
+ok(/const room = toolbar\.clientWidth;/.test(ws) && /const left = room - used\(\);\s*for \(const note of notes\) note\.dataset\.room = left >= NOTE_MIN \? "" : "none";/.test(ws), "fitRibbon fits the commands first and gives the note the room left (it never folds a group)");
 
 // ---- one vocabulary: design (never model or project) for the user's file, result file for a run's .json
 for (const key of ["designId.exists", "contextExport.noView"]) ok(/\bdesign\b/.test(en[key]) && !/\bmodel\b/.test(en[key]), `${key} says design: ${en[key]}`);

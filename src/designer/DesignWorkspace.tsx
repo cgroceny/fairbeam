@@ -150,6 +150,8 @@ function RGroup(props: { label: string; icon: typeof Box; class?: string; childr
 }
 
 type RibbonDensity = "wide" | "full" | "compact";
+/** the narrowest room (px) in which the ribbon note is still readable in three lines */
+const NOTE_MIN = 96;
 /** Fits the shown ribbon tab into one row. It keeps inline fields and command labels as long as
  *  possible, folds groups from the right before resorting to icon-only commands. */
 function fitRibbon(shell: HTMLElement) {
@@ -157,17 +159,21 @@ function fitRibbon(shell: HTMLElement) {
   if (!toolbar) return;
   const groups = [...toolbar.querySelectorAll<HTMLElement>(":scope > .rb-group")];
   for (const g of groups) { delete g.dataset.size; delete g.dataset.collapsed; delete g.dataset.align; }
-  // an item that is not a group (the Post-processing note) keeps its min-width: groups fold first
-  const reserved = [...toolbar.querySelectorAll<HTMLElement>(":scope > :not(.rb-group)")]
-    .reduce((sum, el) => sum + (parseFloat(getComputedStyle(el).minWidth) || 0), 0);
-  const room = toolbar.clientWidth - reserved;
-  const fits = () => groups.reduce((sum, g) => sum + g.offsetWidth, 0) <= room;
+  const room = toolbar.clientWidth;
+  const used = () => groups.reduce((sum, g) => sum + g.offsetWidth, 0);
+  const fits = () => used() <= room;
+  // the commands come first: the note at the end of a tab (Post-processing) takes the room the groups
+  // leave. It wraps to up to three lines there; with less room than NOTE_MIN it is hidden rather than
+  // cut to a few letters (its text is also the tooltip of the disabled result buttons).
+  const notes = [...toolbar.querySelectorAll<HTMLElement>(":scope > .rb-result-note")];
   const done = () => {
     shell.dataset.fit = fits() ? "row" : "scroll";
     for (const g of groups) {
       if (g.dataset.collapsed !== undefined) g.dataset.align = g.offsetLeft + 300 > room ? "end" : "start";
       g.dataset.popAlign = g.getBoundingClientRect().left < 340 ? "start" : "end";
     }
+    const left = room - used();
+    for (const note of notes) note.dataset.room = left >= NOTE_MIN ? "" : "none";
   };
   const foldFromRight = () => {
     for (let i = groups.length - 1; i >= 0; i--) {
