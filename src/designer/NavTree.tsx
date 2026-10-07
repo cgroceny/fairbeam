@@ -8,7 +8,7 @@ import { lumpedLabel } from "../lumped.ts";
 // the geometry, and Ctrl/⌘-click on runs compares them.
 import { createEffect, createMemo, createSignal, For, type JSX, on, Show } from "solid-js";
 import {
-  BookmarkPlus, Box, ChevronDown, ChevronRight, ChevronsDownUp, ChevronsUpDown, Copy, Crosshair, Download, Eye, EyeOff, FolderClosed, FolderOpen,
+  BookmarkPlus, Box, ChevronDown, ChevronRight, ChevronsDownUp, ChevronsUpDown, Copy, Crosshair, Download, Eye, EyeOff, FolderClosed, FolderOpen, Info,
   GitCompareArrows, History, Layers, Move, Orbit, Palette, Pencil, Plus, Radar, ScrollText, Search, SlidersHorizontal, Square, Table2, Trash2, Ungroup, Variable, Waves,
   X, Zap, ChartSpline, ChevronsLeft,
 } from "lucide-solid";
@@ -167,7 +167,8 @@ function Row(props: { row: NavRow; selected: boolean; tabStop: boolean; onActiva
           selected: props.selected, "nt-shown": props.shown(), "nt-section": !!r.section, "nt-has-sub": !!r.sub, "nt-has-metrics": !!r.metrics, "dm-folder": a.kind === "folder" || a.kind === "group", "nt-hidden": props.hidden(),
           "dz-bad-node": r.issue === "error", "dz-warn-node": r.issue === "warning", "dz-drop": dropTarget !== null && dropAt() === dropTarget.key,
         }}
-        style={{ "padding-left": `${8 + (r.level - 1) * 12}px` }} title={part ? t("tree.part.dragTitle", { name: r.label }) : r.title ?? (r.sub && !r.section ? `${r.label} · ${r.sub}` : r.label)}
+        style={{ "padding-left": `${8 + (r.level - 1) * 12}px` }} title={part ? t("tree.part.dragTitle", { name: r.label }) : r.hint ?? r.title ?? (r.sub && !r.section ? `${r.label} · ${r.sub}` : r.label)}
+        aria-description={r.hint}
         aria-level={r.level} aria-setsize={r.size} aria-posinset={r.pos} aria-selected={props.selected}
         aria-expanded={r.expandable ? r.expanded : undefined} aria-haspopup={geometry || a.kind === "folder" || r.section === "components" ? "menu" : undefined}
         tabindex={props.tabStop ? 0 : -1}
@@ -186,7 +187,7 @@ function Row(props: { row: NavRow; selected: boolean; tabStop: boolean; onActiva
         <span class="nt-icon" aria-hidden="true"><Show when={Icon}>{(() => { const I = Icon!; return <I size={13} />; })()}</Show></span>
         <span class="dz-node-label" classList={{ mono: r.icon === "param" }}>{r.label}<Show when={props.shown()}><span class="visually-hidden">{t("tree.shownSuffix")}</span></Show><Show when={a.kind === "run"}><RunQualityBadge compact q={runQualityOf((a as { file: string }).file)} /></Show></span>
         <Show when={r.count !== undefined}><span class="nt-count">{r.count}</span></Show>
-        <Show when={r.sub}><span class="dz-node-sub">{r.sub}</span></Show>
+        <Show when={r.sub}><span class="dz-node-sub">{r.sub}<Show when={r.hint}><Info size={12} class="nt-hint-icon" aria-hidden="true" /></Show></span></Show>
         <Show when={props.toggleHidden}><button class="icon-btn icon-btn-sm nt-eye" tabindex={-1} aria-label={t(props.hidden() ? "tree.showParts" : "tree.hideParts")} title={t(props.hidden() ? "tree.showParts" : "tree.hideParts")} aria-pressed={!props.hidden()} onClick={(e) => { e.stopPropagation(); props.toggleHidden?.(); }}>{props.hidden() ? <EyeOff size={14} /> : <Eye size={14} />}</button></Show>
         <Show when={add}>
           <button class="icon-btn icon-btn-sm nt-add" tabindex={-1} aria-label={t(add!.label)} title={t(add!.label)}
@@ -305,9 +306,10 @@ export function NavTree() {
       sec("lumped", t("tree.lumped"), d.resistors.map((r, i) => ({
         id: `res-el:${i}`, label: r.name || `R${i + 1}`, sub: lumpedLabel(r), icon: "resistor", issue: worst(`resistors[${i}]`), action: select({ type: "resistor", i }),
       })), { issue: worst("resistors") }),
-      sec("results", t("tree.results"), results, results.length ? { title: t("tree.results.title") } : { sub: t("tree.results.none") }),
+      // an empty section shows "none yet" and an info icon; the whole hint is the tooltip and description
+      sec("results", t("tree.results"), results, results.length ? { title: t("tree.results.title") } : { sub: t("tree.section.noneYet"), hint: t("tree.results.none") }),
       // each optimization (running or finished) is a node here, like the mesh convergence studies in Results
-      sec("optimizations", t("tree.optimizations"), optimizations, optimizations.length ? { title: t("tree.optimizations.title") } : { sub: t("optTree.none") }),
+      sec("optimizations", t("tree.optimizations"), optimizations, optimizations.length ? { title: t("tree.optimizations.title") } : { sub: t("tree.section.noneYet"), hint: t("optTree.none") }),
     ];
   });
 

@@ -3626,6 +3626,7 @@
   "tree.result.tables": "Tablolar",
   "tree.results": "Sonuçlar",
   "tree.results.none": "henüz yok: Simülasyon › Çalıştır",
+  "tree.section.noneYet": "yok",
   "tree.results.title": "Karşılaştırmak için çalıştırmalara Ctrl/⌘ ile tıklayın",
   "tree.showParts": "Katıları göster",
   "tree.shownSuffix": ", gösteriliyor",

@@ -112,6 +112,14 @@ const ws = read("src/designer/DesignWorkspace.tsx");
 ok(/t\("wcs\.dialog\.about", \{ axis: a \}\)/.test(read("src/designer/dialogs/WcsDialog.tsx")), "the Transform WCS rotation fields name the axis they turn about");
 ok(/\{axis\}/.test(en["wcs.dialog.about"]), "the label is a template with the axis");
 
+// ---- empty tree sections: a short "none yet" that fits at 1280 px, the whole hint as tooltip and description
+const navTree = read("src/designer/NavTree.tsx");
+ok(/results\.length \? \{ title: t\("tree\.results\.title"\) \} : \{ sub: t\("tree\.section\.noneYet"\), hint: t\("tree\.results\.none"\) \}/.test(navTree), "Results without runs: 'none yet', the hint in the tooltip");
+ok(/optimizations\.length \? \{ title: t\("tree\.optimizations\.title"\) \} : \{ sub: t\("tree\.section\.noneYet"\), hint: t\("optTree\.none"\) \}/.test(navTree), "Optimizations without records: 'none yet', the hint in the tooltip");
+ok(/: r\.hint \?\? r\.title \?\?/.test(navTree) && /aria-description=\{r\.hint\}/.test(navTree), "the row's tooltip and accessible description carry the whole hint");
+ok(/<Show when=\{r\.hint\}><Info size=\{12\} class="nt-hint-icon" aria-hidden="true" \/><\/Show>/.test(navTree), "an info icon marks that there is more to read");
+for (const [lang, table] of [["en", en], ["tr", tr]]) ok(table["tree.section.noneYet"].length <= 12, `${lang}: the short form fits beside the section name`);
+
 // ---- Translate copies
 const nav = read("src/designer/NavTree.tsx");
 ok(/t\("tree\.part\.copies", \{ count: n - 1, total: n \}\)/.test(nav) && !/`×\$\{n/.test(nav), "the tree says '2 copies (3 in total)', not ×3");

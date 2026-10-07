@@ -3699,6 +3699,7 @@
   "tree.result.tables": "Tables",
   "tree.results": "Results",
   "tree.results.none": "none yet: Simulation › Run",
+  "tree.section.noneYet": "none yet",
   "tree.results.title": "Ctrl/⌘-click runs to compare them",
   "tree.showParts": "Show solids",
   "tree.shownSuffix": ", shown",
