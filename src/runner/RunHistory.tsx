@@ -125,7 +125,7 @@ export function SweepSummary(props: { group: SweepGroup; onOpenRun?: (file: stri
   const [sort, setSort] = createSignal<{ key: SortKey; dir: 1 | -1 }>({ key: "_index", dir: 1 });
   const cols = () => [
     ...props.group.keys.map((k) => ({ key: `p:${k}`, label: k, unit: "", get: (r: SummaryRow) => r.values[k] ?? null, digits: 3 })),
-    { key: "f", label: t("spec.band"), unit: "GHz", get: (r: SummaryRow) => r.fCenter, digits: 3 },
+    { key: "f", label: t("runHistory.col.bestMatch"), unit: "GHz", get: (r: SummaryRow) => r.fBest, digits: 3 },
     { key: "s11", label: "|S11| min", unit: "dB", get: (r: SummaryRow) => r.s11Min, digits: 1 },
     { key: "dmax", label: "Dmax", unit: "dBi", get: (r: SummaryRow) => r.dmax, digits: 2 },
     // the radiation efficiency (the far field's), named so it is not read as the Runs table's total

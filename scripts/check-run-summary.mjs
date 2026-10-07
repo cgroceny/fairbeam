@@ -13,6 +13,7 @@ import { bundleMetrics, deepestBand, deltaLabel, deltaText, indexMetrics, metric
 import { activeResultDataTable, resultDataCsv, resultDataTable } from "../src/designer/resultData.ts";
 import { isMainResultView, MAIN_RESULT_VIEWS, MAIN_TAB_LABELS } from "../src/designer/resultTabs.ts";
 import { runChildren } from "../src/designer/navModel.ts";
+import { bandsCsv, parseCsv } from "../src/export/csv.ts";
 import { bandCentre, bandTexts, pickerBands } from "../src/lib/bands.ts";
 import { columnDecimals } from "../src/lib/format.ts";
 import { fmt, setDecimalChoice } from "../src/i18n/index.ts";
@@ -31,6 +32,15 @@ for (const f of files) {
   const m = bundleMetrics(b);
   if (!b.results) { assert.equal(m, null, `${f}: a bundle without results has no headline`); continue; }
   metrics.set(f, m);
+  const table = summaryTable([{ label: f, file: f, bundle: b }]);
+  const csv = parseCsv(bandsCsv(b));
+  for (const [i, band] of b.results.bands.entries()) {
+    const prefix = b.results.bands.length > 1 ? `Band ${i + 1} ` : "Band ";
+    for (const [name, column] of [["low (GHz)", 0], ["high (GHz)", 1], ["center (GHz)", 2], ["best match (GHz)", 3], ["bandwidth (MHz)", 6], ["fractional BW", 5]])
+      assert.equal(table.rows[0][table.header.indexOf(prefix + name)], Number(csv[i + 1][column]), `${f}: Summary and bands.csv ${name}`);
+    assert.equal(table.rows[0][table.header.indexOf(prefix + "edge low")], Number(band.edge_lo));
+    assert.equal(table.rows[0][table.header.indexOf(prefix + "edge high")], Number(band.edge_hi));
+  }
   assert.ok(m.f0 !== null && m.f0 > 0, `${f}: a resonance frequency`);
   assert.ok(m.s11MinDb !== null && m.s11MinDb < 0, `${f}: a negative |S11| minimum`);
   assert.equal(m.source, "bundle");
@@ -150,6 +160,39 @@ assert.ok(metrics.size >= 10, "the example bundles were read");
   setDecimalChoice("language");
 }
 
+// ---- Band exports: a committed band whose middle differs from best match, all open-edge states,
+// and missing bands. The Summary CSV and copied TSV share the same numeric table.
+{
+  const dipole = load("dipole.json");
+  const csv = parseCsv(bandsCsv(dipole));
+  const col = (name) => Number(csv[1][csv[0].indexOf(name)]);
+  assert.equal(col("f_center_GHz"), 2.43125, "dipole middle of the stored edges");
+  assert.equal(col("f_best_GHz"), 2.415, "dipole best match is kept separately");
+  near(col("fractional_bw"), 0.3125 / 2.43125, 1e-12, "dipole fractional bandwidth uses the middle");
+  for (const edge_lo of [false, true]) for (const edge_hi of [false, true]) {
+    const b = structuredClone(dipole);
+    Object.assign(b.results.bands[0], { edge_lo, edge_hi });
+    const band = parseCsv(bandsCsv(b))[1];
+    assert.deepEqual(band.slice(0, 7), csv[1].slice(0, 7), "edge flags do not insert marks into numbers");
+    assert.deepEqual(band.slice(7), [String(edge_lo), String(edge_hi)], "both open-edge flags survive CSV");
+    const table = summaryTable([{ label: "Dipole", file: "dipole.json", bundle: b }]);
+    const value = (name) => table.rows[0][table.header.indexOf(`Band ${name}`)];
+    for (const [name, index] of [["low (GHz)", 0], ["high (GHz)", 1], ["center (GHz)", 2], ["best match (GHz)", 3], ["bandwidth (MHz)", 6], ["fractional BW", 5]])
+      assert.equal(value(name), Number(band[index]), `Summary and bands.csv agree: ${name}`);
+    assert.equal(value("edge low"), Number(edge_lo));
+    assert.equal(value("edge high"), Number(edge_hi));
+    const exported = parseCsv(resultDataCsv(table));
+    assert.deepEqual(exported[1].slice(table.header.indexOf("Band low (GHz)"), table.header.indexOf("Band edge high") + 1),
+      table.rows[0].slice(table.header.indexOf("Band low (GHz)"), table.header.indexOf("Band edge high") + 1).map(String), "Summary CSV preserves numeric band cells");
+  }
+  dipole.results.bands = [];
+  assert.equal(parseCsv(bandsCsv(dipole)).length, 1, "no bands exports the header only");
+  const none = summaryTable([{ label: "Empty", file: "empty.json", bundle: dipole }]);
+  assert.ok(none.header.flatMap((h, i) => h.startsWith("Band ") ? [none.rows[0][i]] : []).every((v) => v === null), "missing band columns are empty");
+  delete dipole.results;
+  assert.equal(parseCsv(bandsCsv(dipole)).length, 1, "preview exports the same header only");
+}
+
 // ---- Copy / CSV: one row per run, English headers, differing parameters
 {
   const a = load("patch-antenna.json");
@@ -173,7 +216,8 @@ assert.ok(metrics.size >= 10, "the example bundles were read");
   {
     const helix = load("helix-axial.json");
     const hb = summaryTable([{ label: "H", file: "helix-axial.json", bundle: helix }, { label: "P", file: "p.json", bundle: a }]);
-    assert.deepEqual(hb.header.filter((h) => h.startsWith("Band ")), ["Band 1 low (GHz)", "Band 1 high (GHz)", "Band 2 low (GHz)", "Band 2 high (GHz)"], "numbered when a run has several bands");
+    const names = ["low (GHz)", "high (GHz)", "center (GHz)", "best match (GHz)", "bandwidth (MHz)", "fractional BW", "edge low", "edge high"];
+    assert.deepEqual(hb.header.filter((h) => h.startsWith("Band ")), [1, 2].flatMap((n) => names.map((name) => `Band ${n} ${name}`)), "numbered when a run has several bands");
     assert.equal(hb.rows[1][hb.header.indexOf("Band 2 low (GHz)")], null, "a run with fewer bands leaves the cells empty");
   }
   const key = a.model.params[0].key;

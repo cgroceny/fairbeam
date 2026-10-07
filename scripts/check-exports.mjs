@@ -4,7 +4,7 @@
 //
 // Writes examples/drawings/<bundle-stem>_{A3,A4,figure}.svg, <bundle-stem>_{s11,zin,smith,pattern_*}.svg
 // and examples/reports/patch-antenna.pdf. Exits non-zero if any check fails: well-formed XML,
-// expected dimension values, no NaN/undefined, Touchstone round trip, CSV row counts, PDF structure
+// expected dimension values, no NaN/undefined, Touchstone round trip, CSV columns and values, PDF structure
 // and embedded glyphs, zip contents.
 
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
@@ -302,7 +302,21 @@ for (const entry of index.projects) {
     check(sw.length - 1 === s.f.length, `${stem} sweep.csv`, `${sw.length - 1} rows`);
     check(sw.every((r) => r.length === 7), `${stem} sweep.csv`, "ragged rows");
     check(Math.abs(Number(sw[1][1]) - s.s11Db[0]) < 1e-3, `${stem} sweep.csv`, "s11_dB mismatch");
-    check(rows(bandsCsv(b)) === b.results.bands.length, `${stem} bands.csv`, "row count");
+    const bands = parseCsv(bandsCsv(b));
+    const bandHeader = ["f_lo_GHz", "f_hi_GHz", "f_center_GHz", "f_best_GHz", "s11_min_dB", "fractional_bw", "bandwidth_MHz", "edge_lo", "edge_hi"];
+    check(JSON.stringify(bands[0]) === JSON.stringify(bandHeader), `${stem} bands.csv`, "column set and order");
+    check(bands.length - 1 === b.results.bands.length, `${stem} bands.csv`, "row count");
+    b.results.bands.forEach((band, i) => {
+      const row = bands[i + 1];
+      const middle = (band.f_lo + band.f_hi) / 2;
+      const expected = [band.f_lo / 1e9, band.f_hi / 1e9, middle / 1e9, band.f_center / 1e9, band.s11_min_db,
+        (band.f_hi - band.f_lo) / middle, (band.f_hi - band.f_lo) / 1e6];
+      const tolerance = [5.1e-7, 5.1e-7, 5.1e-7, 5.1e-7, 1e-12, 1e-12, 5.1e-4];
+      check(row?.length === bandHeader.length, `${stem} bands.csv`, "rectangular rows");
+      expected.forEach((value, col) => check(row?.[col] !== "" && Math.abs(Number(row?.[col]) - value) <= tolerance[col],
+        `${stem} bands.csv ${i + 1} ${bandHeader[col]}`, "numeric value matches table definition"));
+      check(row?.[7] === String(band.edge_lo) && row?.[8] === String(band.edge_hi), `${stem} bands.csv`, "open-edge flags");
+    });
     for (const ff of b.results.farfield) {
       const t = patternCsv(ff);
       check(rows(t) === ff.theta.length * ff.phi.length, `${stem} pattern_${patternTag(ff.f)}.csv`, "row count");
@@ -341,6 +355,8 @@ for (const entry of index.projects) {
   check(/^[a-z0-9_-]+_\d{8}-\d{4}\.zip$/i.test(name), `${stem} package`, `bad name ${name}`);
   const zip = zipPackage(files, name.replace(/\.zip$/, ""), now);
   const un = unzipSync(zip);
+  const bandPath = Object.keys(un).find((p) => p.endsWith("/data/bands.csv"));
+  check(!!bandPath && strFromU8(un[bandPath]) === bandsCsv(b), `${stem} package bands.csv`, "packaged CSV matches the writer");
   const paths = Object.keys(un).map((p) => p.split("/").slice(1).join("/"));
   // port time signals exist for lumped ports only (a waveguide port has no scalar reference impedance)
   const hasSignals = !!b.results.signals?.time_ns;
@@ -350,6 +366,8 @@ for (const entry of index.projects) {
   const readme = strFromU8(un[Object.keys(un).find((p) => p.endsWith("README.md"))]);
   for (const w of want.filter((p) => p !== "README.md")) check(readme.includes(`\`${w}\``), `${stem} README`, `file index lacks ${w}`);
   check(!/NaN|undefined|\[object/.test(readme), `${stem} README`, "NaN/undefined");
+  check(readme.includes("`f_center_GHz` is the middle of the edges") && readme.includes("`f_best_GHz`") && readme.includes("`edge_lo=true`") && readme.includes("`edge_hi=true`"),
+    `${stem} README`, "CSV meanings and open-edge convention travel with the package");
   check(readme.includes(reproduceCommand(b)), `${stem} README`, "missing reproduce command");
   const json = JSON.parse(strFromU8(un[Object.keys(un).find((p) => p.endsWith("project.json"))]));
   check(json.name === b.name, `${stem} package`, "project.json differs");

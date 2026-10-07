@@ -163,6 +163,12 @@ editing them, or the prefill stops working.
 One entry per release, newest first. The installers are on the
 [release page](https://github.com/ismailakdag/fairbeam-releases/releases) of each version.
 
+### Unreleased
+
+- Sweep CSV now exports band edges, their middle as `band_center_ghz`, and the |S11| minimum as `band_best_ghz`; RunHistory labels that minimum frequency Best match.
+
+- Matched-band CSV `f_center_GHz` now means the band middle; `f_best_GHz` holds the |S11| minimum, and fractional bandwidth uses the middle, matching the tables and Summary CSV/TSV.
+
 ### 0.7.0 — first release of Fairbeam, 2026-10-06
 
 Fairbeam is a desktop app for macOS (Apple silicon) and Windows x64 that designs, simulates and

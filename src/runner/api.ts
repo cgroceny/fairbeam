@@ -242,7 +242,8 @@ export interface RunStats {
   /** instead of final_energy_db when openEMS logged no energy line: the energy is at most this (dB) */
   final_energy_bound_db?: number;
   hit_timestep_limit?: boolean;
-  bands?: { f_lo_ghz: number; f_hi_ghz: number; s11_min_db: number; f_center_ghz: number }[];
+  /** f_center_ghz is the |S11| minimum; older history may not have band edges. */
+  bands?: { f_lo_ghz?: number; f_hi_ghz?: number; s11_min_db: number; f_center_ghz: number }[];
   farfield?: { f_ghz: number; dmax_dbi: number; rad_efficiency?: number | null }[];
 }
 

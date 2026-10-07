@@ -138,7 +138,8 @@ for (const { file, text, label, self } of sources) {
   for (const [link, line] of links) {
     if (external.test(link) || link.startsWith("/")) continue;
     checked++;
-    const [path, frag] = link.split("#", 2);
+    const [pathWithQuery, frag] = link.split("#", 2);
+    const path = pathWithQuery.split("?", 1)[0];
     const where = `${label ?? relative(root, file)}:${line}`;
     const target = path ? resolveTarget(file, path) : (self ?? file);
     if (target === PROVIDED) continue;

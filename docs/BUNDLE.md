@@ -386,6 +386,10 @@ each with its own reflection from the run in which it was driven.
 | `fractional_bw` | number | `(f_hi − f_lo) / f_center` |
 | `edge_lo`, `edge_hi` | boolean | The band touches the start or end of the simulated range, so its true edge lies outside it |
 
+The JSON band fields retain their original meanings. In the [CSV export](EXPORTS.md#matched-band-csv-columns),
+`f_center_GHz` is the middle of the edges, `f_best_GHz` is the JSON `f_center`, and
+`fractional_bw` divides by the middle; `edge_lo` and `edge_hi` retain the open-edge flags.
+
 **FarField.** The pattern frequencies are the bands' `f_center` values, the frequency of minimum S11 in each band (at most 4). If there are no bands, the frequency of minimum S11 is used. A model can choose its own (`sim.pattern_freqs`, e.g. the band edges and center of a broadband horn). `--pattern` overrides all of these.
 
 | Field | Type | Description |

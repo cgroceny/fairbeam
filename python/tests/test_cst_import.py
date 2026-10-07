@@ -933,6 +933,61 @@ def _brick(name, x, y, z, comp="c", mat="PEC"):
                  f'Xrange "{x[0]}", "{x[1]}"', f'Yrange "{y[0]}", "{y[1]}"', f'Zrange "{z[0]}", "{z[1]}"')
 
 
+class MeshDensityImport(unittest.TestCase):
+    def imp(self, *blocks):
+        text = "\n".join([*_brick("b", (0, 1), (0, 1), (0, 1)), *blocks])
+        res = import_cst(text, filename="mesh.bas")
+        self.assertEqual(res["report"]["refused"], 0, res["report"]["notes"])
+        return res["design"]["mesh"], res["report"]["notes"]
+
+    def settings(self, mesh_type, near="4", far="4"):
+        return "\n".join(["With MeshSettings", *([f' .SetMeshType "{mesh_type}"'] if mesh_type else []),
+                          f' .Set "StepsPerWaveNear", "{near}"', f' .Set "StepsPerWaveFar", "{far}"', "End With"])
+
+    def test_unsupported_density_uses_automatic_default(self):
+        for mesh_type in ("Tet", "Surface", "unknown", ""):
+            with self.subTest(mesh_type=mesh_type):
+                mesh, notes = self.imp(self.settings(mesh_type))
+                self.assertEqual(mesh, {"mode": "auto", "cells_per_wavelength": 20})
+                self.assertTrue(any("StepsPerWaveNear and StepsPerWaveFar ignored" in n["message"]
+                                    and n["line"] > 0 for n in notes))
+
+    def test_unsupported_density_is_not_evaluated(self):
+        mesh, _ = self.imp(self.settings("Tet", "undefined_near", "undefined_far"))
+        self.assertEqual(mesh, {"mode": "auto", "cells_per_wavelength": 20})
+
+    def test_hexahedral_near_and_far_mapping(self):
+        for mesh_type in ("Hex", "HexTLM", " hex "):
+            with self.subTest(mesh_type=mesh_type):
+                mesh, notes = self.imp(self.settings(mesh_type, "24", "12"))
+                self.assertEqual(mesh, {"mode": "auto", "cells_per_wavelength": 24, "air_cells_per_wavelength": 12})
+                self.assertTrue(any("hexahedral StepsPerWaveNear maps" in n["message"] for n in notes))
+        for far in ("24", "30", "0", "-1"):
+            with self.subTest(far=far):
+                mesh, _ = self.imp(self.settings("Hex", "24", far))
+                self.assertNotIn("air_cells_per_wavelength", mesh)
+
+    def test_non_hexahedral_blocks_do_not_overwrite_supported_density(self):
+        for supported in (self.settings("Hex", "24", "12"), 'Mesh.LinesPerWavelength "24"'):
+            for unsupported in (self.settings("Tet"), self.settings("Surface"), self.settings("")):
+                for blocks in ((supported, unsupported), (unsupported, supported)):
+                    with self.subTest(blocks=blocks):
+                        mesh, _ = self.imp(*blocks)
+                        self.assertEqual(mesh["cells_per_wavelength"], 24)
+                        if supported.startswith("With"):
+                            self.assertEqual(mesh["air_cells_per_wavelength"], 12)
+                        else:
+                            self.assertNotIn("air_cells_per_wavelength", mesh)
+
+    def test_mesh_report_messages_have_ui_translations(self):
+        en = json.loads((REPO / "src/i18n/en.json").read_text())
+        tr = json.loads((REPO / "src/i18n/tr.json").read_text())
+        for mesh_type, key in (("Hex", "home.importCst.meshHex"), ("Tet", "home.importCst.meshIgnored")):
+            _, notes = self.imp(self.settings(mesh_type))
+            self.assertTrue(any(n["message"] == en[key] for n in notes))
+            self.assertTrue(tr[key])
+
+
 class MoreCommands(unittest.TestCase):
     def imp(self, lines):
         res = import_cst("\n".join(lines), filename="t.txt")
@@ -1365,8 +1420,14 @@ class ReportGaps(unittest.TestCase):
         for files in (None, {}, {"other.stl": "solid x\nendsolid x\n"}):
             report = import_cst(text, filename="pyramidal-horn.bas", files=files)["report"]
             refused = [n for n in report["notes"] if n["severity"] == "refused"]
-            self.assertEqual(len(refused), 4, refused)
-            self.assertTrue(all("was not supplied" in n["message"] and ".stl" in n["message"] for n in refused), refused)
+            missing = [n for n in refused if "was not supplied" in n["message"]]
+            dependent = [n for n in refused if "dependent shape" in n["message"]]
+            self.assertEqual(len(missing), 4, refused)
+            self.assertTrue(all(".stl" in n["message"] for n in missing), missing)
+            self.assertEqual(len(dependent), 8, refused)  # material changes and Boolean operands
+            self.assertEqual(len(refused), len(missing) + len(dependent))
+            for suffix in range(5, 9):
+                self.assertEqual(sum(f"fairbeam:horn_{suffix}" in n["message"] for n in dependent), 2)
             self.assertEqual(report["counts"]["part"], 1)   # the rest of the horn is still imported
 
     def test_unreadable_stl_is_refused(self):

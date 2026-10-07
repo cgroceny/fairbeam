@@ -365,9 +365,9 @@ export function reportPages(bundle: Bundle, opt: ReportOptions): string[] {
   if (s11) {
     d.newPage();
     d.h2("Input reflection coefficient");
-    d.figure(s11, `Figure ${fig++}. |S11| versus frequency; the dashed line marks −10 dB and the dots the band centres.`);
+    d.figure(s11, `Figure ${fig++}. |S11| versus frequency; the dashed line marks −10 dB and the dots the best-match frequencies.`);
     if (r?.bands.length)
-      d.table(["Band", "f_lo (GHz)", "f_hi (GHz)", "Centre (GHz)", "|S11| min (dB)"], r.bands.map((x, i) => [String(i + 1), f3(x.f_lo), f3(x.f_hi), f3(x.f_center), fx(x.s11_min_db, 2)]), [0.6, 1, 1, 1, 1], ["r", "r", "r", "r", "r"]);
+      d.table(["Band", "f_lo (GHz)", "f_hi (GHz)", "Center (GHz)", "Best match (GHz)", "|S11| min (dB)"], r.bands.map((x, i) => { const bt = bandTexts(x, f3, fx); return [String(i + 1), f3(x.f_lo), f3(x.f_hi), bt.centre, bt.best, fx(x.s11_min_db, 2)]; }), [0.6, 1, 1, 1, 1.1, 1], ["r", "r", "r", "r", "r", "r"]);
   }
   const zin = zinFigure(b, { widthMm: CW, heightMm: 105 });
   if (zin) {

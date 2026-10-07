@@ -72,13 +72,14 @@ SUPPORTED = {
     "materials": "Material (.Type Normal / Pec / Lossy metal, .Epsilon, .Mu, .Sigma / .Kappa, .TanD, .TanDFreq, "
                  ".TanDGiven, .Folder, .Colour)",
     "shapes": "Brick, Cylinder (inner radius: a tube), Cone, Sphere, Torus; curves Polygon, Polygon3D, Rectangle, "
-              "Circle with Curve.NewCurve, CoverCurve, ExtrudeCurve, Extrude (point list); STL (a polyhedron, "
+              "Circle with Curve.NewCurve, CoverCurve, ExtrudeCurve, Extrude (point list); "
+              "ThickenSheetAdvanced (planar sheets), Loft (two convex parallel sheets, zero tangency); STL (a polyhedron, "
               "read from the .stl file Fairbeam's export writes next to the macro)",
     "structure": "Component.New / Delete, Solid.Add / Subtract / Intersect / Insert / Delete / Rename / "
                  "ChangeMaterial / ChangeComponent, Transform (translate, rotate by any angle, mirror, "
                  "uniform scale; with copies), WCS (axis-aligned local systems)",
     "simulation": "Solver.FrequencyRange, Solver .SteadyStateLimit, Boundary, Mesh .LinesPerWavelength / "
-                  "MeshSettings StepsPerWaveNear / StepsPerWaveFar, DiscretePort, DiscreteFacePort, "
+                  "hexahedral MeshSettings StepsPerWaveNear / StepsPerWaveFar, DiscretePort, DiscreteFacePort, "
                   "LumpedElement (R, L, C; series or parallel),WaveguidePort (Free coordinates), Monitor (Farfield, H-field / surface "
                   "current)",
 }
@@ -106,7 +107,7 @@ class _Refuse(Exception):
 
 
 class _Quiet(_Refuse):
-    """Part of an item already reported (a command on a solid whose STL file was not supplied): skipped, no extra note."""
+    """An operation depends on a solid whose missing STL file was already reported."""
 
 
 # ---------------------------------------------------------------------------- expressions
@@ -229,6 +230,8 @@ _FUNC_MAP = {"sqr": "sqrt", "sqrt": "sqrt", "sin": "sin", "cos": "cos", "tan": "
              "arctan": "atan", "asin": "asin", "arcsin": "asin", "acos": "acos", "arccos": "acos", "atn2": "atan2",
              "atan2": "atan2", "exp": "exp", "log": "log", "ln": "log", "log10": "log10", "abs": "abs",
              "int": "floor", "floor": "floor", "ceil": "ceil", "round": "round", "min": "min", "max": "max"}
+_DEG_FUNCS = {"sind": "sin", "cosd": "cos", "tand": "tan",
+              "asind": "asin", "acosd": "acos", "atnd": "atan"}
 _CONST_MAP = {"pi": "pi", "clight": "c0", "c0": "c0", "eps0": "eps0", "epsilon0": "eps0", "mu0": "mu0"}
 _VBA_UNSUPPORTED = {"and", "or", "not", "xor", "iif", "sgn", "fix", "true", "false", "if", "choose", "switch"}
 
@@ -367,7 +370,7 @@ class _Expr:
             if self.peek() == ("op", "("):
                 if low in self.names:
                     raise _Refuse(f"{v!r} is a parameter, not a function ({self.text!r})")
-                fn = _FUNC_MAP.get(low)
+                fn = _FUNC_MAP.get(low) or _DEG_FUNCS.get(low)
                 if fn is None:
                     raise _Refuse(f"the function {v}() has no design equivalent ({self.text!r})")
                 self.take()
@@ -381,6 +384,12 @@ class _Expr:
                 self.depth -= 1
                 if self.take() != ("op", ")"):
                     raise _Refuse(f"unbalanced parentheses in {self.text!r}")
+                if low in _DEG_FUNCS:
+                    if len(args) != 1:
+                        raise _Refuse(f"{v}() needs one argument")
+                    if low in ("sind", "cosd", "tand"):
+                        return (f"{fn}(({args[0]}) * pi / 180)", self.ATOM)
+                    return (f"({fn}({args[0]}) * 180 / pi)", self.ATOM)
                 return (f"{fn}({', '.join(args)})", self.ATOM)
             if low in self.names:
                 self.used.add(self.names[low])
@@ -971,8 +980,10 @@ class _Importer:
         self.meta_res: dict[str, dict] = {}
         self.meta_bounds = None
         self.meta_unit = 1.0
-        self.unsupported: dict[str, list] = {}
+        self.unsupported: dict[tuple, list] = {}
+        self.unsupported_count = 0
         self.ignored: dict[str, list] = {}
+        self.picked_faces: list[tuple[str, str]] = []
         self.item = ""
         self.line = 0
         self.solver_type = None
@@ -1004,7 +1015,8 @@ class _Importer:
         entry[0] += 1
 
     def unsupported_stmt(self, key: str, message: str):
-        entry = self.unsupported.setdefault(key, [0, self.line, self.item, message])
+        self.unsupported_count += 1
+        entry = self.unsupported.setdefault((key, self.item, message, self.line), [0, self.line, self.item, message])
         entry[0] += 1
 
     # ---- values
@@ -1156,8 +1168,12 @@ class _Importer:
             self.item = b.title
             self.tand = b.tand
             for st in statements(b):
+                self.item = b.title
+                if st[0] == "with" and st[1].one("name"):
+                    w = st[1]
+                    self.item += f" ({w.one('component') or w.one('curve') or ''}:{w.one('name')})"
                 self.line = st[-1] if st[0] != "with" else st[1].line
-                before = sum(v[0] for v in self.unsupported.values())
+                before = self.unsupported_count
                 try:
                     if st[0] == "with":
                         self.with_block(st[1])
@@ -1165,14 +1181,14 @@ class _Importer:
                         self.call(st[1], st[2], st[3])
                     else:
                         self.unsupported_stmt(st[1][:40], f"cannot read the statement {st[1][:80]!r}")
-                except _Quiet:
-                    pass
+                except _Quiet as e:
+                    self.note("refused", f"not imported: dependent shape {str(e)!r} was not imported")
                 except _Refuse as e:
                     self.note("refused", f"not imported: {e}")
                 except (DesignError, ArithmeticError, ValueError, TypeError, KeyError, IndexError, RecursionError) as e:
                     detail = e.detail if isinstance(e, DesignError) else f"{type(e).__name__}: {e}"
                     self.note("refused", f"not imported: the statement could not be read ({detail[:200]})")
-                if sum(v[0] for v in self.unsupported.values()) == before:
+                if self.unsupported_count == before:
                     self.recognized += 1
         for key, (count, line, item, message) in self.unsupported.items():
             more = f" ({count} times)" if count > 1 else ""
@@ -1210,6 +1226,15 @@ class _Importer:
                 for k in [k for k in self.curves if k == prefix or k.startswith(prefix + ":")]:
                     self.curves.pop(k)
                 return
+        if o == "pick":
+            if m == "clearallpicks":
+                self.picked_faces.clear()
+                return
+            if m in ("pickfacefromid", "pickfacefromidon") and len(args) == 2:
+                self.picked_faces.append((args[0].value, args[1].value))
+                return
+            # Other selection methods invalidate the pair; never loft stale picks.
+            self.picked_faces.clear()
         if o == "wcs":
             return self.wcs_call(m, args)
         if o == "solver" and m == "frequencyrange":
@@ -1239,11 +1264,14 @@ class _Importer:
 
     def with_block(self, w: _With):
         o = w.obj.lower()
+        if o in {"brick", "cylinder", "cone", "sphere", "torus", "polygon", "polygon3d", "rectangle", "circle",
+                 "covercurve", "extrudecurve", "extrude", "rotate"} and not w.has("create"):
+            raise _Refuse(f"{w.obj} {w.one('name') or 'unnamed shape'} has no .Create command; no shape was created")
         handler = {
             "units": self.units, "material": self.material, "brick": self.brick, "cylinder": self.cylinder,
             "cone": self.cone, "sphere": self.sphere, "torus": self.torus, "polygon": self.polygon,
             "polygon3d": self.polygon3d, "rectangle": self.rectangle, "circle": self.circle,
-            "covercurve": self.cover, "extrudecurve": self.extrude_curve, "extrude": self.extrude,
+            "covercurve": self.cover, "loft": self.loft, "extrudecurve": self.extrude_curve, "extrude": self.extrude,
             "boundary": self.boundary, "background": self.background, "solver": self.solver, "mesh": self.mesh,
             "meshsettings": self.mesh_settings, "discreteport": self.discrete_port,
             "discretefaceport": self.discrete_port, "lumpedelement": self.lumped_element,
@@ -1252,7 +1280,9 @@ class _Importer:
             "solid": self.solid_with,
         }.get(o)
         if handler is None:
-            self.unsupported_stmt(f"with {o}", f"{w.obj}: this CST object has no design equivalent")
+            if w.one("name"):
+                self.recognized += 1  # a named history object still deserves an import report
+            self.unsupported_stmt(f"with {o}", f"{w.obj} {w.one('name') or ''}: this object has no design equivalent")
             return
         handler(w)
 
@@ -1849,7 +1879,137 @@ class _Importer:
             else:
                 prim = {"kind": "polygon", "normal": AXES[n], "elevation": item["plane"], "points": pts}
         self.new_solid(w, prim, "sheet")
+        self.solids[self.key(w.one("component") or "", w.one("name"))]["sheet_sign"] = item["wsign"]
         self._extra(w, {"reset", "name", "component", "material", "curve", "deletecurve", "create"}, "CoverCurve")
+
+    def _sheet_profile(self, solid):
+        """A single untransformed planar sheet, in cyclic in-plane coordinates."""
+        part = self.single_part(solid)
+        if part.get("transforms") or part.get("booleanHistory") or len(part["primitives"]) != 1:
+            raise _Refuse("only a single untransformed sheet is supported; the original profiles are retained")
+        p = part["primitives"][0]
+        if p["kind"] == "polygon":
+            return AXES.index(p["normal"]), p["elevation"], copy.deepcopy(p["points"])
+        if p["kind"] == "box":
+            flat = [i for i in range(3) if abs(self.val(p["start"][i]) - self.val(p["stop"][i])) < 1e-12]
+            if len(flat) == 1:
+                n = flat[0]
+                u, v = (n + 1) % 3, (n + 2) % 3
+                a, b = p["start"], p["stop"]
+                return n, a[n], [[a[u], a[v]], [b[u], a[v]], [b[u], b[v]], [a[u], b[v]]]
+        raise _Refuse("the shape is not a planar polygon sheet; the original shape is retained")
+
+    def thicken_sheet(self, args):
+        label = args[0].value if args else "unnamed sheet"
+        try:
+            if len(args) < 3:
+                raise _Refuse("expected a shape, Inside/Outside/Centered, and thickness")
+            solid = self.solid_ref(label)
+            n, plane, points = self._sheet_profile(solid)
+            direction = args[1].value.strip().lower()
+            if direction not in ("inside", "outside", "centered"):
+                raise _Refuse(f"unknown direction {args[1].value!r}")
+            thickness = self.expr(args[2], "length")
+            if self.val(thickness) < 0:
+                raise _Refuse("thickness must be nonnegative")
+            if len(args) > 4:
+                self.note("warning", f"ThickenSheetAdvanced {label!r}: additional options are not supported; "
+                          "the planar thickness and direction were imported")
+            if self.val(thickness) == 0:
+                return  # already the requested sheet
+            sign = solid.get("sheet_sign", 1)
+            length = _mul(thickness, -sign if direction == "inside" else sign)
+            if direction == "centered":
+                length = thickness
+                plane = _add(plane, _mul(thickness, -0.5))
+            prim = {"kind": "linpoly", "normal": AXES[n], "elevation": plane,
+                    "length": length, "points": points}
+            resolve_primitive(prim, self.values, label, 0)
+            solid["pieces"][0]["primitives"] = [prim]
+            if "sheet_sign" not in solid and direction != "centered":
+                self.note("warning", f"ThickenSheetAdvanced {label!r}: the source face normal is unavailable; "
+                          f"the positive {AXES[n]} normal was used. Check the thickness direction.")
+        except _Refuse as e:
+            self.note("refused", f"ThickenSheetAdvanced {label!r}: {e}; the available sheet is retained")
+        finally:
+            if len(args) >= 4 and args[3].truth:
+                self.picked_faces.clear()
+
+    def loft(self, w: _With):
+        """Straight lofts between two picked, convex, parallel sheets of the same outline.
+
+        Polyhedron faces are fan-triangulated by the design format. Restrict caps to convex
+        polygons and sections to positive uniform scales/translations to avoid twisted sides.
+        """
+        label = f"{w.one('component') or ''}:{w.one('name') or 'unnamed loft'}"
+        refs = ", ".join(ref for ref, _face in self.picked_faces) or "no selected profiles"
+        try:
+            if not (w.has("create") or w.has("createnew")):
+                raise _Refuse("no .Create or .CreateNew command")
+            extra = {k for k, _a, _ln in w.calls} - {"reset", "name", "component", "material", "tangency", "create", "createnew"}
+            if extra:
+                raise _Refuse(f"unsupported options {w.names(extra)}")
+            if not w.has("tangency") or self.val(self.expr(w.one("tangency"))) != 0:
+                raise _Refuse("only explicit zero tangency (straight sides) is supported")
+            if len(self.picked_faces) != 2:
+                raise _Refuse("exactly two picked sheet faces are required")
+            profiles = []
+            for ref, face in self.picked_faces:
+                if self.val(self.expr(face)) != 1:
+                    raise _Refuse(f"{ref!r}: only face 1 of a single sheet can be identified")
+                profiles.append(self._sheet_profile(self.solid_ref(ref)))
+            n, za, a = profiles[0]
+            nb, zb, b = profiles[1]
+            if n != nb or abs(self.val(za) - self.val(zb)) < 1e-9 or len(a) != len(b):
+                raise _Refuse("profiles must be parallel, separated, and have matching vertex counts")
+            av = [[self.val(c) for c in p] for p in a]
+            bv = [[self.val(c) for c in p] for p in b]
+            count = len(a)
+            if count > 256:
+                raise _Refuse("loft profiles are limited to 256 vertices")
+            turns = [(av[(i+1) % count][0]-av[i][0]) * (av[(i+2) % count][1]-av[(i+1) % count][1])
+                     - (av[(i+1) % count][1]-av[i][1]) * (av[(i+2) % count][0]-av[(i+1) % count][0])
+                     for i in range(count)]
+            if count < 3 or not (all(t > 1e-12 for t in turns) or all(t < -1e-12 for t in turns)):
+                raise _Refuse("only convex polygon profiles are supported")
+            winding = 1 if turns[0] > 0 else -1
+            if any(winding * ((av[(i+1) % count][0]-av[i][0]) * (p[1]-av[i][1])
+                              - (av[(i+1) % count][1]-av[i][1]) * (p[0]-av[i][0])) < -1e-9
+                   for i in range(count) for p in av):
+                raise _Refuse("self-intersecting or concave profiles are not supported")
+            # Match cyclic starts and reversed winding, without inventing a twisted connection.
+            matched = None
+            for order in (list(range(count)), list(reversed(range(count)))):
+                for offset in range(count):
+                    ids = order[offset:] + order[:offset]
+                    q = [bv[i] for i in ids]
+                    d = [av[1][k] - av[0][k] for k in range(2)]
+                    axis = max(range(2), key=lambda k: abs(d[k]))
+                    scale = (q[1][axis] - q[0][axis]) / d[axis]
+                    if scale > 0 and all(math.isclose(q[i][k] - q[0][k], scale * (av[i][k] - av[0][k]),
+                                                     rel_tol=1e-9, abs_tol=1e-9)
+                                         for i in range(count) for k in range(2)):
+                        matched = [b[i] for i in ids]
+                        break
+                if matched is not None:
+                    break
+            if matched is None:
+                raise _Refuse("profiles must differ only by translation and positive uniform scale")
+            vertices = []
+            for plane, points in ((za, a), (zb, matched)):
+                for point in points:
+                    xyz = [0.0, 0.0, 0.0]
+                    xyz[n] = plane
+                    xyz[(n+1) % 3], xyz[(n+2) % 3] = point
+                    vertices.append(xyz)
+            faces = [list(reversed(range(count))), list(range(count, 2*count))]
+            faces += [[i, (i+1) % count, (i+1) % count + count, i+count] for i in range(count)]
+            self.new_solid(w, {"kind": "polyhedron", "vertices": vertices, "faces": faces}, "loft")
+        except _Refuse as e:
+            self.note("refused", f"Loft {label!r} ({refs}) not imported: {e}. Available profile sheets are retained; "
+                      "rebuild the connecting solid before simulation.")
+        finally:
+            self.picked_faces.clear()
 
     def extrude_curve(self, w: _With):
         if not w.has("create"):
@@ -2025,6 +2185,8 @@ class _Importer:
         return part
 
     def solid_call(self, m: str, args: list[_Arg], meth: str = ""):
+        if m == "thickensheetadvanced":
+            return self.thicken_sheet(args)
         if m in ("add", "subtract", "intersect", "insert"):
             if len(args) < 2:
                 raise _Refuse(f"Solid.{m} needs two solids")
@@ -2060,7 +2222,7 @@ class _Importer:
             s["comp"] = args[1].value.strip()
             self._rekey()
             return
-        self.unsupported_stmt(f"solid.{m}", f"Solid.{meth or m}: this operation has no design equivalent")
+        self.unsupported_stmt(f"solid.{m}", f"Solid.{meth or m} ({', '.join(a.value for a in args)}): this operation has no design equivalent")
 
     def boolean_add(self, a: dict, b: dict):
         """A ∪ B: B's shapes join A (the union keeps A's material and name, as CST does)."""
@@ -2380,17 +2542,31 @@ class _Importer:
 
     def mesh_settings(self, w: _With):
         ignored = []
+        hexahedral = (w.one("setmeshtype") or "").strip().lower() in ("hex", "hextlm")
+        density_seen = False
         for k, a, _ln in w.calls:
             if k == "set" and len(a) >= 2:
                 what = a[0].value.strip().lower()
-                if what == "stepsperwavenear":
-                    self.cpw = self.val(self.expr(a[1]))
-                elif what == "stepsperwavefar":
-                    self.air_cpw = self.val(self.expr(a[1]))
+                if what in ("stepsperwavenear", "stepsperwavefar"):
+                    density_seen = True
+                    # Only hexahedral settings describe cells per wavelength for FDTD.
+                    if hexahedral:
+                        value = self.val(self.expr(a[1]))
+                        if what == "stepsperwavenear":
+                            self.cpw = value
+                        else:
+                            self.air_cpw = value
                 else:
                     ignored.append(a[0].value)
             elif k not in ("setmeshtype",):
                 ignored.append(f".{w.orig.get(k, k)}")
+        if density_seen:
+            if hexahedral:
+                self.note("info", "MeshSettings: hexahedral StepsPerWaveNear maps to cells per wavelength; "
+                          "StepsPerWaveFar maps to air cells per wavelength only when positive and lower than the near density.")
+            else:
+                self.note("info", "MeshSettings: StepsPerWaveNear and StepsPerWaveFar ignored because the mesh type is not "
+                          "Hex or HexTLM; Fairbeam's automatic FDTD mesh default is retained unless a hexahedral density is provided.")
         if ignored:
             self.note("info", f"MeshSettings: ignored {', '.join(ignored[:12])}{' ...' if len(ignored) > 12 else ''} "
                       "(the design meshes automatically)")

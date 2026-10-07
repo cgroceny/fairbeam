@@ -793,6 +793,7 @@
   "cstImport.repeated": {
     "other": "Aynı not makroda {count} kez geçiyor"
   },
+  "cstImport.partialGeometry": "Bu içe aktarma eksiktir. Işıma elemanı veya gerekli başka bir şekil eksik olabilir. Simülasyondan önce aşağıda adları belirtilen öğeleri ve geometriyi inceleyin.",
   "cstImport.report": "İçe aktarma raporu",
   "cstImport.sev.info": "Not",
   "cstImport.sev.missing": "Eksik",
@@ -1360,6 +1361,8 @@
   "home.feedback.featureTitle": "GitHub'daki özellik formu (tarayıcınızda açılır)",
   "home.feedback.label": "Geri bildirim gönder:",
   "home.importCst.button": "VBA makrosunu içe aktar…",
+  "home.importCst.meshHex": "MeshSettings: altı yüzlü ağın StepsPerWaveNear değeri dalga boyu başına hücre sayısına aktarılır; StepsPerWaveFar değeri yalnızca pozitif ve yakın bölge yoğunluğundan düşük olduğunda havadaki dalga boyu başına hücre sayısına aktarılır.",
+  "home.importCst.meshIgnored": "MeshSettings: ağ türü Hex veya HexTLM olmadığından StepsPerWaveNear ve StepsPerWaveFar yok sayılır; altı yüzlü ağ yoğunluğu belirtilmedikçe Fairbeam'in otomatik FDTD ağı için varsayılan ayar korunur.",
   "home.importCst.note": "CST uyumlu VBA makrosu veya geçmiş listesi (.bas, .mcs, .txt): şekiller, malzemeler, parametreler ve portlar.",
   "home.importCst.title": "CST uyumlu VBA makrosundan veya geçmiş listesinden (.bas, .mcs, .txt) tasarım oluşturun",
   "home.importPcb.button": "PCB çizimini içe aktar…",
@@ -2800,6 +2803,7 @@
   "runHistory.allRunsNote": {
     "other": "Tüm {count} çalıştırma · grafik bindirmeleri 8 eğriyle sınırlı kalır."
   },
+  "runHistory.col.bestMatch": "En iyi uyum",
   "runHistory.col.radEff": "η ışıma",
   "runHistory.radEffOver": "%100'ün üzerinde: ışıma verimliliği %100'ü aşamaz, bu yüzden bu çalıştırmanın uzak alanı fiziksel değil. Mesh'i inceltin ya da portu kontrol edin.",
   "runHistory.alsoDelete": {
