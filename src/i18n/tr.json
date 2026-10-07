@@ -2736,6 +2736,8 @@
   "runHistory.allRunsNote": {
     "other": "Tüm {count} çalıştırma · grafik bindirmeleri 8 eğriyle sınırlı kalır."
   },
+  "runHistory.col.radEff": "η ışıma",
+  "runHistory.radEffOver": "%100'ün üzerinde: ışıma verimliliği %100'ü aşamaz, bu yüzden bu çalıştırmanın uzak alanı fiziksel değil. Mesh'i inceltin ya da portu kontrol edin.",
   "runHistory.alsoDelete": {
     "other": "Sonuç dosyalarını da sil ({count})"
   },
@@ -3398,7 +3400,7 @@
   "sweep.err.noDesign": "Önce bir tasarım açın.",
   "sweep.err.schema": "Geçersiz parametre taraması şeması.",
   "sweep.err.stop": "Tarama durdurulamadı: {error}",
-  "sweep.estimated": "tahmini {seconds} s",
+  "sweep.estimated": "{engine} ile tahmini {time}",
   "sweep.export": "Dışa aktar",
   "sweep.import": "İçe aktar",
   "sweep.imported": "Tarama içe aktarıldı.",
@@ -3448,6 +3450,8 @@
   "sweep.range.steps": "Örnek sayısı",
   "sweep.range.stop": "Bitiş",
   "sweep.removeAxis": "{key} parametresini diziden çıkar",
+  "sweep.running": "Çalışıyor {n}/{total}…",
+  "sweep.runAgain": "Yeniden çalıştır",
   "sweep.sequenceN": "Dizi {n}",
   "sweep.sequenceName": "Dizi adı",
   "sweep.sequences": "Diziler",
@@ -3631,7 +3635,7 @@
   "tree.showParts": "Katıları göster",
   "tree.shownSuffix": ", gösteriliyor",
   "tree.sweep": "Tarama {name}",
-  "tree.sweep.compareAll": "Tüm çalıştırmaların karşılaştırmasını aç · {name}",
+  "tree.sweep.compareAllMenu": "Tüm çalıştırmaları karşılaştır",
   "tree.sweep.done": "{count} tamam",
   "tree.sweep.failed": "{count} başarısız",
   "tree.sweep.runs": {
@@ -3641,6 +3645,7 @@
   "tree.sweep.status.complete": "tamamlandı",
   "tree.sweep.status.failed": "başarısız",
   "tree.sweep.status.stopped": "durduruldu",
+  "tree.sweep.title": "{name} taraması: açmak ya da kapatmak için tıklayın, tüm çalıştırmaları karşılaştırmak için çift tıklayın",
   "update.progress.downloading": "Fairbeam {version} indiriliyor… {total} MB içinden {done} MB",
   "update.progress.downloadingStart": "Fairbeam {version} indiriliyor",
   "update.progress.downloadingUnknown": "Fairbeam {version} indiriliyor… {done} MB",

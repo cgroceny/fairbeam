@@ -177,7 +177,8 @@ function Row(props: { row: NavRow; selected: boolean; tabStop: boolean; onActiva
         onDragOver={partDrop?.onDragOver}
         onDragLeave={partDrop?.onDragLeave}
         onDrop={partDrop?.onDrop}
-        onClick={(e) => props.onActivate(r, e)} onContextMenu={(e) => props.onMenu(r, e)}>
+        onClick={(e) => props.onActivate(r, e)} onContextMenu={(e) => props.onMenu(r, e)}
+        onDblClick={a.kind === "sweep" ? (e) => { e.preventDefault(); openSweepView(a.id); } : undefined}>
         <Show when={r.expandable} fallback={<span class="nt-twisty" aria-hidden="true" />}>
           <span class="nt-twisty" aria-hidden="true" onClick={(e) => { e.stopPropagation(); props.onToggle(r); }}>
             {r.expanded ? <ChevronDown size={13} /> : <ChevronRight size={13} />}
@@ -407,7 +408,8 @@ export function NavTree() {
         if (!selectRun(a.file, e.ctrlKey || e.metaKey, activeMainResult() ? "main" : "keep")) setNote(t("tree.note.compareFull", { max: MAX_COMPARE })); break;
       // a result node opens (or shows) its main-area tab, as the 1D Results do
       case "result": if (!runKeepsSelection(selection())) setSelection({ type: "design" }); focusResult({ file: a.file, view: a.view, ...(a.f === undefined ? {} : { f: a.f }), ...(a.map === undefined ? {} : { map: a.map }) }, "main"); break;
-      case "sweep": openSweepView(a.id); break;
+      // a sweep folder opens and closes like the other folders; double-click or its menu compares all
+      case "sweep": toggle(r); break;
       case "convergence": openMeshConvergence(a.id); break;
       case "optimization": {
         const job = optJob(a.jobId);
@@ -468,7 +470,7 @@ export function NavTree() {
       if(a.sel.type==="material") { const mi=a.sel.i; actions.push({label:t("contextMenu.color"),run:()=>openColor({kind:"materials",indices:[mi],label:r.label,x,y}),icon:Palette},{label:t("userMaterials.saveTo"),run:()=>void saveDesignMaterial(mi),icon:BookmarkPlus}); }
     }
     else if(a.kind==="parameters") { activate(r,new KeyboardEvent("keydown")); return; }
-    else if(a.kind==="sweep") { openSweepView(a.id); return; }
+    else if(a.kind==="sweep") actions.push({label:t(r.expanded?"tree.menu.collapse":"tree.menu.expand"),run:()=>toggle(r),icon:r.expanded?ChevronsDownUp:ChevronsUpDown},{label:t("tree.sweep.compareAllMenu"),run:()=>openSweepView(a.id),icon:GitCompareArrows});
     else if (a.kind === "convergence") { openMeshConvergence(a.id); return; }
     else if (a.kind === "optimization" || a.kind === "optimization-history" || a.kind === "optimization-best") {
       const job = optJob(a.jobId);

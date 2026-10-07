@@ -2789,6 +2789,8 @@
     "one": "All {count} run · chart overlays remain limited to 8 traces.",
     "other": "All {count} runs · chart overlays remain limited to 8 traces."
   },
+  "runHistory.col.radEff": "η rad",
+  "runHistory.radEffOver": "Above 100 %: a radiation efficiency cannot exceed 100 %, so this run's far field is not physical. Refine the mesh or check the port.",
   "runHistory.alsoDelete": {
     "one": "Also delete the result file ({count})",
     "other": "Also delete the result files ({count})"
@@ -3466,7 +3468,7 @@
   "sweep.err.noDesign": "Open a design first.",
   "sweep.err.schema": "Invalid parameter sweep schema.",
   "sweep.err.stop": "Could not stop the sweep: {error}",
-  "sweep.estimated": "estimated {seconds} s",
+  "sweep.estimated": "estimated {time} on the {engine}",
   "sweep.export": "Export",
   "sweep.import": "Import",
   "sweep.imported": "Sweep imported.",
@@ -3516,6 +3518,8 @@
   "sweep.range.steps": "Sample count",
   "sweep.range.stop": "Stop",
   "sweep.removeAxis": "Remove {key} from the sequence",
+  "sweep.running": "Running {n}/{total}…",
+  "sweep.runAgain": "Run again",
   "sweep.sequenceN": "Sequence {n}",
   "sweep.sequenceName": "Sequence name",
   "sweep.sequences": "Sequences",
@@ -3704,7 +3708,7 @@
   "tree.showParts": "Show solids",
   "tree.shownSuffix": ", shown",
   "tree.sweep": "Sweep {name}",
-  "tree.sweep.compareAll": "Open all-run comparison · {name}",
+  "tree.sweep.compareAllMenu": "Compare all runs",
   "tree.sweep.done": "{count} done",
   "tree.sweep.failed": "{count} failed",
   "tree.sweep.runs": {
@@ -3715,6 +3719,7 @@
   "tree.sweep.status.complete": "complete",
   "tree.sweep.status.failed": "failed",
   "tree.sweep.status.stopped": "stopped",
+  "tree.sweep.title": "Sweep {name}: click to open or close, double-click to compare all runs",
   "update.progress.downloading": "Downloading Fairbeam {version}… {done} of {total} MB",
   "update.progress.downloadingStart": "Downloading Fairbeam {version}",
   "update.progress.downloadingUnknown": "Downloading Fairbeam {version}… {done} MB",
