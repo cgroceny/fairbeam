@@ -115,7 +115,7 @@ export default function StatusBar() {
       </button>
       <Show when={running()}>
         <button class="sb-item sb-btn" onClick={() => { setDesignDockTab("run"); setBottomDockCollapsed(false); }} title={t("status.running.title")}>
-          <LoaderCircle size={12} class="rs-spin" aria-hidden="true" /> <span class="sb-text">{t("status.running", { pct: pct() })}</span>
+          <LoaderCircle size={12} class="rs-spin" aria-hidden="true" /> <span class="sb-text">{running()!.status === "queued" ? t("progress.status.queued") : t("status.running", { pct: pct() })}</span>
         </button>
       </Show>
       {/* the server is busy with runs the dock does not show (a terminal, another window, another

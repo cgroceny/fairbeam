@@ -979,9 +979,14 @@ export async function openResult(file: string) {
 export const liveEnergy = createRoot(() =>
   createMemo(() => {
     let pts: { ts: number; db: number }[] = [];
+    let port: number | undefined;
     for (const e of live.events) {
-      if (e.type === "info" && e.port_run) pts = []; // multi-port: openEMS starts over for every driven port
-      else if (e.type === "progress" && typeof e.energy_db === "number") pts.push({ ts: e.timestep, db: e.energy_db });
+      // multi-port: openEMS starts over for every driven port. Only another port starts a new line:
+      // the first port's info can arrive after its first energy reading, which must stay
+      if (e.type === "info" && e.port_run) {
+        if (port !== undefined && e.port_run !== port) pts = [];
+        port = e.port_run;
+      } else if (e.type === "progress" && typeof e.energy_db === "number") pts.push({ ts: e.timestep, db: e.energy_db });
     }
     return pts;
   }),

@@ -34,8 +34,12 @@
 
 /* the live panel is at least as tall as its fields: no inner scrollbar crowds the Stop run button (a
    dock lower than the fields scrolls as a whole, the chart beside them keeps the panel's height) */
-.rdk-run { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(220px, 1fr); gap: var(--al-space-3); height: 100%; min-height: fit-content; padding: var(--al-space-2) var(--al-space-3); }
-.rdk-run-main { display: flex; flex-direction: column; gap: var(--al-space-2); min-width: 0; }
+.rdk-run { display: grid; grid-template-columns: minmax(0, 1.5fr) minmax(220px, 1fr); gap: var(--al-space-3); height: 100%; min-height: fit-content; padding: var(--al-space-2) var(--al-space-3); }
+.rdk-run-main { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+/* the fields stay compact, so they fit the dock's default height: the notes in small type */
+.rdk-run-main > .rdk-pulse { padding: 2px var(--al-space-2); font-size: var(--al-text-xs); line-height: 1.35; }
+.rdk-eta-stat { flex: 1 1 100%; }
+.rdk-eta-note { margin: 0; font-size: var(--al-text-xs); line-height: 1.35; color: var(--al-text-3); }
 .rdk-run-head { font-size: var(--al-text-sm); }
 .rdk-push { margin-left: auto; }
 .rdk-compare-control { position: relative; }

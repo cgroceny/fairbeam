@@ -37,7 +37,10 @@ export function pulseNote(info: RunInfo, progress: ProgressEvent | null | undefi
   if (limit && end >= limit) return { kind: "overLimit", pulse: end, limit };
   // before the solver starts there is no timestep to compare: the note belongs to the FDTD phase
   if (phase !== "running") return null;
-  const ts = reachedTimestep(progress, stats) ?? 0;
+  // without a timestep reading nothing is known about the pulse: openEMS prints one only every few
+  // seconds, so a short run often has none before it ends, and "0 of 1,876" would be wrong
+  const ts = reachedTimestep(progress, stats);
+  if (ts === null) return null;
   return ts < end ? { kind: "running", end, left: end - ts } : null;
 }
 

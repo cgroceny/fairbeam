@@ -79,7 +79,7 @@ function RunProgress() {
   const fraction = () => runFraction(job(), liveProgress(), liveInfo());
   const eta = createMemo(() => {
     const p = liveProgress();
-    return presentEta({ jobId: designJobId() ?? job().id, port: p?.port ?? liveInfo().port_run, eta: p?.eta ?? undefined, energy: liveEnergy() });
+    return presentEta({ jobId: designJobId() ?? job().id, port: p?.port ?? liveInfo().port_run, eta: p?.eta ?? undefined, energy: liveEnergy(), pulseEnd: liveInfo().pulse_steps });
   });
   // far slower than the pre-run estimate for a while: the machine is probably busy (slowRun.ts)
   const speed = () => liveProgress()?.speed_mcs ?? liveStats().speed_mcells_s;

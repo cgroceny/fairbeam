@@ -48,6 +48,7 @@ assert.equal(pulseNote(info, null, { timesteps: 6600 }, "postprocessing", "runni
 assert.equal(pulseNote(info, { timestep: 2500 }, {}, "running", "running"), null, "no note past the pulse end");
 assert.deepEqual(pulseNote(info, { timestep: 500 }, {}, "running", "running"), { kind: "running", end: 1876, left: 1376 });
 assert.equal(pulseNote(info, null, {}, "setup", "running"), null, "the note belongs to the FDTD phase");
+assert.equal(pulseNote(info, null, {}, "running", "running"), null, "no timestep reading yet (a short run often ends before the first one): no '0 of 1,876' note");
 assert.equal(pulseNote(info, null, { timesteps: 1000 }, "running", "done"), null, "nothing after the run");
 assert.deepEqual(pulseNote({ pulse_steps: 40000, max_timesteps: 30000 }, null, {}, "running", "running"), { kind: "overLimit", pulse: 40000, limit: 30000 });
 assert.equal(pastSolver("exporting", "running"), true);

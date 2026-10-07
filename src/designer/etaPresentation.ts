@@ -20,6 +20,9 @@ export interface EtaPresentationInput {
   eta: Eta | null | undefined;
   /** the field energy readings of the current port (store.ts liveEnergy) */
   energy?: readonly { ts: number; db: number }[];
+  /** the timestep the excitation pulse ends at (RunInfo.pulse_steps): before it the energy is flat, so
+   * the solver's "the limit comes first" is only the pulse, not a run that will not converge */
+  pulseEnd?: number;
   /** wall clock, s (defaults to now) */
   now?: number;
 }
@@ -54,7 +57,7 @@ export function createEtaPresenter() {
   let range: [number, number] | null = null;
   let previous: string | null = null;
 
-  return ({ jobId, port = null, eta, energy, now = Date.now() / 1000 }: EtaPresentationInput): EtaPresentation => {
+  return ({ jobId, port = null, eta, energy, pulseEnd, now = Date.now() / 1000 }: EtaPresentationInput): EtaPresentation => {
     const basis = eta?.basis;
     const jobSeconds = finiteNonnegative(eta?.job_eta_s);
     const portSeconds = finiteNonnegative(eta?.eta_s);
@@ -83,6 +86,9 @@ export function createEtaPresenter() {
     };
 
     if (basis === "converged") return { ...base, state: "converged" };
+    // while the pulse runs the energy cannot fall yet, and right after it the decay has only begun: "the
+    // limit comes first" then says nothing about the run (it read "≤ 11 min" for a run of seconds)
+    if (basis === "timestep-limit" && ((pulseEnd && (timestep ?? 0) < pulseEnd) || (energy && !decayEstablished(energy)))) return { ...base, waitingFor: "decay" };
     if (basis === "timestep-limit") return { ...base, state: "timestep-bound" };
     if (rawSeconds === undefined) return { ...base, waitingFor: "samples" };
     // energy readings the caller did not pass count as established (a server forecast alone)

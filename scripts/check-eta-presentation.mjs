@@ -49,10 +49,19 @@ assert.ok(outside.rangeSeconds[0] <= 60 && outside.rangeSeconds[1] >= 60, "a pro
 // ---- resets, bounds and the multi-port projection
 const changedPort = presenter({ jobId: "run-1", port: 2, eta: sample(100, 30), energy: energy(3, 0), now: 130 });
 assert.equal(changedPort.state, "waiting", "a new port starts over (openEMS restarts the energy)");
+const inPulse = presenter({ jobId: "run-2", port: 2, eta: sample(900, 4500, {
+  basis: "timestep-limit", confidence: "bound", limit_s: 4500, remaining_timesteps: 599000,
+}), pulseEnd: 5325 });
+assert.equal(inPulse.state, "waiting", "during the pulse the flat energy does not make the run 'timestep-bound' (≤ 74 min of noise)");
+assert.equal(inPulse.waitingFor, "decay");
+const early = presenter({ jobId: "run-2", port: 2, eta: sample(3663, 687, {
+  basis: "timestep-limit", confidence: "bound", limit_s: 687, remaining_timesteps: 26000,
+}), pulseEnd: 1876, energy: energy(3, 1) });
+assert.equal(early.waitingFor, "decay", "just after the pulse, before the decay is established, no '≤ 11 min' either");
 const bound = presenter({ jobId: "run-2", port: 2, eta: sample(900, 40, {
   basis: "timestep-limit", confidence: "bound", limit_s: 40, remaining_timesteps: 1000,
-}) });
-assert.equal(bound.state, "timestep-bound");
+}), pulseEnd: 500, energy: energy(2, 4) });
+assert.equal(bound.state, "timestep-bound", "an established decay that is too slow is a real bound");
 assert.equal(bound.limitSeconds, 40, "the hard-stop time stays distinct from a convergence projection");
 assert.equal(bound.rangeSeconds, undefined);
 const multiPort = presenter({ jobId: "run-3", port: 1, eta: sample(1000, 12, { job_eta_s: 44, ports_remaining: 2 }), energy: energy(3, 4), now: 10 });
@@ -73,7 +82,7 @@ assert.equal(estimateText(shortEstimate), "1 s'den kısa", "sub-second estimate 
 setLanguage("en");
 
 const dock = readFileSync(new URL("../src/designer/RunDock.tsx", import.meta.url), "utf8");
-assert.match(dock, /presentEta\(\{ jobId:[^}]*energy: liveEnergy\(\) \}\)/, "RunDock presents solver values with the current port's energy readings");
+assert.match(dock, /presentEta\(\{ jobId:[^}]*energy: liveEnergy\(\), pulseEnd: liveInfo\(\)\.pulse_steps \}\)/, "RunDock presents solver values with the current port's energy readings and the pulse end");
 assert.match(dock, /job\(\)\.phase === "postprocessing"[\s\S]*?runDock\.eta\.postprocessing/, "postprocessing uses its own status copy");
 assert.match(dock, /job\(\)\.phase === "exporting"[\s\S]*?runDock\.eta\.exporting/, "exporting uses its own status copy");
 assert.match(dock, /<details class="rdk-eta-details">[\s\S]*?etaDetails\(\)/, "raw solver values remain expandable");
