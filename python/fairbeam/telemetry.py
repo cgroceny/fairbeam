@@ -1,4 +1,4 @@
-"""Anonymous, opt-in usage counts of the run server (docs/TELEMETRY.md).
+"""Pseudonymous, opt-in usage counts of the run server (docs/TELEMETRY.md).
 
 Off unless the desktop shell, built with its telemetry switch, passes ``FAIRBEAM_TELEMETRY_DIR``.
 Even then the server counts only while the shell's ``state.json`` there says ``"counting": true``

@@ -12,15 +12,15 @@ parametric Python models.
 
 ## Download
 
-The desktop app is free, for **macOS** (Apple silicon, signed and notarized) and **Windows** x64.
+The desktop app is free, for **macOS** (Apple silicon, signed with a Developer ID and notarized by Apple) and **Windows** x64.
 Get the latest version from
 [fairbeam-releases](https://github.com/ismailakdag/fairbeam-releases/releases/latest). The app
-installs its own runtime (Python and openEMS) for your user on first start and updates itself.
+installs its own runtime (Python and openEMS) for your user on first start and offers updates for you to install.
 [Getting started](docs/GETTING-STARTED.md) takes you from installing to reading the results of a
-patch antenna in five minutes.
+patch antenna.
 
-The Windows installer is not code-signed. On the first run SmartScreen shows "Windows protected
-your PC": choose **More info › Run anyway**. The macOS app is signed and notarized. The
+The Windows installer is not code-signed. SmartScreen may show "Windows protected
+your PC": choose **More info › Run anyway**. The macOS app is signed with a Developer ID and notarized by Apple. The
 [browser demo](https://fairbeam.org/app/) opens the example projects read-only, without installing
 anything.
 
@@ -35,8 +35,8 @@ anything.
   [GPU engine](docs/GPU.md)).
 - **Results.** S-parameters with markers, impedance, VSWR, Smith and polar charts, 2D and 3D
   far-field patterns (directivity, gain, realized gain, efficiency), surface currents and field
-  planes, multi-port S-matrices and arrays with beam steering. Every chart has a table, and runs
-  can be compared ([results](docs/RESULTS.md), [multi-port](docs/MULTIPORT.md),
+  planes, multi-port S-matrices and arrays with beam steering. Supported result plots provide data tables and run
+  comparisons ([results](docs/RESULTS.md), [multi-port](docs/MULTIPORT.md),
   [arrays](docs/ARRAYS.md)).
 - **Python models and CLI.** One Python file per antenna or circuit, with templates; the `fairbeam`
   CLI runs, sweeps, converges and optimizes them ([writing models](docs/MODELS.md),
@@ -49,12 +49,12 @@ anything.
 
 ## Open and reproducible
 
-Fairbeam follows the FAIR principles:
+Fairbeam supports reproducible workflows through recorded inputs, versioned bundles and documented export formats:
 - **Findable** results: versioned, self-describing project bundles that record the generator, the
   versions and the run settings (`fairbeam.project/1`).
 - **Accessible:** open formats and no licence server.
 - **Interoperable:** Touchstone, CSV, STL, glTF, Gerber/Excellon and VBA macros.
-- **Reusable:** GPL-3.0 parametric models with their recorded inputs.
+- **Reusable:** GPL-3.0-or-later project models with recorded inputs; third-party models retain their own terms.
 
 Results are checked against analytical references ([validation](docs/VALIDATION.md),
 [how results are computed](docs/RESULTS.md)).
@@ -67,13 +67,25 @@ breaking changes bump its version. The fabrication outputs
 have not yet been checked by a fab. Known gaps and plans are in
 [the roadmap](docs/ARCHITECTURE.md#roadmap).
 
+## Privacy
+
+Usage counts and sign-in are built but OFF in Fairbeam 0.7.0. No usage counts are recorded or sent,
+and no usage-consent dialog appears. Update checks contact GitHub (fairbeam-releases). App and
+runtime downloads come from GitHub and upstream hosts. This website is hosted on Vercel. These
+services see your IP address and request data as any web server does; request-log retention is set
+by the hosting provider.
+
+Before any usage counting is enabled, a full notice will be published identifying the controller,
+purposes, processors, retention periods, rights and transfer arrangements. For privacy questions or
+rights requests, contact ismail@fairbeam.org. Do not post personal information in public issues.
+
 ## From source
 
 Requirements: Python 3.10+, Node.js 20+ and an openEMS build. On macOS (and Linux) a script builds
 openEMS for you:
 
 ```bash
-scripts/install-openems-macos.sh                              # openEMS + CSXCAD into ~/opt/openEMS (5-10 min)
+scripts/install-openems-macos.sh                              # openEMS + CSXCAD into ~/opt/openEMS
 ~/opt/openEMS/venv/bin/fairbeam run python/models/patch_antenna.py
 npm install
 npm run serve &   # the run server on port 5320 (Run panel, sweeps, optimizer)
@@ -108,7 +120,7 @@ npm run dev       # the viewer and designer on http://127.0.0.1:5310
   [SeanMollet/openEMS](https://github.com/SeanMollet/openEMS).
 - **Libraries:** the viewer uses [SolidJS](https://www.solidjs.com) and
   [three.js](https://threejs.org), and the desktop shell is built with [Tauri](https://tauri.app).
-- **Details:** every bundled component, with its licence and source, is listed in [NOTICE.md](NOTICE.md).
+- **Details:** selected third-party components and source locations are listed in [NOTICE.md](NOTICE.md).
 
 ## License
 

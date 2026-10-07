@@ -7,7 +7,7 @@
 -->
 
 This guide is for people trying the Fairbeam desktop app: install it, then design, simulate and
-read the results of a patch antenna in about five minutes. The full reference for the designer is
+read the results of a patch antenna. The full reference for the designer is
 [DESIGNER.md](DESIGNER.md). To build Fairbeam from source instead, see
 [Running Fairbeam from source](FROM-SOURCE.md). In the app, Help › Getting Started Guide opens the
 public copy of this page.
@@ -18,19 +18,19 @@ Download the installer from [fairbeam.org](https://fairbeam.org) or the
 [releases page](https://github.com/ismailakdag/fairbeam-releases/releases).
 
 - **macOS** (Apple silicon, macOS 27 or newer): open the `.dmg` and drag Fairbeam to Applications.
-  The app is signed and notarized by Apple, so it opens with a normal double-click.
+  The app is signed with a Developer ID and notarized by Apple.
 - **Windows** (10/11, x64): run the `-setup.exe`. It installs for your user, without an
-  administrator prompt. The installer is not code-signed, so SmartScreen shows "Windows protected
+  administrator prompt. The installer is not code-signed, so SmartScreen may show "Windows protected
   your PC": choose **More info › Run anyway**.
 
 **First start.** Fairbeam needs its simulation runtime (Python, openEMS and the Fairbeam
 package). The setup screen says "Fairbeam needs to install its runtime": choose **Install the
-runtime** (the button shows the download size; it takes well under a minute on a fast
-connection). If you already have an openEMS installation, **Use an existing Python…** points
+runtime** (the button shows the download size; duration depends on your connection and system). If
+you already have an openEMS installation, **Use an existing Python…** points
 Fairbeam at it instead. The app then opens on the **Start** screen. Later starts skip this step,
 and newer versions are offered in the app (Help › Check for updates).
 
-## 2. A five-minute walkthrough
+## 2. A first-design walkthrough
 
 ### Create a design
 

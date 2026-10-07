@@ -9,7 +9,9 @@ npm run serve:gpu          # run server using the GPU build; the Run panel and t
 
 The desktop app uses `~/opt/openEMS-gpu/venv` by itself when its openEMS lists the gpu engine (General settings › Start with the GPU build of openEMS, on by default; [DESKTOP.md](DESKTOP.md#shell)).
 
-Measured on an Apple M5 Pro, identical results on both engines (same stopping timestep, |S11|, Dmax, efficiency):
+Solver timings on an Apple M5 Pro. In documented same-timestep Windows CPU / macOS Metal
+comparisons, S-parameter magnitudes above −30 dB agree within 0.1 dB and Dmax within 0.004 dB; see
+[BENCHMARKS.md](BENCHMARKS.md) for the tested models and limits:
 
 | Model | Cells | CPU (4 threads) | Metal GPU |
 | --- | --- | --- | --- |

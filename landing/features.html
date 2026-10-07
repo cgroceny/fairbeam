@@ -5,9 +5,9 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="color-scheme" content="light dark">
   <title>Features · Fairbeam</title>
-  <meta name="description" content="Every feature of the Fairbeam desktop app, its example projects, the files it writes, the validation against analytical results, solver times on the CPU and the GPU, and what to expect from the current version.">
+  <meta name="description" content="Feature overview, simulation results, recorded solver times and known limitations.">
   <meta property="og:title" content="Features · Fairbeam">
-  <meta property="og:description" content="Every feature of the Fairbeam desktop app, with validation results, solver times and the known limits of the current version.">
+  <meta property="og:description" content="Feature overview, simulation results, recorded solver times and known limitations.">
   <meta property="og:type" content="website">
   <meta property="og:url" content="https://fairbeam.org/features.html">
   <meta property="og:image" content="https://fairbeam.org/media/fairbeam-promo-poster.jpg">
@@ -69,14 +69,14 @@
     <div class="shell page-head">
       <p class="eyebrow">Features</p>
       <h1>What Fairbeam does</h1>
-      <p class="lede">The desktop app in full: what it models, simulates and exports, the example projects, and the measured numbers behind them.</p>
+      <p class="lede">Feature overview: modeling, simulation, exports, example projects and their simulated results.</p>
     </div>
 
     <div class="shell page-layout">
       <nav class="guide-toc" aria-labelledby="toc-title">
         <p class="eyebrow" id="toc-title">On this page</p>
         <ol>
-          <li><a href="#all">All features</a></li>
+          <li><a href="#all">Feature overview</a></li>
           <li><a href="#example-projects">Example projects</a></li>
           <li><a href="#files">Output files</a></li>
           <li><a href="#results">Results</a></li>
@@ -86,7 +86,7 @@
 
       <div class="page-body">
         <section aria-labelledby="all">
-          <h2 id="all">All features</h2>
+          <h2 id="all">Feature overview</h2>
           <ul class="feature-grid feature-grid-2">
             <li>
               <h3>Ribbon-based designer</h3>
@@ -94,11 +94,11 @@
             </li>
             <li>
               <h3>Import a VBA macro</h3>
-              <p>Reads a CST-compatible VBA macro or history list: parameters, materials, shapes, booleans, transforms, ports, resistors, monitors, the band, the boundaries and manual mesh lines. An import report lists every command that was skipped or changed, with its line.</p>
+              <p>Imports supported commands from CST-compatible VBA macros and history lists, with a report of unsupported or changed operations. Review the report and imported model before running.</p>
             </li>
             <li>
               <h3>Parameters and checks</h3>
-              <p>Every length and frequency is an expression over named parameters. Checks run as you edit and explain what they found; a design without an excited port, or one that cannot converge, is refused before any solver time is spent.</p>
+              <p>Dimensions and frequencies can use named parameters. Live checks explain detected problems and block known invalid setups, including designs without an excited port. Convergence still needs to be checked after running.</p>
             </li>
             <li>
               <h3>Start templates and examples</h3>
@@ -114,15 +114,15 @@
             </li>
             <li>
               <h3>Mesh convergence</h3>
-              <p>Simulation › Mesh convergence… runs the design at finer automatic meshes until the resonance, |S11| and D<sub>max</sub> stop changing, and reports the density that converged. From the command line: <code>fairbeam converge</code>.</p>
+              <p>Mesh convergence studies refine automatic meshes and compare resonance, |S11| and Dmax against tolerances, stopping at convergence or the configured run limit. Also available through fairbeam converge.</p>
             </li>
             <li>
               <h3>Run quality and one-click fixes</h3>
-              <p>A run that did not converge, or whose numbers look suspicious, is flagged in the tree and on its results. Common design checks offer a fix in one click. Waveguide-port power is calibrated, so the pyramidal horn's efficiency reads about 99&nbsp;%.</p>
+              <p>Run-quality warnings and one-click fixes flag common problems. With calibrated waveguide-port power, the horn example has about 99.3% raw radiation efficiency at 10 GHz; its lossless-normalized result is 100%.</p>
             </li>
             <li>
               <h3>Parameter sweeps</h3>
-              <p>Sequences, each over up to six parameters as ranges or value lists, checked before anything runs. The runs are queued, and every run of the sweep can be compared in one plot.</p>
+              <p>Queue checked sweep sequences over up to six parameters and compare selected runs, up to eight at a time, in one plot.</p>
             </li>
             <li>
               <h3>Goal-driven optimizer</h3>
@@ -146,15 +146,15 @@
             </li>
             <li>
               <h3>Far field, currents, beams</h3>
-              <p>3D patterns and polar cuts in directivity, gain, realized gain or RHCP/LHCP, with a card for D<sub>max</sub>, gains, radiation, mismatch and total efficiency and the main lobe. Optionally, the radiation and total efficiency over the whole band, computed after the run (about 0.3&nbsp;s for 21 frequencies on the patch; the solver time does not change). Animated surface currents, and array beams steered after the run.</p>
+              <p>View directivity, gain, realized gain, polarization, currents and steered array patterns. Optional radiation and total efficiency curves are computed after the solver finishes; additional post-processing time depends on the model and frequency count.</p>
             </li>
             <li>
               <h3>GPU engines</h3>
-              <p>Optional GPU builds of openEMS: Metal on Apple silicon and CUDA on NVIDIA cards under Windows. The patch antenna takes 1.6&nbsp;s instead of 10.6&nbsp;s on an M5 Pro, and 2.6&nbsp;s instead of 53&nbsp;s on a Ryzen 9 with an RTX 3060. When a GPU build is installed it is the default, and the CPU engine stays available.</p>
+              <p>Optional openEMS GPU builds support Metal on Apple silicon and CUDA on NVIDIA GPUs under Windows. Documented patch solver times were 1.6 s versus 10.6 s on an M5 Pro and 2.6 s versus 52.9 s on a Ryzen 9 7900X with RTX 3060, using the recorded runtimes. GPU startup preference can be changed; CPU remains available.</p>
             </li>
             <li>
               <h3>VBA macro, drawings, fabrication</h3>
-              <p>A CST-compatible VBA macro rebuilds the model in the target program, and Touchstone or CSV files can be compared against the run. Dimensioned drawings, publication figures, a PDF report, and Gerber, drill and DXF files (preview).</p>
+              <p>Export a CST-compatible VBA macro for supported geometry and settings; check the reconstructed model in the target program. Export Touchstone, CSV, drawings, figures, a PDF report and preview fabrication files.</p>
             </li>
             <li>
               <h3>Desktop app</h3>
@@ -165,7 +165,7 @@
 
         <section aria-labelledby="example-projects">
           <h2 id="example-projects">Example projects</h2>
-          <p>Fourteen simulated projects come with the app, and all of them open in the browser demo. Six of them:</p>
+          <p>Twenty simulated projects come with the app and are listed in the browser demo. Six of them:</p>
           <dl class="example-list">
             <div><dt><a href="app/?example=pyramidal-horn">Pyramidal horn, WR-90</a></dt><dd>An optimum-gain horn fed by a TE<sub>10</sub> waveguide port, with PML boundaries: 15.5 dBi at 10 GHz and |S11| below −16 dB from 8 to 12 GHz.</dd></div>
             <div><dt><a href="app/?example=helix-axial">Axial-mode helix</a></dt><dd>A Kraus helix, seven turns at 13° pitch over a square ground plane: right-hand circular, 11.6 dBi at 2.4 GHz, an axial ratio of 0.9 dB on boresight and the cross-polarized LHCP 26 dB lower.</dd></div>
@@ -174,7 +174,7 @@
             <div><dt><a href="app/?example=branchline-coupler">Branch-line coupler</a></dt><dd>A 90° hybrid: −3.21 and −2.99 dB to the two outputs at 2.40 GHz, 90.0° apart, with the reciprocity and passivity of the four-port matrix checked.</dd></div>
             <div><dt><a href="app/?example=lowpass-stepped">Stepped-impedance low-pass</a></dt><dd>Alternating wide and narrow line sections: the −3 dB point lands at 2.356 GHz, 5.2 % below the ideal line cascade, because the steps themselves add capacitance.</dd></div>
           </dl>
-          <p><a href="app/">Open all 14 examples in the demo</a></p>
+          <p><a href="app/">Open all 20 examples in the demo</a></p>
         </section>
 
         <section aria-labelledby="files">
@@ -199,7 +199,7 @@
         </section>
 
         <section aria-labelledby="results">
-          <h2 id="results">Measured, with the source of every number</h2>
+          <h2 id="results">Simulation results and recorded solver times</h2>
 
           <div class="results-grid">
             <figure class="sheet figure-s11">
@@ -234,11 +234,11 @@
               </thead>
               <tbody>
                 <tr><th scope="row">Patch antenna, −60 dB</th><td class="num">0.26&nbsp;M</td><td class="num">10.6</td><td class="num">1.6</td><td class="num">52.9</td><td class="num">49.9</td><td class="num">2.6</td></tr>
-                <tr><th scope="row">4 × 1 patch array (4 runs)</th><td class="num">0.45&nbsp;M</td><td class="num">–</td><td class="num">14.2</td><td class="num">874</td><td class="num">686</td><td class="num">25.1</td></tr>
+                <tr><th scope="row">4 × 1 patch array (4 runs)</th><td class="num">0.43&nbsp;M</td><td class="num">–</td><td class="num">14.2</td><td class="num">874</td><td class="num">686</td><td class="num">25.1</td></tr>
                 <tr><th scope="row">Sierpinski monopole</th><td class="num">2.0&nbsp;M</td><td class="num">12.0</td><td class="num">2.7</td><td class="num">61.1</td><td class="num">65.7</td><td class="num">3.4</td></tr>
               </tbody>
             </table>
-            <p class="note">The same models give the same results on both platforms. Runs that stop at the same timestep agree within 0.1&nbsp;dB in every S-parameter and 0.004&nbsp;dB in D<sub>max</sub>. The older Mac CPU runs checked the end criterion on a wall-clock schedule and stop at a different timestep, which moves only very deep |S11| nulls. The GPU engine is a separate openEMS fork (SeanMollet/openEMS, GPL-3.0, beta) built side by side; the CPU build stays the reference. The M5 Pro CPU time of the patch was re-measured on 2026-09-25 with the current model. Details and commands in the benchmark notes of the repository.</p>
+            <p class="note">For the documented same-timestep Windows CPU / macOS Metal comparisons, S-parameter magnitudes above −30 dB agree within 0.1 dB and Dmax within 0.004 dB. Other comparisons have different bounds; see the benchmark notes. The optional GPU engine is a separate beta fork of openEMS.</p>
           </div>
 
           <div class="table-grid">
@@ -254,27 +254,27 @@
                   <tr><th scope="row">Wilkinson split S21 = S31</th><td class="num">−3.09&nbsp;dB</td><td class="num">−3.01&nbsp;dB (ideal)</td></tr>
                   <tr><th scope="row">Branch-line S21 / S31</th><td class="num">−3.21 / −2.99&nbsp;dB</td><td class="num">−3.01&nbsp;dB each</td></tr>
                   <tr><th scope="row">Low-pass −3 dB point</th><td class="num">2.356&nbsp;GHz</td><td class="num">2.485&nbsp;GHz (ideal)</td></tr>
-                  <tr><th scope="row">4×1 array S11 / S22</th><td class="num">−23.5 / −17.0&nbsp;dB</td><td class="num">4 GPU runs, 18&nbsp;s</td></tr>
+                  <tr><th scope="row">4×1 array S11 / S22</th><td class="num">−23.5 / −17.0&nbsp;dB</td><td class="num">4 GPU runs</td></tr>
                 </tbody>
               </table>
-              <p class="note">Wilkinson with the textbook 100 Ω resistor: output match and isolation stall at −18.4 and −22.0 dB, because the odd-mode impedance at the outputs is about 34 Ω. The lumped resistor itself is exact; the cause is still an open question. Branch-line at 2.40 GHz: 90.0° between the outputs. Low-pass: the step discontinuities pull the cutoff 5.2 % below the ideal line cascade, as expected for this filter type.</p>
+              <p class="note">For the recorded 100 Ω Wilkinson example, output match and isolation are −18.4 and −22.0 dB. Resistor checks agree within 0.1% in their tested range; the divider discrepancy remains unresolved. The documented branch-line output phase difference is 90.0° at 2.40 GHz, and the low-pass cutoff is 5.2% below the ideal-line model.</p>
             </div>
 
             <div class="stack-lg">
               <div class="table-block">
                 <h3>Optimizer</h3>
                 <table>
-                  <caption>Measured runs of <code>fairbeam optimize</code> on the GPU engine</caption>
+                  <caption>Simulated examples from <code>fairbeam optimize</code></caption>
                   <thead>
                     <tr><th scope="col">Task</th><th scope="col" class="num">Result</th><th scope="col" class="num">Cost</th></tr>
                   </thead>
                   <tbody>
-                    <tr><th scope="row">Dipole to f<sub>0</sub> = 2.40 GHz</th><td class="num">2.4000&nbsp;GHz</td><td class="num">2 evaluations, 2.0&nbsp;s</td></tr>
-                    <tr><th scope="row">Wilkinson: all ports ≤ −20 dB, S23 ≤ −25 dB</th><td class="num">82&nbsp;Ω</td><td class="num">3 evaluations, 7.6&nbsp;s</td></tr>
-                    <tr><th scope="row">Wilkinson: S23 ≤ −35 dB</th><td class="num">73&nbsp;Ω</td><td class="num">4 evaluations, 3.6&nbsp;s</td></tr>
+                    <tr><th scope="row">Dipole to f<sub>0</sub> = 2.40 GHz</th><td class="num">2.4000&nbsp;GHz</td><td class="num">2 evaluations</td></tr>
+                    <tr><th scope="row">Wilkinson: all ports ≤ −20 dB, S23 ≤ −25 dB</th><td class="num">82&nbsp;Ω</td><td class="num">3 evaluations</td></tr>
+                    <tr><th scope="row">Wilkinson: S23 ≤ −35 dB</th><td class="num">73&nbsp;Ω</td><td class="num">4 evaluations</td></tr>
                   </tbody>
                 </table>
-                <p class="note">The isolation resistor went from the textbook 100 Ω to 73 Ω in about 11 s; with all ports driven, 73 Ω gives S23 = −39.9 dB and every port matched below −24 dB.</p>
+                <p class="note">The isolation resistor went from the textbook 100 Ω to 73 Ω in the documented optimization; with all ports driven, 73 Ω gives S23 = −39.9 dB and every port matched below −24 dB.</p>
               </div>
 
               <div class="table-block">
@@ -307,15 +307,15 @@
             </div>
             <div>
               <dt>Fabrication files not yet validated</dt>
-              <dd>The Gerber, drill and DXF files are parsed back and checked against the geometry to 1 µm, but have not been opened in a Gerber viewer or sent to a fab. The simulation uses zero-thickness copper; clearances and footprints are yours to check.</dd>
+              <dd>Selected fabrication fixtures are parsed back and checked against their geometry to 1 µm. These preview exports are not fab-validated. Check each export in an independent viewer and review clearances, footprints and fabrication tolerances before ordering.</dd>
             </div>
             <div>
               <dt>Wilkinson output match: open question</dt>
-              <dd>With the textbook 100 Ω resistor the divider's output match and isolation fall short of theory. The resistor model is exact, so the cause is either the layout or the staircase mesh at the resistor node; a finer mesh at the resistor node will tell.</dd>
+              <dd>The 100 Ω Wilkinson example has output match and isolation below the analytical expectation. Tested resistor fixtures agree within 0.1%; the remaining layout and mesh discrepancy needs further investigation.</dd>
             </div>
             <div>
               <dt>Windows installer not code-signed, macOS 27+</dt>
-              <dd>The macOS app is signed and notarized by Apple. The Windows installer is not code-signed, so Windows SmartScreen warns (More info › Run anyway). The macOS openEMS build needs macOS 27 or newer on Apple silicon. Linux has no installer yet; the Python package works with any openEMS installation whose Python bindings import.</dd>
+              <dd>The managed macOS solver requires macOS 27+ on Apple silicon. Windows installers are not code-signed and may trigger SmartScreen. Linux currently uses a source setup with compatible openEMS and CSXCAD versions; see the tested configuration and limits. The macOS app is signed with a Developer ID and notarized by Apple.</dd>
             </div>
             <div>
               <dt>Licenses</dt>
@@ -339,6 +339,7 @@
         <a href="https://github.com/ismailakdag/fairbeam-releases/releases">Releases</a>
         <a href="https://github.com/ismailakdag/fairbeam">Source code</a>
         <a href="index.html#about">About</a>
+        <a href="https://github.com/ismailakdag/fairbeam/blob/main/NOTICE.md">Third-party licenses and trademark notices</a>
         <a href="privacy.html">Privacy</a>
       </nav>
       <p class="footer-note">Simulations by <a href="https://openems.de" rel="noreferrer">openEMS</a> and CSXCAD. Fairbeam is free software under GPL-3.0-or-later.</p>

@@ -186,11 +186,12 @@ start and needs no admin rights.
 - **Python models.** Models written as small Python files, run from the app or with the `fairbeam`
   command. The run server and the Run panel start from the same files.
 - **Files and export.** Self-describing project bundles, Touchstone, CSV, STL, glTF, Blender
-  scenes and rendered images, Gerber and Excellon fabrication output, and PCB artwork import.
+  scenes (rendered images require Blender), preview Gerber and Excellon fabrication output
+  requiring independent review, and PCB artwork import for the documented file subsets.
 - **Coming from the previous app.** Fairbeam is a separate app. On its first start it can import your
   settings, workspace and Python models and then help remove the old app; files the old app wrote
   still open ([MIGRATING-FROM-ANTENLAB.md](MIGRATING-FROM-ANTENLAB.md)).
-- **Updates.** The app checks for new versions on start and installs them in place; the download,
-  install and restart steps show their progress.
-- Optional sign-in ([ACCOUNTS.md](ACCOUNTS.md)) and anonymous usage counts
+- **Updates.** By default, the app checks GitHub for updates on startup and offers installation with
+  progress for download, installation and restart. Startup checks can be disabled.
+- Optional sign-in ([ACCOUNTS.md](ACCOUNTS.md)) and pseudonymous usage counts
   ([TELEMETRY.md](TELEMETRY.md)) are built but switched off in this release.

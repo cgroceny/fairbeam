@@ -12,7 +12,8 @@
       "title": "Get started",
       "titleTr": "Başlarken",
       "pages": [
-        {"source": "docs/GETTING-STARTED.md", "slug": "getting-started", "title": "Getting started", "description": "Install the desktop app, then design, simulate and read the results of a patch antenna in about five minutes.", "titleTr": "Başlarken"}
+        {"source": "docs/GETTING-STARTED.md", "slug": "getting-started", "title": "Getting started", "description": "Install the desktop app, create a patch antenna, run it and inspect the results.", "titleTr": "Başlarken"},
+        {"source": "docs/MIGRATING-FROM-ANTENLAB.md", "slug": "migration", "title": "Coming from antenlab", "titleTr": "Önceki uygulamadan geçiş", "description": "Import settings, workspaces and Python models, review backups and remove the old app."}
       ]
     },
     {
@@ -31,7 +32,7 @@
         {"source": "docs/MESHING.md", "slug": "meshing", "title": "Automatic meshing", "description": "How the automatic mesh is built from the geometry: options, rules, the mesh report and checks against hand-made meshes.", "titleTr": "Otomatik mesh oluşturma"},
         {"source": "docs/RUN-SERVER.md", "slug": "run-server", "title": "Run server and Run panel", "description": "The local run server behind the Run panel: run setup, your own materials, optimization and comparing projects.", "titleTr": "Çalıştırma sunucusu ve Simülasyon çalıştır paneli"},
         {"source": "docs/STUDIES.md", "slug": "studies", "title": "Sweeps and studies", "description": "Parameter sweeps, mesh convergence studies, the study file format and Touchstone export from the command line.", "titleTr": "Taramalar ve çalışmalar"},
-        {"source": "docs/OPTIMIZE.md", "slug": "optimize", "title": "Optimizer", "description": "Tuning a model or a design towards goals: parameters, goals, algorithms, the output and measured examples.", "titleTr": "Optimizasyon aracı"},
+        {"source": "docs/OPTIMIZE.md", "slug": "optimize", "title": "Optimizer", "description": "Tuning a model or a design towards goals: parameters, goals, algorithms, the output and simulated examples.", "titleTr": "Optimizasyon aracı"},
         {"source": "docs/MULTIPORT.md", "slug": "multiport", "title": "Multi-port structures", "description": "One run per driven port, the S-matrix, and the S-parameter and array views in the viewer.", "titleTr": "Çok portlu yapılar"},
         {"source": "docs/GPU.md", "slug": "gpu", "title": "GPU engine", "description": "The optional GPU build of openEMS, Metal on Apple silicon and CUDA on Windows, with measured timings.", "titleTr": "GPU motoru"}
       ]
@@ -69,8 +70,8 @@
       "titleTr": "Başvuru",
       "pages": [
         {"source": "docs/VALIDATION.md", "slug": "validation", "title": "Validation", "description": "Results compared with closed-form theory, mesh convergence and the recommended solver settings.", "titleTr": "Doğrulama"},
-        {"source": "docs/BENCHMARKS.md", "slug": "benchmarks", "title": "Benchmarks", "description": "The 14 example projects on reference machines under Windows and macOS: results and solver times.", "titleTr": "Performans ölçümleri"},
-        {"source": "docs/openems-lumped-resistor.md", "slug": "openems-lumped-resistor", "title": "Lumped resistors in openEMS", "description": "openEMS lumped resistors measured at the element, and where an apparent error in a test fixture comes from.", "titleTr": "openEMS'te toplu dirençler"},
+        {"source": "docs/BENCHMARKS.md", "slug": "benchmarks", "title": "Benchmarks", "description": "Recorded results and solver times for the historical set of 14 reference projects under Windows and macOS.", "titleTr": "Performans ölçümleri"},
+        {"source": "docs/openems-lumped-resistor.md", "slug": "openems-lumped-resistor", "title": "Lumped resistors in openEMS", "description": "openEMS lumped resistors simulated at the element, and where an apparent error in a test fixture comes from.", "titleTr": "openEMS'te toplu dirençler"},
         {"source": "AI_POLICY.md", "slug": "ai-policy", "title": "AI policy", "description": "How Fairbeam uses AI coding assistants, and what the project asks of AI-assisted contributions.", "titleTr": "Yapay zekâ politikası"},
         {"source": "CONTRIBUTING.md", "slug": "contributing", "title": "Contributing", "description": "Reporting problems, pull requests and the ground rules for contributions.", "titleTr": "Katkıda bulunma"}
       ]

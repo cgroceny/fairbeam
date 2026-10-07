@@ -1,4 +1,4 @@
-// POST https://fairbeam.org/api/ping: one day of the desktop app's anonymous usage counts
+// POST https://fairbeam.org/api/ping: one day of the desktop app's pseudonymous usage counts
 // (docs/TELEMETRY.md). Disabled: without STATS_GITHUB_TOKEN and STATS_SALT in the Vercel
 // environment it answers 503 and does nothing. The logic is in _ping-core.js.
 import { handlePing } from "./_ping-core.js";

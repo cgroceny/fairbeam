@@ -1,7 +1,7 @@
 # Fairbeam documentation
 
 **New to Fairbeam? Start with [Getting started](GETTING-STARTED.md)**: install the desktop app and
-design, run and read a patch antenna in five minutes. The repository [README](../README.md) is the
+design, run and read a patch antenna. The repository [README](../README.md) is the
 short overview. To contribute, read [CONTRIBUTING.md](../CONTRIBUTING.md) and the
 [AI policy](../AI_POLICY.md).
 
@@ -23,7 +23,7 @@ translated. To check a locally served site in Chrome, run `npm run check:docs-la
 
 | Guide | What it covers |
 | --- | --- |
-| [Getting started](GETTING-STARTED.md) | Installing the desktop app (macOS signed and notarized, Windows), a five-minute walkthrough from the patch starter to results, the other starters, mesh convergence, field planes, sweeps and the optimizer, importing a VBA macro, where files live, reporting a problem |
+| [Getting started](GETTING-STARTED.md) | Installing the desktop app (macOS signed with a Developer ID and notarized by Apple, Windows), a walkthrough from the patch starter to results, the other starters, mesh convergence, field planes, sweeps and the optimizer, importing a VBA macro, where files live, reporting a problem |
 | [Running from source](FROM-SOURCE.md) | Requirements, building openEMS and installing Fairbeam from the repository, first run, the test suite, platform notes |
 | [The designer](DESIGNER.md) | The visual workspace: start screen and starters, the one-row ribbon (Home, Modeling, Transform, Simulation, Optimize, Post-processing), navigation tree and components, modeling, checks, simulation settings, mesh view and mesh convergence, running and results (efficiency, gain patterns, field planes), design files, VBA macro import, known limitations, feedback |
 | [Example designs](../examples/designs/README.md) | Six 867 MHz antennas as designer files (blade, wideband, meander and sleeve dipoles, collinear, Yagi), with parameters, results and how to scale them |
@@ -31,7 +31,7 @@ translated. To check a locally served site in Chrome, run `npm run check:docs-la
 | [Writing models](MODELS.md) | Model files (`MODEL`, `PARAMS`, `build`), an example, templates and the in-app editor |
 | [Automatic meshing](MESHING.md) | `sim.auto_mesh()`: options, rules, report, validation against hand meshes |
 | [Run server and Run panel](RUN-SERVER.md) | `fairbeam serve`, the Run panel, sweeps, comparison overlays, the optimizer in the UI |
-| [Optimizer](OPTIMIZE.md) | Goals, driven ports, algorithms, output and measured examples |
+| [Optimizer](OPTIMIZE.md) | Goals, driven ports, algorithms, output and simulated examples |
 | [Studies](STUDIES.md) | `sweep`, `converge`, `touchstone` and the study file format |
 | [Multi-port structures and arrays](MULTIPORT.md) | One run per driven port, S-matrices, the S-parameters and Array tabs |
 | [Arrays](ARRAYS.md) | Embedded element patterns, normalization, beam steering, the 2×1 and 4×1 arrays |
@@ -52,8 +52,8 @@ translated. To check a locally served site in Chrome, run `npm run check:docs-la
 | [Architecture](ARCHITECTURE.md) | Data flow, run server, project layout, roadmap |
 | [Design](DESIGN.md) | Visual design rules, tokens, layout primitives, keyboard map |
 | [Turkish UI glossary](i18n-glossary.md) | The Turkish/English terms of the interface and the alternatives considered for each term |
-| [Usage statistics](TELEMETRY.md) | The opt-in, anonymous usage counts: what would be collected, the consent flow, the serverless endpoint. Built but switched off |
+| [Usage statistics](TELEMETRY.md) | The opt-in, pseudonymous usage counts: what would be collected, the consent flow, the serverless endpoint. Built but switched off |
 | [Optional sign-in](ACCOUNTS.md) | GitHub and Google sign-in for the desktop app: the build switches, the flow, what is stored. Built but switched off |
 | [Deploy](DEPLOY.md) | The public site (landing page and demo) on Vercel |
-| [Benchmarks](BENCHMARKS.md) | The 14 examples on reference machines (Windows and macOS): results and solver times |
+| [Benchmarks](BENCHMARKS.md) | The historical benchmark set of 14 examples on reference machines (Windows and macOS): results and solver times |
 | [Designer state and viewport checks](DESIGNER-STATE-LIFECYCLE.md) | The designer async-state tests and the viewport lifecycle checks, and how to run them |

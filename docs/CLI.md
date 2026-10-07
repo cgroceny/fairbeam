@@ -328,11 +328,11 @@ cut-off stays trapped in a sample with εr·μr > 1 (the fixture warns). The com
   smaller one, and checks afterwards from the port probes' time axis that both used it (as for the
   plane-wave cell, a step that does not resolve a dispersive sample's poles is refused);
 - takes S11 and S21 from the port waves (reference: the TE10 wave impedance η0·k0/β0) and refers
-  them to the sample faces with β0 measured in the empty run between the two reference planes;
+  them to the sample faces with β0 simulated in the empty run between the two reference planes;
 - compares with `analytic_layers(p)` through the guided transfer-matrix slab
   (`slab_s(..., kc=π/a)`);
 - extracts εr and μr with the guided NRW and NIST forms (β_s = j·ln T / d, μr = z·β_s/β0,
-  εr·μr = (β_s² + kc²)/(β0² + kc²)), using the measured β0.
+  εr·μr = (β_s² + kc²)/(β0² + kc²)), using the simulated β0.
 
 The band must start above the empty guide's TE10 cut-off c/(2a) (an error otherwise), and the
 command warns when `f_max` reaches its TE20 or TE01 cut-off. The filled section's cut-offs (divided

@@ -9,7 +9,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="color-scheme" content="light dark">
   <title>Privacy and usage statistics · Fairbeam</title>
-  <meta name="description" content="What the Fairbeam desktop app's optional, anonymous usage statistics collect, where the data goes and how to turn them off. Not active yet.">
+  <meta name="description" content="Usage counts and sign-in are built but OFF in Fairbeam 0.7.0. Network requests, hosting and future optional usage reports.">
   <link rel="canonical" href="https://fairbeam.org/privacy.html">
   <link rel="icon" href="favicon.svg" type="image/svg+xml">
   <link rel="icon" href="favicon.ico" sizes="48x48">
@@ -21,8 +21,11 @@
   <link rel="stylesheet" href="styles.css">
   <link rel="stylesheet" href="navigation.css">
   <script>try{var t=localStorage.getItem("fairbeam.theme");if(t==="light"||t==="dark")document.documentElement.setAttribute("data-theme",t)}catch(e){}</script>
-  <script src="navigation.js" defer></script>
-  <script src="script.js" defer></script>
+  <script src="language.js" defer></script>
+<script src="navigation.js" defer>
+</script>
+  <script src="script.js" defer>
+</script>
 </head>
 <body>
   <a class="skip-link" href="#main">Skip to content</a>
@@ -30,122 +33,179 @@
   <header class="site-header">
     <div class="shell header-row">
       <a class="wordmark" href="./" aria-label="Fairbeam, home">
-        <svg class="lockup" viewBox="0 0 774 120" preserveAspectRatio="xMinYMid slice" aria-hidden="true" focusable="false"><path fill="#B87333" d="M27 0H93A27 27 0 0 1 120 27V93A27 27 0 0 1 93 120H27A27 27 0 0 1 0 93V27A27 27 0 0 1 27 0Z"/><path fill="#3FD0E0" d="M120 27C116.97 30.09 113.93 32.73 110.9 35.03C104.73 39.71 98.57 43.03 92.4 45.61C84.01 49.12 75.61 51.26 67.21 52.82C56.92 54.73 46.63 55.74 36.35 56.45A10 10 0 1 0 36.35 63.55C46.63 64.26 56.92 65.27 67.21 67.18C75.61 68.74 84.01 70.88 92.4 74.39C98.57 76.97 104.73 80.29 110.9 84.97C113.93 87.27 116.97 89.91 120 93Z"/><g fill="currentColor" transform="translate(168 116.245)"><path d="M11.8 0V-64.52H0V-80H11.8V-91.49Q11.8 -102.07 17.47 -107.74Q23.14 -113.41 33.87 -113.41H47.82V-97.78H31.42V-80H47.82V-64.52H31.42V0ZM128.12 0H117.24Q112.8 0 109.35 -2.07Q105.9 -4.14 104.06 -8.12Q102.68 -10.73 102.38 -13.79H101.46Q99.46 -6.13 93.26 -2.15Q87.05 1.84 78.16 1.84Q65.9 1.84 59.31 -4.67Q52.72 -11.19 52.72 -21.76Q52.72 -30.04 56.78 -35.4Q60.84 -40.77 68.51 -43.52Q76.17 -46.28 86.9 -46.28H100.54V-52.11Q100.54 -58.7 97.01 -62.45Q93.49 -66.21 85.67 -66.21Q78.77 -66.21 74.56 -63.22Q70.34 -60.23 67.43 -56.09L55.79 -66.51Q60.23 -73.41 67.59 -77.62Q74.94 -81.84 87.05 -81.84Q103.14 -81.84 111.65 -74.41Q120.15 -66.97 120.15 -53.33V-15.63H128.12ZM100.54 -34.48H87.97Q80.31 -34.48 76.48 -31.95Q72.64 -29.43 72.64 -24.67V-22.07Q72.64 -17.32 75.86 -14.87Q79.08 -12.41 84.75 -12.41Q89.2 -12.41 92.72 -13.72Q96.25 -15.02 98.39 -17.62Q100.54 -20.23 100.54 -23.91ZM150.8 -91.65Q144.83 -91.65 142.07 -94.48Q139.31 -97.32 139.31 -101.46V-104.52Q139.31 -108.81 142.07 -111.57Q144.83 -114.33 150.8 -114.33Q156.78 -114.33 159.54 -111.57Q162.3 -108.81 162.3 -104.52V-101.46Q162.3 -97.32 159.54 -94.48Q156.78 -91.65 150.8 -91.65ZM141 0V-80H160.61V0ZM199.69 0H180.08V-80H199.69V-63.45H200.46Q201.53 -67.74 204.06 -71.49Q206.59 -75.25 210.96 -77.62Q215.33 -80 221.61 -80H225.9V-61.46H219.77Q213.18 -61.46 208.66 -60.15Q204.14 -58.85 201.92 -56.17Q199.69 -53.49 199.69 -49.04ZM237.24 0V-113.41H256.86V-66.82H257.47Q259.62 -73.72 265.67 -77.78Q271.72 -81.84 279.54 -81.84Q289.81 -81.84 296.7 -76.93Q303.6 -72.03 307.28 -62.76Q310.96 -53.49 310.96 -40.15Q310.96 -26.82 307.28 -17.39Q303.6 -7.97 296.7 -3.07Q289.81 1.84 279.54 1.84Q271.72 1.84 265.75 -2.3Q259.77 -6.44 257.47 -13.33H256.86V0ZM273.26 -14.41Q280.92 -14.41 285.67 -19.54Q290.42 -24.67 290.42 -33.1V-46.9Q290.42 -55.48 285.67 -60.61Q280.92 -65.75 273.26 -65.75Q268.66 -65.75 264.9 -64.14Q261.15 -62.53 259 -59.62Q256.86 -56.7 256.86 -52.87V-27.43Q256.86 -23.3 259 -20.38Q261.15 -17.47 264.9 -15.94Q268.66 -14.41 273.26 -14.41ZM358.47 1.84Q346.67 1.84 338.24 -3.3Q329.81 -8.43 325.29 -17.85Q320.77 -27.28 320.77 -40.15Q320.77 -52.72 325.21 -62.15Q329.66 -71.57 337.93 -76.7Q346.21 -81.84 357.85 -81.84Q370.42 -81.84 378.47 -76.32Q386.51 -70.8 390.42 -61.69Q394.33 -52.57 394.33 -41.53V-35.1H341.15V-33.1Q341.15 -24.52 346.05 -19.16Q350.96 -13.79 360.61 -13.79Q367.82 -13.79 372.57 -16.93Q377.32 -20.08 381 -24.67L391.57 -12.87Q386.67 -6.28 378.16 -2.22Q369.66 1.84 358.47 1.84ZM358.16 -67.13Q352.95 -67.13 349.12 -64.75Q345.29 -62.38 343.22 -58.16Q341.15 -53.95 341.15 -48.43V-47.2H373.95V-48.58Q373.95 -54.25 372.11 -58.31Q370.27 -62.38 366.74 -64.75Q363.22 -67.13 358.16 -67.13ZM478.31 0H467.43Q462.99 0 459.54 -2.07Q456.09 -4.14 454.25 -8.12Q452.87 -10.73 452.57 -13.79H451.65Q449.66 -6.13 443.45 -2.15Q437.24 1.84 428.35 1.84Q416.09 1.84 409.5 -4.67Q402.91 -11.19 402.91 -21.76Q402.91 -30.04 406.97 -35.4Q411.03 -40.77 418.7 -43.52Q426.36 -46.28 437.09 -46.28H450.73V-52.11Q450.73 -58.7 447.2 -62.45Q443.68 -66.21 435.86 -66.21Q428.97 -66.21 424.75 -63.22Q420.54 -60.23 417.62 -56.09L405.98 -66.51Q410.42 -73.41 417.78 -77.62Q425.13 -81.84 437.24 -81.84Q453.33 -81.84 461.84 -74.41Q470.34 -66.97 470.34 -53.33V-15.63H478.31ZM450.73 -34.48H438.16Q430.5 -34.48 426.67 -31.95Q422.84 -29.43 422.84 -24.67V-22.07Q422.84 -17.32 426.05 -14.87Q429.27 -12.41 434.94 -12.41Q439.39 -12.41 442.91 -13.72Q446.44 -15.02 448.58 -17.62Q450.73 -20.23 450.73 -23.91ZM510.8 0H491.19V-80H510.8V-66.67H511.57Q513.87 -72.95 519 -77.39Q524.14 -81.84 533.03 -81.84Q541.3 -81.84 547.36 -77.85Q553.41 -73.87 556.17 -65.75H556.48Q558.62 -72.34 565.06 -77.09Q571.49 -81.84 581 -81.84Q592.64 -81.84 599.08 -73.64Q605.52 -65.44 605.52 -50.57V0H585.9V-48.58Q585.9 -57.16 582.76 -61.46Q579.62 -65.75 573.03 -65.75Q569.2 -65.75 565.75 -64.29Q562.3 -62.84 560.23 -60Q558.16 -57.16 558.16 -52.87V0H538.54V-48.58Q538.54 -57.16 535.33 -61.46Q532.11 -65.75 525.67 -65.75Q521.99 -65.75 518.54 -64.29Q515.1 -62.84 512.95 -60Q510.8 -57.16 510.8 -52.87Z"/></g></svg>
+        <svg class="lockup" viewBox="0 0 774 120" preserveAspectRatio="xMinYMid slice" aria-hidden="true" focusable="false">
+<path fill="#B87333" d="M27 0H93A27 27 0 0 1 120 27V93A27 27 0 0 1 93 120H27A27 27 0 0 1 0 93V27A27 27 0 0 1 27 0Z"/>
+<path fill="#3FD0E0" d="M120 27C116.97 30.09 113.93 32.73 110.9 35.03C104.73 39.71 98.57 43.03 92.4 45.61C84.01 49.12 75.61 51.26 67.21 52.82C56.92 54.73 46.63 55.74 36.35 56.45A10 10 0 1 0 36.35 63.55C46.63 64.26 56.92 65.27 67.21 67.18C75.61 68.74 84.01 70.88 92.4 74.39C98.57 76.97 104.73 80.29 110.9 84.97C113.93 87.27 116.97 89.91 120 93Z"/>
+<g fill="currentColor" transform="translate(168 116.245)">
+<path d="M11.8 0V-64.52H0V-80H11.8V-91.49Q11.8 -102.07 17.47 -107.74Q23.14 -113.41 33.87 -113.41H47.82V-97.78H31.42V-80H47.82V-64.52H31.42V0ZM128.12 0H117.24Q112.8 0 109.35 -2.07Q105.9 -4.14 104.06 -8.12Q102.68 -10.73 102.38 -13.79H101.46Q99.46 -6.13 93.26 -2.15Q87.05 1.84 78.16 1.84Q65.9 1.84 59.31 -4.67Q52.72 -11.19 52.72 -21.76Q52.72 -30.04 56.78 -35.4Q60.84 -40.77 68.51 -43.52Q76.17 -46.28 86.9 -46.28H100.54V-52.11Q100.54 -58.7 97.01 -62.45Q93.49 -66.21 85.67 -66.21Q78.77 -66.21 74.56 -63.22Q70.34 -60.23 67.43 -56.09L55.79 -66.51Q60.23 -73.41 67.59 -77.62Q74.94 -81.84 87.05 -81.84Q103.14 -81.84 111.65 -74.41Q120.15 -66.97 120.15 -53.33V-15.63H128.12ZM100.54 -34.48H87.97Q80.31 -34.48 76.48 -31.95Q72.64 -29.43 72.64 -24.67V-22.07Q72.64 -17.32 75.86 -14.87Q79.08 -12.41 84.75 -12.41Q89.2 -12.41 92.72 -13.72Q96.25 -15.02 98.39 -17.62Q100.54 -20.23 100.54 -23.91ZM150.8 -91.65Q144.83 -91.65 142.07 -94.48Q139.31 -97.32 139.31 -101.46V-104.52Q139.31 -108.81 142.07 -111.57Q144.83 -114.33 150.8 -114.33Q156.78 -114.33 159.54 -111.57Q162.3 -108.81 162.3 -104.52V-101.46Q162.3 -97.32 159.54 -94.48Q156.78 -91.65 150.8 -91.65ZM141 0V-80H160.61V0ZM199.69 0H180.08V-80H199.69V-63.45H200.46Q201.53 -67.74 204.06 -71.49Q206.59 -75.25 210.96 -77.62Q215.33 -80 221.61 -80H225.9V-61.46H219.77Q213.18 -61.46 208.66 -60.15Q204.14 -58.85 201.92 -56.17Q199.69 -53.49 199.69 -49.04ZM237.24 0V-113.41H256.86V-66.82H257.47Q259.62 -73.72 265.67 -77.78Q271.72 -81.84 279.54 -81.84Q289.81 -81.84 296.7 -76.93Q303.6 -72.03 307.28 -62.76Q310.96 -53.49 310.96 -40.15Q310.96 -26.82 307.28 -17.39Q303.6 -7.97 296.7 -3.07Q289.81 1.84 279.54 1.84Q271.72 1.84 265.75 -2.3Q259.77 -6.44 257.47 -13.33H256.86V0ZM273.26 -14.41Q280.92 -14.41 285.67 -19.54Q290.42 -24.67 290.42 -33.1V-46.9Q290.42 -55.48 285.67 -60.61Q280.92 -65.75 273.26 -65.75Q268.66 -65.75 264.9 -64.14Q261.15 -62.53 259 -59.62Q256.86 -56.7 256.86 -52.87V-27.43Q256.86 -23.3 259 -20.38Q261.15 -17.47 264.9 -15.94Q268.66 -14.41 273.26 -14.41ZM358.47 1.84Q346.67 1.84 338.24 -3.3Q329.81 -8.43 325.29 -17.85Q320.77 -27.28 320.77 -40.15Q320.77 -52.72 325.21 -62.15Q329.66 -71.57 337.93 -76.7Q346.21 -81.84 357.85 -81.84Q370.42 -81.84 378.47 -76.32Q386.51 -70.8 390.42 -61.69Q394.33 -52.57 394.33 -41.53V-35.1H341.15V-33.1Q341.15 -24.52 346.05 -19.16Q350.96 -13.79 360.61 -13.79Q367.82 -13.79 372.57 -16.93Q377.32 -20.08 381 -24.67L391.57 -12.87Q386.67 -6.28 378.16 -2.22Q369.66 1.84 358.47 1.84ZM358.16 -67.13Q352.95 -67.13 349.12 -64.75Q345.29 -62.38 343.22 -58.16Q341.15 -53.95 341.15 -48.43V-47.2H373.95V-48.58Q373.95 -54.25 372.11 -58.31Q370.27 -62.38 366.74 -64.75Q363.22 -67.13 358.16 -67.13ZM478.31 0H467.43Q462.99 0 459.54 -2.07Q456.09 -4.14 454.25 -8.12Q452.87 -10.73 452.57 -13.79H451.65Q449.66 -6.13 443.45 -2.15Q437.24 1.84 428.35 1.84Q416.09 1.84 409.5 -4.67Q402.91 -11.19 402.91 -21.76Q402.91 -30.04 406.97 -35.4Q411.03 -40.77 418.7 -43.52Q426.36 -46.28 437.09 -46.28H450.73V-52.11Q450.73 -58.7 447.2 -62.45Q443.68 -66.21 435.86 -66.21Q428.97 -66.21 424.75 -63.22Q420.54 -60.23 417.62 -56.09L405.98 -66.51Q410.42 -73.41 417.78 -77.62Q425.13 -81.84 437.24 -81.84Q453.33 -81.84 461.84 -74.41Q470.34 -66.97 470.34 -53.33V-15.63H478.31ZM450.73 -34.48H438.16Q430.5 -34.48 426.67 -31.95Q422.84 -29.43 422.84 -24.67V-22.07Q422.84 -17.32 426.05 -14.87Q429.27 -12.41 434.94 -12.41Q439.39 -12.41 442.91 -13.72Q446.44 -15.02 448.58 -17.62Q450.73 -20.23 450.73 -23.91ZM510.8 0H491.19V-80H510.8V-66.67H511.57Q513.87 -72.95 519 -77.39Q524.14 -81.84 533.03 -81.84Q541.3 -81.84 547.36 -77.85Q553.41 -73.87 556.17 -65.75H556.48Q558.62 -72.34 565.06 -77.09Q571.49 -81.84 581 -81.84Q592.64 -81.84 599.08 -73.64Q605.52 -65.44 605.52 -50.57V0H585.9V-48.58Q585.9 -57.16 582.76 -61.46Q579.62 -65.75 573.03 -65.75Q569.2 -65.75 565.75 -64.29Q562.3 -62.84 560.23 -60Q558.16 -57.16 558.16 -52.87V0H538.54V-48.58Q538.54 -57.16 535.33 -61.46Q532.11 -65.75 525.67 -65.75Q521.99 -65.75 518.54 -64.29Q515.1 -62.84 512.95 -60Q510.8 -57.16 510.8 -52.87Z"/>
+</g>
+</svg>
       </a>
       <button class="mobile-nav-toggle" type="button" data-mobile-nav-toggle aria-label="Open the menu" title="Open the menu" aria-expanded="false" aria-controls="site-nav">
-        <svg class="icon-menu" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
-        <svg class="icon-close" viewBox="0 0 24 24" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18"/></svg>
+        <svg class="icon-menu" viewBox="0 0 24 24" aria-hidden="true">
+<path d="M4 7h16M4 12h16M4 17h16"/>
+</svg>
+        <svg class="icon-close" viewBox="0 0 24 24" aria-hidden="true">
+<path d="m6 6 12 12M18 6 6 18"/>
+</svg>
       </button>
       <nav class="site-nav" id="site-nav" aria-label="Main">
         <a href="features.html">Features</a>
         <a href="./#examples">Examples</a>
         <a href="docs/">Docs</a>
         <a href="./#download">Download</a>
-        <a class="nav-github" href="https://github.com/ismailakdag/fairbeam"><svg viewBox="0 0 16 16" aria-hidden="true" focusable="false"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8Z"/></svg>GitHub</a>
+        <a class="nav-github" href="https://github.com/ismailakdag/fairbeam">
+<svg viewBox="0 0 16 16" aria-hidden="true" focusable="false">
+<path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8Z"/>
+</svg>GitHub</a>
         <a class="button ghost nav-demo" href="app/">Open the demo</a>
       </nav>
       <div class="header-actions">
+        <div class="site-language-switch" role="group" aria-label="Site language" data-language-label-en="Site language" data-language-label-tr="Site dili">
+          <button type="button" data-site-language="en" aria-label="English" aria-pressed="true" lang="en">EN</button>
+          <button type="button" data-site-language="tr" aria-label="Türkçe" aria-pressed="false" lang="tr">TR</button>
+        </div>
         <a class="button ghost button-sm header-demo" href="app/">Open the demo</a>
         <button class="icon-button" type="button" id="theme-toggle" aria-label="Theme: system" title="Theme: system (click to change)">
-          <svg viewBox="0 0 24 24" aria-hidden="true" class="icon-system"><rect x="3" y="4" width="18" height="12" rx="2"/><path d="M8 20h8M12 16v4"/></svg>
-          <svg viewBox="0 0 24 24" aria-hidden="true" class="icon-light"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>
-          <svg viewBox="0 0 24 24" aria-hidden="true" class="icon-dark"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z"/></svg>
+          <svg viewBox="0 0 24 24" aria-hidden="true" class="icon-system">
+<rect x="3" y="4" width="18" height="12" rx="2"/>
+<path d="M8 20h8M12 16v4"/>
+</svg>
+          <svg viewBox="0 0 24 24" aria-hidden="true" class="icon-light">
+<circle cx="12" cy="12" r="4"/>
+<path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/>
+</svg>
+          <svg viewBox="0 0 24 24" aria-hidden="true" class="icon-dark">
+<path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z"/>
+</svg>
         </button>
       </div>
     </div>
   </header>
 
-  <main tabindex="-1" id="main" class="guide">
-    <div class="shell guide-head">
-      <p class="eyebrow">Privacy · desktop app</p>
-      <h1>Usage statistics</h1>
-      <p class="lede">The Fairbeam desktop app can share anonymous usage counts, only if you say yes. This page lists exactly what would be sent.</p>
-      <p class="fineprint"><strong>Not active yet.</strong> No released version collects or sends anything. The app does not ask, and Settings › General › Usage statistics says “Not active in this build”. This page describes the feature before it is turned on.</p>
-    </div>
-
-    <div class="shell guide-layout">
-      <nav class="guide-toc" aria-labelledby="toc-title">
-        <p class="eyebrow" id="toc-title">On this page</p>
-        <ol>
-          <li><a href="#summary">In short</a></li>
-          <li><a href="#collected">What is sent</a></li>
-          <li><a href="#never">What is never sent</a></li>
-          <li><a href="#where">Where it goes</a></li>
-          <li><a href="#off">Turning it off</a></li>
-          <li><a href="#website">The website</a></li>
-        </ol>
-      </nav>
-
-      <article class="guide-body">
-        <section aria-labelledby="summary">
-          <h2 id="summary">In short</h2>
-          <ul>
-            <li><strong>Off unless you agree.</strong> On first start, the app asks once. Until you answer, nothing is counted.</li>
-            <li><strong>Anonymous counts.</strong> Only numbers such as “3 simulations on the CPU”, with a random id that is created on your computer. The id is not linked to your name, e-mail, account or hardware, and you can reset it.</li>
-            <li><strong>Once a day.</strong> At most one small message a day, holding the counts of a whole previous day.</li>
-            <li><strong>You can check it.</strong> Settings › General › Usage statistics › <em>View what would be sent</em> shows the exact message.</li>
-            <li>The legal basis is your consent (KVKK art. 5(1), GDPR art. 6(1)(a)). You can withdraw it at any time, and withdrawing it deletes the counts not sent yet.</li>
-          </ul>
-        </section>
-
-        <section aria-labelledby="collected">
-          <h2 id="collected">What is sent</h2>
-          <p>One message per day of use, with these fields and nothing else:</p>
-          <div class="guide-table">
-            <table>
-              <thead><tr><th scope="col">Field</th><th scope="col">Example</th><th scope="col">Meaning</th></tr></thead>
-              <tbody>
-                <tr><th scope="row"><code>install_id</code></th><td><code>1b4e28ba-…</code></td><td>a random id, created on your computer, resettable</td></tr>
-                <tr><th scope="row"><code>app_version</code></th><td><code>0.7.0</code></td><td>the Fairbeam version</td></tr>
-                <tr><th scope="row"><code>os</code>, <code>arch</code></th><td><code>macos</code>, <code>aarch64</code></td><td>operating system and processor type</td></tr>
-                <tr><th scope="row"><code>gpu_available</code></th><td><code>false</code></td><td>whether the openEMS build in use has the GPU engine</td></tr>
-                <tr><th scope="row"><code>day</code></th><td><code>2026-09-27</code></td><td>the day (UTC) the counts are for</td></tr>
-                <tr><th scope="row"><code>counters</code></th><td><code>{"app.start": 2}</code></td><td>whole numbers under fixed names, listed below</td></tr>
-              </tbody>
-            </table>
-          </div>
-          <p>The counters, per day:</p>
-          <ul>
-            <li><strong>App</strong>: starts, a new install, an update (and the version it came from).</li>
-            <li><strong>Simulations</strong>: started, finished, failed and canceled. They are grouped by engine (CPU or GPU) and by kind of model (your design, a bundled example or a Python model). Finished runs also count a duration range (under 10 s, 10–60 s, 1–10 min, over 10 min) and a size range (under 100 000, up to 1 million, over 1 million cells). For a failure, only a category code is counted, for example <code>solver</code>, <code>memory</code> or <code>mesh-cells</code>, never the message.</li>
-            <li><strong>Monitors</strong> used in a run: far field, surface current, efficiency, field planes.</li>
-            <li><strong>Sweeps</strong>, with a range of their number of points; <strong>optimizer runs</strong>, with the method.</li>
-            <li><strong>Features</strong>: VBA macro import, VBA macro export, Touchstone export, PDF report.</li>
-          </ul>
-        </section>
-
-        <section aria-labelledby="never">
-          <h2 id="never">What is never sent</h2>
-          <p>File names, design contents, model names, parameter names or values, folder paths, error messages, your e-mail, your user or computer name, and your IP address are never sent. The server refuses any message that has a field or a counter name not on the lists above.</p>
-        </section>
-
-        <section aria-labelledby="where">
-          <h2 id="where">Where it goes</h2>
-          <p>The app sends the message over HTTPS to <code>fairbeam.org/api/ping</code>, a function on this website (hosted by Vercel). There:</p>
-          <ul>
-            <li>the random id is replaced by a keyed hash, so even the stored data does not contain it;</li>
-            <li>the counts are appended to a daily file that only the developer can read;</li>
-            <li>the IP address and the exact time are not stored. Vercel's request logs keep the IP address for a short time, as for every page of this site.</li>
-          </ul>
-          <p>The counts are only ever used added up: how many installs are active per day and per week, which versions and systems are in use, how many simulations run and which features matter. Nothing is sold or shared.</p>
-        </section>
-
-        <section aria-labelledby="off">
-          <h2 id="off">Turning it off</h2>
-          <ul>
-            <li>In the app: Settings › General › Usage statistics › <strong>Off</strong>. It stops at once and deletes the counts not sent yet. <strong>Reset id</strong> creates a new random id.</li>
-            <li>For a whole computer: set the environment variable <code>FAIRBEAM_NO_TELEMETRY=1</code>. It wins over every setting.</li>
-            <li>Questions: open an issue on the <a href="https://github.com/ismailakdag/fairbeam-releases/issues/new/choose">public tracker</a>.</li>
-          </ul>
-        </section>
-
-        <section aria-labelledby="website">
-          <h2 id="website">The website</h2>
-          <p>This website sets no cookies and uses no analytics. The theme button and the demo remember your choices in your browser's local storage only.</p>
-        </section>
-      </article>
-    </div>
-  </main>
+<main tabindex="-1" id="main" class="guide">
+<div class="shell guide-head">
+<h1>Privacy and usage statistics</h1>
+<p class="lede">Usage counts and sign-in are built but OFF in Fairbeam 0.7.0. No usage counts are recorded or sent, and no usage-consent dialog appears.</p>
+</div>
+<div class="shell guide-layout">
+<nav class="guide-toc" aria-label="Privacy sections">
+<ol>
+<li>
+<a href="#summary">Current release</a>
+</li>
+<li>
+<a href="#collected">Optional usage reports — disabled</a>
+</li>
+<li>
+<a href="#never">Report contents and network metadata</a>
+</li>
+<li>
+<a href="#where">Future processing and retention</a>
+</li>
+<li>
+<a href="#off">Controls in an enabled build</a>
+</li>
+<li>
+<a href="#website">The website</a>
+</li>
+</ol>
+</nav>
+<article class="guide-body">
+<section aria-labelledby="summary">
+<h2 id="summary">Current release</h2>
+<p>Usage counts and sign-in are built but OFF in Fairbeam 0.7.0. No usage counts are recorded or sent, and no usage-consent dialog appears.</p>
+<p>Update checks contact GitHub (fairbeam-releases). App and runtime downloads come from GitHub and upstream hosts. This website is hosted on Vercel. These services see your IP address and request data as any web server does; request-log retention is set by the hosting provider.</p>
+<p>Startup update checks can be disabled in General settings. On Windows, the WebView2 component follows Microsoft’s own diagnostic-data settings.</p>
+<p>Before any usage counting is enabled, a full notice will be published identifying the controller, purposes, processors, retention periods, rights and transfer arrangements. For privacy questions or rights requests, contact ismail@fairbeam.org. Do not post personal information in public issues.</p>
+</section>
+<section aria-labelledby="collected">
+<h2 id="collected">Optional usage reports — disabled</h2>
+<p>The following describes the optional implementation, which would require an enabled build and your consent. It sends at most one report per UTC day for a previous day of use.</p>
+<p>Reports use a resettable, random pseudonymous install ID, not your name or account. The server replaces it with a keyed pseudonym that can link counts from the same installation across days.</p>
+<p>View what would be sent shows the report format; in Fairbeam 0.7.0 it is an example only and is not sent.</p>
+<p>An enabled report contains schema, install_id, app_version, os, arch, gpu_available, day and counters. The accepted fields and counter names are defined in the published report schema.</p>
+<p>
+<a href="https://github.com/ismailakdag/fairbeam/blob/main/api/_ping-schema.json">Report schema</a>
+</p>
+<div class="guide-table">
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<th scope="row">
+<code>schema</code>
+</th>
+<td>Report format version</td>
+</tr>
+<tr>
+<th scope="row">
+<code>install_id</code>
+</th>
+<td>Resettable random installation identifier</td>
+</tr>
+<tr>
+<th scope="row">
+<code>app_version</code>
+</th>
+<td>Fairbeam version</td>
+</tr>
+<tr>
+<th scope="row">
+<code>os, arch</code>
+</th>
+<td>Operating system and processor type</td>
+</tr>
+<tr>
+<th scope="row">
+<code>gpu_available</code>
+</th>
+<td>Whether the openEMS build has the GPU engine</td>
+</tr>
+<tr>
+<th scope="row">
+<code>day</code>
+</th>
+<td>UTC day the counts describe</td>
+</tr>
+<tr>
+<th scope="row">
+<code>counters</code>
+</th>
+<td>Integer counts under the published names</td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>App counts cover starts, new installs and updates, including the previous version. Started and finished simulations are grouped by engine and model source. Failed simulations are grouped by engine and error category, canceled simulations by engine, and refused runs by reason. Finished runs also count duration and cell-count ranges; error messages are excluded.</p>
+<p>Other counters cover far-field, surface-current, efficiency and field-plane monitors; sweep size ranges and optimizer methods; VBA macro import and export, Touchstone export and PDF reports.</p>
+</section>
+<section aria-labelledby="never">
+<h2 id="never">Report contents and network metadata</h2>
+<p>Usage-report bodies exclude file names, design contents, model names, parameter names and values, paths, error messages, email addresses, user names, computer names and IP addresses. The receiving infrastructure still processes the source IP address and request metadata. The endpoint rejects fields and counters outside its published schema.</p>
+</section>
+<section aria-labelledby="where">
+<h2 id="where">Future processing and retention</h2>
+<p>If enabled, reports would be sent over HTTPS to fairbeam.org/api/ping on Vercel, and count records stored through GitHub in a configured repository. The intended purpose is aggregate product-usage analysis. Access permissions and processor arrangements must be restricted and documented before collection begins.</p>
+<p>Count records exclude IP addresses and exact timestamps. Hosting logs and storage metadata may contain network and timing information. Provider log retention is set by the hosting provider; count-record retention and transfer arrangements will be specified in the full notice before activation.</p>
+</section>
+<section aria-labelledby="off">
+<h2 id="off">Controls in an enabled build</h2>
+<p>If usage counting is enabled in a future release, Settings › General › Usage statistics › Off stops counting and deletes unsent counts. Reset id creates a new random identifier; it does not delete records already uploaded.</p>
+<p>Set FAIRBEAM_NO_TELEMETRY=1 in the environment used to launch Fairbeam. It overrides consent and other usage-count settings for that process.</p>
+</section>
+<section aria-labelledby="website">
+<h2 id="website">The website</h2>
+<p>The website source includes no analytics scripts or cookie-setting code. Theme and language preferences, and the browser demo’s settings and any drafts, are stored locally in your browser. Vercel hosting infrastructure still processes your IP address and request data, with retention set by the hosting provider.</p>
+</section>
+</article>
+</div>
+</main>
 
   <footer class="site-footer">
     <div class="shell footer-row">
@@ -158,10 +218,12 @@
         <a href="https://github.com/ismailakdag/fairbeam-releases/releases">Releases</a>
         <a href="https://github.com/ismailakdag/fairbeam">Source code</a>
         <a href="index.html#about">About</a>
+        <a href="https://github.com/ismailakdag/fairbeam/blob/main/NOTICE.md">Third-party licenses and trademark notices</a>
         <a href="privacy.html" aria-current="page">Privacy</a>
       </nav>
       <p class="footer-note">Simulations by <a href="https://openems.de" rel="noreferrer">openEMS</a> and CSXCAD. Fairbeam is free software under GPL-3.0-or-later.</p>
-      <p class="footer-credit">by <a href="https://akdag.dev" rel="author">İsmail Akdağ</a></p>
+      <p class="footer-credit">by <a href="https://akdag.dev" rel="author">İsmail Akdağ</a>
+</p>
     </div>
   </footer>
 </body>

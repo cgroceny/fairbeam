@@ -210,9 +210,9 @@ Pozitif d kalınlıklı numunede (hücrenin `back - front` değeri) komut, S11 v
 `build(p)` işlevi `fairbeam.waveguide_fixture.WaveguideFixture` oluşturan model, dikdörtgen dalga kılavuzu iletim/yansıma düzeneğini çalıştırır: numune iki TE10 portu arasında a × b kesitini (varsayılan WR-90) doldurur; x ve y'de PEC duvarları, iki portun arkasında PML vardır. `Simulation(..., excitation="gauss")` kullanın: varsayılan Gauss türevi darbe DC'ye uzanır; dolu ve boş kılavuzun TE10 kesim frekansları arasındaki enerji, εr·μr > 1 numunede hapsolur (düzenek uyarır). Komut ardından:
 
 - openEMS kurulumundan her çalıştırmanın zaman adımını okur, boş kılavuzu ve numuneyi küçük adımla çalıştırır; sonra port problarının zaman ekseninden ikisinin de bunu kullandığını denetler (düzlem dalga hücresi gibi, dispersif kutupları çözümlemeyen adım reddedilir);
-- port dalgalarından S11 ve S21'i alır (referans: TE10 dalga empedansı η0·k0/β0), boş çalıştırmada iki referans düzlemi arasında ölçülen β0 ile numune yüzlerine taşır;
+- port dalgalarından S11 ve S21'i alır (referans: TE10 dalga empedansı η0·k0/β0), boş çalıştırmada iki referans düzlemi arasında simülasyonla elde edilen β0 ile numune yüzlerine taşır;
 - kılavuzlu transfer matrisi levhasıyla (`slab_s(..., kc=π/a)`) `analytic_layers(p)` karşılaştırması yapar;
-- ölçülen β0 kullanarak kılavuzlu NRW/NIST biçimleriyle εr ve μr çıkarır (β_s = j·ln T / d, μr = z·β_s/β0, εr·μr = (β_s² + kc²)/(β0² + kc²)).
+- simülasyonla elde edilen β0 kullanarak kılavuzlu NRW/NIST biçimleriyle εr ve μr çıkarır (β_s = j·ln T / d, μr = z·β_s/β0, εr·μr = (β_s² + kc²)/(β0² + kc²)).
 
 Bant, boş kılavuzun TE10 kesim frekansı c/(2a) üstünde başlamalıdır (aksi halde hata); `f_max`, TE20 veya TE01 kesimine ulaşırsa komut uyarır. Dolu bölümün kesimleri (√(εr·μr) değerine bölünmüş) yalnızca raporlanır: kesiti dolduran homojen numune TE10'u bu modlara kuplajlamaz. Sonuç dosyasına `"setup": "waveguide"` (düzlem dalga hücresinde `"plane-wave"`), frekans başına `z_ref`, `beta0` (`measured`, `analytic`, `max_rel_difference`), `empty` altında boş çalıştırmanın `s11` ve yüzlere taşınmış `s21` değerleri, `cell` altında düzenek geometrisi ve kesimler (`cutoffs_empty`, `cutoffs_filled`) eklenir. Örnek `python/examples/wr90_fixture.py`; sonuçlar [VALIDATION.md](VALIDATION.md#17-waveguide-material-fixture-wr-90) içindedir.
 

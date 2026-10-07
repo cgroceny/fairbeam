@@ -1,13 +1,24 @@
 # Usage statistics (telemetry)
 
-Fairbeam can count, anonymously and only with the user's consent, how often the desktop app is
+Usage counts and sign-in are built but OFF in Fairbeam 0.7.0. No usage counts are recorded or sent,
+and no usage-consent dialog appears. Update checks contact GitHub (fairbeam-releases). App and
+runtime downloads come from GitHub and upstream hosts. This website is hosted on Vercel. These
+services see your IP address and request data as any web server does; request-log retention is set
+by the hosting provider.
+
+Before any usage counting is enabled, a full notice will be published identifying the controller,
+purposes, processors, retention periods, rights and transfer arrangements. For privacy questions or
+rights requests, contact ismail@fairbeam.org. Do not post personal information in public issues.
+
+An enabled future build could count, using a pseudonymous install ID and only with the user's
+consent, how often the desktop app is
 started and how many simulations it runs, and send these counts once a day. The maintainer then
 knows roughly how many people use the app and which features they use. There is no third-party
 analytics service (no Aptabase, PostHog or Google Analytics) and no database.
 
 **Status: built and wired, but OFF.** Release builds do not include it. With the switch off:
 
-- no network request is ever made, and the sending code is not even compiled in;
+- no usage-report request is made, and the usage-report sending code is not compiled in;
 - no consent dialog is shown, and the app writes no telemetry files;
 - General settings › Usage statistics says "Not active in this build: nothing is counted or sent."
   Its "View what would be sent" button still works: it shows an example that nothing sends, and
@@ -167,11 +178,11 @@ The consent setting is unset until the user answers, and unset means no counting
   - **What is collected**, which opens the privacy page in the browser.
 - **Turning it off** stops counting at once and deletes the counts not sent yet.
 
-The wording follows KVKK and GDPR. It says that the data is anonymous counts with a random id,
-lists what is sent and what is not, says where it goes (fairbeam.org, stored where only the developer can read
-them) and how to turn it off. The legal basis is consent (KVKK art. 5(1), GDPR
-art. 6(1)(a)), which the user can withdraw at any time. The public list is
-[landing/privacy.html](../landing/privacy.html), marked "not active yet".
+The optional implementation requires consent. Before any usage counting is enabled, a full notice
+will be published identifying the controller, purposes, processors, retention periods, rights and
+transfer arrangements. For privacy questions or rights requests, contact ismail@fairbeam.org. Do not
+post personal information in public issues. The public description is
+[landing/privacy.html](../landing/privacy.html), marked disabled in this release.
 
 ## The receiving side
 
@@ -193,9 +204,8 @@ For each request, it:
    real `day` between 31 days ago and tomorrow. At most 120 counters, only known keys, whole
    numbers from 0 to 10000. Anything else is refused with 400, 405, 413 or 415.
 4. **Pseudonymises.** The install id is replaced by `HMAC-SHA256(STATS_SALT, install_id)`, cut to
-   16 hex characters. The plain id is never stored. The salt stays on the server, so the stored
-   hash cannot be traced back to an install id. The hash only counts unique installs per day and
-   per week.
+   16 hex characters. The count record omits the plain ID. This stable pseudonym can link reports from the same
+   installation across days; it does not establish anonymity.
 5. **Rate-limits.** It accepts at most 2 pings per hashed id per receiving day. A second ping for
    the same `day` from the same id is answered 200 `duplicate` and not stored.
 6. **Stores.** It appends one line per ping to `data/<receiving day>.jsonl` in the private repo
@@ -208,8 +218,9 @@ For each request, it:
    {"day":"2026-09-27","id":"3f2a9c0d1e7b4a55","v":"0.7.0","os":"macos","arch":"aarch64","gpu":false,"c":{"app.start":2}}
    ```
 
-   The IP address, the headers and the exact time are not stored. Vercel's own request logs keep
-   the IP for a short time, as for any page of the site.
+   The count record excludes IP addresses, headers and exact timestamps. Hosting logs and Git
+   storage metadata may contain network and timing information. Log retention is set by the
+   hosting provider; record retention must be documented before activation.
 
 ### Setup (by hand, when turning it on)
 
@@ -260,7 +271,7 @@ node scripts/stats-summary.mjs --gh --repo <owner>/<repo> --days 28
 
 1. Do [the receiving-side setup](#setup-by-hand-when-turning-it-on) and check the 400 answer.
 2. Complete `landing/privacy.html`. KVKK and GDPR require the data controller and a contact for
-   data-protection requests to be named. Also state how long the daily files are kept. Remove the
+   data-protection requests to be named. Also document purposes, processors, retention, rights, transfers and ismail@fairbeam.org as the contact. Remove the
    page's "not active yet" note in the same release.
 3. Build with the feature. Either add `default = ["telemetry"]` under `[features]` in
    `src-tauri/Cargo.toml`, or pass `--features telemetry` to `tauri build` in the release script.
@@ -276,12 +287,12 @@ files, and the endpoint can be disabled by removing `STATS_GITHUB_TOKEN`.
 
 - A ping contains nothing but the eight fields above. The counters hold only listed keys, and the
   values are whole numbers.
-- A ping never contains file names, design contents, parameter names or values, model names,
+- A usage-report JSON body excludes file names, design contents, parameter names or values, model names,
   paths, error messages, email addresses, user names, host names or the IP address.
 - The install id is a random v4 UUID created on the computer, not derived from the hardware. The
   user can reset it.
-- Nothing is counted before consent is `granted`, and nothing is sent in a build without the
-  feature.
+- No usage counts are recorded before consent is `granted`, and no usage reports are sent in a
+  build without the feature. Receiving infrastructure still sees the source IP and request data.
 
 Tests:
 

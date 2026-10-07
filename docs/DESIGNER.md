@@ -847,7 +847,7 @@ without the dialog.
     (default 21, a whole number from 3 to 201) evenly spaced across the band, stored as
     `monitors.efficiency: {"points": N}` and in the bundle's `results.efficiency`; total efficiency
     follows with the port's S11. It is computed from the far-field box after the run, so it adds
-    post-processing time, not solver time, and it needs the far field: with the far field off, or
+    post-processing time, and it needs the far field: with the far field off, or
     a count outside 3–201, the `monitor-efficiency` check (browser and server) is an error that
     blocks the run. Ribbon Simulation › Monitors › **Efficiency** turns it on (Cancel takes it back)
     and opens its **Number of frequencies** field.

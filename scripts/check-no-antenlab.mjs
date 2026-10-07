@@ -28,6 +28,8 @@ const ALLOW = [
   { glob: "python/tests/test_legacy_formats.py", reason: "proof that files of the old app still open" },
   { glob: "scripts/check-legacy-formats.mjs", reason: "proof that files of the old app still open" },
   { glob: "docs/MIGRATING-FROM-ANTENLAB.md", reason: "the migration page for users of the old app" },
+  { glob: "docs/tr/MIGRATING-FROM-ANTENLAB.md", reason: "the Turkish migration page for users of the old app" },
+  { glob: "landing/docs.json", line: /Coming from antenlab/, reason: "the published migration page title" },
   { glob: "**", line: /MIGRATING-FROM-ANTENLAB\.md|Migrating from antenlab/, reason: "links to the migration page" },
   { glob: "package.json", line: /check[:-]no-antenlab/, reason: "the name of this guard" },
   { glob: ".github/workflows/ci.yml", line: /check[:-]no-antenlab/, reason: "the name of this guard" },

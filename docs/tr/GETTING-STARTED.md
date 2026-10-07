@@ -4,18 +4,18 @@
   Web sitesi bu dosyayı Türkçe başlangıç kılavuzu olarak yayımlar.
 -->
 
-Bu kılavuz, Fairbeam masaüstü uygulamasını denemek isteyenler içindir: uygulamayı kurun, ardından yaklaşık beş dakikada bir yama anten tasarlayın, simüle edin ve sonuçlarını inceleyin. Tasarımcının tüm özellikleri [DESIGNER.md](DESIGNER.md) sayfasında açıklanır. Fairbeam'i kaynak kodundan derlemek için [Fairbeam'i kaynak kodundan çalıştırma](FROM-SOURCE.md) sayfasına bakın. Uygulamada Yardım › Başlangıç Kılavuzu bu sayfanın yayımlanmış sürümünü açar.
+Bu kılavuz, Fairbeam masaüstü uygulamasını denemek isteyenler içindir: uygulamayı kurun, ardından bir yama anten tasarlayın, simüle edin ve sonuçlarını inceleyin. Tasarımcının tüm özellikleri [DESIGNER.md](DESIGNER.md) sayfasında açıklanır. Fairbeam'i kaynak kodundan derlemek için [Fairbeam'i kaynak kodundan çalıştırma](FROM-SOURCE.md) sayfasına bakın. Uygulamada Yardım › Başlangıç Kılavuzu bu sayfanın yayımlanmış sürümünü açar.
 
 ## 1. Kurulum
 
 Kurulum dosyasını [fairbeam.org](https://fairbeam.org) veya [sürümler sayfasından](https://github.com/ismailakdag/fairbeam-releases/releases) indirin.
 
-- **macOS** (Apple silicon, macOS 27 veya üzeri): `.dmg` dosyasını açın ve Fairbeam'i Uygulamalar klasörüne sürükleyin. Uygulama imzalıdır ve Apple tarafından doğrulanmıştır; normal bir çift tıklamayla açılır.
-- **Windows** (10/11, x64): `-setup.exe` dosyasını çalıştırın. Yönetici izni istemeden kullanıcı hesabınıza kurulur. Kurulum dosyası kod imzalı olmadığından SmartScreen “Windows bilgisayarınızı korudu” mesajını gösterir: **Ek bilgi › Yine de çalıştır** seçeneğini kullanın.
+- **macOS** (Apple silicon, macOS 27 veya üzeri): `.dmg` dosyasını açın ve Fairbeam'i Uygulamalar klasörüne sürükleyin. Uygulama Developer ID ile imzalanmış ve Apple tarafından doğrulanmıştır.
+- **Windows** (10/11, x64): `-setup.exe` dosyasını çalıştırın. Yönetici izni istemeden kullanıcı hesabınıza kurulur. Kurulum dosyası kod imzalı olmadığından SmartScreen “Windows bilgisayarınızı korudu” mesajını gösterebilir: **Ek bilgi › Yine de çalıştır** seçeneğini kullanın.
 
-**İlk açılış.** Fairbeam'in simülasyon çalışma ortamına (Python, openEMS ve Fairbeam paketi) ihtiyacı vardır. Kurulum ekranında çalışma ortamının kurulması gerektiği belirtilir: **Çalışma ortamını kur** seçeneğini kullanın (düğmede indirme boyutu gösterilir; hızlı bağlantıda işlem bir dakikadan çok daha kısa sürer). Mevcut bir openEMS kurulumunuz varsa **Mevcut bir Python kullan…** ile Fairbeam'i bu kuruluma yönlendirin. Uygulama ardından **Ana ekran** ile açılır. Sonraki açılışlarda bu adım atlanır; yeni sürümler uygulamada sunulur (Yardım › Güncellemeleri denetle).
+**İlk açılış.** Fairbeam'in simülasyon çalışma ortamına (Python, openEMS ve Fairbeam paketi) ihtiyacı vardır. Kurulum ekranında çalışma ortamının kurulması gerektiği belirtilir: **Çalışma ortamını kur** seçeneğini kullanın (düğmede indirme boyutu gösterilir; süre bağlantınıza ve sisteme bağlıdır). Mevcut bir openEMS kurulumunuz varsa **Mevcut bir Python kullan…** ile Fairbeam'i bu kuruluma yönlendirin. Uygulama ardından **Ana ekran** ile açılır. Sonraki açılışlarda bu adım atlanır; yeni sürümler uygulamada sunulur (Yardım › Güncellemeleri denetle).
 
-## 2. Beş dakikalık uygulama
+## 2. İlk tasarım uygulaması
 
 ### Tasarım oluşturun
 

@@ -38,7 +38,7 @@ export function renderRoadmap(data) {
   const releaseName = (r) => (r === "next" ? (next ? `Coming in ${next}` : "Next release") : `Released in ${r}`);
 
   const refs = (links) => {
-    if (!links?.length) return "";
+    if (!links?.length || !data.issueUrl) return "";
     const ref = (n) => (data.issueUrl ? `<a href="${esc(data.issueUrl)}/${n}">#${n}</a>` : `<span>#${n}</span>`);
     return `<p class="rm-refs"><span class="visually-hidden">${data.issueUrl ? "On GitHub: " : "Tracked as "}</span>${links.map(ref).join(" ")}</p>`;
   };
@@ -103,7 +103,7 @@ export function renderRoadmap(data) {
   const date = new Date(`${data.updated}T12:00:00Z`);
   const day = date.toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric", timeZone: "UTC" });
 
-  return `<p class="rm-intro">${count("available")} features available, ${count("development")} in development and ${count("planned")} planned, from the project's issues and pull requests. Updated <time datetime="${esc(data.updated)}">${day}</time>.</p>
+  return `<p class="rm-intro">${count("available")} features available, ${count("development")} in development and ${count("planned")} planned. Availability refers to the stated release; future plans may change. Updated <time datetime="${esc(data.updated)}">${day}</time>.</p>
     <div class="rm-board" id="roadmap-board">
       <div class="rm-tabs" role="tablist" aria-label="Roadmap by state" hidden>${tabs}
       </div>

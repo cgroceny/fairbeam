@@ -3,6 +3,7 @@
 import assert from "node:assert/strict";
 import { mkdirSync, readFileSync } from "node:fs";
 import { runInNewContext } from "node:vm";
+import { renderRoadmap } from "./roadmap-render.mjs";
 import { linkedExample } from "../src/runner/examples.ts";
 
 const read = (path) => readFileSync(new URL(`../${path}`, import.meta.url), "utf8");
@@ -22,10 +23,37 @@ for (const [en, tr] of context.tables) {
   if (translations.has(key)) assert.equal(tr, translations.get(key), `consistent translation for ${en}`);
   translations.set(key, tr);
 }
-assert.equal(translations.get("The macOS app is signed and notarized by Apple."),
-  "macOS uygulaması imzalanmış ve Apple tarafından doğrulanmıştır.");
+assert.equal(translations.get("The macOS app is signed with a Developer ID and notarized by Apple."),
+  "macOS uygulaması Developer ID ile imzalanmış ve Apple tarafından doğrulanmıştır.");
 const index = JSON.parse(read("public/projects/index.json")).projects;
 const home = read("landing/index.html");
+// Public claims must retain release status, data flows and numerical scope in both languages.
+const privacy = read("landing/privacy.html");
+assert.match(privacy, /src="language\.js"/);
+assert.match(privacy, /data-site-language="tr"/);
+assert.match(privacy, /Usage counts and sign-in are built but OFF in Fairbeam 0\.7\.0/);
+for (const required of ["GitHub (fairbeam-releases)", "upstream hosts", "Vercel", "IP address", "hosting provider", "controller", "retention", "rights", "transfer", "ismail@fairbeam.org", "pseudonymous install ID"]) {
+  assert.ok(privacy.includes(required), `privacy disclosure: ${required}`);
+}
+for (const match of privacy.matchAll(/<(?:p|h1|h2|td|th)\b[^>]*>([^<]+)<\//g)) {
+  const text = normalize(match[1].replaceAll("&amp;", "&"));
+  assert.ok(translations.has(text), `privacy translation: ${text}`);
+}
+const features = read("landing/features.html");
+assert.match(features, /above −30 dB agree within 0\.1 dB/);
+assert.match(features, /same-timestep Windows CPU \/ macOS Metal/);
+assert.ok([...translations.values()].some((tr) => tr.includes("−30 dB") && tr.includes("0,004 dB")));
+const meshClaim = features.match(/<p>(Auto mode picks.*?)<\/p>/)[1];
+assert.match(translations.get(meshClaim), /dipol ve yama.*rezonans.*%0,1/);
+assert.equal(index.length, 20);
+assert.match(home, /20 simulated example projects/);
+const roadmap = read("landing/roadmap.json");
+assert.doesNotMatch(roadmap, /interrupted downloads resume|No lost work|same results|half the time|4 to 64 times/);
+assert.match(roadmap, /partial downloads restart/);
+const renderedRoadmap = renderRoadmap(JSON.parse(roadmap));
+assert.match(renderedRoadmap, /Availability refers to the stated release; future plans may change/);
+assert.doesNotMatch(renderedRoadmap, /class="rm-refs"/);
+assert.match(roadmap, /unless you select Delete the application data; workspaces remain/);
 const cards = [...home.matchAll(/<a class="example-card" href="(app\/\?example=([^"]+))">([\s\S]*?)<\/a>/g)];
 assert.equal(cards.length, 3);
 const ids = ["pyramidal-horn", "helix-axial", "wilkinson-divider"];

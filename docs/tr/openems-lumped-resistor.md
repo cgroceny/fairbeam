@@ -1,6 +1,6 @@
 # openEMS toplu dirençleri: doğruluk denetimi (openEMS geliştiricileri için tekrarlama)
 
-**Sonuç: openEMS toplu dirençleri doğrudur.** Doğrudan elemanda ölçüldüğünde, 0,5–6 GHz arasında direncin gerçek kısmındaki hata %0,1'den küçüktür. Küçük paralel reaktans prob kutusundan kaynaklanır. Sonuç; direnç değerinden (30–300 Ω), akım doğrultusundaki veya ona dik hücre sayısından (1–8), `caps` ayarından ve elemanın sıradan bir `LumpedElement` ya da pasif bir `LumpedPort` olmasından bağımsızdır. Aynı dirence sahip kayıplı bir malzeme bloğu da aynı davranışı gösterir.
+**Sonuç: denenen direnç düzeneklerinde %0,1 içinde uyum.** Doğrudan elemanda simüle edildiğinde, 0,5–6 GHz arasında direncin gerçek kısmındaki hata %0,1'den küçüktür. Küçük paralel reaktans prob kutusundan kaynaklanır. Sonuç; direnç değerinden (30–300 Ω), akım doğrultusundaki veya ona dik hücre sayısından (1–8), `caps` ayarından ve elemanın sıradan bir `LumpedElement` ya da pasif bir `LumpedPort` olmasından bağımsızdır. Aynı dirence sahip kayıplı bir malzeme bloğu da aynı davranışı gösterir.
 
 Test düzeneği üzerinden gözlenen, frekansa bağlı gibi görünen hata, düzenek etkisini giderme işleminin (de-embedding) bir artefaktıdır. Düzenek uzunluğuyla ölçeklenir; R'den, eleman türünden ve mesh'ten bağımsızdır. Daha önce belirtilen “2,4 GHz'de +%10” tahmini, mikroşerit test hattının farklı bir mesh'e sahip referans hatla düzeltilmesinden kaynaklanıyordu ve yanlıştı. Üst projeye hata olarak bildirilecek bir durum yoktur. Buradaki betik ve veriler, kontrol etmek isteyen herkes içindir.
 
@@ -25,7 +25,7 @@ Her durum üç çalıştırma gerektirir: açık devre (DUT yok), kısa devre (D
 Y'_m = 1/Z_m − 1/Z_open,   Y'_s = 1/Z_short − 1/Z_open,   Z_dut = 1/Y'_m − 1/Y'_s
 ```
 
-DUT olarak pasif port kullanıldığında betik, **doğrudan DUT üzerinde ölçülen −U/I değerini** de raporlar. Bunlar, arada düzenek olmadan elemanın kendi problarından alınan gerilim ve akımdır. Uyarım, DC içermeyen bir Gauss türevidir; durdurma ölçütü −60 dB'dir. Aşağıdaki tablonun 14 durumunun tamamı openEMS Metal GPU türevinde 8 s'de çalıştırılmıştır. CPU motoru aynı değerleri daha uzun sürede verir.
+DUT olarak pasif port kullanıldığında betik, **doğrudan DUT üzerinde hesaplanan −U/I değerini** de raporlar. Bunlar, arada düzenek olmadan elemanın kendi problarından alınan gerilim ve akımdır. Uyarım, DC içermeyen bir Gauss türevidir; durdurma ölçütü −60 dB'dir. Aşağıdaki tablonun 14 durumunun tamamı openEMS Metal GPU türevinde 8 s'de çalıştırılmıştır. CPU motoru aynı değerleri daha uzun sürede verir.
 
 ## Veriler (Z_dut / R, a = w = g = 1 mm; aksi belirtilmedikçe 4 × 4 hücre)
 
@@ -48,7 +48,7 @@ DUT olarak pasif port kullanıldığında betik, **doğrudan DUT üzerinde ölç
 **Tablonun yorumu.**
 
 - Düzenek etkisi giderilen değer, tüm R değerleri, eleman türleri (caps bulunan veya bulunmayan toplu eleman, port, kayıplı malzeme) ve mesh'ler için aynı olan 1 − k f² çarpanını gösterir. Bu çarpan yalnızca düzenek boyutuyla değişir: 6 GHz'de a = 0,5 mm için 0,983, a = 1 mm için 0,959 ve 2 mm aralık için 0,937 elde edilir. Bu, açık-kısa devre modelinin toplu eleman varsayımının kısa bir iletim hattı olan düzeneğe uygulanamamasının göstergesidir. Dirençle ilgisi yoktur.
-- Elemanda ölçüldüğünde gerçek kısım doğrudur. Sanal kısım (2,4 GHz'de R'nin −%0,7'si, 6 GHz'de −%1,7'si), prob kutusundan kaynaklanan yaklaşık 5 fF'lık paralel kapasitansa karşılık gelir.
+- Eleman üzerinde simüle edildiğinde gerçek kısım bu düzeneklerde %0,1 içinde uyuşur. Sanal kısım (2,4 GHz'de R'nin −%0,7'si, 6 GHz'de −%1,7'si), prob kutusundan kaynaklanan yaklaşık 5 fF'lık paralel kapasitansa karşılık gelir.
 
 ## Fairbeam açısından sonuçlar
 

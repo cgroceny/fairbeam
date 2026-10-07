@@ -12,7 +12,7 @@ Vercel builds the site from the public source repository, and only the build out
 | `landing/` (the home page, `features.html`, `roadmap.html`, `privacy.html`, CSS and small scripts; the roadmap board is rendered into `roadmap.html` at build time), the scroll story under `/story/`, `tokens.css` copied from `design-system/` | Python package, models, install scripts, tests |
 | The docs under `/docs/`: the Markdown files listed in `landing/docs.json`, rendered at build time by `scripts/docs-render.mjs` (links between them go to their pages, other repository files to GitHub), with an overview page | The other Markdown files of the repository (they stay on GitHub) |
 | The viewer built with `--mode demo` under `/app/` (minified JS/CSS) | `src/` as source code (only the minified bundle ships) |
-| The 14 example projects in `public/projects/` (bundle JSON, listed in `index.json`) | The local run server; the demo never calls `/api` |
+| The 20 example projects in `public/projects/` (bundle JSON, listed in `index.json`) | The local run server; the demo never calls `/api` |
 | Four example SVGs from `examples/drawings/`, IBM Plex woff2 files (OFL) | `.sim/`, raw openEMS output, anything git-ignored |
 
 The demo build (`VITE_FAIRBEAM_DEMO=1`, set in `.env.demo`) replaces the Run button with a

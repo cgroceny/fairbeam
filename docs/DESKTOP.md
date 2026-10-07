@@ -45,7 +45,8 @@ Verified on Windows 11 x64, with the NSIS installer:
 - "Use an existing Python" works with a repository venv (`OPENEMS_INSTALL_PATH` set as in
   [WINDOWS.md](WINDOWS.md)).
 - Uninstalling removes the install folder and the shortcuts. The app data (runtime, logs, WebView2
-  data, about 560 MB), `settings.json` and the workspace stay.
+  data, about 560 MB) and `settings.json` stay unless you select "Delete the application data".
+  The workspace stays in either case.
 
 The published installer was checked as a first-time user would use it, downloaded from the
 website with Edge:

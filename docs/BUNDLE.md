@@ -403,7 +403,7 @@ The JSON band fields retain their original meanings. In the [CSV export](EXPORTS
 | `prad_w` | number | Radiated power in W, mirror-corrected |
 | `pacc_w` | number | Power accepted at the port, `½·Re(u·i*)` interpolated at `f`, in W |
 | `rad_efficiency` | number \| null | `prad_w / pacc_w`. `null` if `pacc_w ≤ 0`. Above 1 is unphysical for a passive antenna (the two powers come from independent numerical measurements); the value is kept and flagged in `qa_warnings`. For a model marked lossless (see below) 1 while `prad_w / pacc_w` is within 5 % of 1 |
-| `rad_efficiency_raw` | number \| null? | Lossless models only: the measured `prad_w / pacc_w`, the power balance of the two numerical measurements |
+| `rad_efficiency_raw` | number \| null? | Lossless models only: the simulated `prad_w / pacc_w`, the power balance of the two numerical measurements |
 | `qa_warnings` | string[]? | Exporter QA notes for this entry, e.g. a radiation efficiency above 100 % (gain then exceeds Dmax by the same factor), or a lossless model's power balance |
 | `gain_dbi` | number? | `10·log10(efficiency · Dmax)`. Present only if efficiency > 0 |
 | `realized_gain_dbi` | number? | `10·log10(efficiency · Dmax · (1 − \|S11\|²))`. Present only if efficiency > 0 |
@@ -432,8 +432,8 @@ resistors) radiates everything it accepts, so its radiation efficiency is 1 and 
 only measures how well the two numerical powers agree. A Python model says so with
 `sim.lossless = True` (the pyramidal horn does); `evaluate()` checks the claim (a lossy material or
 a resistor voids it, with a warning) and then reports `rad_efficiency` 1, gain = directivity, while
-the measured ratio is within 5 % of 1, keeping it in `rad_efficiency_raw` and a note; beyond 5 %
-the measured value is reported with a warning. `prad_w` and `pacc_w` are never altered. The horn
+the simulated ratio is within 5 % of 1, keeping it in `rad_efficiency_raw` and a note; beyond 5 %
+the simulated value is reported with a warning. `prad_w` and `pacc_w` are never altered. The horn
 read Prad / Pacc 1.037 at cpw 20 and 1.08 at cpw 30. The NF2FF box was not the cause: an
 exact Poynting flux (raw E and H on the Yee lattice) through the feed guide, the five-face box and
 planes across the horn agree to 0.1-0.4 %, whereas the waveguide port's mode-matching probes read
@@ -461,7 +461,7 @@ run openEMS transforms them at `N` frequencies spread evenly from `f_min` to `f_
 | `prad_w` | number[] | Radiated power in W, mirror-corrected as for `farfield` (divided by 2^`mirror_planes`) |
 | `pacc_w` | number[] | Power accepted at the port, `½·Re(u·i*)` interpolated at each `f`, in W |
 | `rad_efficiency` | (number \| null)[] | `prad_w / pacc_w`, 4 decimals; `null` where `pacc_w ≤ 0`. Values above 1 are kept, as for `farfield`; a lossless model reports 1 within 5 %, as there |
-| `rad_efficiency_raw` | (number \| null)[]? | Lossless models only: the measured `prad_w / pacc_w` |
+| `rad_efficiency_raw` | (number \| null)[]? | Lossless models only: the simulated `prad_w / pacc_w` |
 | `pacc_error` | (number \| null)[]? | Estimated relative error of `pacc_w` from where the run stopped (below). `null` where `pacc_w ≤ 0` |
 | `reliable` | boolean[]? | `false` where `pacc_error` exceeds 0.1 (10 %) or `pacc_w ≤ 0`: the value is kept, but it is not trustworthy. The viewer leaves these out of the curves and draws them as flagged points. Absent in older bundles (every value counts as reliable) |
 | `mirror_planes` | number | PEC/PMC boundaries used for the correction |
@@ -477,7 +477,7 @@ criterion truncates the ring-down of the port signals, which leaves an error of 
 absolute size at every frequency; relative to a small `pacc_w` it is large, and the ratio zig-zags.
 `pacc_error` estimates it as the change of ½·Re(U·I*) when the last tenth of the ring-down (after the
 excitation pulse) is left out of the DFT; while the signals decay, what the run did not record is of
-that order or smaller. Measured on the patch starter (11 frequencies, 1.47–3.19 GHz, GPU):
+that order or smaller. Simulated on the patch starter (11 frequencies, 1.47–3.19 GHz, GPU):
 
 | End criterion | Radiation efficiency over the band | Reliable |
 | --- | --- | --- |

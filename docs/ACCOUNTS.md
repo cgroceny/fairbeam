@@ -1,5 +1,15 @@
 # Optional sign-in (GitHub, Google)
 
+Usage counts and sign-in are built but OFF in Fairbeam 0.7.0. No usage counts are recorded or sent,
+and no usage-consent dialog appears. Update checks contact GitHub (fairbeam-releases). App and
+runtime downloads come from GitHub and upstream hosts. This website is hosted on Vercel. These
+services see your IP address and request data as any web server does; request-log retention is set
+by the hosting provider.
+
+Before any usage counting is enabled, a full notice will be published identifying the controller,
+purposes, processors, retention periods, rights and transfer arrangements. For privacy questions or
+rights requests, contact ismail@fairbeam.org. Do not post personal information in public issues.
+
 Status: **built, switched off**. No release has it on. With the switch off, the app shows no account
 UI, has no account commands and makes no network call for accounts. Guest mode is the default and
 stays the default when the switch is on: every feature works without an account, offline.
