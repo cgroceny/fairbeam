@@ -78,6 +78,42 @@ assert.equal(runQuality(both).verdict, "not-converged", "not converged outranks 
 const preview = clone(); delete preview.results;
 assert.equal(runQuality(preview), null, "a geometry preview has no verdict");
 
+// the band-wide efficiency the Efficiency view draws (results.efficiency): a value above 100 % beyond the
+// tolerance at a reliable frequency, or a frequency marked unreliable, is a reason too (the badge shows the
+// same in the Runs table, the tree, Properties and the Summary: python/fairbeam/cli.py run_quality agrees)
+{
+  const f = [2.3e9, 2.4e9, 2.5e9];
+  const withSweep = (sweep) => { const c = clone(); c.results.efficiency = [{ f, rad_efficiency: [0.92, 0.95, 0.97], ...sweep }]; return c; };
+  assert.equal(runQuality(withSweep({})).verdict, "converged", "a clean band");
+  const over = runQuality(withSweep({ rad_efficiency: [0.92, 1.17, 1.08] }));
+  assert.equal(over.verdict, "suspicious", "117 % at a band frequency");
+  assert.deepEqual(over.reasons, [{ code: "band-efficiency-above-100", efficiency: 1.17, f: 2.4e9, count: 2, total: 3 }], "the worst value and how many");
+  assert.equal(runQuality(withSweep({ rad_efficiency: [0.92, 1.04, 0.97] })).verdict, "converged", "within the 5 % tolerance");
+  const shaky = runQuality(withSweep({ reliable: [true, true, false] }));
+  assert.deepEqual(shaky.reasons, [{ code: "efficiency-unreliable", count: 1, total: 3 }], "an unreliable frequency");
+  const masked = runQuality(withSweep({ rad_efficiency: [0.92, 0.95, 1.6], reliable: [true, true, false] }));
+  assert.deepEqual(masked.reasons.map((r) => r.code), ["efficiency-unreliable"], "an unreliable value is not judged as above 100 %");
+  assert.equal(runQuality(withSweep({ rad_efficiency: [1.5] })).verdict, "converged", "a malformed sweep is not judged");
+  // the reported run: 10 of 21 frequencies above 100 %, worst 117 % at 3.12 GHz, far field 98.7 %
+  const reported = clone();
+  const fr = Array.from({ length: 21 }, (_, i) => 1.68e9 + i * 0.072e9);
+  reported.results.efficiency = [{ f: fr, rad_efficiency: fr.map((_, i) => (i < 11 ? 0.95 : 1.08 + (i - 11) * 0.009)) }];
+  reported.results.farfield[0].rad_efficiency = 0.987;
+  const rq = runQuality(reported);
+  assert.equal(rq.verdict, "suspicious", "a band efficiency above 100 % is 'Check results' though the far field is fine");
+  assert.equal(rq.reasons[0].count, 10);
+  // the reasons are worded, and the Properties panel shows them as text
+  const view = readFileSync(new URL("../src/designer/RunQualityView.tsx", import.meta.url), "utf8");
+  assert.ok(/case "band-efficiency-above-100": return \{/.test(view) && /case "efficiency-unreliable": return \{/.test(view), "the band reasons are worded");
+  const props = readFileSync(new URL("../src/designer/PropsExtras.tsx", import.meta.url), "utf8");
+  assert.ok(/reasonTexts\(v\(\)\)/.test(props) && /readRunContent\(props\.file\)/.test(props), "Properties: the reason text, read from the run when the index gave the verdict alone");
+  const en = JSON.parse(readFileSync(new URL("../src/i18n/en.json", import.meta.url), "utf8"));
+  const tr = JSON.parse(readFileSync(new URL("../src/i18n/tr.json", import.meta.url), "utf8"));
+  for (const key of ["quality.reason.bandEfficiency", "quality.reason.efficiencyUnreliable", "quality.banner.unreliable", "quality.banner.otherUnreliable"]) assert.ok(en[key] && tr[key], `${key} in both languages`);
+  // an index verdict without reasons (every() of nothing is true) is "Check results", not "Port not coupled"
+  assert.ok(/q\.reasons\.length && q\.reasons\.every\(\(r\) => r\.code === "port-uncoupled"\) \? "quality\.badge\.uncoupled"/.test(view), "the badge of an index verdict says Check results");
+}
+
 // ---- the project index carries the verdict (python/fairbeam/cli.py run_quality), so a run is badged unread
 {
   assert.deepEqual(indexQuality({ quality: "not-converged" }), { verdict: "not-converged", reasons: [] });
@@ -205,26 +241,41 @@ assert.equal(runQuality(preview), null, "a geometry preview has no verdict");
 
 // ---- a converged run that works but is not a good antenna yet gets a hint, never a verdict (matchHint)
 {
-  const { matchHint } = await import("../src/lib/runQuality.ts");
-  const mk = (f0, fRes, dip) => {
+  const { designFrequency, matchHint } = await import("../src/lib/runQuality.ts");
+  // a one-port design with an f0 parameter (GHz) and a Gaussian dip of `dip` dB at fRes on a 0 dB curve
+  const mk = (f0, fRes, dip, floor = 0) => {
     const c = structuredClone(base);
     const n = 201, fr = Array.from({ length: n }, (_, i) => 1.4e9 + (i * 2e9) / (n - 1));
     const p = Object.values(c.results.ports)[0];
-    const g = 10 ** (dip / 20);
-    p.s11_re = fr.map((x) => 1 - (1 - g) * Math.exp(-(((x - fRes) / 0.15e9) ** 2)));
+    const g = 10 ** (dip / 20), top = 10 ** (floor / 20);
+    p.s11_re = fr.map((x) => top - (top - g) * Math.exp(-(((x - fRes) / 0.15e9) ** 2)));
     p.s11_im = fr.map(() => 0);
     c.results.frequency = fr;
-    c.results.farfield = [{ ...c.results.farfield[0], f: f0 }];
+    c.results.farfield = [{ ...c.results.farfield[0], f: 2.2e9 }];
+    c.model.params = [...c.model.params.filter((x) => x.key !== "f0"), ...(f0 ? [{ key: "f0", value: f0 / 1e9, unit: "GHz" }] : [])];
     return c;
   };
+  assert.equal(designFrequency(mk(2.45e9, 2.45e9, -20)), 2.45e9, "the design frequency is the f0 parameter");
+  assert.equal(designFrequency({ model: { params: [{ key: "f0", value: 867, unit: "MHz" }] } }), 867e6, "in its unit");
+  assert.equal(designFrequency(base), null, "a model without f0 has none (not the first far-field frequency)");
   const poor = matchHint(mk(2.45e9, 1.8e9, -3.3));   // the reported patch: resonant at 1.80 GHz, only -3.3 dB deep
-  assert.ok(poor && poor.off === "below" && Math.abs(poor.f - 1.8e9) < 0.02e9 && poor.db > -3.4 && poor.db < -3.2, "resonance 26 % below f0, -3.3 dB");
+  assert.ok(poor && poor.off === undefined && Math.abs(poor.f - 1.8e9) < 0.02e9 && poor.db > -3.4 && poor.db < -3.2, "a -3.3 dB minimum is a poor match, not a resonance to move");
+  assert.equal(matchHint(mk(2.45e9, 1.8e9, -20))?.off, "below", "a resonance (-20 dB, closed on both sides) 26 % below f0");
   assert.equal(matchHint(mk(2.45e9, 2.45e9, -25)), null, "a deep dip at f0 needs no hint");
   assert.equal(matchHint(mk(2.45e9, 2.45e9, -4))?.off, undefined, "a shallow dip at f0: poor match only");
   assert.equal(matchHint(mk(2.45e9, 2.9e9, -20))?.off, "above", "a good dip 18 % above f0");
-  const cut = mk(2.45e9, 1.8e9, -3.3); cut.run.converged = false;
+  assert.equal(matchHint(mk(null, 2.9e9, -20)), null, "no f0 parameter: no detuning advice (and the match is good)");
+  assert.equal(matchHint(mk(null, 1.8e9, -3.3))?.off, undefined, "no f0 parameter: the poor-match note only");
+  // a matched line: below -10 dB over the whole range (a ripple between -36 and -20 dB) has no resonance
+  assert.equal(matchHint(mk(3.25e9, 2.66e9, -36, -20)), null, "a ripple below -10 dB is not a resonance");
+  const twoPort = mk(2.45e9, 1.8e9, -20); twoPort.ports = [...twoPort.ports, { ...twoPort.ports[0], number: 2, excite: false }];
+  assert.equal(matchHint(twoPort), null, "never for a two-port design (a line, a filter, a coupler)");
+  const line = JSON.parse(readFileSync(new URL("microstrip-line.json", dir), "utf8"));
+  assert.equal(matchHint(line), null, "the microstrip line example: no advice");
+  const cut = mk(2.45e9, 1.8e9, -20); cut.run.converged = false;
   assert.equal(matchHint(cut), null, "a run that did not converge gets its verdict, not a match hint");
   const view = readFileSync(new URL("../src/designer/RunQualityView.tsx", import.meta.url), "utf8");
+  assert.ok(/h\(\)\.off && h\(\)\.f0 \?/.test(view), "the shorten / lengthen words only with a design frequency");
   assert.ok(/quality\.reason\.s11NotConverged/.test(view) && /timestep-limit"\) - Number/.test(view), "|S11| > 0 dB after a truncated run: the cause first");
 }
 

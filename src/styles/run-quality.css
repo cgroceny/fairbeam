@@ -6,7 +6,9 @@
   background: var(--al-warn-bg); color: var(--al-text); font-size: var(--al-text-sm); line-height: var(--al-leading);
 }
 .rq-banner > svg { flex: none; margin-top: 2px; color: var(--al-warn); }
-.rq-body { min-width: 0; }
+.rq-body { min-width: 0; flex: 1; }
+.rq-banner > .rq-fold { flex: none; margin: -2px -4px 0 0; }
+.rq-banner > .rq-fold svg { color: var(--al-text-2); }
 .rq-body > strong { display: block; font-weight: 600; }
 .rq-body > strong:not(:first-child) { margin-top: var(--al-space-2); }
 .rq-reasons { margin: var(--al-space-1) 0 0; padding: 0; list-style: none; }
@@ -25,3 +27,6 @@
 .rdk-runs-name .rq-badge { margin-left: var(--al-space-2); }
 /* the one-click fix beside a blocking check in the Run dialog */
 .rd-errors .rd-fix { margin: 0; }
+/* the reasons in words in the Properties panel of a run */
+.rq-props-reasons { margin: 0 0 var(--al-space-2); padding-left: 1.1em; }
+.rq-props-reasons li + li { margin-top: var(--al-space-1); }

@@ -145,9 +145,10 @@ export function shortMachine(name: string): string {
   return s || name;
 }
 
-/** "CPU · 4", "CPU · 24", "Metal", "CUDA", "GPU" */
+/** "CPU · 4", "CPU · 24", "GPU": the engine as the UI names it everywhere (projectLabels.ts
+ * engineName); the GPU backend (CUDA, Metal) is in the row's title (rowTitle). */
 export function engineText(r: BenchRow): string {
-  if (r.engine === "gpu") return r.backend ?? "GPU";
+  if (r.engine === "gpu") return "GPU";
   return r.threads ? `CPU · ${r.threads}` : "CPU · all";
 }
 

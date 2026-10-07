@@ -5,6 +5,8 @@ import { sMatrix } from "../lib/sparams";
 import { compareBundles, comparing } from "../compare/store";
 import { traces } from "../compare/series";
 import { downloadFailedMessage, downloadMessage, revealDownloadedFile } from "../lib/download";
+import type { Bundle } from "../types";
+import { titledSvg } from "./figureTitle";
 import { fmt as nf, t, tEn, type Params } from "../i18n";
 
 // The figure generators and the PDF path (jsPDF, svg2pdf) load on first use, not with the app.
@@ -12,19 +14,32 @@ type Charts = typeof import("../drawing/charts");
 const loadCharts = () => import("../drawing/charts");
 const loadRender = () => import("../drawing/render");
 
-type Fmt = "svg" | "pdf";
+type Fmt = "svg" | "pdf" | "png";
 
-/** "Export figure" menu in the dock bar: B&W publication charts as SVG or PDF. The figures hold the
- * active run only; while a comparison is on screen the menu says so, names the run it exports
- * and marks every entry, so a saved figure is never mistaken for the overlaid chart. */
-export default function FigureMenu() {
+/** Pixels per inch of a PNG figure: print resolution, also sharp on a slide. */
+export const FIGURE_PNG_DPI = 300;
+
+/** "Export figure" menu in the dock bar (Examples) and the result toolbar (Design): B&W publication
+ * charts as SVG, PDF or a 300 dpi PNG with the figure's title above it. The figures hold the active run
+ * only; while a comparison is on screen the menu says so, names the run it exports and marks every
+ * entry, so a saved figure is never mistaken for the overlaid chart. `source` is the run to draw (the
+ * Examples dock's open project by default), `scope` the comparison on screen, `stem` the file name stem. */
+export default function FigureMenu(props: {
+  source?: () => Bundle | null | undefined;
+  scope?: () => { label: string; left: number } | null;
+  stem?: () => string;
+  /** where the save notes go (the toolbar's feedback line), instead of the menu's own status */
+  report?: (text: string, path?: string) => void;
+} = {}) {
   let root!: HTMLDivElement;
   let trigger!: HTMLButtonElement;
   const [open, setOpen] = createSignal(false);
   const [fmt, setFmt] = createSignal<Fmt>("svg");
   const [wide, setWide] = createSignal(false);
   const [saving, setSaving] = createSignal(false);
-  const [saveNote, setSaveNote] = createSignal<{ text: string; path?: string } | null>(null);
+  const [saveNote, setNote] = createSignal<{ text: string; path?: string } | null>(null);
+  // a toolbar with its own feedback line (Design) takes the notes; the dock bar shows them here
+  const setSaveNote = (note: { text: string; path?: string } | null) => (props.report && note ? props.report(note.text, note.path) : setNote(note));
   // positioned fixed (the dock bar may clip), then kept inside the viewport: it opens below the
   // trigger, flips above when there is no room, and is clamped at the left/right edges
   let menu: HTMLDivElement | undefined;
@@ -46,13 +61,14 @@ export default function FigureMenu() {
 
   /** While comparing: the active run's trace label and how many compared traces stay out. */
   const scope = () => {
+    if (props.scope) return props.scope();
     if (!comparing()) return null;
     const ts = traces(bundle(), compareBundles());
     return ts.length > 1 ? { label: ts[0].label, left: ts.length - 1 } : null;
   };
 
   const items = () => {
-    const b = bundle();
+    const b = props.source ? props.source() : bundle();
     if (!b?.results) return [];
     // label: an i18n key (the menu shows it in the UI language, the PDF title in English)
     const list: { label: string; params?: Params; name: (C: Charts) => string; make: (C: Charts, w: number) => string | null }[] = [
@@ -111,6 +127,7 @@ export default function FigureMenu() {
     const requestedWide = wide();
     const requestedFormat = fmt();
     const title = `${b.name} — ${labelOf(it, true)}${scope() ? ` (${tEn("figure.activeRunOnlyTitle")})` : ""}`;
+    const stem = (props.stem?.() || b.model.id).replace(/[^A-Za-z0-9_.-]+/g, "_");
     let name = t("figure.fallbackName", { label: labelOf(it) });
     setSaving(true);
     close();
@@ -120,9 +137,12 @@ export default function FigureMenu() {
       const w = requestedWide ? C.COLUMN_WIDTH.double : C.COLUMN_WIDTH.single;
       const svg = it.make(C, w);
       if (!svg) { setSaveNote({ text: t("figure.unavailable") }); return; }
-      const base = `${b.model.id.replace(/[^A-Za-z0-9_-]+/g, "_")}_${it.name(C)}${requestedWide ? "_wide" : ""}`;
+      const base = `${stem}_${it.name(C)}${requestedWide ? "_wide" : ""}`;
       name = `${base}.${requestedFormat}`;
-      const result = requestedFormat === "svg" ? await R.saveBlob(name, svg, "image/svg+xml") : await R.saveBlob(name, await R.svgToPdf(svg, title), "application/pdf");
+      // PNG: the same black-and-white figure at print resolution, its title on the picture
+      const result = requestedFormat === "svg" ? await R.saveBlob(name, svg, "image/svg+xml")
+        : requestedFormat === "png" ? await R.saveBlob(name, await R.svgToPng(titledSvg(svg, title), FIGURE_PNG_DPI), "image/png")
+          : await R.saveBlob(name, await R.svgToPdf(svg, title), "application/pdf");
       setSaveNote({ text: downloadMessage(result), path: result.status === "saved" ? result.path : undefined });
     } catch (e) { setSaveNote({ text: downloadFailedMessage(name, e) }); }
     finally { setSaving(false); }
@@ -191,6 +211,7 @@ export default function FigureMenu() {
             <span class="cluster-sm" role="group" aria-label={t("figure.formatAria")}>
               <button role="menuitemradio" aria-checked={fmt() === "svg"} class="chip-btn" classList={{ active: fmt() === "svg" }} onClick={() => setFmt("svg")}>SVG</button>
               <button role="menuitemradio" aria-checked={fmt() === "pdf"} class="chip-btn" classList={{ active: fmt() === "pdf" }} onClick={() => setFmt("pdf")}>PDF</button>
+              <button role="menuitemradio" aria-checked={fmt() === "png"} class="chip-btn" classList={{ active: fmt() === "png" }} onClick={() => setFmt("png")} title={t("figure.pngTitle", { dpi: FIGURE_PNG_DPI })}>PNG</button>
             </span>
           </div>
           <Show when={scope()}>

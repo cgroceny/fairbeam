@@ -629,29 +629,7 @@ input[type="range"] { height: var(--al-control-h-sm); margin: 0; accent-color: v
 /* ------------------------------------------------------------------ charts */
 .chart { position: relative; width: 100%; height: 100%; min-width: 0; min-height: 0; overflow: hidden; }
 .chart-container { width: 100%; height: 100%; min-width: 0; min-height: 0; }
-.chart-inspector-wrap { display: flex; flex-direction: column; width: 100%; height: 100%; min-width: 0; min-height: 0; overflow: hidden; }
-.chart-inspector-wrap > .chart { position: relative; flex: 1 1 62%; min-height: 72px; }
-.chart-inspector-wrap > .chart > svg { position: absolute; inset: 0; width: 100%; height: 100%; }
-.chart-inspector-panel { flex: 0 1 auto; max-height: 32%; min-height: 0; display: flex; flex-direction: column; border-top: 1px solid var(--al-border); font-size: var(--al-text-xs); overflow: hidden; }
-.chart-inspector-toolbar { display: flex; justify-content: flex-end; padding: 2px var(--al-space-1); flex: none; }
-.chart-inspector-tools { display: flex; flex-wrap: wrap; align-items: center; gap: var(--al-space-1); padding: var(--al-space-1); flex: none; }
-.chart-inspector-tools button, .chart-inspector-tools input { font-size: var(--al-text-xs); }
-.chart-inspector-tools input[inputmode="decimal"] {
-  width: 7ch; box-sizing: content-box; height: calc(var(--al-control-h-sm) - 2px); padding: 0 var(--al-space-1); text-align: right;
-  border: 1px solid var(--al-control-border); border-radius: var(--al-radius-sm); background: var(--al-surface); color: var(--al-text);
-  font-family: var(--al-font-mono); font-variant-numeric: tabular-nums;
-}
-.chart-inspector-tools label { display: inline-flex; align-items: center; gap: var(--al-space-1); }
-.chart-inspector-table-wrap { min-height: 0; max-height: 150px; overflow: auto; user-select: text; scrollbar-width: thin; }
-.chart-inspector-table { border-collapse: collapse; width: 100%; font-family: var(--al-font-mono); font-size: var(--al-text-xs); }
-.chart-inspector-table th, .chart-inspector-table td { text-align: left; padding: 2px var(--al-space-2); white-space: nowrap; border-bottom: 1px solid var(--al-border); }
-.chart-inspector-table :is(th, td):first-child { padding-left: var(--al-space-3); }
-/* numbers line up on their right edge; the flags column ellipsizes (the full text is the cell's title) */
-.chart-inspector-table :is(th, td):nth-child(n+3):nth-child(-n+7) { text-align: right; font-variant-numeric: tabular-nums; }
-.chart-inspector-table :is(th, td):nth-child(8) { max-width: 24ch; overflow: hidden; text-overflow: ellipsis; }
-.chart-inspector-table th { position: sticky; top: 0; background: var(--al-surface); color: var(--al-text-3); }
-.chart-inspector-table tr:focus-visible { outline: 2px solid var(--al-focus); outline-offset: -2px; }
-.chart-inspector-table tr.active td { background: var(--al-accent-soft); }
+/* the marker inspector under a chart: src/styles/charts.css (imported by charts/LineChart.tsx) */
 /* out of flow: the SVG's pixel size must never feed back into the layout it measures */
 .chart svg { position: absolute; top: 0; left: 0; display: block; }
 .chart-legend {

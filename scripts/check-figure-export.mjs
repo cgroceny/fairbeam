@@ -1,12 +1,43 @@
 // Focused browser regression for FigureMenu's async export snapshot, duplicate guard and retry.
 // Uses the normal Vite/run-server scenario stack over its temporary public-project copy. Downloads
-// are intercepted at the anchor boundary inside this browser page, so no file reaches disk.
+// are intercepted at the anchor boundary inside this browser page, so no file reaches disk. A first,
+// static part (no browser) checks the PNG figure's title band and where the figures are offered;
+// FAIRBEAM_FIGURE_STATIC_ONLY=1 stops after it.
 //
-//   node scripts/check-figure-export.mjs
+//   node --experimental-strip-types scripts/check-figure-export.mjs
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { pathToFileURL } from 'node:url';
 import { chromePath, startStack } from './scenarios/stack.mjs';
+import { svgSizeMm, titledSvg } from '../src/components/figureTitle.ts';
+
+// ---- without a browser: the PNG figure's title band, and where the figures are offered
+{
+  const fig = '<?xml version="1.0" encoding="UTF-8"?>\n<svg xmlns="http://www.w3.org/2000/svg" version="1.1" width="88mm" height="62mm" viewBox="0 0 88 62" font-family="IBM Plex Sans"><title>x</title><rect width="88" height="62"/></svg>\n';
+  const titled = titledSvg(fig, 'Patch <A> — |S11| vs frequency');
+  const [w, h] = svgSizeMm(titled);
+  assert.equal(w, 88, 'the PNG figure keeps the figure\'s width');
+  assert.ok(h > 62 && h < 75, `a title band above the figure: ${h} mm`);
+  assert.ok(titled.includes('>Patch &lt;A&gt; — |S11| vs frequency</text>'), 'the title is drawn, escaped');
+  assert.ok(/<svg xmlns="http:\/\/www\.w3\.org\/2000\/svg" version="1\.1" viewBox="0 0 88 62" font-family="IBM Plex Sans" x="0" y="[\d.]+" width="88" height="62">/.test(titled), 'the figure keeps its viewBox, placed under the band');
+  assert.equal(titledSvg(fig, '  '), fig, 'no title: unchanged');
+  assert.equal(titledSvg('<svg width="300" height="200"></svg>', 'x'), '<svg width="300" height="200"></svg>', 'no size in mm: unchanged');
+  const menu = readFileSync(new URL('../src/components/FigureMenu.tsx', import.meta.url), 'utf8');
+  assert.ok(/type Fmt = "svg" \| "pdf" \| "png";/.test(menu) && /export const FIGURE_PNG_DPI = 300;/.test(menu), 'PNG at 300 dpi beside SVG and PDF');
+  assert.ok(/R\.svgToPng\(titledSvg\(svg, title\), FIGURE_PNG_DPI\)/.test(menu), 'the PNG carries the figure\'s title');
+  assert.ok(/const b = props\.source \? props\.source\(\) : bundle\(\);/.test(menu), 'the menu draws the run it is given (Design) or the open example');
+  const views = readFileSync(new URL('../src/designer/ResultViews.tsx', import.meta.url), 'utf8');
+  assert.ok(/<FigureMenu source=\{\(\) => designResult\(\)\?\.bundle\}/.test(views), 'the Design result toolbar offers the publication figures of the shown run');
+  assert.ok(/<FileSpreadsheet size=\{14\} aria-hidden="true" \/> <span class="btn-short">CSV<\/span>/.test(views) && /<FileChartLine size=\{14\} aria-hidden="true" \/> <span class="btn-short">\{touchstoneExt\(\)\}<\/span>/.test(views), 'CSV and Touchstone: their own icons and short labels');
+  const visible = readFileSync(new URL('../src/components/visibleFigure.ts', import.meta.url), 'utf8');
+  assert.ok(/html\.setAttribute\("data-theme","light"\)/.test(visible) && /inLightTheme\(\(\)=>\{/.test(visible) && /paper\.setAttribute\("fill","#fff"\)/.test(visible), 'the visible chart is exported in the light publication style');
+  assert.ok(/svgToPng\(title \? titledSvg\(svg,title\) : svg,300\)/.test(visible), 'its PNG at 300 dpi, with the run and the view as its title');
+  const en = JSON.parse(readFileSync(new URL('../src/i18n/en.json', import.meta.url), 'utf8'));
+  assert.ok(en['figure.pngTitle'] && JSON.parse(readFileSync(new URL('../src/i18n/tr.json', import.meta.url), 'utf8'))['figure.pngTitle'], 'the PNG choice is explained in both languages');
+  console.log('PASS static: PNG figure title band, Design figure menu, export buttons and the light visible-chart export');
+}
+if (process.env.FAIRBEAM_FIGURE_STATIC_ONLY) process.exit(0);
 
 const require = createRequire(import.meta.url);
 const withTimeout = async (promise, ms, what) => {

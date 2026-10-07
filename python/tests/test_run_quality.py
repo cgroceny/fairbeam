@@ -99,6 +99,31 @@ class RunQualityRules(unittest.TestCase):
         del norun["run"]
         self.assertIsNone(run_quality(norun))
 
+    def test_band_efficiency_like_the_efficiency_view(self):
+        # the band-wide efficiency (results.efficiency): above 100 % beyond the tolerance at a reliable
+        # frequency, or marked unreliable anywhere (the same cases as scripts/check-run-quality.mjs)
+        base = patch_bundle()
+        f = [2.3e9, 2.4e9, 2.5e9]
+        sweep = {"f": f, "rad_efficiency": [0.92, 0.95, 0.97]}
+        clean = copy.deepcopy(base)
+        clean["results"]["efficiency"] = [dict(sweep)]
+        self.assertEqual(run_quality(clean), "converged")
+        over = copy.deepcopy(base)
+        over["results"]["efficiency"] = [{**sweep, "rad_efficiency": [0.92, 1.17, 0.97]}]
+        self.assertEqual(run_quality(over), "suspicious", "117 % at one band frequency")
+        within = copy.deepcopy(base)
+        within["results"]["efficiency"] = [{**sweep, "rad_efficiency": [0.92, 1.04, 0.97]}]
+        self.assertEqual(run_quality(within), "converged", "within the 5 % tolerance")
+        unreliable = copy.deepcopy(base)
+        unreliable["results"]["efficiency"] = [{**sweep, "reliable": [True, True, False]}]
+        self.assertEqual(run_quality(unreliable), "suspicious", "an unreliable frequency")
+        masked = copy.deepcopy(base)
+        masked["results"]["efficiency"] = [{**sweep, "rad_efficiency": [0.92, 0.95, 1.6], "reliable": [True, True, False]}]
+        self.assertEqual(run_quality(masked), "suspicious", "unreliable, whatever its value")
+        odd = copy.deepcopy(base)
+        odd["results"]["efficiency"] = [{"f": f, "rad_efficiency": [1.5]}, "nonsense"]
+        self.assertEqual(run_quality(odd), "converged", "a malformed sweep is not judged")
+
     def test_zero_and_non_finite_samples_are_skipped(self):
         b = patch_bundle()
         port = next(iter(b["results"]["ports"].values()))
@@ -142,6 +167,28 @@ class IndexField(unittest.TestCase):
         self.assertEqual(rows["ok.json"]["quality"], "converged")
         self.assertEqual(rows["stopped.json"]["quality"], "not-converged")
         self.assertNotIn("quality", rows["preview.json"])
+
+    def test_band_ranges_for_the_picker(self):
+        # each band's edges in GHz and whether it runs into the edge of the simulated range
+        # (src/lib/bands.ts pickerBands: the middle of a closed band, the range of an open one)
+        b = patch_bundle()
+        band = b["results"]["bands"][0]
+        horn = patch_bundle()
+        horn["results"]["bands"] = [{**band, "f_lo": 8e9, "f_hi": 12e9, "f_center": 11.16e9, "edge_lo": True, "edge_hi": True}]
+        with tempfile.TemporaryDirectory() as d:
+            (Path(d) / "patch.json").write_text(json.dumps(b), encoding="utf-8")
+            (Path(d) / "horn.json").write_text(json.dumps(horn), encoding="utf-8")
+            entry = cli._read_index_entry(Path(d) / "patch.json")
+            open_band = cli._read_index_entry(Path(d) / "horn.json")
+        self.assertEqual(entry["band_ranges"], [{"lo": round(band["f_lo"] / 1e9, 4), "hi": round(band["f_hi"] / 1e9, 4),
+                                                 "edge_lo": False, "edge_hi": False}])
+        self.assertEqual(open_band["band_ranges"], [{"lo": 8.0, "hi": 12.0, "edge_lo": True, "edge_hi": True}])
+        self.assertEqual(open_band["bands"], [11.16], "the band list keeps the |S11| minimum")
+        committed = json.loads((PROJECTS / "index.json").read_text("utf-8"))["projects"]
+        for e in committed:
+            if e.get("simulated"):
+                bundle = json.loads((PROJECTS / e["file"]).read_text("utf-8"))
+                self.assertEqual(e.get("band_ranges"), cli._index_band_ranges(bundle["results"]["bands"]) or None, e["file"])
 
     def test_the_mtime_cache_keeps_the_field_and_follows_a_rewritten_bundle(self):
         with tempfile.TemporaryDirectory() as d:

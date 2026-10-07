@@ -9,7 +9,9 @@ import type { Band, Bundle, ProjectIndexEntry } from "../types";
 import { efficiencyData, farfieldSummary } from "../lib/farfieldQuantity.ts";
 import { nearestIndex, sweep } from "../lib/rf.ts";
 import { indexQuality, runQuality, type RunQuality } from "../lib/runQuality.ts";
-import { differingParams, madeLabels } from "./resultTabs.ts";
+import { isoLocalStamp } from "../lib/isoTime.ts";
+import { ghzDigits } from "../lib/format.ts";
+import { differingParams } from "./resultTabs.ts";
 import { t } from "../i18n/index.ts";
 
 /** The far-field entry nearest the resonance, with the numbers the summary shows. */
@@ -141,7 +143,7 @@ export function metricsLine(m: RunMetrics | null, fixed: (v: number, digits: num
   if (!m) return "";
   const parts: string[] = [];
   if (m.noResonance) parts.push(t("summary.noResonance"));
-  else if (m.f0 !== null) parts.push(`${fixed(m.f0 / 1e9, 3)} GHz`);
+  else if (m.f0 !== null) parts.push(`${fixed(m.f0 / 1e9, ghzDigits(m.f0 / 1e9))} GHz`);
   if (m.s11MinDb !== null) parts.push(`${fixed(m.s11MinDb, 1).replace(/^-/, "−")} dB`);
   if (m.farfield) parts.push(`${fixed(m.farfield.dmaxDbi, 1)} dBi`);
   return parts.join(" · ");
@@ -249,7 +251,12 @@ export interface SummaryRun { label: string; file: string; bundle: Bundle }
 export interface SummaryTable { header: string[]; rows: (string | number | null)[][] }
 
 const round = (v: number | null | undefined, digits: number): number | null => (finite(v) ? Number(v.toFixed(digits)) : null);
-const bandList = (bands: readonly Band[]) => bands.map((b) => `${(b.f_lo / 1e9).toFixed(3)}-${(b.f_hi / 1e9).toFixed(3)}`).join("; ");
+/** The band columns: a low and a high edge per band (numbers, which a spreadsheet reads as such; a
+ * "2.098-2.287" text it would read as a date or a subtraction), numbered when a run has several. */
+const bandHeaders = (count: number) => Array.from({ length: Math.max(1, count) }, (_, i) => {
+  const n = count > 1 ? ` ${i + 1}` : "";
+  return [`Band${n} low (GHz)`, `Band${n} high (GHz)`];
+}).flat();
 
 /** The Δ columns of the delta view: the difference from the reference run, in the units of their headers. */
 const DELTA_COLUMNS: { key: DeltaKey; header: string; digits: number }[] = [
@@ -272,25 +279,27 @@ const DELTA_REFERENCE_HEADER = "Δ reference run";
 export function summaryTable(runs: readonly SummaryRun[], options: { deltas?: boolean; reference?: string | null } = {}): SummaryTable {
   const withDeltas = !!options.deltas && runs.length >= 2;
   const columns = differingParams(runs.map((r) => r.bundle.model));
-  const made = madeLabels(runs.map((r) => r.bundle.created));
+  const all = runs.map((r) => bundleMetrics(r.bundle));
+  const bandCount = Math.max(1, ...all.map((m) => m?.bands.length ?? 0));
   const header = [
     "Run", "File", "Made", ...columns.map((c) => `${c.key}${c.unit ? ` (${c.unit})` : ""}`),
-    "Verdict", "f res (GHz)", "|S11| min (dB)", "Bandwidth -10 dB (MHz)", "Bandwidth (%)", "Bands -10 dB (GHz)",
+    "Verdict", "f res (GHz)", "|S11| min (dB)", "Bandwidth -10 dB (MHz)", "Bandwidth (%)", ...bandHeaders(bandCount),
     "Far field f (GHz)", "Dmax (dBi)", "Gain (dBi)", "Realized gain (dBi)", "Radiation efficiency (%)", "Total efficiency (%)", "Cells",
     ...(withDeltas ? [...DELTA_COLUMNS.map((c) => c.header), DELTA_REFERENCE_HEADER] : []),
   ];
-  const all = runs.map((r) => bundleMetrics(r.bundle));
   const ref = withDeltas ? referenceIndex(runs, options.reference) : -1;
   const rows = runs.map((r, i) => {
     const m = all[i];
     const deltas = withDeltas && i !== ref ? metricDeltas(all[ref], m) : null;
     const ff = m?.farfield ?? null;
     return [
-      r.label, r.file, made[i] === "—" ? null : made[i],
+      // when it was made: the full local date and time with its offset (ISO 8601), not the time of day alone
+      r.label, r.file, isoLocalStamp(r.bundle.created),
       ...columns.map((c) => { const v = r.bundle.model.params.find((p) => p.key === c.key)?.value; return typeof v === "number" || typeof v === "string" ? v : v == null ? null : String(v); }),
       m?.quality?.verdict ?? null,
       round(m?.f0 == null || m.noResonance ? null : m.f0 / 1e9, 6), round(m?.s11MinDb, 3), round(m?.bwHz == null ? null : m.bwHz / 1e6, 3),
-      round(m?.fractionalBw == null ? null : m.fractionalBw * 100, 3), m && m.bands.length ? bandList(m.bands) : null,
+      round(m?.fractionalBw == null ? null : m.fractionalBw * 100, 3),
+      ...Array.from({ length: bandCount }, (_, k) => m?.bands[k]).flatMap((b) => [round(b ? b.f_lo / 1e9 : null, 6), round(b ? b.f_hi / 1e9 : null, 6)]),
       round(ff ? ff.f / 1e9 : null, 6), round(ff?.dmaxDbi, 3), round(ff?.gainDbi, 3), round(ff?.realizedDbi, 3),
       round(ff?.radEff == null ? null : ff.radEff * 100, 2), round(m?.totalEff == null ? null : m.totalEff * 100, 2), m?.cells ?? null,
       ...(withDeltas ? [...DELTA_COLUMNS.map((c) => round(deltas?.[c.key]?.value, c.digits)), i === ref ? null : runs[ref].label] : []),

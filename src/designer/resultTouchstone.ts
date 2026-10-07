@@ -5,13 +5,17 @@ import { saveDownload, type DownloadResult } from "../lib/download.ts";
 import { countUsage } from "../lib/telemetry.ts";
 import { t } from "../i18n/index.ts";
 
-type Run = { file: string; bundle: Bundle };
+/** A run to export: its result file and, when the caller has it, its label (the run's name in the UI). */
+type Run = { file: string; bundle: Bundle; label?: string };
 
-function safeBase(value: string): string {
-  const leaf = String(value ?? "").replace(/\\/g, "/").split("/").pop() ?? "";
-  const clean = leaf.replace(/\.[^.]*$/, "").normalize("NFKC")
-    .replace(/[<>:"|?*\x00-\x1f]/g, "_").replace(/[. ]+$/g, "").trim();
-  return clean.replace(/\s+/g, "_").slice(0, 100) || "results";
+/** A file name stem from a run's label or file: lower case, words joined by hyphens, a result file's
+ * ".json" dropped and nothing else, so "Dip C · k=0.5126" is "dip-c-k-0.5126" (a dot inside a value is
+ * not an extension). The zip and the files in it use the same stems. */
+export function exportStem(value: string, fallback = "results"): string {
+  const leaf = (String(value ?? "").replace(/\\/g, "/").split("/").pop() ?? "").replace(/\.json$/i, "");
+  const stem = leaf.normalize("NFKC").toLowerCase()
+    .replace(/[^\p{L}\p{N}._]+/gu, "-").replace(/-{2,}/g, "-").replace(/^[-.]+|[-.]+$/g, "");
+  return stem.slice(0, 100).replace(/[-.]+$/, "") || fallback;
 }
 
 function checkedText(bundle: Bundle, label: string): { text: string; ports: number[] } {
@@ -59,14 +63,9 @@ function checkedText(bundle: Bundle, label: string): { text: string; ports: numb
   return { text, ports: matrix.ports };
 }
 
-function memberStem(file: string): string {
-  const leaf = String(file ?? "").replace(/\\/g, "/").split("/").pop() ?? "run";
-  const stem = leaf.replace(/\.[^.]*$/, "").normalize("NFKC")
-    .replace(/[<>:"|?*\x00-\x1f/\\]/g, "_").replace(/[. ]+$/g, "").trim();
-  return stem.slice(0, 100) || "run";
-}
-
-/** Every Touchstone export of the app; counted for the usage statistics (docs/TELEMETRY.md) once saved. */
+/** Every Touchstone export of the app; counted for the usage statistics (docs/TELEMETRY.md) once saved.
+ * `filenameBase` is the shown run's label (or file); the file, or the zip of compared runs, is named
+ * after it, and each file in the zip after its run's label (else its file). */
 export async function exportResultTouchstone(bundle: Bundle, filenameBase: string, runs?: Run[]): Promise<DownloadResult> {
   const result = await writeResultTouchstone(bundle, filenameBase, runs);
   if (result.status !== "cancelled" && result.status !== "failed") countUsage("feature.touchstone_export");
@@ -74,7 +73,7 @@ export async function exportResultTouchstone(bundle: Bundle, filenameBase: strin
 }
 
 async function writeResultTouchstone(bundle: Bundle, filenameBase: string, runs?: Run[]): Promise<DownloadResult> {
-  const base = safeBase(filenameBase);
+  const base = exportStem(filenameBase);
   if (!runs || runs.length < 2) {
     const { text, ports } = checkedText(bundle, t("results.touchstone.result"));
     const ext = ports.length === 1 ? ".s1p" : `.s${ports.length}p`;
@@ -85,9 +84,9 @@ async function writeResultTouchstone(bundle: Bundle, filenameBase: string, runs?
   for (const run of runs) {
     const { text, ports } = checkedText(run.bundle, run.file || t("results.touchstone.run"));
     const suffix = ports.length === 1 ? ".s1p" : `.s${ports.length}p`;
-    const stem = memberStem(run.file);
+    const stem = exportStem(run.label || run.file, "run");
     let uniqueStem = stem;
-    for (let n = 2; used.has(`${uniqueStem}${suffix}`.toLowerCase()); n++) uniqueStem = `${stem}_${n}`;
+    for (let n = 2; used.has(`${uniqueStem}${suffix}`.toLowerCase()); n++) uniqueStem = `${stem}-${n}`;
     const name = `${uniqueStem}${suffix}`;
     used.add(name.toLowerCase());
     members[name] = new TextEncoder().encode(text);

@@ -8,7 +8,7 @@
 import { readFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import { labelOf, projectLabels } from "../src/lib/projectLabels.ts";
+import { engineBackend, engineName, labelOf, projectLabels } from "../src/lib/projectLabels.ts";
 import { newestResults, resultGroups } from "../src/runner/resultsIndex.ts";
 import { requireDesignResult, ResultFollow } from "../src/runner/resultFollow.ts";
 import { compareLines, compareTable, traceLabels, traces } from "../src/compare/series.ts";
@@ -36,8 +36,17 @@ const labelsOf = (entries) => {
     { file: "dipole.json", name: "Half-wave dipole", engine: "CPU", created: "2026-09-24T23:18:48+0300" },
   ]);
   eq(got[0], "Win patch · CPU", "engine: CPU");
-  eq(got[1], "Win patch · CUDA", "engine: CUDA");
+  eq(got[1], "Win patch · GPU", "engine: a CUDA run is a GPU run (the backend is a detail)");
   eq(got[2], "Half-wave dipole", "a unique name is unchanged");
+}
+
+// one name for the engine everywhere (tree, Runs table, Summary, Properties, example panel): CPU or GPU;
+// the GPU backend only where a row says it is the backend
+{
+  for (const [raw, name] of [["cpu", "CPU"], ["CPU", "CPU"], ["gpu", "GPU"], ["GPU", "GPU"], ["CUDA", "GPU"], ["Metal", "GPU"], [" cuda ", "GPU"], ["", null], [null, null], [undefined, null], ["Vulkan", "Vulkan"]]) {
+    eq(engineName(raw), name, `engineName(${JSON.stringify(raw)})`);
+  }
+  for (const [raw, backend] of [["CUDA", "CUDA"], ["metal", "Metal"], ["gpu", null], ["CPU", null], [null, null]]) eq(engineBackend(raw), backend, `engineBackend(${JSON.stringify(raw)})`);
 }
 
 // same engine, different parameters: only the differing parameter is named
@@ -60,8 +69,8 @@ const labelsOf = (entries) => {
     { file: "c.json", name: "Horn", engine: "CUDA", params: { f0: 12 } },
   ]);
   eq(got[0], "Horn · CPU · f0=10", "engine + params a");
-  eq(got[1], "Horn · CUDA · f0=10", "engine + params b");
-  eq(got[2], "Horn · CUDA · f0=12", "engine + params c");
+  eq(got[1], "Horn · GPU · f0=10", "engine + params b");
+  eq(got[2], "Horn · GPU · f0=12", "engine + params c");
 }
 
 // an old index (the demo's): the save time, with the date only when the days differ
@@ -139,7 +148,7 @@ const labelsOf = (entries) => {
   eq(resultGroups(runs)[0].entries.length, 2, "group retains both runs and excludes preview");
   const named = runs.slice(1).map((p) => ({ ...p, name: p.model === "a" ? "Branch-line coupler (2.4 GHz)" : "My named run" }));
   const labels = projectLabels(resultGroups(named).flatMap((g) => g.entries));
-  eq(labels.get("a-new.json"), "Branch-line coupler (2.4 GHz) · CUDA", "header keeps display name before collision suffix");
+  eq(labels.get("a-new.json"), "Branch-line coupler (2.4 GHz) · GPU", "header keeps display name before collision suffix");
   eq(labels.get("b.json"), "My named run", "explicit unique name stays unchanged");
 }
 

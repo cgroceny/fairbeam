@@ -5,6 +5,36 @@ import { fmt, t, decimalComma } from "../i18n/index.ts";
 
 export const GHz = (hz: number, digits = 3) => `${fmt.fixed(hz / 1e9, digits)} GHz`;
 
+/** Decimals of a frequency in GHz that give four significant digits: 2.404, 11.16, 0.8670. One rule
+ * for every place a frequency is read off a chart (the readouts, the marker table, the hover tips,
+ * the Smith chart's labels), so the same frequency never shows as 2.36 in one and 2.4036 in another. */
+export function ghzDigits(ghz: number): number {
+  const a = Math.abs(ghz);
+  return a >= 100 ? 1 : a >= 10 ? 2 : a >= 1 ? 3 : 4;
+}
+/** A frequency given in GHz, four significant digits, with the decimal point (copied data). */
+export const ghzPlain = (ghz: number) => (Number.isFinite(ghz) ? ghz.toFixed(ghzDigits(ghz)) : "—");
+/** A frequency given in GHz, four significant digits, in the UI language's decimal separator. */
+export const ghzText = (ghz: number) => (Number.isFinite(ghz) ? fmt.fixed(ghz, ghzDigits(ghz)) : "—");
+/** A frequency given in Hz as display text with its unit: "2.404 GHz". */
+export const freqText = (hz: number) => `${ghzText(hz / 1e9)} GHz`;
+
+/** A value with its unit that never breaks between the two ("−1.22 dB", "75.5 %"): a no-break space. */
+export const withUnit = (value: string, unit: string) => `${value} ${unit}`;
+
+/** The decimals of a table column of numbers (a parameter across runs): as many as its most precise
+ * value needs, at most `max`, so every value is shown as it was set and the column reads alike
+ * (0.4660 / 0.4194 / 0.5126, not 0.466 / 0.4194 / 0.5126). Non-numbers are ignored. */
+export function columnDecimals(values: readonly unknown[], max = 4): number {
+  let digits = 0;
+  for (const v of values) {
+    if (typeof v !== "number" || !Number.isFinite(v)) continue;
+    const s = v.toFixed(max).replace(/0+$/, "");
+    digits = Math.max(digits, s.length - s.indexOf(".") - 1);
+  }
+  return Math.min(max, digits);
+}
+
 export function num(v: number | null | undefined, digits = 2): string {
   if (v === null || v === undefined || !Number.isFinite(v)) return "—";
   return fmt.fixed(v, digits);

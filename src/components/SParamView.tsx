@@ -1,11 +1,11 @@
 // Multi-port S-parameter views for the dock: a compact S_ij picker (matrix popover, at most three
-// pairs; compared runs draw each pair in the run's colour with its own dash), a dB/phase chart,
-// the Smith chart of a port's S_ii and the all-pairs table. Single-port bundles never reach this
-// component.
+// pairs; compared runs draw each pair in the run's colour with its own dash), a dB/phase chart (a
+// stack of panes for the stacked data formats, charts/StackedCharts.tsx), the Smith chart of a port's
+// S_ii and the all-pairs table. Single-port bundles use the dB/phase switch alone (`matrix: false`).
 
 import { createEffect, createMemo, createRoot, createSignal, For, on, onCleanup, Show } from "solid-js";
 import { ChevronDown } from "lucide-solid";
-import LineChart, { type Series } from "../charts/LineChart";
+import StackedCharts from "../charts/StackedCharts";
 import { plotQuantities, type PlotFormat } from "../charts/plotQuantities";
 import SmithChart from "../charts/SmithChart";
 import { bundle } from "../state";
@@ -79,8 +79,9 @@ export const multiPort = () => (store.S()?.ports.length ?? 0) >= 2;
 export const sParams = store.S;
 
 /** Picker (matrix popover) and dB/phase switch for the dock bar (or, with `smith`, the Smith
- * chart's port). `store` defaults to the Examples dock's selection. */
-export function SParamTools(props: { smith?: boolean; store?: SParamSelection; format?: PlotFormat }) {
+ * chart's port). `store` defaults to the Examples dock's selection; `matrix: false` (a one-port run,
+ * S11 alone) leaves the dB/phase switch without a picker. */
+export function SParamTools(props: { smith?: boolean; store?: SParamSelection; format?: PlotFormat; matrix?: boolean }) {
   let root!: HTMLDivElement;
   let trigger!: HTMLButtonElement;
   let menu: HTMLDivElement | undefined;
@@ -143,7 +144,7 @@ export function SParamTools(props: { smith?: boolean; store?: SParamSelection; f
         </div>
       }
     >
-      <div class="figure-menu" ref={root} onKeyDown={onKey}>
+      <Show when={props.matrix !== false}><div class="figure-menu" ref={root} onKeyDown={onKey}>
         <button ref={trigger} class="btn btn-ghost btn-sm" aria-haspopup="dialog" aria-expanded={open()} onClick={openMenu} title={t("sparams.pickerTitle")}>
           <span class="mono">{summary()}</span> <ChevronDown size={12} aria-hidden="true" />
         </button>
@@ -151,7 +152,8 @@ export function SParamTools(props: { smith?: boolean; store?: SParamSelection; f
           <div class="menu sp-menu" role="dialog" aria-label={t("sparams.pickerAria")} ref={menu} style={{ top: `${pos().top}px`, left: `${pos().left}px` }}>
             <div class="menu-row">
               <span class="menu-label">{t("sparams.matrixAxes")}</span>
-              <span class="menu-label push">{store.selectedPairs().length}/{MAX_SERIES}</span>
+              {/* how many traces are picked, of the most that can be */}
+              <span class="menu-label push">{t("sparams.pickedCount", { count: store.selectedPairs().length, max: MAX_SERIES })}</span>
             </div>
             <div class="sp-grid" role="group" aria-label={t("sparams.matrixAria")} onKeyDown={(e) => gridKeys(e, S().ports.length)} style={{ "grid-template-columns": `repeat(${S().ports.length}, auto)` }}>
               <For each={S().ports}>
@@ -180,7 +182,7 @@ export function SParamTools(props: { smith?: boolean; store?: SParamSelection; f
             </div>
           </div>
         </Show>
-      </div>
+      </div></Show>
       <Show when={(props.format ?? "plot") === "plot"}><div class="seg seg-sm" role="radiogroup" aria-label={t("sparams.plottedQuantity")} onKeyDown={radioGroupKeys}>
         <button class="seg-btn" role="radio" aria-checked={store.mode() === "db"} classList={{ active: store.mode() === "db" }} onClick={() => store.setMode("db")}>dB</button>
         <button class="seg-btn" role="radio" aria-checked={store.mode() === "phase"} classList={{ active: store.mode() === "phase" }} onClick={() => store.setMode("phase")}>{t("chart.q.phase")}</button>
@@ -198,18 +200,11 @@ export function SParamChart(props: { markers?: { x: number; label: string; activ
       if (!c) return [];
       return [{ id: key(p), label: pairLabel(p), color: COLORS[k], x: fGHz(), re: c.re, im: c.im }];
     }), props.format ?? "plot", store.mode()));
-  const minDb = (ss: Series[]) => Math.min(-30, Math.floor(Math.min(...ss.flatMap((s) => s.y.filter(Number.isFinite)), 0) / 5) * 5);
   return (
     <Show when={groups().some((g) => g.series.length)} fallback={<div class="panel-empty">{t("sparams.chooseOneAbove")}</div>}>
-      <div class="sp-quantity-stack" style={{ height: "100%", display: "flex", "flex-direction": "column", "min-height": "0" }}><For each={groups()}>{(g) => <div style={{ height: `${100 / groups().length}%`, "min-height": "0" }}><LineChart
-        ariaLabel={t("results.aria.vsFrequency", { title: g.title, what: g.series.map((s) => s.label).join(", ") })}
-        series={g.series} xLabel={t("chart.frequencyGHz")} yLabel={g.yLabel}
-        yDomain={g.key === "db" ? [minDb(g.series), 0] : g.key === "phase" ? [-180, 180] : undefined}
-        hlines={g.kind === "reflection" ? [{ y: -10, label: "−10 dB" }] : g.key === "phase" ? [{ y: 0, label: "" }] : []}
-        markers={g.kind === "reflection" ? props.markers : []} onMarker={g.kind === "reflection" ? props.onMarker : undefined}
-        inspection={props.inspectionKey ? { key: `${props.inspectionKey}:${g.key}`, kind: g.kind } : undefined}
-        xFormat={(v) => v.toFixed(2)} yFormat={(v) => v.toFixed(1)}
-      /></div>}</For></div>
+      <StackedCharts groups={groups()} inspectionChart={props.inspectionKey}
+        ariaLabel={(g) => t("results.aria.vsFrequency", { title: g.title, what: g.series.map((s) => s.label).join(", ") })}
+        pane={(g) => (g.kind === "reflection" ? { markers: props.markers, onMarker: props.onMarker } : {})} />
     </Show>
   );
 }

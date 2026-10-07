@@ -8,7 +8,7 @@ import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { buildBenchmarks, serialize } from "./build-benchmarks.mjs";
 import { validateBundle } from "../src/lib/validate.ts";
-import { benchView, engineText, shortMachine, timestepsText } from "../src/lib/benchmarks.ts";
+import { benchView, engineText, rowTitle, shortMachine, timestepsText } from "../src/lib/benchmarks.ts";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const projects = join(root, "public", "projects");
@@ -48,8 +48,10 @@ for (const f of readdirSync(projects).filter((x) => x.endsWith(".json") && x !==
     ok(self === 0 && v.thisRun !== null, `${f}: the committed run should be added as "this run"`);
     ok(v.thisRun?.solver_s === 16.06 && timestepsText(v.thisRun?.timesteps ?? null) === "18,468", `${f}: this run ${JSON.stringify(v.thisRun)}`);
     const machines = v.rows.map((r) => `${r.row.machine} ${engineText(r.row)}`).join(" | ");
-    ok(machines === "Apple M5 Pro CPU · 4 | Apple M5 Pro Metal | AMD Ryzen 9 7900X CPU · 4 | AMD Ryzen 9 7900X CPU · 24 | NVIDIA RTX 3060 (on the 7900X) CUDA",
+    // the engine column names CPU or GPU like the rest of the UI; the backend is in the row's title
+    ok(machines === "Apple M5 Pro CPU · 4 | Apple M5 Pro GPU | AMD Ryzen 9 7900X CPU · 4 | AMD Ryzen 9 7900X CPU · 24 | NVIDIA RTX 3060 (on the 7900X) GPU",
       `${f}: rows ${machines}`);
+    ok(rowTitle(v.rows[1].row).includes("Metal GPU engine") && rowTitle(v.rows[4].row).includes("CUDA GPU engine"), `${f}: the backend in the title`);
     ok(v.rows[0].row.solver_s === 10.6, `${f}: M5 Pro CPU should be the re-measured 10.6 s`);
     // the Windows rows with repeated runs take the docs' medians; MCells/s scaled from the first run
     const [t4, t24, cuda] = v.rows.slice(2).map((r) => r.row);
@@ -98,7 +100,8 @@ for (const f of readdirSync(projects).filter((x) => x.endsWith(".json") && x !==
   b.run.host = { os: "Windows", machine: "AMD64", cpu: "Intel Core i7" };
   b.run.log_tail = [...(b.run.log_tail ?? []), "Create FDTD engine (GPU, backend: CUDA (NVIDIA GeForce RTX 4090))"];
   const v = benchView(file, b);
-  ok(v?.thisRun?.machine === "NVIDIA GeForce RTX 4090 (on Intel Core i7)" && engineText(v.thisRun) === "CUDA", `CUDA this run: ${JSON.stringify(v?.thisRun)}`);
+  ok(v?.thisRun?.machine === "NVIDIA GeForce RTX 4090 (on Intel Core i7)" && engineText(v.thisRun) === "GPU" && v.thisRun.backend === "CUDA", `CUDA this run: ${JSON.stringify(v?.thisRun)}`);
+  ok(v?.thisRun?.threads === null && !/thread/.test(engineText(v.thisRun)), "a GPU run never shows threads");
 }
 
 // 7. short machine names for the narrow table

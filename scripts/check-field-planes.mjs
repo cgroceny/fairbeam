@@ -69,26 +69,26 @@ const withMaps = (maps) => ({ ...clone(patch), field_planes: maps });
   assert.equal(validate.validateBundle(clone(patch)).bundle.field_planes, undefined, 'older bundles have none');
 }
 
-// ---- 2. the run tree: "E-field (z = 2.5 mm, 2.45 GHz)" under 2D/3D Results, with the map index
+// ---- 2. the run tree: "E-field (z = 2.5 mm, 2.450 GHz)" under 2D/3D Results, with the map index
 {
-  assert.equal(navModel.fieldPlaneLabel(map()), 'E-field (z = 2.5 mm, 2.45 GHz)');
-  assert.equal(navModel.fieldPlaneLabel(map({ quantity: 'H', component: 'y', normal: 'x', position_mm: -1.25, f: 2.5e9 })), 'Hy (x = \u22121.25 mm, 2.5 GHz)');
+  assert.equal(navModel.fieldPlaneLabel(map()), 'E-field (z = 2.5 mm, 2.450 GHz)');
+  assert.equal(navModel.fieldPlaneLabel(map({ quantity: 'H', component: 'y', normal: 'x', position_mm: -1.25, f: 2.5e9 })), 'Hy (x = \u22121.25 mm, 2.500 GHz)');
   assert.ok(navModel.matchesFilter('x = -1.25', navModel.fieldPlaneLabel(map({ quantity: 'H', component: 'y', normal: 'x', position_mm: -1.25, f: 2.5e9 }))), 'a typed hyphen-minus finds the label with the typographic minus');
   const content = navModel.runContent(withMaps([map(), map({ f: 2.5e9 })]));
   assert.deepEqual(content.fieldPlanes, [
-    { map: 0, f: 2.45e9, label: 'E-field (z = 2.5 mm, 2.45 GHz)' }, { map: 1, f: 2.5e9, label: 'E-field (z = 2.5 mm, 2.5 GHz)' }]);
+    { map: 0, f: 2.45e9, label: 'E-field (z = 2.5 mm, 2.450 GHz)' }, { map: 1, f: 2.5e9, label: 'E-field (z = 2.5 mm, 2.500 GHz)' }]);
   const kids = navModel.runChildren('run.json', content);
   const group = kids.find((n) => n.label === '2D/3D Results');
   assert.ok(group, 'a run with field planes has 2D/3D Results');
   // the legacy patch bundle also has surface currents: both kinds in the one group, currents first
   assert.ok(group.children[0].label.startsWith('Surface current'));
   const fp = group.children.filter((n) => n.action.view === 'fieldplane');
-  assert.deepEqual(fp.map((n) => n.label), ['E-field (z = 2.5 mm, 2.45 GHz) · 3D', 'E-field (z = 2.5 mm, 2.5 GHz) · 3D']);
+  assert.deepEqual(fp.map((n) => n.label), ['E-field (z = 2.5 mm, 2.450 GHz) · 3D', 'E-field (z = 2.5 mm, 2.500 GHz) · 3D']);
   assert.deepEqual(fp.map((n) => n.id), ['res:run.json:fieldplane:0', 'res:run.json:fieldplane:1'], 'ids are unique per map');
   assert.deepEqual(fp[1].action, { kind: 'result', file: 'run.json', view: 'fieldplane', f: 2.5e9, map: 1 });
   // each map also has its 2D heat map (a main-area tab), listed before its 3D plane
   const fm = group.children.filter((n) => n.action.view === 'fieldmap');
-  assert.deepEqual(fm.map((n) => n.label), ['E-field (z = 2.5 mm, 2.45 GHz) · 2D map', 'E-field (z = 2.5 mm, 2.5 GHz) · 2D map']);
+  assert.deepEqual(fm.map((n) => n.label), ['E-field (z = 2.5 mm, 2.450 GHz) · 2D map', 'E-field (z = 2.5 mm, 2.500 GHz) · 2D map']);
   assert.deepEqual(fm.map((n) => n.id), ['res:run.json:fieldmap:0', 'res:run.json:fieldmap:1']);
   assert.deepEqual(fm[1].action, { kind: 'result', file: 'run.json', view: 'fieldmap', f: 2.5e9, map: 1 });
   const order = group.children.filter((n) => n.action.map === 0).map((n) => n.action.view);

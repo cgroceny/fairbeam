@@ -463,7 +463,11 @@ export interface ProjectIndexEntry {
   model: string;
   created: string;
   simulated: boolean;
+  /** the |S11| minimum of each -10 dB band (GHz) */
   bands: number[];
+  /** each -10 dB band's edges (GHz) and whether it runs into the edge of the simulated range
+   * (src/lib/bands.ts); newer indexes only */
+  band_ranges?: { lo: number; hi: number; edge_lo: boolean; edge_hi: boolean }[];
   cells: number;
   /** "CPU", "Metal", "CUDA" or "GPU"; newer indexes only (see src/lib/projectLabels.ts) */
   engine?: string;

@@ -196,7 +196,7 @@
   "chart.col.marker": "İşaretçi",
   "chart.col.trace": "Eğri",
   "chart.col.value": "Değer",
-  "chart.deltaCell": "Δf {df} · Δdeğer {dv}",
+  "chart.deltaCell": "Δf {df} · Δ {dv}",
   "chart.dip": "Çukur",
   "chart.flag.openAbove": "son örneğin üstünde açık",
   "chart.flag.openBelow": "ilk örneğin altında açık",
@@ -1030,6 +1030,7 @@
   "editor.savedNoBuild": "Kaydedildi, ancak model oluşturulamıyor",
   "editor.savedNoLoad": "Kaydedildi, ancak model yüklenemiyor",
   "efficiency.aria": "Frekansa göre uyumsuzluk verimliliği ve uzak alan frekanslarındaki ışıma ve toplam verimlilik",
+  "efficiency.details": "Ayrıntılar",
   "efficiency.ariaCompared": "Frekansa göre karşılaştırılan her çalıştırmanın uyumsuzluk verimliliği ve uzak alan frekanslarındaki toplam verimlilik",
   "efficiency.axisDb": "Verimlilik (dB)",
   "efficiency.axisPct": "Verimlilik (%)",
@@ -1045,11 +1046,20 @@
   "efficiency.overUnityNote": {
     "other": "%100'ün üzerinde {count} değer: pasif bir anten için fiziksel değil (ışınan ve kabul edilen güç ayrı sayısal ölçümlerdir), bu yüzden kazanç ve toplam verimlilik orada olduğundan yüksek görünür."
   },
+  "efficiency.overUnityLine": {
+    "other": "%100'ün üzerinde {count} değer (en yüksek: {f} GHz'de %{eta})"
+  },
   "efficiency.overUnityShort": "%100'ün üzerinde: fiziksel değil",
   "efficiency.radiation": "Işıma",
   "efficiency.radiationUnreliable": "Işıma, güvenilmez",
   "efficiency.total": "Toplam",
   "efficiency.unit": "Verimlilik birimi",
+  "efficiency.unreliableLine": {
+    "other": "{count} değer güvenilmez"
+  },
+  "efficiency.unreliableNote": {
+    "other": "Bant boyunca ışıma verimliliğinin {count} değeri güvenilmez: port orada az güç kabul ediyor ve çalıştırma, alanlar yeterince sönümlenmeden durdu. Bu değerler eğrilerin dışında bırakılır ve halkalı noktalar olarak çizilir; daha düşük bir durdurma ölçütü bandın daha büyük kısmını güvenilir kılar."
+  },
   "efficiency.unreliableWhy": "güvenilmez: port burada gelen gücün çalıştırmanın durdurma ölçütü için çok azını kabul ediyor (nota bakın)",
   "exampleCopy.carried": "Aktarılanlar:",
   "exampleCopy.carried.body": "şekiller ve ölçüleri, malzemeler (aynı metaller tek malzemeyi paylaşır), portlar, bant, sınırlar, örneğin mesh çizgileri ve parametreleri. Bir parametrenin doğrusal formülü olan ölçü ifade olur; böylece kopya o parametreyle taranabilir ve optimize edilebilir.",
@@ -1158,6 +1168,7 @@
   "farfield.hideValuesTitle": "Uzak alan değerlerini gizle (renk ölçeği kalır)",
   "farfield.lobeTitle": "Örüntü maksimumunun yönü",
   "farfield.mainLobe": "Ana lob",
+  "farfield.omniPhi": "φ'de her yöne eşit",
   "farfield.mismatch": "Uyumsuzluk verimliliği",
   "farfield.mismatchTitle": "Uyarılan portun bu frekanstaki 1 − |S11|² değeri",
   "farfield.overUnity": "%100'ün üzerinde: kazanç olduğundan yüksek",
@@ -1255,6 +1266,7 @@
   "figure.titleScoped": "Yalnızca etkin çalıştırmanın siyah-beyaz yayın şekilleri (IEEE stili); karşılaştırılan eğriler dışa aktarılmaz",
   "figure.widthAria": "Grafik genişliği",
   "figure.formatAria": "Dosya biçimi",
+  "figure.pngTitle": "{dpi} dpi PNG, şeklin başlığı üstünde (sunum ve raporlar için)",
   "figure.zin": "Giriş empedansı",
   "format.minutesSeconds": "{m} dk {s} s",
   "format.percent": "%{value}",
@@ -1478,7 +1490,6 @@
   "measured.solver": "Çözücü",
   "measured.solverTitle": "Çözücü süresi, tüm port çalıştırmalarının toplamı",
   "measured.speed": "Hız",
-  "measured.thisRun": "Bu çalıştırma",
   "measured.threads": "iş parçacığı",
   "measured.timesteps": "Zaman adımları",
   "model.aria": "Model",
@@ -2329,9 +2340,19 @@
   "quality.banner.otherNotConverged": "{run} çalıştırması yakınsamadı:",
   "quality.banner.otherSuspicious": "{run} çalıştırmasını kontrol edin:",
   "quality.banner.otherUncoupled": "{run} çalıştırmasının portu antene bağlı görünmüyor:",
+  "quality.banner.otherUnreliable": "{run} çalıştırmasının bazı değerleri belirsiz:",
   "quality.banner.suspicious": "Bu sonuçları kontrol edin: bazı değerler fiziksel görünmüyor.",
   "quality.banner.uncoupled": "Port antene bağlı görünmüyor: neredeyse hiç güç kabul edilmiyor ya da ışınmıyor.",
+  "quality.banner.unreliable": "Bu sonuçları kontrol edin: bazı değerler belirsiz.",
+  "quality.details.hide": "Nedenleri gizle",
+  "quality.details.show": "Nedenleri göster",
   "quality.reason.efficiency": "Işıma verimliliği {f} GHz'de %{eta}, yani %100'ün üzerinde; kazanç olduğundan yüksek çıkar. Neyin değişeceği için verimlilik notuna bakın.",
+  "quality.reason.bandEfficiency": {
+    "other": "Bant boyunca ışıma verimliliği {total} frekansın {count} tanesinde %100'ün üzerinde (en yüksek: {f} GHz'de %{eta}); kazanç orada olduğundan yüksek çıkar. Neyin değişeceği için verimlilik notuna bakın."
+  },
+  "quality.reason.efficiencyUnreliable": {
+    "other": "Bant boyunca ışıma verimliliği {total} frekansın {count} tanesinde güvenilmez: port orada az güç kabul ediyor ve çalıştırma, alanlar bunu ölçecek kadar sönümlenmeden durdu. Daha düşük bir durdurma ölçütü bandın daha büyük kısmını güvenilir kılar."
+  },
   "quality.reason.s11": "|S11| {f} GHz'de {db} dB'ye çıkıyor (port {port}); pasif bir anten için bu mümkün değil. Mesh'i sıklaştırın, sınırları modelden uzaklaştırın ya da durdurma ölçütünü düşürün ve yeniden çalıştırın.",
   "quality.reason.timestepLimit": "Zaman adımı sınırına ulaşıldığında alan enerjisi durdurma ölçütüne inmemişti. En fazla zaman adımını artırın ya da durdurma ölçütünü gevşetin ve yeniden çalıştırın.",
   "quality.reason.timestepLimitPort": "Port {port}: zaman adımı sınırına ulaşıldığında alan enerjisi durdurma ölçütüne inmemişti. En fazla zaman adımını artırın ya da durdurma ölçütünü gevşetin ve yeniden çalıştırın.",
@@ -3219,6 +3240,9 @@
   "sparams.pairNotStoredRun": "{pair} bu çalıştırmada kayıtlı değil.",
   "sparams.pickerAria": "Çizilecek S-parametreleri",
   "sparams.pickerTitle": "Çizilecek, kopyalanacak ve CSV olarak dışa aktarılacak S-parametrelerini seçin (en fazla üç)",
+  "sparams.pickedCount": {
+    "other": "{count} eğri seçili (en çok {max})"
+  },
   "sparams.plottedQuantity": "Çizilen büyüklük (eski)",
   "sparams.smithOf": "{pair} Smith abağı",
   "sparams.smithOfCompared": "Karşılaştırılan her çalıştırmanın {pair} Smith abağı",
@@ -3229,10 +3253,15 @@
   "spec.allThreads": "tüm",
   "spec.aria": "Simülasyon ayrıntıları",
   "spec.band": "Bant",
+  "spec.bandOpen": "bant, simüle edilen aralığın ötesine uzanıyor",
+  "spec.bandOpenNote": "≤ / ≥: bant, simüle edilen aralığın ötesine uzanıyor; genişliği en az gösterilen kadardır.",
   "spec.bandsCaption": "Uyumlu bantlar, |S11| −10 dB altında",
+  "spec.bestMatch": "En iyi uyum",
+  "spec.bestMatch.title": "Banttaki |S11| minimumunun frekansı",
   "spec.boundaries": "Sınır koşulları",
   "spec.bw": "BG",
   "spec.centre": "Merkez",
+  "spec.centre.title": "Bant kenarlarının ortası, (f alt + f üst) / 2",
   "spec.dcFree": "DC'siz",
   "spec.empty": "Kurulumunu ve sonuçlarını görmek için bir örnek ya da sonuç dosyası açın.",
   "spec.endCriterion": "Durdurma ölçütü",
@@ -3240,6 +3269,7 @@
   "spec.ffCaption": "Uzak alan · örüntüsünü göstermek için bir satır seçin",
   "spec.gaussDerivative": "Gauss türevi",
   "spec.geometryOnly": "Yalnızca geometri — simüle edilmedi.",
+  "spec.gpuBackend": "GPU arka ucu",
   "spec.gpuWarning": "GPU istendi, ancak: {warning}.",
   "spec.grid": "Izgara",
   "spec.gridLines": "{x} × {y} × {z} çizgi",
@@ -3740,8 +3770,8 @@
   "viewport.current.pause": "Duraklat",
   "viewport.current.phaseLabel": "Yüzey akımı fazı, 0–360 derece",
   "viewport.current.play": "Oynat",
-  "viewport.current.unit": "|J| / maks., doğrusal, düzlem başına",
-  "viewport.current.unitPhase": "Anlık |Re(J e^(jφ))| / sabit fazör tepe değeri",
+  "viewport.current.unit": "|J|, düzlemdeki tepe değerine göre normalize (1 = tepe), doğrusal; mutlak birim yok",
+  "viewport.current.unitPhase": "Anlık |Re(J e^(jφ))|, fazör tepe değerine göre normalize (1 = tepe); mutlak birim yok",
   "viewport.face.curved": "Düz bir yüz seçin: eğri yüzeyler hizalanamaz. Kutu yüzleri, levhalar, çokgen yüzleri ve silindir kapakları hizalanabilir.",
   "viewport.face.slanted": "x, y ya da z boyunca bir yüz seçin: eğik yüzler henüz hizalanamaz.",
   "viewport.face.unsupported": "Eğri ve eğik yüzler yüz hizalamada desteklenmez",

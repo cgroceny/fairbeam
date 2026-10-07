@@ -1,7 +1,8 @@
 // "Measured on other machines" in the Run section: the measured solver times of the open model on the
 // reference machines (public/benchmarks.json, written by scripts/build-benchmarks.mjs from
 // docs/BENCHMARKS.md, docs/GPU.md, docs/benchmarks/*.json and the committed bundles). Measurements
-// only; hidden when the model has none or the file is missing.
+// only, and only the other ones: the open bundle's own run is the Run section above the table, so a
+// row that is that run is left out. Hidden when the model has no other measurement or the file is missing.
 
 import { createMemo, createSignal, For, Show } from "solid-js";
 import type { Bundle } from "../types";
@@ -28,11 +29,10 @@ const mcells = (v: number | null) => (v === null ? "—" : fmt.intl(v, { maximum
 
 const ports = (v: BenchView) => Math.max(0, ...[...v.rows.map((r) => r.row), ...(v.thisRun ? [v.thisRun] : [])].map((r) => r.timesteps?.length ?? 0));
 
-function Row(props: { row: BenchRow; self: boolean }) {
+function Row(props: { row: BenchRow }) {
   return (
-    <tr classList={{ "bench-self": props.self }} title={rowTitle(props.row)}>
+    <tr title={rowTitle(props.row)}>
       <td class="bench-machine">
-        {props.self ? <span class="bench-tag">{t("measured.thisRun")}</span> : null}
         <span class="bench-name">{shortMachine(props.row.machine)}</span>
         <span class="bench-engine">{engineText(props.row)}</span>
       </td>
@@ -45,7 +45,12 @@ function Row(props: { row: BenchRow; self: boolean }) {
 
 export default function MeasuredTimes(props: { bundle: Bundle }) {
   load();
-  const view = createMemo(() => benchView(file(), props.bundle));
+  // the rows measured elsewhere: not the open bundle's own run (benchView marks it, or adds it as thisRun)
+  const view = createMemo(() => {
+    const v = benchView(file(), props.bundle);
+    const others = v?.rows.filter((r) => !r.self) ?? [];
+    return v && others.length ? { ...v, rows: others, thisRun: null } : null;
+  });
   return (
     <Show when={view()}>
       {(v) => (
@@ -61,8 +66,7 @@ export default function MeasuredTimes(props: { bundle: Bundle }) {
               </tr>
             </thead>
             <tbody>
-              <For each={v().rows}>{(r) => <Row row={r.row} self={r.self} />}</For>
-              <Show when={v().thisRun}>{(r) => <Row row={r()} self />}</Show>
+              <For each={v().rows}>{(r) => <Row row={r.row} />}</For>
             </tbody>
           </table>
           <Show when={ports(v()) > 1}>

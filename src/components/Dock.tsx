@@ -1,7 +1,9 @@
 import DockResizeHandle from "./DockResizeHandle";
 import { createEffect, createMemo, createSignal, For, type JSX, lazy, Match, on, onCleanup, onMount, Show, Switch } from "solid-js";
-import { Check, Copy, Download, Table2, TriangleAlert } from "lucide-solid";
+import { Check, Copy, FileChartLine, FileSpreadsheet, Table2, TriangleAlert } from "lucide-solid";
 import LineChart, { type Series } from "../charts/LineChart";
+import StackedCharts from "../charts/StackedCharts";
+import { quantityDomain, quantityLines } from "../charts/quantityAxes";
 import { useSize } from "../charts/useSize";
 import PolarChart from "../charts/PolarChart";
 import SmithChart from "../charts/SmithChart";
@@ -10,11 +12,11 @@ import { radioGroupKeys } from "../lib/a11y";
 import { bundle, dockTab, farfieldIndex, setDockTab, setFarfieldIndex, setLayers, source, type DockTab } from "../state";
 import { sMatrix } from "../lib/sparams";
 import { nearestIndex, patternCut, sweep } from "../lib/rf";
-import { num } from "../lib/format";
+import { freqText, ghzText, num, withUnit } from "../lib/format";
 import { efficiencyIssue, efficiencyWarningUi } from "../lib/runText";
-import { effectiveQuantity, farfieldSummary, QUANTITY_LABEL, quantityGrid, quantityMax, toDb } from "../lib/farfieldQuantity";
+import { effectiveQuantity, farfieldSummary, QUANTITY_LABEL, quantityGrid, quantityMax } from "../lib/farfieldQuantity";
 import { patternQuantity } from "../lib/patternQuantityStore";
-import { PatternQuantitySelect } from "./FarfieldCard";
+import { PatternQuantitySelect, totalEffText } from "./FarfieldCard";
 import type { Signals } from "../types";
 import ComparePicker from "../compare/ComparePicker";
 import { compareBundles, comparing, cutPhi, pinned, setCutPhi, setZPart, zPart } from "../compare/store";
@@ -34,6 +36,7 @@ import { downloadMessage, revealDownloadedFile, type DownloadResult } from "../l
 import { exportNotice, registerSurfaceExports } from "../components/exportContext";
 import { saveVisibleFigure, visibleFigureSvgs } from "../components/visibleFigure";
 import { t } from "../i18n";
+import "../styles/result-views.css";
 
 /** label: an i18n key, translated at render */
 const ALL_TABS: { id: DockTab; label: string }[] = [
@@ -167,7 +170,7 @@ export default function Dock() {
   onMount(()=> {
     const ready=()=>!!bundle()?.results;
     const chart=()=>ready() && visibleFigureSvgs(dockEl??null).length>0;
-    const figure=(format:"png"|"svg")=>saveVisibleFigure(dockEl??null,`${bundle()?.model.id??"result"}-${dockTab()}`,format);
+    const figure=(format:"png"|"svg")=>saveVisibleFigure(dockEl??null,`${bundle()?.model.id??"result"}-${dockTab()}`,format,`${bundle()?.name??""} — ${t(ALL_TABS.find((x)=>x.id===dockTab())?.label??"dock.results.reflection")}`);
     onCleanup(registerSurfaceExports("examples-result",{ready:chart,screenshot:()=>figure("png"),actions:()=>[
       {id:"result-csv",label:t("contextExport.resultCsv"),disabled:!ready()||!resultView()||!resultDataTable(bundle(),resultView()??"sparams",storedFF()?.f,dataOptions()).rows.length,reason:t("contextExport.noData"),run:exportData},
       {id:"result-touchstone",label:t("contextExport.touchstone"),disabled:!ready()||!sMatrix(bundle())?.pairs.length,reason:t("contextExport.noSParameters"),run:exportTouchstone},
@@ -217,9 +220,10 @@ export default function Dock() {
     });
     return [...seen].map(([f, i]) => ({ f, index: i }));
   });
-  const markers = () => ffMarks().map(({ f, index }) => ({ x: f / 1e9, label: `${num(f / 1e9, 2)}`, active: storedFF()?.f === f, index }));
+  // far-field frequencies in the frequency format of every chart readout (2.400, 8.000)
+  const markers = () => ffMarks().map(({ f, index }) => ({ x: f / 1e9, label: ghzText(f / 1e9), active: storedFF()?.f === f, index }));
   const selectMarker = (k: number) => selectFF(ffMarks()[k]?.index ?? 0);
-  const smithMarks = () => ffMarks().map(({ f }) => ({ f, label: `${num(f / 1e9, 2)} GHz` }));
+  const smithMarks = () => ffMarks().map(({ f }) => ({ f, label: freqText(f) }));
   const bands = () => (bundle()?.results?.bands ?? []).map((b) => ({ x0: b.f_lo / 1e9, x1: b.f_hi / 1e9 }));
   const selectFF = (i: number) => {
     setFarfieldIndex(i);
@@ -475,7 +479,7 @@ export default function Dock() {
           <ComparePicker />
           <FigureMenu />
           <Show when={bundle()?.results && resultView()}>
-            <select class="btn btn-ghost btn-sm" aria-label={t("results.toolbar.formatAria")} value={dataFormat()} onChange={(event) => {
+            <select class="btn btn-ghost btn-sm result-format" aria-label={t("results.toolbar.formatAria")} value={dataFormat()} onChange={(event) => {
               const value = event.currentTarget.value as ResultDataFormat;
                 writeResultDataFormat(value);
             }}>
@@ -485,7 +489,7 @@ export default function Dock() {
               aria-live="polite">
               <Show when={copied()} fallback={<><Copy size={14} aria-hidden="true" /> {t("results.toolbar.copyData")}</>}><Check size={14} aria-hidden="true" /> {t("results.toolbar.copied")}</Show>
             </button>
-            <button class="btn btn-ghost btn-sm" onClick={exportData} title={t("results.toolbar.csvTitle")}><Download size={14} aria-hidden="true" /> CSV</button>
+            <button class="btn btn-ghost btn-sm" onClick={exportData} title={t("results.toolbar.csvTitle")} aria-label={t("results.toolbar.csvTitle")}><FileSpreadsheet size={14} aria-hidden="true" /> <span class="btn-short">CSV</span></button>
           </Show>
           <Show when={dataAction()}>
             <span class="dock-data-status" role="status" aria-live="polite">
@@ -497,7 +501,7 @@ export default function Dock() {
             </span>
           </Show>
           <Show when={bundle()?.results}>
-            <button class="btn btn-ghost btn-sm" onClick={exportTouchstone} title={t("results.toolbar.touchstoneTitle")}><Download size={14} aria-hidden="true" /> Touchstone</button>
+            <button class="btn btn-ghost btn-sm" onClick={exportTouchstone} title={t("results.toolbar.touchstoneTitle")} aria-label={t("results.toolbar.touchstoneTitle")}><FileChartLine size={14} aria-hidden="true" /> <span class="btn-short">{`.s${Math.max(1, sMatrix(bundle())?.ports.length ?? 1)}p`}</span></button>
           </Show>
           <button class="btn btn-ghost btn-sm" aria-pressed={showTable()} onClick={() => setShowTable(!showTable())} title={showTable() ? t("dock.results.backToChart") : t("dock.results.showData")}>
             <Table2 size={14} aria-hidden="true" /> {t("results.tab.table")}
@@ -513,10 +517,8 @@ export default function Dock() {
             <Switch>
               <Match when={dockTab() === "reflection" && cmpSp()}>
                 {(groups) => <Show when={groups().some((g) => g.series.length)} fallback={<div class="panel-empty">{t("sparams.chooseOneAbove")}</div>}>
-                  <div style={{ height: "100%", display: "flex", "flex-direction": "column", "min-height": "0" }}><For each={groups()}>{(g) => <div style={{ height: `${100 / groups().length}%`, "min-height": "0" }}><LineChart ariaLabel={t("results.aria.vsFrequency", { title: g.title, what: t("dock.results.aria.pickedCompared") })} series={g.series}
-                    inspection={{ key: `examples:${source()}:reflection:${g.key}`, kind: g.kind }} xLabel={t("chart.frequencyGHz")} yLabel={g.yLabel}
-                    yDomain={g.key === "db" ? [Math.min(-30, Math.floor(Math.min(...g.series.flatMap((s) => s.y.filter(Number.isFinite)), 0) / 5) * 5), 0] : g.key === "phase" ? [-180, 180] : undefined} hlines={g.kind === "reflection" ? [{ y: -10, label: "−10 dB" }] : g.key === "phase" ? [{ y: 0, label: "" }] : []}
-                    xFormat={(v) => v.toFixed(2)} yFormat={(v) => v.toFixed(1)} /></div>}</For></div>
+                  <StackedCharts groups={groups()} inspectionChart={`examples:${source()}:reflection`}
+                    ariaLabel={(g) => t("results.aria.vsFrequency", { title: g.title, what: t("dock.results.aria.pickedCompared") })} />
                 </Show>}
               </Match>
               <Match when={dockTab() === "smith" && spCompare() && cmp()}>
@@ -526,20 +528,16 @@ export default function Dock() {
                 <SParamChart markers={markers()} onMarker={selectMarker} inspectionKey={`examples:${source()}:reflection`} format={dataFormat()} />
               </Match>
               <Match when={dockTab() === "reflection" && cmpSingleNamed()}>
-                {(groups) => <div style={{ height: "100%", display: "flex", "flex-direction": "column", "min-height": "0" }}>{groups().map((g) => <div style={{ height: `${100 / groups().length}%`, "min-height": "0" }}><LineChart ariaLabel={t("results.aria.vsFrequency", { title: g.title, what: t("dock.results.aria.reflectionCompared") })} series={g.series}
-                  inspection={{ key: `examples:${source()}:reflection:${g.key}`, kind: g.kind }} xLabel={t("chart.frequencyGHz")} yLabel={g.yLabel}
-                  yDomain={g.key === "db" ? [Math.min(-30, Math.floor(Math.min(...g.series.flatMap(s => s.y.filter(Number.isFinite)), 0) / 5) * 5), 0] : g.key === "phase" ? [-180, 180] : undefined}
-                  hlines={g.kind === "reflection" ? [{ y: -10, label: "−10 dB" }] : g.key === "phase" ? [{ y: 0, label: "" }] : []}
-                  xFormat={v => v.toFixed(2)} yFormat={v => v.toFixed(1)} /></div>)}</div>}
+                {(groups) => <StackedCharts groups={groups()} inspectionChart={`examples:${source()}:reflection`}
+                  ariaLabel={(g) => t("results.aria.vsFrequency", { title: g.title, what: t("dock.results.aria.reflectionCompared") })} />}
               </Match>
               <Match when={dockTab() === "reflection" && dataFormat() !== "plot" && !multiPort() && cmp() && !cmpSingleNamed()}>
                 <div class="panel-empty">{t("dock.results.noComplex")}</div>
               </Match>
               <Match when={dockTab() === "reflection" && dataFormat() !== "plot" && singleNamed().length}>
-                <div style={{ height: "100%", display: "flex", "flex-direction": "column", "min-height": "0" }}>{singleNamed().map((g) => <div style={{ height: `${100 / singleNamed().length}%`, "min-height": "0" }}><LineChart ariaLabel={t("results.aria.vsFrequency", { title: g.title, what: t("results.aria.inputReflection") })} series={g.series} inspection={{ key: `examples:${source()}:reflection:${g.key}`, kind: g.kind }}
-                  xLabel={t("chart.frequencyGHz")} yLabel={g.yLabel} yDomain={g.key === "db" ? [Math.min(-30, Math.floor(Math.min(...g.series.flatMap(s => s.y.filter(Number.isFinite)), 0) / 5) * 5), 0] : g.key === "phase" ? [-180, 180] : undefined}
-                  hlines={g.key === "db" ? [{ y: -10, label: "−10 dB" }] : g.key === "phase" ? [{ y: 0, label: "" }] : []}
-                  markers={g.key === "db" ? markers() : []} onMarker={g.key === "db" ? selectMarker : undefined} onPick={g.key === "db" ? pickFreq : undefined} bands={g.key === "db" ? bands() : []} xFormat={v => v.toFixed(2)} yFormat={v => v.toFixed(1)} /></div>)}</div>
+                <StackedCharts groups={singleNamed()} inspectionChart={`examples:${source()}:reflection`}
+                  ariaLabel={(g) => t("results.aria.vsFrequency", { title: g.title, what: t("results.aria.inputReflection") })}
+                  pane={(g) => (g.key === "db" ? { markers: markers(), onMarker: selectMarker, onPick: pickFreq, bands: bands() } : {})} />
               </Match>
               <Match when={dockTab() === "reflection" && dataFormat() !== "plot" && !multiPort() && !cmp() && !singleNamed().length}>
                 <div class="panel-empty">{t("dock.results.noComplex")}</div>
@@ -556,16 +554,15 @@ export default function Dock() {
                 <LineChart
                   ariaLabel={t("dock.results.aria.s11")}
                   series={cmpS11()?.series ?? s11Series()}
-                  inspection={{ key: `examples:${source()}:reflection:db`, kind: "reflection" }}
+                  inspection={{ key: `examples:${source()}:reflection:db`, chart: `examples:${source()}:reflection`, kind: "reflection" }}
                   xLabel={t("chart.frequencyGHz")}
                   yLabel="|S11| (dB)"
-                  yDomain={[Math.min(-30, Math.floor(Math.min(...(cmpS11()?.series.flatMap((c) => c.y.filter(Number.isFinite)) ?? sw()!.s11Db.filter(Number.isFinite))) / 5) * 5), 0]}
-                  hlines={[{ y: -10, label: "−10 dB" }]}
+                  yDomain={quantityDomain({ key: "db", series: cmpS11()?.series ?? s11Series() })}
+                  hlines={quantityLines({ key: "db", kind: "reflection", series: cmpS11()?.series ?? s11Series() })}
                   bands={bands()}
                   markers={markers()}
                   onMarker={selectMarker}
                   onPick={pickFreq}
-                  xFormat={(v) => v.toFixed(2)}
                   yFormat={(v) => v.toFixed(1)}
                   extra={extraAt}
                 />
@@ -574,11 +571,10 @@ export default function Dock() {
                 <LineChart
                   ariaLabel={cmpZ() ? t(zPart() === "re" ? "dock.results.aria.zReCompared" : "dock.results.aria.zImCompared") : t("results.aria.impedance")}
                   series={cmpZ()?.series ?? zSeries()}
-                  inspection={{ key: `examples:${source()}:impedance:${zPart()}`, kind: "other" }}
+                  inspection={{ key: `examples:${source()}:impedance:${zPart()}`, chart: `examples:${source()}:impedance`, kind: "other" }}
                   xLabel={t("chart.frequencyGHz")}
                   yLabel={cmpZ() ? `${zPart() === "re" ? "Re" : "Im"} Zin (Ω)` : "Zin (Ω)"}
                   hlines={cmpZ() && zPart() === "im" ? [{ y: 0, label: "" }] : [{ y: sw()!.zRef, label: t("results.impedance.referenceLine", { z: num(sw()!.zRef, sw()!.zRef >= 100 ? 0 : 1) }) }, { y: 0, label: "" }]}
-                  xFormat={(v) => v.toFixed(2)}
                   yFormat={(v) => v.toFixed(1)}
                 />
               </Match>
@@ -612,17 +608,17 @@ export default function Dock() {
                       <Show
                         when={arrayMode() && steeredFarField() && storedFF()}
                         fallback={<>
-                          <dt>{t("results.pattern.frequency")}</dt><dd class="mono">{num(ff()!.f / 1e9, 3)} GHz</dd>
-                          <dt>Dmax</dt><dd class="mono">{num(ff()!.dmax_dbi, 2)} dBi</dd>
-                          <dt>{t("farfield.quantity.gain")}</dt><dd class="mono">{ff()!.gain_dbi !== undefined ? `${num(ff()!.gain_dbi, 2)} dBi` : "—"}</dd>
-                          <dt>{t("farfield.quantity.realized")}</dt><dd class="mono">{ff()!.realized_gain_dbi !== undefined ? `${num(ff()!.realized_gain_dbi, 2)} dBi` : "—"}</dd>
+                          <dt>{t("results.pattern.frequency")}</dt><dd class="mono">{freqText(ff()!.f)}</dd>
+                          <dt>Dmax</dt><dd class="mono">{withUnit(num(ff()!.dmax_dbi, 2), "dBi")}</dd>
+                          <dt>{t("farfield.quantity.gain")}</dt><dd class="mono">{ff()!.gain_dbi !== undefined ? withUnit(num(ff()!.gain_dbi, 2), "dBi") : "—"}</dd>
+                          <dt>{t("farfield.quantity.realized")}</dt><dd class="mono">{ff()!.realized_gain_dbi !== undefined ? withUnit(num(ff()!.realized_gain_dbi, 2), "dBi") : "—"}</dd>
                           <dt>{t("farfield.radEff")}</dt>
                           <dd class="mono" classList={{ "cell-warn": !!efficiencyIssue(ff()!) }} title={efficiencyWarningUi(ff()!) ?? undefined}>
                             {ff()!.rad_efficiency !== null ? t("format.percent", { value: num(ff()!.rad_efficiency! * 100, 1) }) : "—"}
                             <Show when={efficiencyIssue(ff()!)}> <TriangleAlert size={12} aria-label={t("farfield.overUnity")} /></Show>
                           </dd>
                           <dt title={t("farfield.totalTitlePort")}>{t("farfield.total")}</dt>
-                          <dd class="mono kv-nowrap">{ffSummary()?.totalEff != null ? `${t("format.percent", { value: num(ffSummary()!.totalEff! * 100, 1) })} · ${num(toDb(ffSummary()!.totalEff!), 2).replace(/^-/, "\u2212")} dB` : "—"}</dd>
+                          <dd class="mono">{ffSummary()?.totalEff != null ? totalEffText(ffSummary()!.totalEff!) : "—"}</dd>
                         </>}
                       >
                         <dt>{t("results.pattern.frequency")}</dt><dd class="mono">{num(storedFF()!.f / 1e9, 3)} GHz</dd>

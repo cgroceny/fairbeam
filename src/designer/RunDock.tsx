@@ -7,7 +7,9 @@ import { createEffect, createMemo, createSignal, For, type JSX, Match, onCleanup
 import { ChevronDown, ChevronUp, CircleCheck, CircleX, FileText, Info, Square, TriangleAlert } from "lucide-solid";
 import LineChart, { type Series } from "../charts/LineChart";
 import { SERIES_COLORS, traces } from "../compare/series";
-import { compact, num, seconds } from "../lib/format";
+import { columnDecimals, compact, num, seconds } from "../lib/format";
+import { engineName } from "../lib/projectLabels";
+import { isoLocalStamp } from "../lib/isoTime";
 import { api, isTerminal, type Eta, type Phase } from "../runner/api";
 import OptimizeProgress from "../runner/OptimizeProgress";
 import { cancelJob, live, liveEnergy, liveInfo, liveLog, liveProgress, liveStats, stopping } from "../runner/store";
@@ -34,6 +36,7 @@ import { estimateTime } from "./meshStats";
 import { bundle } from "../state";
 import { fmt, t } from "../i18n";
 import "../styles/designer-sim.css";
+import "../styles/result-views.css";
 
 // labels are i18n keys
 const PHASES: { id: Phase; label: string }[] = [
@@ -322,8 +325,16 @@ function RunsTable() {
   // the headline numbers: a column shows when any run has the value (a run without a far field has no Dmax)
   const metrics = createMemo(() => rows().map((r) => bundleRunMetrics(r.bundle)));
   const has = (pick: (m: RunMetrics) => unknown) => metrics().some((m) => m && pick(m) != null);
-  const engineOf = (b: Bundle) => b.run?.engine ?? b.solver.engine;
+  // CPU or GPU, as the rest of the UI names it (a bundle older than the GPU engine ran on the CPU)
+  const engineOf = (b: Bundle) => engineName(b.run?.engine ?? "cpu");
   const engines = () => differs(rows().map((r) => engineOf(r.bundle)));
+  // a parameter column in the UI language's decimal separator, with one number of decimals for the column
+  const paramValue = (b: Bundle, key: string) => b.model.params.find((v) => v.key === key)?.value;
+  const paramDigits = createMemo(() => new Map(columns().map((p) => [p.key, columnDecimals(rows().map((r) => paramValue(r.bundle, p.key)))])));
+  const paramText = (b: Bundle, key: string) => {
+    const v = paramValue(b, key);
+    return typeof v === "number" ? fmt.fixed(v, paramDigits().get(key) ?? 0) : v === undefined || v === null ? "—" : String(v);
+  };
   const solverTime = (b: Bundle) => seconds(b.run?.solver_time_s ?? b.run?.wall_time_total_s ?? b.run?.wall_time_s);
   return (
     <div class="rdk-runs-tab">
@@ -345,7 +356,7 @@ function RunsTable() {
               <Show when={has((m) => m.farfield)}><th scope="col" class="num">{t("runDock.runs.col.dmax")}</th></Show>
               <Show when={has((m) => m.totalEff)}><th scope="col" class="num" title={t("summary.totalEff.title")}>{t("runDock.runs.col.eff")}</th></Show>
               <th scope="col">{t("runDock.runs.col.made")}</th>
-              <For each={columns()}>{(p) => <th scope="col">{p.key}{p.unit ? ` (${p.unit})` : ""}</th>}</For>
+              <For each={columns()}>{(p) => <th scope="col" class="num">{p.key}{p.unit ? ` (${p.unit})` : ""}</th>}</For>
               <Show when={engines()}><th scope="col">{t("runDock.runs.col.engine")}</th></Show>
               <th scope="col">{t("runDock.runs.col.solverTime")}</th>
             </tr></thead>
@@ -373,8 +384,8 @@ function RunsTable() {
                   <td class="num">{m()?.bwHz != null ? num(m()!.bwHz! / 1e6, 0) : "\u2014"}</td>
                   <Show when={has((x) => x.farfield)}><td class="num">{m()?.farfield ? num(m()!.farfield!.dmaxDbi, 2) : "\u2014"}</td></Show>
                   <Show when={has((x) => x.totalEff)}><td class="num">{m()?.totalEff != null ? num(m()!.totalEff! * 100, 1) : "\u2014"}</td></Show>
-                  <td>{made()[i()]}</td>
-                  <For each={columns()}>{(p) => <td>{String(row.bundle.model.params.find((v) => v.key === p.key)?.value ?? "—")}</td>}</For>
+                  <td title={isoLocalStamp(row.bundle.created) ?? undefined}>{made()[i()]}</td>
+                  <For each={columns()}>{(p) => <td class="num">{paramText(row.bundle, p.key)}</td>}</For>
                   <Show when={engines()}><td>{engineOf(row.bundle)}</td></Show>
                   <td>{solverTime(row.bundle)}</td>
                 </tr>

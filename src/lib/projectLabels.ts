@@ -1,5 +1,5 @@
 // Labels for the project pickers (header, start screen, Compare). Results saved from runs of the
-// same model share the model's display name ("Win patch" for a CPU and a CUDA run); a name that
+// same model share the model's display name ("Win patch" for a CPU and a GPU run); a name that
 // occurs more than once gets a short suffix from what the index says about each run. Unique names
 // are left alone.
 
@@ -15,6 +15,24 @@ export interface LabelSource {
 }
 
 const SEP = " · ";
+
+/** The engine of a run as the UI names it: "CPU" or "GPU". Indexes, bundles and the run server write
+ * "cpu", "gpu", "CPU", "CUDA", "Metal" or "GPU"; the GPU backend is a detail, shown only where a row is
+ * labelled as such (engineBackend). Null when the run does not say; an unknown name is kept. */
+export function engineName(engine: string | null | undefined): string | null {
+  const e = String(engine ?? "").trim();
+  if (!e) return null;
+  const k = e.toLowerCase();
+  if (k === "cpu") return "CPU";
+  if (k === "gpu" || k === "cuda" || k === "metal") return "GPU";
+  return e;
+}
+
+/** The GPU backend a run names ("CUDA" or "Metal"), else null (a CPU run, or a GPU run that does not say). */
+export function engineBackend(engine: string | null | undefined): "CUDA" | "Metal" | null {
+  const k = String(engine ?? "").trim().toLowerCase();
+  return k === "cuda" ? "CUDA" : k === "metal" ? "Metal" : null;
+}
 
 const fmtValue = (v: number | string | boolean) =>
   typeof v === "number" ? String(Number.isInteger(v) ? v : +v.toPrecision(6)) : String(v);
@@ -40,8 +58,8 @@ function suffixes(group: LabelSource[]): string[] {
     values.forEach((v, i) => v && parts[i].push(v));
   };
 
-  // 1. the engine: CPU / Metal / CUDA
-  add(group.map((e) => e.engine ?? ""));
+  // 1. the engine: CPU / GPU
+  add(group.map((e) => engineName(e.engine) ?? ""));
   // 2. the parameters that differ within the group
   if (!done()) {
     const keys = [...new Set(group.flatMap((e) => Object.keys(e.params ?? {})))];
@@ -79,7 +97,7 @@ export function projectLabels(entries: readonly LabelSource[]): Map<string, stri
     const sfx = suffixes(group);
     group.forEach((e, i) => out.set(e.file, sfx[i] ? `${name}${SEP}${sfx[i]}` : name));
   }
-  // a suffixed label may still equal another project's own name ("Patch · CUDA" saved as a name)
+  // a suffixed label may still equal another project's own name ("Patch · GPU" saved as a name)
   const seen = new Map<string, number>();
   for (const l of out.values()) seen.set(l, (seen.get(l) ?? 0) + 1);
   for (const [file, l] of out) if (seen.get(l)! > 1) out.set(file, `${l}${SEP}${fileStem(file)}`);

@@ -621,6 +621,17 @@ def _index_engine(run: dict) -> str | None:
     return "Metal" if (run.get("host") or {}).get("os") == "Darwin" else "GPU"
 
 
+def _index_band_ranges(bands) -> list:
+    """The -10 dB bands' edges in GHz and whether each runs into the edge of the simulated range."""
+    out = []
+    for x in bands or []:
+        if not isinstance(x, dict) or not (_finite(x.get("f_lo")) and _finite(x.get("f_hi"))):
+            continue
+        out.append({"lo": round(x["f_lo"] / 1e9, 4), "hi": round(x["f_hi"] / 1e9, 4),
+                    "edge_lo": bool(x.get("edge_lo")), "edge_hi": bool(x.get("edge_hi"))})
+    return out
+
+
 def _index_params(model: dict) -> dict:
     """Parameters set to something other than their default (like src/lib/benchmarks.ts changedParams)."""
     out = {}
@@ -652,8 +663,9 @@ def run_quality(b: dict) -> str | None:
     results (a geometry preview). Mirrors runQuality() in src/lib/runQuality.ts:
       - not-converged: a run (any port's) stopped at the timestep limit;
       - suspicious: converged, but |S11| is more than 0.1 dB above 0 dB somewhere, or a far-field
-        radiation efficiency is above 1.05, or the port is not coupled (|S11| never below -0.5 dB over
-        the band, or the total efficiency below 2 % in every far-field entry)."""
+        radiation efficiency is above 1.05, or the band-wide efficiency is above 1.05 at a reliable
+        frequency or marked unreliable somewhere, or the port is not coupled (|S11| never below
+        -0.5 dB over the band, or the total efficiency below 2 % in every far-field entry)."""
     res, run = b.get("results"), b.get("run")
     if res is None or run is None:
         return None
@@ -682,9 +694,29 @@ def run_quality(b: dict) -> str | None:
         eta = ff.get("rad_efficiency") if isinstance(ff, dict) else None
         if _finite(eta) and eta > 1 + EFFICIENCY_TOLERANCE:
             return "suspicious"
+    if _band_efficiency_suspicious(res):
+        return "suspicious"
     if uncoupled or _negligible_total_efficiency(b):
         return "suspicious"
     return "converged"
+
+
+def _band_efficiency_suspicious(res: dict) -> bool:
+    """The band-wide radiation efficiency (results.efficiency, the Efficiency view's curves) is above
+    1 + EFFICIENCY_TOLERANCE at a reliable frequency, or marked unreliable at any frequency; only the
+    well-formed sweeps count (mirrors bandEfficiencyReasons / efficiencySweeps)."""
+    for sw in res.get("efficiency") or []:
+        if not isinstance(sw, dict):
+            continue
+        f, eta = sw.get("f"), sw.get("rad_efficiency")
+        if not (isinstance(f, list) and isinstance(eta, list) and f and len(f) == len(eta)):
+            continue
+        reliable = sw.get("reliable") if isinstance(sw.get("reliable"), list) else None
+        for i, e in enumerate(eta):
+            bad = reliable is not None and i < len(reliable) and reliable[i] is False
+            if bad or (_finite(e) and e > 1 + EFFICIENCY_TOLERANCE):
+                return True
+    return False
 
 
 def _negligible_total_efficiency(b: dict) -> bool:
@@ -768,6 +800,11 @@ def _read_index_entry(f: Path) -> dict | None:
         "bands": [round(x["f_center"] / 1e9, 3) for x in res.get("bands", [])],
         "cells": b.get("mesh", {}).get("total_cells"),
     }
+    # optional (newer indexes only): each band's edges, for the picker's band text (src/lib/bands.ts):
+    # the middle of the edges, or the range of a band that runs past the simulated range
+    ranges = _index_band_ranges(res.get("bands"))
+    if ranges:
+        entry["band_ranges"] = ranges
     # optional (newer indexes only): what tells runs of the same model apart in the viewer's pickers
     engine = _index_engine(b.get("run"))
     if engine:

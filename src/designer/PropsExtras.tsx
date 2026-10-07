@@ -2,15 +2,16 @@
 // expression, evaluated value, unit and description; the same commit rules as the Parameters dock)
 // and a run (its facts, verdict, headline numbers and parameters, with two shortcuts). The Inspector
 // in DesignPane.tsx chooses between these and the shape inspectors.
-import { createSignal, For, Show } from "solid-js";
+import { createEffect, createSignal, For, Show } from "solid-js";
 import { ExprField } from "./DesignPane";
 import { namesIn } from "./expr";
 import { shown as fmtValue } from "./displayNumber.ts";
 import { draft, edit, fieldId, focusPath, names } from "./store";
 import { createRowEdit } from "./rowEdit";
 import { showView } from "./runResults";
-import { runQualityOf, runMetricsOf, designRuns } from "./runResults";
-import { verdictLabel } from "./RunQualityView";
+import { runQualityOf, runMetricsOf, designRuns, readRunContent } from "./runResults";
+import { reasonTexts, verdictLabel } from "./RunQualityView";
+import { engineBackend, engineName } from "../lib/projectLabels";
 import { index } from "../state";
 import { fmt, t } from "../i18n";
 import type { DesignParam } from "./types";
@@ -96,6 +97,8 @@ export function RunInspector(props: { file: string }) {
   const row = () => designRuns().find((r) => r.file === props.file);
   const m = () => runMetricsOf(props.file);
   const q = () => runQualityOf(props.file);
+  // the index knows the verdict, the bundle its reasons: read the run (once; the tree does the same)
+  createEffect(() => { if (q() && q()!.verdict !== "converged" && !q()!.reasons.length) void readRunContent(props.file); });
   const cells = () => m()?.cells ?? entry()?.cells;
   const params = () => Object.entries(entry()?.params ?? {});
   const compare = () => void import("./treeResultActions")
@@ -107,7 +110,9 @@ export function RunInspector(props: { file: string }) {
     const created = entry()?.created;
     const when = created ? new Date(created) : null;
     if (when && !Number.isNaN(+when)) out.push([t("props.run.date"), fmt.dateTime(when)]);
-    if (entry()?.engine) out.push([t("props.run.engine"), entry()!.engine!]);
+    // CPU or GPU as everywhere else; the GPU backend on a row of its own
+    if (engineName(entry()?.engine)) out.push([t("props.run.engine"), engineName(entry()?.engine)!]);
+    if (engineBackend(entry()?.engine)) out.push([t("spec.gpuBackend"), engineBackend(entry()?.engine)!]);
     if (cells()) out.push([t("props.run.cells"), fmt.int(cells()!)]);
     const x = m();
     if (x?.noResonance) out.push([t("summary.f0"), t("summary.noResonance")]);
@@ -123,7 +128,13 @@ export function RunInspector(props: { file: string }) {
       <h3 class="dz-h">{t("props.run.title")}</h3>
       <p class="mono" title={row()?.title}>{entry()?.name || row()?.label || props.file}</p>
       <Show when={q()}>{(v) => (
-        <p class="note" data-verdict={v().verdict}>{t("props.run.verdict")}: <b>{v().verdict === "converged" ? t("props.run.converged") : verdictLabel(v())}</b></p>
+        <>
+          <p class="note" data-verdict={v().verdict}>{t("props.run.verdict")}: <b>{v().verdict === "converged" ? t("props.run.converged") : verdictLabel(v())}</b></p>
+          {/* why, in words (the reasons of a verdict the index gave alone arrive once the run is read) */}
+          <Show when={v().verdict !== "converged" && reasonTexts(v()).length}>
+            <ul class="note rq-props-reasons"><For each={reasonTexts(v())}>{(r) => <li>{r}</li>}</For></ul>
+          </Show>
+        </>
       )}</Show>
       <dl class="dz-facts">
         <For each={facts()}>{([k, v]) => <><dt>{k}</dt><dd class="mono">{v}</dd></>}</For>

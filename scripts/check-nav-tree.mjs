@@ -53,8 +53,11 @@ const ids = (rows) => rows.map((r) => r.id);
   eq(rows.map((r) => r.label), ["zz_ab · 11:30", "zz_ab · 10:05"], "same names get the time (projectLabels)");
   eq(rows.map((r) => r.sub), ["CPU", "CPU"], "the time is not repeated in the sub line");
   const cuda = runRows([entries[0], { ...entries[1], engine: "CUDA", created: "2026-09-27T09:00:00+0300" }], "zz-ab");
-  eq(cuda.map((r) => r.label), ["zz_ab · CUDA", "zz_ab · CPU"], "engines tell runs apart first");
+  eq(cuda.map((r) => r.label), ["zz_ab · GPU", "zz_ab · CPU"], "engines tell runs apart first (CPU or GPU)");
   eq(cuda.map((r) => r.sub), ["09-27 09:00", "09-26 10:05"], "runs on several days show the date");
+  eq(cuda[0].title.endsWith("GPU (CUDA)"), true, "the backend only in the row's title");
+  const both = runRows([{ ...entries[0], name: "solo", engine: "gpu" }], "zz-ab");
+  eq(both[0].sub, "GPU · 10:05", "the engine before the time: a narrow tree cuts the time, not the engine");
   const sameMinute = runRows([entries[0], { ...entries[1], created: "2026-09-26T10:05:40+0300" }], "zz-ab");
   eq(sameMinute.map((r) => [r.label, r.sub]), [["zz_ab · 10:05:40", "CPU"], ["zz_ab · 10:05:00", "CPU"]], "seconds in the label: no time in the sub line");
   const finished = new Map([["zz-ab.json", Date.parse("2026-09-26T12:00:00+0300")]]);
@@ -72,8 +75,8 @@ const ids = (rows) => rows.map((r) => r.id);
   const kids = runChildren("r.json", runContent(b));
   eq(kids.map((k) => k.label), ["1D Results", "Far fields", "2D/3D Results", "Tables", "Log"], "result folders, in order");
   eq(kids[0].children.map((k) => k.action.view), ["sparams", "impedance", "vswr", "smith", "efficiency"], "1D views (the efficiency with them)");
-  eq(kids[1].children.map((k) => [k.label, k.action.view, k.action.f]), [["Far field (f = 2.4 GHz)", "pattern", 2.4e9], ["3D pattern (f = 2.4 GHz)", "pattern3d", 2.4e9],
-    ["Far field (f = 2.5 GHz)", "pattern", 2.5e9], ["3D pattern (f = 2.5 GHz)", "pattern3d", 2.5e9]], "per far-field frequency: its cuts and its 3D pattern");
+  eq(kids[1].children.map((k) => [k.label, k.action.view, k.action.f]), [["Far field (f = 2.400 GHz)", "pattern", 2.4e9], ["3D pattern (f = 2.400 GHz)", "pattern3d", 2.4e9],
+    ["Far field (f = 2.500 GHz)", "pattern", 2.5e9], ["3D pattern (f = 2.500 GHz)", "pattern3d", 2.5e9]], "per far-field frequency: its cuts and its 3D pattern");
   eq(kids[2].children[0].action, { kind: "result", file: "r.json", view: "currents", f: 2.4e9 }, "a current map focuses its frequency");
   eq(kids[4].action, { kind: "result", file: "r.json", view: "log" }, "the log is a leaf");
   eq(runChildren("r.json", null).map((k) => k.label), ["1D Results", "Tables", "Log"], "before the bundle is read: the fixed folders");

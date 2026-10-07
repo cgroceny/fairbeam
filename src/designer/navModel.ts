@@ -7,8 +7,9 @@ import type { ProjectIndexEntry } from "../types";
 import type { ResultView } from "./resultFocus";
 import type { Selection } from "./types";
 import { newestResults } from "../runner/resultsIndex.ts";
-import { projectLabels } from "../lib/projectLabels.ts";
+import { engineBackend, engineName, projectLabels } from "../lib/projectLabels.ts";
 import { studySub } from "./convergence.ts";
+import { freqText } from "../lib/format.ts";
 import { fmt, localeTag, t } from "../i18n/index.ts";
 
 export type NavSection = "parameters" | "components" | "materials" | "ports" | "lumped" | "results" | "optimizations";
@@ -210,8 +211,12 @@ export function runRows(entries: readonly ProjectIndexEntry[], model: string, fi
     const m = stamp(r.created);
     // the label may carry the time already (with seconds, or the date) when names repeat
     const when = !m || label.includes(m[2]) ? "" : days.size > 1 ? `${m[1].slice(5)} ${m[2]}` : m[2];
-    const sub = [when, r.engine ?? ""].filter((s) => s && !label.split(SEP).includes(s)).join(SEP);
-    return { file: r.file, label, sub, title: [r.file, r.created, r.engine].filter(Boolean).join(SEP) };
+    const engine = engineName(r.engine) ?? "";
+    const backend = engineBackend(r.engine);
+    // the engine before the time: a narrow tree cuts the end of the line, so the time goes first and
+    // the name, the headline numbers and the engine stay readable (the full text is the row's title)
+    const sub = [engine, when].filter((s) => s && !label.split(SEP).includes(s)).join(SEP);
+    return { file: r.file, label, sub, title: [r.file, r.created, backend ? `${engine} (${backend})` : engine].filter(Boolean).join(SEP) };
   });
 }
 
@@ -242,7 +247,8 @@ export function runContent(b: unknown): RunContent {
   };
 }
 
-const ghz = (f: number) => `${fmt.num(+(f / 1e9).toPrecision(4), 9)} GHz`;
+// a monitor frequency as every result view prints it (four significant digits: 2.400 GHz)
+const ghz = freqText;
 
 /** The children of a run node: 1D results, far fields, 2D/3D results, tables and the log
  * (result folders). Far fields and currents are listed once the run's bundle has been read. */

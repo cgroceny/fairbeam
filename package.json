@@ -113,7 +113,7 @@
     "desktop:preview:windows": "node scripts/build-windows-preview.mjs",
     "check:affine-consumers": "node --experimental-strip-types scripts/check-affine-consumers.mjs",
     "check:transformed-drawing": "node --experimental-strip-types scripts/check-transformed-drawing.mjs",
-    "check:figure-export": "node scripts/check-figure-export.mjs",
+    "check:figure-export": "node --experimental-strip-types scripts/check-figure-export.mjs",
     "check:mesh-export": "node --experimental-strip-types scripts/check-mesh-export.mjs",
     "check:blender-export": "node --experimental-strip-types scripts/check-blender-export.mjs",
     "check:export-dialog": "node scripts/check-export-dialog.mjs",

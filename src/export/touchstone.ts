@@ -7,10 +7,11 @@
 import type { Bundle } from "../types";
 import { sweep } from "../lib/rf.ts";
 import { sMatrix } from "../lib/sparams.ts";
+import { isoLocalNow, isoLocalStamp } from "../lib/isoTime.ts";
 
 const ascii = (s: string) => s.replace(/Ω/g, "Ohm").replace(/[·•]/g, "-").replace(/[^\x20-\x7e]/g, "?");
 
-export function touchstoneS1p(b: Bundle, exported: string = new Date().toISOString()): string | null {
+export function touchstoneS1p(b: Bundle, exported: string = isoLocalNow()): string | null {
   const s = sweep(b);
   if (!s) return null;
   const port = b.ports.find((p) => p.excite) ?? b.ports[0];
@@ -19,7 +20,7 @@ export function touchstoneS1p(b: Bundle, exported: string = new Date().toISOStri
     `! Touchstone v1 file written by Fairbeam ${b.generator.version}`,
     `! Project:   ${ascii(b.name)}`,
     `! Model:     ${ascii(b.model.id)}`,
-    `! Simulated: ${b.created} (${ascii(b.solver.engine)}${b.generator.openems ? ` ${ascii(b.generator.openems)}` : ""}, ${ascii(b.solver.method)})`,
+    `! Simulated: ${isoLocalStamp(b.created) ?? "unknown"} (${ascii(b.solver.engine)}${b.generator.openems ? ` ${ascii(b.generator.openems)}` : ""}, ${ascii(b.solver.method)})`,
     `! Exported:  ${exported}`,
     port ? `! Port ${port.number}: ${port.type}, R = ${port.R} Ohm, along ${port.direction}` : "! Port 1",
     ...(port?.type === "waveguide"
@@ -40,7 +41,7 @@ export function touchstoneS1p(b: Bundle, exported: string = new Date().toISOStri
  * or when the ports have different reference impedances (v1 allows only one; use the Python
  * `fairbeam touchstone`, which renormalises).
  */
-export function touchstoneNPort(b: Bundle, exported: string = new Date().toISOString()): string | null {
+export function touchstoneNPort(b: Bundle, exported: string = isoLocalNow()): string | null {
   const S = sMatrix(b);
   if (!S || S.legacy || S.ports.length < 2) return null;
   const n = S.ports.length;
@@ -51,7 +52,7 @@ export function touchstoneNPort(b: Bundle, exported: string = new Date().toISOSt
     `! Touchstone v1 file written by Fairbeam ${b.generator.version}`,
     `! Project:   ${ascii(b.name)}`,
     `! Model:     ${ascii(b.model.id)}`,
-    `! Simulated: ${b.created} (${ascii(b.solver.engine)}${b.generator.openems ? ` ${ascii(b.generator.openems)}` : ""}, ${ascii(b.solver.method)})`,
+    `! Simulated: ${isoLocalStamp(b.created) ?? "unknown"} (${ascii(b.solver.engine)}${b.generator.openems ? ` ${ascii(b.generator.openems)}` : ""}, ${ascii(b.solver.method)})`,
     `! Exported:  ${exported}`,
     `! ${n} ports (${S.ports.join(", ")}), one simulation per excited port, power-wave S-parameters`,
     `! ${S.f.length} points, ${fmtF(S.f[0])} - ${fmtF(S.f[S.f.length - 1])} GHz, real/imaginary`,

@@ -145,8 +145,21 @@ export interface FarfieldSummary {
   /** dBi: the bundle's value, else computed */
   gainDbi: number | null;
   realizedDbi: number | null;
-  /** direction of the pattern maximum (degrees) */
-  peak: { theta: number; phi: number };
+  /** direction of the pattern maximum (degrees), and how much the directivity varies over φ on the cone
+   * θ = peak.theta (dB): below OMNI_PHI_DB the pattern is omnidirectional in φ and φ names no direction */
+  peak: { theta: number; phi: number; phiRippleDb: number | null };
+}
+
+/** The directivity varies by less than this over φ at the peak's θ: omnidirectional in φ (dB). */
+export const OMNI_PHI_DB = 1;
+
+/** max − min of the directivity over φ at the θ row nearest `theta` (dB), null without finite values. */
+export function phiRipple(ff: Pick<FarField, "theta" | "directivity_dbi">, theta: number): number | null {
+  if (!ff.theta?.length) return null;
+  let k = 0;
+  ff.theta.forEach((v, i) => { if (Math.abs(v - theta) < Math.abs(ff.theta[k] - theta)) k = i; });
+  const row = (ff.directivity_dbi[k] ?? []).filter(Number.isFinite);
+  return row.length > 1 ? Math.max(...row) - Math.min(...row) : null;
 }
 
 export function farfieldSummary(b: Bundle, ff: FarField): FarfieldSummary {
@@ -163,7 +176,7 @@ export function farfieldSummary(b: Bundle, ff: FarField): FarfieldSummary {
     totalEff: eff !== null && mis !== null ? eff * mis : null,
     gainDbi: ff.gain_dbi ?? (eff !== null ? ff.dmax_dbi + toDb(eff) : null),
     realizedDbi: ff.realized_gain_dbi ?? (eff !== null && mis !== null && mis > 0 ? ff.dmax_dbi + toDb(eff * mis) : null),
-    peak: { theta: beam.theta, phi: beam.phi },
+    peak: { theta: beam.theta, phi: beam.phi, phiRippleDb: phiRipple(ff, beam.theta) },
   };
 }
 
