@@ -107,7 +107,7 @@ export function attachRendered(ctx: RenderedContext): RenderedHandle {
       renderer.shadowMap.needsUpdate = true;
       ctx.requestRender();
     },
-    beforeRender(camera) { stage?.update(camera); },
+    beforeRender(camera) { stage?.update(camera, renderer.domElement.clientHeight || renderer.domElement.height / renderer.getPixelRatio()); },
     hide() { leave(); },
     dispose() {
       leave();

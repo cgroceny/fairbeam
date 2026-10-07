@@ -235,10 +235,12 @@ export function smaConnector(p: SmaPlacement, unitMm: number, mk: MaterialFactor
   return group;
 }
 
-/** The port marker: a thin red rod along the port with a bead at each end. */
+/** The port marker: a thin red rod along the port with a bead at each end. Its beads keep a minimum size on screen
+ *  (updateMarkerSizes), so a port stays visible in a full-model view of a large board. */
 export function portMarker(port: PortInput, bead: number, mk: MaterialFactory): THREE.Group {
   const group = new THREE.Group();
   group.name = `marker-${port.number}`;
+  group.userData.marker = { bead };
   // along the port's direction through the middle of its cross-section (start and stop are opposite
   // corners of the port's box, so the straight line between them would run diagonally)
   const k = AXIS[port.direction];
@@ -252,15 +254,58 @@ export function portMarker(port: PortInput, bead: number, mk: MaterialFactory): 
     r.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), along.clone().normalize());
     r.position.copy(a).add(b).multiplyScalar(0.5);
     r.castShadow = true;
+    r.userData.markerPart = "rod";
     group.add(r);
   }
   for (const at of [a, b]) {
     const s = new THREE.Mesh(new THREE.SphereGeometry(bead, 20, 14), material);
     s.position.copy(at);
     s.castShadow = true;
+    s.userData.markerPart = "bead";
     group.add(s);
   }
   return group;
+}
+
+/** The smallest on-screen diameter of a marker bead, in output pixels. */
+export const MARKER_MIN_PX = 8;
+
+/** The factor a marker bead of radius `bead` (drawing units) is enlarged by so that it is at least `minPx` pixels across
+ *  where one pixel spans `worldPerPixel` drawing units; 1 when it is large enough already. */
+export function markerScale(bead: number, worldPerPixel: number, minPx = MARKER_MIN_PX): number {
+  if (!(bead > 0) || !(worldPerPixel > 0)) return 1;
+  return Math.max(1, (minPx / 2) * worldPerPixel / bead);
+}
+
+/** Drawing units per output pixel at `point` for this camera and an image `heightPx` pixels tall. */
+export function worldPerPixel(camera: THREE.Camera, point: THREE.Vector3, heightPx: number): number {
+  if (!(heightPx > 0)) return 0;
+  const o = camera as THREE.OrthographicCamera;
+  if (o.isOrthographicCamera) return (o.top - o.bottom) / (o.zoom || 1) / heightPx;
+  const p = camera as THREE.PerspectiveCamera;
+  if (!p.isPerspectiveCamera) return 0;
+  // the depth of the point along the view direction
+  const dir = new THREE.Vector3();
+  p.getWorldDirection(dir);
+  const depth = Math.max(point.clone().sub(p.getWorldPosition(new THREE.Vector3())).dot(dir), p.near);
+  return (2 * depth * Math.tan(THREE.MathUtils.degToRad(p.fov) / 2)) / (p.zoom || 1) / heightPx;
+}
+
+/** Keep every port marker under `root` at least MARKER_MIN_PX across for this camera: the beads grow (and the rod
+ *  thickens) when the view would draw them smaller, whatever the zoom; they never shrink below their own size. */
+export function updateMarkerSizes(root: THREE.Object3D, camera: THREE.Camera, heightPx: number): void {
+  root.traverse((g) => {
+    const info = g.userData.marker as { bead: number } | undefined;
+    if (!info) return;
+    const centre = new THREE.Box3();
+    for (const c of g.children) if (c.userData.markerPart === "bead") centre.expandByPoint(c.getWorldPosition(new THREE.Vector3()));
+    if (centre.isEmpty()) return;
+    const k = markerScale(info.bead, worldPerPixel(camera, centre.getCenter(new THREE.Vector3()), heightPx));
+    for (const c of g.children) {
+      if (c.userData.markerPart === "bead") c.scale.setScalar(k);
+      else if (c.userData.markerPart === "rod") c.scale.set(k, 1, k);   // the cylinder runs along its local y
+    }
+  });
 }
 
 /** A waveguide port: a thin flange frame round the port's opening, in the port plane. */
@@ -359,6 +404,8 @@ export function buildPorts(ports: readonly PortInput[], solids: readonly Solid[]
       group.add(smaConnector(placement, o.unitMm, o.mk));
       placements.push(placement);
       drawn[port.number] = "sma";
+      // a connector under the ground plane (a probe feed) is hidden from above: the marker shows where the feed is
+      if (placement.mount === "bottom") group.add(portMarker(port, bead, o.mk));
     } else {
       group.add(portMarker(port, bead, o.mk));
       drawn[port.number] = "marker";

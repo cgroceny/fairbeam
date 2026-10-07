@@ -16,7 +16,7 @@ import type { ViewState } from "./frame.ts";
 import { t } from "../i18n";
 import { useModal } from "../lib/dialog";
 import { readGeneralSettings } from "../lib/generalSettings";
-import { saveDownloadUrl } from "../lib/download";
+import { downloadMessage, saveDownloadUrl } from "../lib/download";
 import {
   detectBlender, openBlendInBlender, openBlenderDownload, openRenderFolder, blenderFileUrl,
   type BlenderImage, type BlenderInfo, type BlenderQuality, type BlenderRenderProgress,
@@ -45,6 +45,8 @@ export interface BlenderRenderPanelProps {
   device?: "auto" | "cpu" | "gpu";
   /** called once when a render this panel started has finished (status done, failed or cancelled) */
   onFinished?: (result: BlenderRenderProgress) => void;
+  /** why a render cannot start now (an invalid size in the dialog): the Start button is disabled with this reason */
+  blocked?: string;
 }
 
 const STAGES: Record<string, string> = {
@@ -134,7 +136,16 @@ export default function BlenderRenderPanel(props: BlenderRenderPanelProps) {
   };
   const failed = (message: string) => setNote({ text: message, warn: true });
   const guard = (fn: () => Promise<unknown>) => { setNote(null); void fn().catch(e => failed(e instanceof Error ? e.message : String(e))); };
-  const saveAs = (img: BlenderImage) => guard(async () => { const r = await saveDownloadUrl(img.name, img.url); if (r.status === "failed") failed(t("render.blender.saveFailed", { name: img.name })); });
+  // every click answers with a status line: the download's outcome, the folder opened, or the error
+  const saveAs = (img: BlenderImage) => guard(async () => {
+    const r = await saveDownloadUrl(img.name, img.url);
+    if (r.status === "failed") failed(t("render.blender.saveFailed", { name: img.name }));
+    else setNote({ text: downloadMessage(r), warn: r.status === "cancelled" });
+  });
+  const openFolder = () => guard(async () => {
+    const r = await openRenderFolder(design());
+    setNote({ text: t("render.folder.opened", { folder: r?.dir || p()?.folder || design() }), warn: false });
+  });
 
   return <section class="blr" aria-label={t("render.blender.title")}>
     <Show when={!detecting() && info() && !info()!.ok}>
@@ -153,7 +164,7 @@ export default function BlenderRenderPanel(props: BlenderRenderPanelProps) {
 
     <div class="blr-controls">
       <Show when={!running()} fallback={<button class="btn btn-ghost" onClick={() => void cancelBlenderRender()}><Square size={13} aria-hidden="true" /> {t("render.blender.cancel")}</button>}>
-        <button class="btn btn-primary" disabled={detecting() || !info()?.ok} onClick={() => void start()}><Play size={13} aria-hidden="true" /> {p() ? t("render.blender.again") : t("render.blender.start")}</button>
+        <button class="btn btn-primary" disabled={detecting() || !info()?.ok || !!props.blocked} title={props.blocked} onClick={() => void start()}><Play size={13} aria-hidden="true" /> {p() ? t("render.blender.again") : t("render.blender.start")}</button>
       </Show>
       <Show when={detecting()}><span class="muted"><LoaderCircle size={13} class="spin" aria-hidden="true" /> {t("render.blender.detecting")}</span></Show>
     </div>
@@ -202,7 +213,7 @@ export default function BlenderRenderPanel(props: BlenderRenderPanelProps) {
       </div>
       <div class="blr-actions">
         <button class="btn btn-ghost btn-sm" onClick={() => saveAs(shown()!)}><Download size={13} aria-hidden="true" /> {t("render.blender.saveAs")}</button>
-        <button class="btn btn-ghost btn-sm" onClick={() => guard(() => openRenderFolder(design()))}><FolderOpen size={13} aria-hidden="true" /> {t("render.blender.openFolder")}</button>
+        <button class="btn btn-ghost btn-sm" onClick={openFolder}><FolderOpen size={13} aria-hidden="true" /> {t("render.blender.openFolder")}</button>
         <Show when={p()?.blend}>
           <button class="btn btn-ghost btn-sm" onClick={() => guard(() => openBlendInBlender(design(), p()!.blend!, configuredPath()))} title={blenderFileUrl(design(), p()!.blend!)}>
             <ExternalLink size={13} aria-hidden="true" /> {t("render.blender.openBlend")}
