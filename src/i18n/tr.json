@@ -1064,6 +1064,7 @@
   "exampleCopy.checkingMesh": "Dönüştürülen mesh denetleniyor…",
   "exampleCopy.copying": "Kopyalanıyor…",
   "exampleCopy.create": "Kopya oluştur",
+  "exampleCopy.designCopy": "Bu örnek bir tasarımdır: kopya, aynı tasarımın yeni bir adla, parametreleri, mesh çizgileri ve açıklamasıyla oluşturulmuş hâlidir. Örneğin sonuçları aktarılmaz; kendi sonuçlarınız için kopyayı çalıştırın.",
   "exampleCopy.id": "Tasarım kimliği",
   "exampleCopy.idInvalid": "Boş ve geçerli bir kimlik girin: harfle başlayan, 2–41 küçük harf, rakam veya alt çizgi. Windows aygıt adları, uygulamayla gelen örneklerin kimlikleri ve kullanılan kimlikler alınamaz.",
   "exampleCopy.intro": "Bu örneğin bir Tasarım kopyasını oluşturun; özgün örnek değişmez. Kopya tasarımcıda açılır.",

@@ -17,6 +17,8 @@ assert.ok(dialog.includes("source_cells") && dialog.includes("design_cells") && 
 assert.equal(en["exampleCopy.params"], "Parameters carried over: {carried} of {total} (the others are fixed numbers in the copy) · {expressions} values use them");
 assert.ok(!/identical metals share one/.test(en["exampleCopy.carried.body"]) && /the solids' names and labels/.test(en["exampleCopy.carried.body"]) && /the description/.test(en["exampleCopy.carried.body"]),
   "the dialog lists what the copy keeps: names, labels, materials, description");
+// an example that is a design (the 867 MHz ones) is copied as it is: its own text, not the conversion's
+assert.ok(dialog.includes('source()?.kind !== "design"') && dialog.includes('t("exampleCopy.designCopy")'), "a design source gets its own line instead of the conversion text");
 // a bundled example's id is never offered for the copy (the server refuses it)
 assert.ok(dialog.includes("keys.has(candidate) || isReservedDesignId(candidate)") && dialog.includes("!DESIGN_ID_RE.test(base) || isReservedDesignId(base)"));
 // the conversion notes: their own field (model.conversion), collapsed in Properties, translated by code
@@ -30,6 +32,7 @@ assert.ok(/<details class="dz-conversion">[\s\S]*t\("props\.conversionNotes", \{
   && pane.includes("hasKey(`exampleCopy.note.${n.code}`) ? t(`exampleCopy.note.${n.code}`, n.values) : n.text"),
   "Properties shows the notes collapsed, in the interface language, with the English text as the fallback");
 const tr = JSON.parse(read("src/i18n/tr.json"));
+assert.ok(typeof en["exampleCopy.designCopy"] === "string" && typeof tr["exampleCopy.designCopy"] === "string");
 for (const code of [...converter.matchAll(/_note\("(\w+)"/g)].map((m) => m[1])) {
   assert.ok(typeof en[`exampleCopy.note.${code}`] === "string" && typeof tr[`exampleCopy.note.${code}`] === "string", `note ${code} has its text in both languages`);
 }

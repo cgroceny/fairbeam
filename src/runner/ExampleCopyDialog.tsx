@@ -79,15 +79,18 @@ export default function ExampleCopyDialog() {
       <form class="stack" onSubmit={submit}>
         <h2 id="example-copy-title">{t("exampleCopy.title")}</h2>
         <p class="muted">{t("exampleCopy.intro")}</p>
-        <div class="ec-carry" role="group" aria-label={t("exampleCopy.carry.label")}>
-          <p><b>{t("exampleCopy.carried")}</b> {t("exampleCopy.carried.body")}</p>
-          <p><b>{t("exampleCopy.notCarried")}</b> {t("exampleCopy.notCarried.body")}</p>
-        </div>
-        <Show when={preview()?.params_carried !== undefined}>
-          <p class="muted" role="status">{t("exampleCopy.params", { carried: preview()!.params_carried!, total: preview()!.params_total ?? 0, expressions: preview()!.expressions ?? 0 })}</p>
-          <Show when={(preview()!.params_partial ?? []).length > 0}><p class="muted">{t("exampleCopy.partial", { keys: preview()!.params_partial!.join(", ") })}</p></Show>
+        {/* an example that is itself a design (the 867 MHz ones) is copied as it is: no conversion to describe */}
+        <Show when={source()?.kind !== "design"} fallback={<p class="muted">{t("exampleCopy.designCopy")}</p>}>
+          <div class="ec-carry" role="group" aria-label={t("exampleCopy.carry.label")}>
+            <p><b>{t("exampleCopy.carried")}</b> {t("exampleCopy.carried.body")}</p>
+            <p><b>{t("exampleCopy.notCarried")}</b> {t("exampleCopy.notCarried.body")}</p>
+          </div>
+          <Show when={preview()?.params_carried !== undefined}>
+            <p class="muted" role="status">{t("exampleCopy.params", { carried: preview()!.params_carried!, total: preview()!.params_total ?? 0, expressions: preview()!.expressions ?? 0 })}</p>
+            <Show when={(preview()!.params_partial ?? []).length > 0}><p class="muted">{t("exampleCopy.partial", { keys: preview()!.params_partial!.join(", ") })}</p></Show>
+          </Show>
+          <p class="muted">{t("exampleCopy.meshNote")}</p>
         </Show>
-        <p class="muted">{t("exampleCopy.meshNote")}</p>
         <Show when={previewPending()}><p class="muted" role="status">{t("exampleCopy.checkingMesh")}</p></Show>
         <Show when={preview() && preview()!.source_cells !== null}>
           <div class={preview()!.within_tolerance ? "mesh-preview" : "mesh-preview mesh-preview-warning"} role={preview()!.within_tolerance ? "status" : "alert"}>

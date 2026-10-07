@@ -1082,6 +1082,7 @@
   "exampleCopy.checkingMesh": "Checking converted mesh…",
   "exampleCopy.copying": "Copying…",
   "exampleCopy.create": "Create copy",
+  "exampleCopy.designCopy": "This example is a design: the copy is the same design under a new name, with its parameters, mesh and description. The example's results are not carried over; run the copy to get your own.",
   "exampleCopy.id": "Design ID",
   "exampleCopy.idInvalid": "Use a free, valid ID: 2–41 lowercase letters, digits or underscores, starting with a letter. Windows device names, the bundled examples' IDs and IDs already in use are taken.",
   "exampleCopy.intro": "Create a Design copy of this example; the original stays unchanged. The copy opens in the designer.",
