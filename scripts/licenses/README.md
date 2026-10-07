@@ -8,7 +8,8 @@ Optional Rust features require extending the inventory before distributing a bui
 
 `inventory.json` preserves the metadata and full original license/NOTICE texts. The root
 `THIRD-PARTY-NOTICES.md` is generated from this snapshot. `npm run check:licenses` is offline:
-it verifies input fingerprints, rejects unreviewed missing licenses or texts, and compares the
+it verifies input fingerprints (the lockfiles, pins and scripts, and the set of npm packages imported
+by viewer sources, so ordinary source edits do not make it stale), rejects unreviewed missing licenses or texts, and compares the
 entire generated output. Rendering normalizes line endings and trailing whitespace; the snapshot
 retains the original text. CI runs the same check. Run `node scripts/third-party-licenses.mjs` to
 render an unchanged snapshot without downloading metadata again.

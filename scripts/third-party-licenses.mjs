@@ -11,10 +11,17 @@ const root = fileURLToPath(new URL('../', import.meta.url));
 process.chdir(root);
 export const inputs = ['package.json', 'package-lock.json', 'src-tauri/Cargo.toml', 'src-tauri/Cargo.lock', 'runtime/pins.json', 'runtime/requirements.txt', 'runtime/install.py', 'runtime/setup-runtime.sh', 'runtime/setup-runtime.ps1', 'scripts/build-openems-macos-pack.py', 'scripts/install-openems-macos.sh', 'vite.config.ts', 'scripts/third-party-licenses.py', 'scripts/third-party-licenses.mjs', 'scripts/licenses/render.mjs', 'scripts/licenses/exceptions.json', 'scripts/build-site.mjs', 'scripts/licenses/solver-components.json', 'scripts/licenses/crate-sources.json'];
 const hash = f => createHash('sha256').update(readFileSync(f)).digest('hex');
-// Source imports affect the rendered module graph even when the npm lock is unchanged.
-const sourceFiles = execFileSync('rg', ['--files', 'src', 'landing', 'public'], {encoding:'utf8'}).trim().split('\n').filter(f => /\.(tsx?|css|html|js|svg)$/.test(f));
+// The rendered module graph changes when the viewer imports a different npm package, not on
+// every source edit. Fingerprint the package specifiers imported by viewer and site sources.
+const lockedPackages = new Set(Object.keys(JSON.parse(readFileSync('package-lock.json')).packages).map(k => k.replace(/^.*node_modules\//, '')));
+const sourceFiles = execFileSync('rg', ['--files', 'src', 'landing', 'public'], {encoding:'utf8'}).trim().split('\n').filter(f => /\.(tsx?|css|html|js)$/.test(f));
+const specifiers = new Set();
+for (const file of sourceFiles) for (const m of readFileSync(file, 'utf8').matchAll(/(?:from|import)\s*\(?\s*['"]([^'"./][^'"]*)['"]/g)) {
+  const parts = m[1].split('/');
+  if (lockedPackages.has(m[1].startsWith('@') ? parts.slice(0, 2).join('/') : parts[0])) specifiers.add(m[1]);
+}
 const fingerprints = Object.fromEntries(inputs.sort().map(f => [f, hash(f)]));
-fingerprints.viewerSources = createHash('sha256').update(sourceFiles.sort().map(f => `${f}:${hash(f)}`).join('\n')).digest('hex');
+fingerprints.viewerImports = createHash('sha256').update([...specifiers].sort().join('\n')).digest('hex');
 if (process.argv.includes('--refresh')) {
   const modules = new Set();
   await build({build: {write:false}, plugins:[{name:'license-modules', generateBundle(_, bundle) {
