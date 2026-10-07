@@ -11,6 +11,7 @@ import { matchesShortcut, shortcutTable } from "../src/designer/shortcuts.ts";
 import { commandModifier, modifierShortcut } from "../src/lib/shortcut.ts";
 import { listKeyTarget } from "../src/lib/tabKeys.ts";
 import { viewportChangeCloses } from "../src/lib/menuDismiss.ts";
+import { BROWSER_RESERVED, SHEET_ORDER, shortcutSheet } from "../src/designer/shortcutSheet.ts";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const read = (p) => readFileSync(join(root, p), "utf8").replaceAll("\r\n", "\n");
@@ -54,7 +55,31 @@ eq(mac.markers.id, "markers", "marker shortcut is registered in the macOS table"
 eq(pc.markers.label, "Toggle marker mode", "marker shortcut label");
 eq(pc.markers.key, "M", "marker shortcut key label");
 eq(pc.markers.context, "Focused plot or active Results dock; outside text fields", "marker shortcut context");
-check(/import \{ SHORTCUTS \} from "\.\/shortcuts"/.test(read("src/designer/ShortcutHelp.tsx")) && /Object\.values\(SHORTCUTS\)/.test(read("src/designer/ShortcutHelp.tsx")), "ShortcutHelp renders registered shortcuts from SHORTCUTS");
+check(/import \{ SHORTCUTS \} from "\.\/shortcuts"/.test(read("src/designer/ShortcutHelp.tsx")) && /shortcutSheet\(SHORTCUTS, extras\(\), !!health\(\)\?\.desktop\)/.test(read("src/designer/ShortcutHelp.tsx")), "ShortcutHelp renders the registered shortcuts through the grouped sheet");
+
+// ---- the sheet: grouped, common commands first, browser-reserved chords marked in the web build
+{
+  const sheetEntries = Object.fromEntries(Object.entries(pc).map(([id, s]) => [id, { label: s.label, context: s.context, key: s.key }]));
+  const extraIds = ["applyBoolean", "drawSolid", "base", "cameras", "mainTabsLocal", "closeShown", "orbit", "select3d", "treeNav", "treeMulti"];
+  const extraEntries = Object.fromEntries(extraIds.map((id) => [id, { label: id, context: "", key: "x" }]));
+  const groupsOf = (desktop) => shortcutSheet(sheetEntries, extraEntries, desktop);
+  const web = groupsOf(false), app = groupsOf(true);
+  eq(web.map((g) => g.group).join(","), "edit,view,panels,tools,boolean,mouse", "groups: Edit, View, Panels, Tools, Boolean, Mouse");
+  const placed = Object.values(SHEET_ORDER).flat();
+  for (const id of Object.keys(pc)) eq(placed.filter((x) => x === id).length, 1, `shortcut ${id} is listed once in the sheet`);
+  for (const id of extraIds) eq(placed.filter((x) => x === id).length, 1, `extra row ${id} is listed once`);
+  eq(web.flatMap((g) => g.rows).length, Object.keys(pc).length + extraIds.length, "every row is shown in the browser too (none is hidden)");
+  eq(web[0].rows.slice(0, 3).map((r) => r.id).join(","), "save,undo,redo", "Edit starts with the most used commands");
+  eq(web[1].rows[0].id, "fit", "View starts with Fit");
+  const reserved = web.flatMap((g) => g.rows).filter((r) => r.desktopOnly).map((r) => r.id).sort().join(",");
+  eq(reserved, "close,mainTabs,transform", "in the browser: Ctrl+W, Ctrl+Tab and Ctrl+T are marked desktop app only");
+  eq(app.flatMap((g) => g.rows).some((r) => r.desktopOnly), false, "the desktop app marks nothing");
+  for (const id of BROWSER_RESERVED) check(/Ctrl\+(T|W|Tab)\b/.test(pc[id].key), `${id} is a browser chord (${pc[id].key})`);
+  const help = read("src/designer/ShortcutHelp.tsx");
+  check(/t\(`shortcuts\.group\.\$\{g\.group\}`\)/.test(help) && /<h3 class="shortcut-group-title"/.test(help), "each group has a heading");
+  check(/<Show when=\{row\.desktopOnly\}><span class="shortcut-note" title=\{t\("shortcuts\.desktopOnly\.title"\)\}>\{t\("shortcuts\.desktopOnly"\)\}<\/span><\/Show>/.test(help), "a reserved chord says desktop app only, with the reason as tooltip");
+  check(!/item\.id !== "transform" && item\.id !== "close"/.test(help), "the browser no longer hides Transform and Close from the sheet");
+}
 eq(modifierShortcut("W", MAC), "⌘W", "modifierShortcut on macOS");
 eq(modifierShortcut("W", PC), "Ctrl+W", "modifierShortcut elsewhere");
 for (const t of [mac, pc]) for (const [id, s] of Object.entries(t)) eq(s.id, id, `table entry ${id} carries its id`);

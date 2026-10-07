@@ -86,6 +86,12 @@
 .shortcut-list dd { margin: 0; }
 .shortcut-list kbd { white-space: nowrap; }
 .shortcut-help-dialog { width: min(560px, calc(100vw - 32px)); }
+/* the sheet's groups (Edit, View, Panels, Tools, Boolean, Mouse and tree) */
+.shortcut-group + .shortcut-group { margin-top: var(--al-space-4); }
+.shortcut-group-title { margin: 0 0 var(--al-space-1); font-size: var(--al-text-xs); font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: var(--al-text-3); }
+/* in the browser: a chord the browser keeps for itself (Ctrl+T, Ctrl+W, Ctrl+Tab) */
+.shortcut-desktop-only kbd { opacity: 0.6; }
+.shortcut-note { display: block; margin-top: 2px; font-size: var(--al-text-xs); color: var(--al-text-3); text-align: right; }
 /* one column that scrolls between the head and the footer (the default .dialog-body is a
    300 px + fluid two-column grid for options and preview) */
 .shortcut-help-dialog .dialog-body { display: block; min-height: 0; overflow: auto; padding: var(--al-space-4) var(--al-pad-panel); }
