@@ -1,5 +1,5 @@
-// Opt-in weekly aggregate counts; accepts legacy reports but discards their extra fields.
-import { randomBytes } from "node:crypto";
+// Opt-in weekly install counts; accepts legacy reports but stores nothing from them.
+import { createHmac, randomBytes } from "node:crypto";
 import { createRequire } from "node:module";
 
 const require = createRequire(import.meta.url);
@@ -8,14 +8,12 @@ export const SCHEMA = require("./_ping-schema.json");
 
 /** Browser origins of the desktop app (the shell's own HTTP client sends no Origin at all). */
 export const ALLOWED_ORIGINS = ["tauri://localhost", "http://tauri.localhost", "https://tauri.localhost"];
-const MAX_ATTEMPTS = 5;
 const DAY_MS = 86_400_000;
 
 const KEYS = new Set(SCHEMA.legacy_keys);
 const KEY_PATTERNS = SCHEMA.legacy_key_patterns.map((p) => new RegExp(p));
 const UUID_V4 = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
 const VERSION = /^[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}(?:-[0-9a-z.]{1,16})?$/;
-const REPO = /^[A-Za-z0-9][A-Za-z0-9_.-]{0,99}\/[A-Za-z0-9][A-Za-z0-9_.-]{0,99}$/;
 
 export const utcDay = (ms) => new Date(ms).toISOString().slice(0, 10);
 
@@ -44,7 +42,6 @@ export function validatePing(body, nowMs) {
   if (!SCHEMA.arch.includes(arch)) return fail("arch");
   if (!minimal && (typeof install_id !== "string" || !UUID_V4.test(install_id))) return fail("install_id");
   if (legacy) {
-    if (typeof install_id !== "string" || !UUID_V4.test(install_id)) return fail("install_id");
     if (typeof gpu_available !== "boolean") return fail("gpu_available");
     const n = dayNumber(day);
     const today = Math.floor(nowMs / DAY_MS);
@@ -92,7 +89,7 @@ export async function handlePing(request, deps) {
     return new Response(null, { status: 204, headers: { ...cors, "access-control-allow-methods": "POST", "access-control-allow-headers": "content-type", "access-control-max-age": "86400" } });
   }
   if (request.method !== "POST") return json(405, { error: "POST only" }, { ...cors, allow: "POST, OPTIONS" });
-  if (!env.STATS_GITHUB_TOKEN) return json(503, { error: "usage statistics are not enabled" }, cors);
+  if (!storageEnv(env)) return json(503, { error: "usage statistics are not enabled" }, cors);
   if (!/^application\/json(?:\s*;|$)/i.test(request.headers.get("content-type") ?? "")) {
     return json(415, { error: "application/json only" }, cors);
   }
@@ -104,13 +101,8 @@ export async function handlePing(request, deps) {
   const v = validatePing(body, nowMs);
   if (!v.ok) return json(400, { error: `invalid ping: ${v.error}` }, cors);
   try {
-    const week = isoWeek(utcDay(nowMs));
-    if (v.ping.install_id) {
-      const count = await countInstall(deps, week, v.ping, nowMs);
-      await incrementAggregate(deps, week, v.ping, count);
-    } else {
-      await incrementAggregate(deps, week, v.ping);
-    }
+    // Earlier report formats are validated and acknowledged; nothing from them is stored.
+    if (v.ping.install_id) await countInstall(deps, isoWeek(utcDay(nowMs)), v.ping, nowMs);
     return json(202, { ok: true }, cors);
   } catch (e) {
     // Do not log request bodies, headers, addresses or exception details.
@@ -128,7 +120,7 @@ export function isoWeek(day) {
   return `${year}-W${String(week).padStart(2, "0")}`;
 }
 
-/** Monday 00:00 UTC of an ISO week ("2026-W41"), so storage commits carry no request time. */
+/** Monday 00:00 UTC of an ISO week ("2026-W41"), so an aggregate carries no request time. */
 export function weekStart(week) {
   const [year, w] = week.split("-W").map(Number);
   const jan4 = Date.UTC(year, 0, 4);
@@ -136,77 +128,64 @@ export function weekStart(week) {
   return new Date(monday + (w - 1) * 7 * DAY_MS).toISOString().replace(".000Z", "Z");
 }
 
-/** Update only a tuple's total. No event log, identity, IP address or user agent is stored. */
-export async function incrementAggregate(deps, week, ping, distinctCount) {
-  const { env, fetch: fetchImpl = globalThis.fetch } = deps;
-  const repo = env.STATS_REPO ?? "";
-  const branch = env.STATS_BRANCH || "main";
-  if (!REPO.test(repo)) throw new Error("invalid stats repository");
-  const path = `data/${week}--${ping.app_version}--${ping.os}--${ping.arch}${distinctCount === undefined ? "" : "--installs"}.json`;
-  const api = `https://api.github.com/repos/${repo}/contents/${path}`;
-  const headers = {
-    authorization: `Bearer ${env.STATS_GITHUB_TOKEN}`,
-    accept: "application/vnd.github+json",
-    "x-github-api-version": "2022-11-28",
-    "user-agent": "fairbeam-ping",
-  };
-  // The commit is dated to the start of the week: the history holds no per-request time.
-  const identity = { name: "Fairbeam usage totals", email: "ismail@fairbeam.org", date: weekStart(week) };
-  for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
-    const r = await fetchImpl(`${api}?ref=${encodeURIComponent(branch)}`, { headers });
-    let sha, count = 0;
-    if (r.ok) {
-      const file = await r.json();
-      const aggregate = JSON.parse(Buffer.from(file.content, "base64").toString("utf8"));
-      count = aggregate.count;
-      if (!Number.isSafeInteger(count) || count < 0 || count === Number.MAX_SAFE_INTEGER) throw new Error("invalid total");
-      sha = file.sha;
-    } else if (r.status !== 404) throw new Error("storage read failed");
-    const aggregate = { week, app_version: ping.app_version, os: ping.os, arch: ping.arch, count: distinctCount === undefined ? count + 1 : Math.max(count, distinctCount) };
-    const put = await fetchImpl(api, {
-      method: "PUT", headers: { ...headers, "content-type": "application/json" },
-      body: JSON.stringify({ message: `Update usage total ${week}`, content: Buffer.from(JSON.stringify(aggregate) + "\n").toString("base64"), branch, author: identity, committer: identity, ...(sha ? { sha } : {}) }),
-    });
-    if (put.status === 200 || put.status === 201) return;
-    if (put.status === 409 || put.status === 422) continue;
-    throw new Error("storage write failed");
-  }
-  throw new Error("storage contention");
+// Storage is a Redis REST store connected through Vercel (Upstash). The integration injects the URL
+// and token, so nobody types a secret. Both naming schemes of the integration are accepted.
+export function storageEnv(env = {}) {
+  const url = env.KV_REST_API_URL || env.UPSTASH_REDIS_REST_URL || "";
+  const token = env.KV_REST_API_TOKEN || env.UPSTASH_REDIS_REST_TOKEN || "";
+  return url && token && /^https:\/\/[a-z0-9.-]+(?::[0-9]+)?\/?$/i.test(url) ? { url, token } : null;
 }
 
-// Redis executes the complete update atomically. Hashes and salt expire at the ISO week boundary;
-// each successful update already has an aggregate, so deletion cannot lose the weekly total.
-export const COUNT_INSTALL_LUA = `
+// The week's salt: created by the first request of the ISO week, shared by concurrent requests and
+// deleted by Redis at the week boundary. Nothing derived from an install ID is involved here.
+export const WEEK_SALT_LUA = `
 local salt = redis.call('GET', KEYS[1])
 if not salt then
   salt = ARGV[1]
-  redis.call('SET', KEYS[1], salt, 'EXAT', ARGV[3])
+  redis.call('SET', KEYS[1], salt, 'EXAT', ARGV[2])
 end
-local hash = redis.sha1hex(salt .. ARGV[2])
-local first = redis.call('SADD', KEYS[2], hash)
-redis.call('EXPIREAT', KEYS[2], ARGV[3])
-if first == 1 then redis.call('HINCRBY', KEYS[4], 'cumulative_weekly_distinct', 1) end
-local added = redis.call('SADD', KEYS[3], hash)
-redis.call('EXPIREAT', KEYS[3], ARGV[3])
-if added == 1 then redis.call('HINCRBY', KEYS[4], ARGV[4], 1) end
-return tonumber(redis.call('HGET', KEYS[4], ARGV[4]))
+return salt
 `;
+
+// Receives only the salted hash, never the install ID. One atomic update per ping: hash sets
+// (whole week, and version/OS/architecture of the week) expire at the boundary after the
+// aggregates were incremented, so deleting them cannot lose a total.
+export const COUNT_INSTALL_LUA = `
+local first = redis.call('SADD', KEYS[1], ARGV[1])
+redis.call('EXPIREAT', KEYS[1], ARGV[2])
+if first == 1 then redis.call('HINCRBY', KEYS[3], 'cumulative_weekly_distinct', 1) end
+local added = redis.call('SADD', KEYS[2], ARGV[1])
+redis.call('EXPIREAT', KEYS[2], ARGV[2])
+if added == 1 then redis.call('HINCRBY', KEYS[3], ARGV[3], 1) end
+return tonumber(redis.call('HGET', KEYS[3], ARGV[3]))
+`;
+
+/** Salted, keyed hash of an install ID; only this value ever reaches Redis. */
+export const hashInstall = (salt, installId) => createHmac("sha256", salt).update(installId).digest("hex");
+
+async function redis(deps, command) {
+  const store = storageEnv(deps.env);
+  if (!store) throw new Error("install storage unavailable");
+  const response = await (deps.fetch ?? globalThis.fetch)(store.url, {
+    method: "POST", headers: { authorization: `Bearer ${store.token}`, "content-type": "application/json" },
+    body: JSON.stringify(command),
+  });
+  if (!response.ok) throw new Error("install storage failed");
+  const { result, error } = await response.json();
+  if (error) throw new Error("install storage failed");
+  return result;
+}
+
+/** Counts one install for the ISO week; returns the tuple's distinct-install total so far. */
 export async function countInstall(deps, week, ping, nowMs) {
-  const { env, fetch: fetchImpl = globalThis.fetch } = deps;
-  const url = env.KV_REST_API_URL;
-  if (!url || !env.KV_REST_API_TOKEN || !/^https:\/\/[a-z0-9.-]+(?::[0-9]+)?\/?$/i.test(url)) throw new Error('install storage unavailable');
   const tuple = `${week}--${ping.app_version}--${ping.os}--${ping.arch}`;
   const expires = Math.floor(Date.parse(weekStart(week)) / 1000) + 7 * 86400;
-  if (expires <= Math.floor(nowMs / 1000)) throw new Error('expired week');
-  const response = await fetchImpl(url, {
-    method: 'POST', headers: { authorization: `Bearer ${env.KV_REST_API_TOKEN}`, 'content-type': 'application/json' },
-    body: JSON.stringify(['EVAL', COUNT_INSTALL_LUA, 4,
-      `fairbeam:{counts}:salt:${week}`, `fairbeam:{counts}:ids:${week}`,
-      `fairbeam:{counts}:ids:${tuple}`, 'fairbeam:{counts}:aggregates',
-      randomBytes(32).toString('hex'), ping.install_id, expires, tuple]),
-  });
-  if (!response.ok) throw new Error('install storage failed');
-  const { result, error } = await response.json();
-  if (error || !Number.isSafeInteger(result) || result < 1) throw new Error('invalid install total');
-  return result;
+  if (expires <= Math.floor(nowMs / 1000)) throw new Error("expired week");
+  const salt = await redis(deps, ["EVAL", WEEK_SALT_LUA, "1", `fairbeam:{counts}:salt:${week}`, randomBytes(32).toString("hex"), String(expires)]);
+  if (typeof salt !== "string" || !/^[0-9a-f]{64}$/.test(salt)) throw new Error("invalid salt");
+  const total = await redis(deps, ["EVAL", COUNT_INSTALL_LUA, "3",
+    `fairbeam:{counts}:ids:${week}`, `fairbeam:{counts}:ids:${tuple}`, "fairbeam:{counts}:aggregates",
+    hashInstall(salt, ping.install_id), String(expires), tuple]);
+  if (!Number.isSafeInteger(total) || total < 1) throw new Error("invalid install total");
+  return total;
 }

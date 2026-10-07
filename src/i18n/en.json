@@ -3857,7 +3857,7 @@
   "usage.summary.never": "Nothing about your designs, files, results or you is sent. Fairbeam stores aggregates and weekly salted ID hashes, deleted at the end of the week. No IP addresses, user agents or request headers are stored by the app or API.",
   "usage.summary.off": "Optional and off until you allow it. Turn off counting any time in Settings › General › Install counts. Turning it off deletes your local ID; turning it on again or choosing Reset ID creates a new random ID. This does not reset the weekly sending limit.",
   "usage.summary.what": "With your permission, Fairbeam sends a random install ID, app version, operating system, CPU architecture and report schema at most once every seven days to count installs.",
-  "usage.summary.where": "Vercel hosts the API and Redis storage; GitHub stores aggregate snapshots. Providers process network requests under their own policies. Questions: ismail@fairbeam.org.",
+  "usage.summary.where": "Vercel hosts the API; a Redis database from Upstash, connected through Vercel, holds the weekly data. Providers process network requests under their own policies. Questions: ismail@fairbeam.org.",
   "usage.resetId": "Reset ID",
   "usage.title": "Install counts",
   "usage.whatIsCollected": "What is collected",

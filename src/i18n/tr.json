@@ -3780,7 +3780,7 @@
   "usage.summary.never": "Tasarımlarınız, dosyalarınız, sonuçlarınız veya sizinle ilgili hiçbir bilgi gönderilmez. Fairbeam toplu sayıları ve haftanın sonunda silinen, haftalık tuzla özetlenmiş kimlikleri saklar. Uygulama veya API, IP adreslerini, kullanıcı aracısı bilgilerini veya istek başlıklarını saklamaz.",
   "usage.summary.off": "İzin verene kadar kapalıdır ve isteğe bağlıdır. Ayarlar › Genel › Kurulum sayımı bölümünden istediğiniz zaman kapatın. Kapatıldığında yerel kimliğiniz silinir; yeniden açtığınızda veya Kimliği sıfırlayın seçeneğini kullandığınızda yeni bir rastgele kimlik oluşturulur. Bu işlem haftalık gönderim sınırını sıfırlamaz.",
   "usage.summary.what": "İzninizle Fairbeam, kurulumları saymak için en fazla yedi günde bir rastgele kurulum kimliği, uygulama sürümü, işletim sistemi, CPU mimarisi ve rapor şeması gönderir.",
-  "usage.summary.where": "API ve Redis depolaması Vercel üzerinden sağlanır; GitHub toplu sayıların kopyalarını saklar. Sağlayıcılar ağ isteklerini kendi politikaları kapsamında işler. Sorularınız için: ismail@fairbeam.org.",
+  "usage.summary.where": "API Vercel üzerinde barındırılır; haftalık veriler Vercel üzerinden bağlanan Upstash Redis veritabanında tutulur. Sağlayıcılar ağ isteklerini kendi politikaları kapsamında işler. Sorularınız için: ismail@fairbeam.org.",
   "usage.resetId": "Kimliği sıfırlayın",
   "usage.title": "Kurulum sayımı",
   "usage.whatIsCollected": "Neler toplanıyor",

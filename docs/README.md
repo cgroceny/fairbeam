@@ -52,7 +52,7 @@ translated. To check a locally served site in Chrome, run `npm run check:docs-la
 | [Architecture](ARCHITECTURE.md) | Data flow, run server, project layout, roadmap |
 | [Design](DESIGN.md) | Visual design rules, tokens, layout primitives, keyboard map |
 | [Turkish UI glossary](i18n-glossary.md) | The Turkish/English terms of the interface and the alternatives considered for each term |
-| [Usage statistics](TELEMETRY.md) | Minimal opt-in weekly counts, download totals and draft privacy notices. Built but switched off |
+| [Usage statistics](TELEMETRY.md) | Opt-in weekly install counts, download totals and the privacy notice. Asked once on first start in release builds |
 | [Optional sign-in](ACCOUNTS.md) | GitHub and Google sign-in for the desktop app: the build switches, the flow, what is stored. Built but switched off |
 | [Deploy](DEPLOY.md) | The public site (landing page and demo) on Vercel |
 | [Benchmarks](BENCHMARKS.md) | The historical benchmark set of 14 examples on reference machines (Windows and macOS): results and solver times |
