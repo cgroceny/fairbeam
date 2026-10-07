@@ -16,6 +16,7 @@
 import { existsSync, readFileSync, statSync } from "node:fs";
 import { join, posix } from "node:path";
 import { Marked } from "marked";
+import { externalLinksInHtml } from "./site-links.mjs";
 import { highlightCode } from "./docs-highlight.mjs";
 import { globToRegExp } from "./lib/tracked-files.mjs";
 
@@ -28,7 +29,8 @@ const decode = (s) => s.replace(/&(#x[0-9a-f]+|#\d+|amp|lt|gt|quot|#39|nbsp);/gi
   if (named) return named;
   return String.fromCodePoint(e[1] === "x" || e[1] === "X" ? parseInt(e.slice(2), 16) : parseInt(e.slice(1), 10));
 });
-const plainText = (html) => decode(html.replace(/<[^>]+>/g, "")).replace(/\s+/g, " ").trim();
+const withoutLinkHints = (html) => html.replace(/<span class="visually-hidden" data-i18n="on">[\s\S]*?<\/span>/g, "");
+const plainText = (html) => decode(withoutLinkHints(html).replace(/<[^>]+>/g, "")).replace(/\s+/g, " ").trim();
 
 /** The manifest, checked: every page has a source that exists, a unique slug, a title and a description. */
 export function loadManifest(root) {
@@ -194,6 +196,10 @@ function renderMarkdown(root, source, { published, titles, repo, branch, hidden,
       }
     },
     renderer: {
+      link({ href, title, tokens }) {
+        const inner = this.parser.parseInline(tokens);
+        return externalLinksInHtml(`<a href="${esc(href)}"${title ? ` title="${esc(title)}"` : ""}>${inner}</a>`, language);
+      },
       heading({ tokens, depth }) {
         headingDepths.push(depth);
         const inner = this.parser.parseInline(tokens);
@@ -203,7 +209,7 @@ function renderMarkdown(root, source, { published, titles, repo, branch, hidden,
           title = { id, html: inner, text: plainText(inner) };
           return "";
         }
-        if (depth === 2 || depth === 3) headings.push({ depth, id, html: inner.replace(/<\/?a\b[^>]*>/g, "") });
+        if (depth === 2 || depth === 3) headings.push({ depth, id, html: withoutLinkHints(inner).replace(/<\/?a\b[^>]*>/g, "") });
         return `<h${depth} id="${id}">${inner}<a class="doc-anchor" href="#${id}" aria-hidden="true" tabindex="-1"></a></h${depth}>\n`;
       },
       html({ text }) {
@@ -230,7 +236,7 @@ function renderMarkdown(root, source, { published, titles, repo, branch, hidden,
       },
     },
   });
-  const body = marked.parse(text)
+  const body = externalLinksInHtml(marked.parse(text), language)
     // wide tables scroll inside their own box instead of widening the page
     .replace(/<table>/g, '<div class="doc-table"><table>').replace(/<\/table>/g, "</table></div>")
     // a paragraph that held only a left-out image
@@ -409,7 +415,7 @@ ${r.body}
       type: "article",
       main,
     });
-    files.push({ path: `${prefix}/${page.slug}.html`, html: markFooter(html, `${page.slug}.html`) });
+    files.push({ path: `${prefix}/${page.slug}.html`, html: externalLinksInHtml(markFooter(html, `${page.slug}.html`), language) });
   });
 
   // the overview: the groups with a line for each page

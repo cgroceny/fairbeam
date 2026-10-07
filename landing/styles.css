@@ -195,6 +195,8 @@ thead .group th[colspan] { text-align: center; padding-right: 0; padding-left: v
   position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; border: 0;
   overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap;
 }
+/* Keep hidden new-tab hints inside the viewport even after a long inline link. */
+.visually-hidden[data-i18n="on"] { inset-inline-start: 0; }
 .roadmap-page { padding-bottom: var(--lp-section); }
 .rm-intro { max-width: 70ch; color: var(--al-text-2); }
 .rm-after { margin-top: var(--al-space-6); max-width: 70ch; color: var(--al-text-2); }
