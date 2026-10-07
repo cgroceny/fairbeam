@@ -149,6 +149,97 @@ ok(/\.rb-shell \.rb-result-note \{[^}]*min-width: 160px;[^}]*white-space: normal
 ok(/<p class="rb-result-note" title=\{resultNote\(\)\}>\{resultNote\(\)\}<\/p>/.test(ws), "the note's tooltip carries the whole text");
 ok(/:scope > :not\(\.rb-group\)[\s\S]{0,120}minWidth[\s\S]{0,80}const room = toolbar\.clientWidth - reserved;/.test(ws), "fitRibbon keeps the note's min-width free");
 
+// ---- one vocabulary: design (never model or project) for the user's file, result file for a run's .json
+for (const key of ["designId.exists", "contextExport.noView"]) ok(/\bdesign\b/.test(en[key]) && !/\bmodel\b/.test(en[key]), `${key} says design: ${en[key]}`);
+ok(/a design or a Python model/.test(en["app.noProjects.run"]), "the Examples empty state names a design (or a Python model, which the command runs)");
+for (const key of ["header.screen.resultsTitle", "results.compare.currentProject", "results.compare.otherProjects", "results.compare.overlayHint", "home.designs.unknownModified"]) {
+  ok(!/project/i.test(en[key]), `${key} does not say project: ${en[key]}`);
+  ok(!/proje/i.test(tr[key]), `${key} (tr) does not say proje: ${tr[key]}`);
+}
+ok(/result file/.test(en["header.screen.resultsTitle"]) && /result files/.test(en["results.compare.otherProjects"]), "a run's saved file is a result file");
+// the tree heading names its rows (solids, grouped in components), like the Examples panel
+eq([en["tree.components"], tr["tree.components"]], [en["model.parts"], tr["model.parts"]], "the tree heading over the solids reads Solids / Katılar");
+// one name for the zip
+eq(tr["package.title"], tr["header.package.label"], "TR: the dialog and the header button share one name");
+eq(tr["package.title"], "Paketi dışa aktar", "TR: Paketi dışa aktar");
+ok(en["ribbon.post.packageTitle"].startsWith(en["header.package.label"]) && tr["ribbon.post.packageTitle"].startsWith("Paketi dışa aktar"), "the ribbon's short Package button says Export package in its tooltip");
+ok(en["shortcuts.export.label"].includes(en["contextExport.designPython"]) && tr["shortcuts.export.label"].includes(tr["contextExport.designPython"]), "the Shortcuts sheet uses the Export menu's term");
+// one mesh-density term, with its short form
+for (const key of ["props.sim.cpw", "sim.mesh.cpw", "spec.lambdaPerCell"]) eq([en[key], tr[key]], [en["sim.mesh.cpwAtFmax"], tr["sim.mesh.cpwAtFmax"]], `${key} is the one mesh-density term`);
+eq(en["ribbon.sim.cellsPerWavelength"], "Cells / λ", "the short form");
+
+// ---- Turkish: one form per phrase, translated words, the polite imperative in tooltips
+ok(!allTr.some(([, text]) => /\(önerilir\)/.test(text)), "Otomatik (önerilen) is the one form");
+eq(tr["settings.threads.auto"], "Otomatik (önerilen)", "threads Auto");
+eq(tr["optTree.method.secant"], "Sekant", "the secant method has one name");
+ok(/t\("opt\.method\.auto", \{ method: methodName\(optPlan\(\)\.method\) \}\)/.test(read("src/runner/OptimizePanel.tsx")), "Auto (method) names the method in the UI language, not its id");
+eq([tr["render.toggle.label"], tr["render.image.label"], tr["render.dialog.title"], tr["render.menu.label"]], ["Render", "Render görüntüsü…", "Render görüntüsü", "Render görüntüsü (PNG)…"], "TR: one term for the render feature");
+ok(tr["render.group"] !== tr["ribbon.tab.view"] && !/^Görünt/.test(tr["render.group"]), "the render group is not a near-twin of the Görünüm tab");
+eq(tr["ribbon.tab.home"], "Giriş", "the Home tab is Giriş");
+ok(tr["ribbon.tab.home"] !== tr["ribbon.home.start"], "the Home tab is not named like the Ana ekran button inside it");
+const informal = /(?<![\p{L}'’])(aç|kapat|kaydet|seç|ekle|sil|göster|gizle|aktar|oluştur|durdur|kaldır|indir|kopyala|çalıştır|genişlet|daralt|sığdır|bitir|sıfırla|uygula|düzenle|değiştir|ayarla|aynala|çiz|dön)(?=[.,;:)]|\s+\(|\s+(?:ya da|veya|ve)\s|$)/u;
+for (const [key, text] of allTr) {
+  if (!/[a-z]Title$/.test(key)) continue;
+  if (key === "ribbon.draw.optionsTitle") continue; // a list of option names
+  ok(!informal.test(text), `${key}: a tooltip uses the polite imperative ("seçin", "kaydedin"): ${text}`);
+}
+eq(tr["ribbon.home.selectionNeeded"], "Çoğaltmak veya silmek için bir katı ya da şekil seçin.", "the Duplicate/Delete reason is polite too");
+// a timestep count is a count, and "≤" never breaks from its value
+for (const key of ["runText.energy.valueAt", "runText.energy.boundAt"]) ok(!/\{timestep\}\./.test(tr[key]), `${key}: no ordinal timestep ("29.073." reads as one number)`);
+for (const table of [en, tr]) ok(/≤ \{criterion\} dB/.test(table["runText.converged.value"]) && /≤ \{value\} dB/.test(table["runText.energy.boundAt"]), "a no-break space after ≤ and before dB");
+// a GPU benchmark row names its host in the UI language
+{
+  const { shortMachine } = await import("../src/lib/benchmarks.ts");
+  setLanguage("tr");
+  eq(shortMachine("NVIDIA RTX 3060 (on the 7900X)"), "RTX 3060 (7900X ile)", "TR: the GPU row's host");
+  setLanguage("en");
+  eq(shortMachine("NVIDIA RTX 3060 (on the 7900X)"), "RTX 3060 (on the 7900X)", "EN: unchanged");
+}
+
+// ---- newcomer jargon gets plain words or a tooltip
+const spec = read("src/components/SpecPanel.tsx");
+ok(/title=\{methodTitle\(b\(\)\.solver\.method\)\}>\{methodLabel\(b\(\)\.solver\.method\)\}/.test(spec) && tr["spec.method.fdtdYee"] !== en["spec.method.fdtdYee"], "the FDTD (Yee, staircase) method is translated and explained");
+ok(/class="chip" title=\{t\("spec\.dcFree\.title"\)\}/.test(spec), "DC-free has a tooltip");
+ok(/title=\{boundaryHint\(b\(\)\.solver\.boundaries\[face\]\)\}/.test(spec) && /\{boundaryLabel\(b\(\)\.solver\.boundaries\[face\]\)\}/.test(spec), "the boundary cells are named in the UI language, with a tooltip");
+eq(tr["spec.boundary.MUR"], "Mur emici sınır", "TR: Mur emici sınır, not Mur ABC");
+ok(!/Mur ABC/.test(read("src/lib/format.ts") + spec + JSON.stringify(en) + JSON.stringify(tr)), "no 'Mur ABC' left in the UI");
+ok(/hint=\{t\("ribbon\.wcs\.groupTitle"\)\}/.test(ws) && /title=\{props\.hint \?\? props\.label\}/.test(ws), "the WCS ribbon group explains the abbreviation");
+ok(/title=\{typeHint\(ty\)\}><span class="ss-swatch"/.test(read("src/designer/SimSettingsDialog.tsx")), "the boundary legend (Open (MUR), PML, PEC, PMC) has tooltips");
+ok(!/CSXCAD/.test(en["props.part.note"] + tr["props.part.note"]) && /one material/.test(en["props.part.note"]), "the solid note says one material, joined, without CSXCAD");
+ok(/quarter wavelength/.test(en["sim.pad.labelEmpty"]) && /çeyrek dalga boyu/.test(tr["sim.pad.labelEmpty"]), "λ(f min)/4 is said in words");
+ok(/far field/.test(en["model.layer.nf2ff.hint"]), "the NF2FF box tooltip says what it is for");
+{
+  const { paramTooltip } = await import("../src/lib/paramLabel.ts");
+  eq(paramTooltip({ key: "sub_h", label: "Substrate height" }), "Substrate height", "a parameter tooltip falls back to its label, not the raw key");
+  eq(paramTooltip({ key: "sub_h", label: "Substrate height", description: "FR-4 core" }), "FR-4 core", "a description wins");
+  eq(paramTooltip({ key: "sub_h" }), "sub_h", "only without a label: the key");
+  ok(/<dt title=\{paramTooltip\(p\)\}>/.test(read("src/components/ModelPanel.tsx")), "the Examples parameter rows use it");
+}
+
+// ---- docs, website and example labels use the same words as the app
+for (const file of ["docs/GETTING-STARTED.md", "docs/DESIGNER.md", "landing/guide.html", "landing/index.html", "landing/language.js", "landing/roadmap.json"]) {
+  ok(!/Open as new project|new project…|as a new project/.test(read(file)), `${file}: "Open as new design…", as in the app`);
+}
+const landingTr = read("landing/language.js");
+ok(!/Yeni proje olarak/.test(landingTr) && /Yeni tasarım olarak aç/.test(landingTr), "the Turkish website says Yeni tasarım olarak aç");
+ok(!/Başlangıç ekranı|"Başlangıç, Tasarım/.test(landingTr), "the Turkish website calls the Start screen Ana ekran");
+{
+  const { readdirSync } = await import("node:fs");
+  for (const f of readdirSync(`${root}python/models`).filter((n) => n.endsWith(".py"))) {
+    const params = [...read(`python/models/${f}`).matchAll(/Param\(\s*"[^"]*",[^,]*,\s*"([^"]*)",\s*"[^"]*"(?:,\s*((?:"[^"]*"\s*)+))?/g)];
+    for (const m of params) ok(!/\b(lambda|ohm)\b|Max cell/.test(m[1]) && !/\b(lambda|ohm)\b/.test(m[2] ?? ""), `${f}: a parameter label or description uses λ and Ω: ${m[1]}`);
+  }
+  for (const f of readdirSync(`${root}public/projects`).filter((n) => n.endsWith(".json") && n !== "index.json")) {
+    const b = JSON.parse(read(`public/projects/${f}`));
+    for (const p of b.model?.params ?? []) ok(!/\b(lambda|ohm)\b|Max cell/.test(p.label ?? "") && !/\b(lambda|ohm)\b/.test(p.description ?? ""), `${f}: ${p.key} label uses λ and Ω: ${p.label}`);
+  }
+}
+ok(/Mesh: cells per λ at f max/.test(read("python/models/patch_antenna.py")), "the example mesh parameter is named in the one mesh-density term");
+
+// the Python source in Properties is wide enough to read and keeps Edit / Copy / Save on one row
+ok(/:has\(> \.panel-right \.python-panel\) \{ --dw-right-col: max\(360px, /.test(read("src/styles/designer.css")), "the Properties column is at least 360 px while the Python panel is open");
+ok(/\.python-panel-actions \{[^}]*flex-wrap: nowrap;/.test(read("src/styles/python-panel.css")), "the Python panel's buttons do not wrap");
+
 // ---- a new design opens on a usable ribbon tab
 ok(/ribbonTab\(\) === "post"\) \{ setRibbonTab\("model"\)/.test(ws), "a design without results does not open on Post-processing");
 

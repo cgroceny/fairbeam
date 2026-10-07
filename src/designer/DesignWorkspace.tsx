@@ -112,7 +112,7 @@ function RButton(props: { icon: typeof Box; label: string; title?: string; actio
 /** A ribbon group. When the ribbon runs out of room (see fitRibbon) its buttons first lose their
  *  labels (data-size="icons"; the label stays as tooltip and accessible name) and, only when that
  *  is not enough, the group folds into one drop-down button (data-collapsed). */
-function RGroup(props: { label: string; icon: typeof Box; class?: string; children: JSX.Element }) {
+function RGroup(props: { label: string; icon: typeof Box; class?: string; children: JSX.Element; /** tooltip of the group name (an abbreviation explained) */ hint?: string }) {
   const [open, setOpen] = createSignal(false);
   let host!: HTMLDivElement;
   let toggle!: HTMLButtonElement;
@@ -125,7 +125,7 @@ function RGroup(props: { label: string; icon: typeof Box; class?: string; childr
     <div ref={host} class={`rb-group ${props.class ?? ""}`} role="group" aria-label={props.label} data-open={open() ? "" : undefined}
       onFocusOut={(e) => { const next = e.relatedTarget as Node | null; if (open() && (!next || !host.contains(next))) setOpen(false); }}
       onKeyDown={(e) => { if (e.key === "Escape" && open() && !e.defaultPrevented) { e.stopPropagation(); setOpen(false); toggle.focus(); } }}>
-      <button ref={toggle} type="button" class="rb-btn rb-group-toggle" aria-expanded={open()} title={props.label} onClick={() => setOpen(!open())}>
+      <button ref={toggle} type="button" class="rb-btn rb-group-toggle" aria-expanded={open()} title={props.hint ?? props.label} onClick={() => setOpen(!open())}>
         <props.icon size={16} aria-hidden="true" /><span>{props.label}<ChevronDown size={11} aria-hidden="true" /></span>
       </button>
       {/* a command chosen from a folded group closes it; toggles and pop-up openers keep it open */}
@@ -144,7 +144,7 @@ function RGroup(props: { label: string; icon: typeof Box; class?: string; childr
           });
         }
       }}>{props.children}</div>
-      <div class="rb-label" title={props.label}>{props.label}</div>
+      <div class="rb-label" title={props.hint ?? props.label}>{props.label}</div>
     </div>
   );
 }
@@ -541,7 +541,7 @@ export function Ribbon() {
             <Show when={drawOptionsOpen()}><DrawOptionsPanel onClose={() => setDrawOptionsOpen(false)} /></Show>
           </div>
         </RGroup>
-        <RGroup label={t("ribbon.wcs.group")} icon={Grid3x3}>
+        <RGroup label={t("ribbon.wcs.group")} hint={t("ribbon.wcs.groupTitle")} icon={Grid3x3}>
           <RButton icon={MousePointerClick} label={t("ribbon.wcs.face")} title={t("ribbon.wcs.faceTitle")} pressed={facePicking()}
             onClick={() => { startTool(null); setExtrudeFacePicking(false); setFacePicking(!facePicking()); }} />
           <RButton icon={Move3d} label={t("ribbon.wcs.transform")} title={t("ribbon.wcs.transformTitle")} onClick={() => setWcsDialog(true)} />
