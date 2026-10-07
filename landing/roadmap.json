@@ -149,7 +149,7 @@
       "items": [
         {
           "title": "Automatic meshing",
-          "description": "The FDTD mesh is built from the geometry, within 0.1 % of converged hand-tuned meshes.",
+          "description": "The FDTD mesh is built from the geometry. In the dipole and patch checks, resonance differs from converged hand-tuned meshes by about 0.1% or less.",
           "links": [],
           "status": "available",
           "release": "0.7.0"
