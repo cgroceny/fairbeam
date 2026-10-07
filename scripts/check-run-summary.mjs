@@ -447,6 +447,15 @@ assert.ok(metrics.size >= 10, "the example bundles were read");
   assert.deepEqual(tables.children.map((k) => k.action.view), ["summary", "table"], "Tables: Summary, then the S-parameter table");
 }
 
+// ---- the reference run select shows the reference (each option says so; a value set on the select before
+// its options exist leaves the browser on the first option, the shown run), in EN and TR alike
+{
+  const view = read("src/designer/RunSummaryView.tsx");
+  assert.ok(/<option value=\{row\.file\} selected=\{row\.file === refFile\(\)\}>/.test(view), "each option is selected when it is the reference");
+  assert.equal(/<select[^>]*value=\{rows\(\)\[refIdx\(\)\]\.file\}/.test(view), false, "no value on the select itself");
+  assert.ok(/const refFile = \(\) => rows\(\)\[refIdx\(\)\]\.file;/.test(view), "the reference is the run the differences are taken from");
+}
+
 // ---- matched bands: the centre is the middle of the edges, the |S11| minimum is the best match, and a
 // band that runs past the simulated range is marked (the horn: below -10 dB over the whole 8-12 GHz)
 {

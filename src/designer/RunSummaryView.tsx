@@ -189,6 +189,7 @@ function RunsCompare(props: { runs: { file: string; bundle: Bundle }[] }) {
     return v === undefined ? "—" : typeof v === "number" ? fmt.fixed(v, paramDigits().get(key) ?? 0) : String(v);
   };
   const ref = () => rows()[refIdx()].letter;
+  const refFile = () => rows()[refIdx()].file;
   const modes: SummaryMode[] = ["values", "delta"];
   return (
     <div class="rs-card">
@@ -204,8 +205,10 @@ function RunsCompare(props: { runs: { file: string; bundle: Bundle }[] }) {
         </div>
         <label class="rs-ref">
           <span class="note">{t("summary.reference.label")}</span>
-          <select class="rp-select dz-input" value={rows()[refIdx()].file} onChange={(e) => chooseSummaryReference(e.currentTarget.value)}>
-            <For each={rows()}>{(row) => <option value={row.file}>{t("summary.reference.option", { run: row.letter, name: row.name })}</option>}</For>
+          {/* each option says whether it is the reference: a value on the select is applied before its
+              options exist, and the browser would show the first one */}
+          <select class="rp-select dz-input" onChange={(e) => chooseSummaryReference(e.currentTarget.value)}>
+            <For each={rows()}>{(row) => <option value={row.file} selected={row.file === refFile()}>{t("summary.reference.option", { run: row.letter, name: row.name })}</option>}</For>
           </select>
         </label>
         <span class="note">{t("summary.mode.hint", { run: ref() })}</span>
