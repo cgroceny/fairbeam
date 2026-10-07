@@ -23,7 +23,7 @@ The geometry maps one to one onto CSXCAD primitives, the same ones Python models
                 {"type": "waveguide", "number": 2, "mode": "TE10", "a": "22.86", "b": "10.16",
                  "start": [...], "stop": [...], "direction": "z"}],
       "resistors": [{"name": "r1", "R": "100", "start": [...], "stop": [...], "direction": "y"}],
-      "mesh": {"mode": "auto", "cells_per_wavelength": 20},
+      "mesh": {"mode": "auto", "cells_per_wavelength": 20, "refine_features": false},
       "far_field": {"enabled": true, "frequencies": ["f0"]},   # optional "faces": 6 flags x- x+ y- y+ z- z+
       "monitors": {"currents": ["f0"],              # optional: surface-current maps (GHz)
                    "efficiency": {"points": 21},     # optional: radiation efficiency over the band
@@ -592,6 +592,8 @@ def check_design(d: dict) -> None:
     mesh = d.get("mesh", {})
     if not isinstance(mesh, dict):
         raise DesignError("mesh must be an object", "mesh")
+    if "refine_features" in mesh and not isinstance(mesh["refine_features"], bool):
+        raise DesignError("refine features must be true or false", "mesh.refine_features")
     if mesh.get("mode", "auto") not in ("auto", "design", "manual"):
         raise DesignError('mesh.mode must be "auto", "design" or "manual"', "mesh.mode")
     if mesh.get("mode") == "manual":
@@ -2963,6 +2965,7 @@ def build(d: dict, values: dict):
             raise DesignError("air cells per wavelength must be > 0 and <= cells per wavelength",
                               "mesh.air_cells_per_wavelength")
     if mode != "manual":
+        kw["refine_features"] = m.get("refine_features", False)
         sim.auto_mesh(**kw)
     if mode == "design":
         report = getattr(sim, "mesh_report", None)
@@ -3575,6 +3578,7 @@ def to_python(d: dict) -> str:
                     "air_cells_per_wavelength": air,
                     "max_ratio": e(ov["max_ratio"]) if "max_ratio" in ov else "1.4", "dielectric_cells": e(ov["dielectric_cells"]) if "dielectric_cells" in ov else ("5" if has_dielectric else "4"),
                     "pad": e(ov["pad"]) if "pad" in ov else pad_expr}
+        adaptive["refine_features"] = repr(mm.get("refine_features", False))
         args = ", ".join(f"{k}={v}" for k, v in adaptive.items())
         out.append(f"    sim.auto_mesh({args})")
         note_keys = list(adaptive)
@@ -3586,7 +3590,7 @@ def to_python(d: dict) -> str:
         max_ratio = f", max_ratio={e(mm['max_ratio'])}" if "max_ratio" in mm else ""
         air_cpw = (f", air_cells_per_wavelength={e(mm['air_cells_per_wavelength'])}"
                    if mm.get("air_cells_per_wavelength") is not None else "")
-        out.append(f"    sim.auto_mesh(cells_per_wavelength={e(mm.get('cells_per_wavelength', 20))}{edge_rule}{max_ratio}{air_cpw}{pad})")
+        out.append(f"    sim.auto_mesh(cells_per_wavelength={e(mm.get('cells_per_wavelength', 20))}{edge_rule}{max_ratio}{air_cpw}{pad}, refine_features={mm.get('refine_features', False)!r})")
     ff = d.get("far_field", {"enabled": True})
     if ff.get("enabled", True):
         args = []
@@ -3811,7 +3815,7 @@ def empty_design(id_: str, name: str) -> dict:
         "parts": [],
         "ports": [],
         "resistors": [],
-        "mesh": {"mode": "auto", "cells_per_wavelength": 20},
+        "mesh": {"mode": "auto", "cells_per_wavelength": 20, "refine_features": False},
         "far_field": {"enabled": True, "frequencies": ["f0"]},
     }
 
@@ -3869,6 +3873,6 @@ def blank_design(id_: str, name: str) -> dict:
         "ports": [{"type": "lumped", "number": 1, "R": "50", "start": ["feed", "0", "0"], "stop": ["feed", "0", "h"],
                    "direction": "z"}],
         "resistors": [],
-        "mesh": {"mode": "auto", "cells_per_wavelength": 20},
+        "mesh": {"mode": "auto", "cells_per_wavelength": 20, "refine_features": False},
         "far_field": {"enabled": True, "frequencies": ["f0"]},
     }

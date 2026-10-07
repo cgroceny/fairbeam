@@ -135,6 +135,9 @@ EXPLANATIONS = {
     "mesh-cells": "A large mesh needs more memory and time and may exceed the server's cell limit. Reduce cells per wavelength, lower the maximum frequency, or simplify fine details while checking accuracy.",
     "mesh-warning": "The automatic mesher found geometry or spacing that may make the grid costly or inaccurate. Review the detail in this message and adjust the nearby geometry or mesh settings before running again.",
     "mesh-feature": "This feature falls between mesh lines and may disappear from the simulated geometry. Thicken it, model thin metal as a sheet, or refine the mesh until it is resolved.",
+    "mesh-fine-feature": "A narrow gap, notch or strip has fewer cells across its width than the automatic mesh requires. Turn on \"Refine fine features\" in Simulation settings or simplify the feature, then rebuild the preview and inspect its resolution and total cell count before running.",
+    "mesh-fine-refinement": "The preview compares the automatic mesh before and after local refinement of narrow features. Fine cells extend across each Cartesian mesh plane, so review the total cell count and the remaining resolution warnings before running.",
+    "mesh-fine-limit": "Some fine-feature refinement would exceed the configured cell limit. The preview drops the largest estimated refinements first and keeps the ones that fit. Simplify the fine geometry or reduce the simulation domain, then rebuild the preview and resolve its feature warnings before running.",
     "mesh-lines": "Manual mesh lines need at least two finite, strictly increasing coordinates on each axis. Correct the line list or switch to automatic mesh.",
     "mesh-lines-parity": "The built mesh differs from the manual line list. Rebuild the preview and check that no line was omitted or changed.",
     "air-pad": "The open boundaries absorb the outgoing wave only if they stand far enough from the structure; with the air padding this small the reflections from them, and the box the far field is computed on, come too near the antenna. Use about a quarter wavelength at f min, which the automatic padding gives when the field is left empty.",
@@ -590,6 +593,8 @@ class _Lint:
                 self.error("simulation.end_criteria_db", "end-criterion",
                            f"{end:g} dB is below the {END_DB_MIN} dB limit that runs accept")
         m = self.d.get("mesh", {})
+        if "refine_features" in m and not isinstance(m["refine_features"], bool):
+            self.error("mesh.refine_features", "expr", "refine features must be true or false")
         if m.get("mode") == "manual":
             raw = m.get("lines")
             if not isinstance(raw, dict):
@@ -1398,6 +1403,43 @@ class _Lint:
                           + (f"; {hint}" if hint else ""))
         for w in (mesh.get("auto") or {}).get("warnings") or []:
             self.warn("mesh", "mesh-warning", f"automatic mesh: {w}")
+        impact = (mesh.get("auto") or {}).get("fine_feature_refinement") or {}
+        limit = impact.get("cell_limit")
+        if impact.get("skipped_cell_limit") and _num(limit) and math.isfinite(limit) and limit > 0:
+            self.warn("mesh", "mesh-fine-limit",
+                      f"the {limit:,.0f} cell limit dropped {impact.get('dropped_features', 0)} fine-feature refinements; "
+                      f"{impact.get('retained_features', 0)} refinements retained")
+        baseline, refined = impact.get("baseline_cells"), impact.get("total_cells")
+        if (all(_num(v) and math.isfinite(v) and v > 0 for v in (baseline, refined))
+                and refined > baseline):
+            self.info("mesh", "mesh-fine-refinement",
+                      f"local fine-feature refinement adds {refined - baseline:,.0f} cells "
+                      f"({baseline:,.0f} → {refined:,.0f}; {refined / baseline:.3g}×)")
+        unresolved_features = []
+        for feature in (mesh.get("auto") or {}).get("fine_features") or []:
+            if not isinstance(feature, dict):
+                continue
+            width, cells, required = (feature.get(k) for k in ("width", "cells_across", "required_cells"))
+            if (not all(_num(v) and math.isfinite(v) for v in (width, cells, required))
+                    or width <= 0 or required <= 0):
+                continue
+            if feature.get("resolved") is False or cells < required * (1 - 1e-6):
+                unresolved_features.append((cells / required, width, cells, required))
+        if unresolved_features:
+            worst = sorted(unresolved_features)[:3]
+            widths = ", ".join(f"{w:.3g}" for _, w, _, _ in worst)
+            cells = ", ".join(f"{c:.3g}" for _, _, c, _ in worst)
+            targets = ", ".join(f"{r:g}" for _, _, _, r in worst)
+            # With the setting off (the default) this is a suggestion, not a warning: most designs
+            # have a feed gap or a thin strip, and the user chose not to refine.
+            off = impact.get("enabled") is False
+            hint = '. To fix: turn on "Refine fine features" in Simulation settings › Mesh' if off else ""
+            text = (f"under-resolved fine features: {len(unresolved_features)}; worst widths (mm): {widths}; "
+                    f"cells across: {cells}; required: {targets}{hint}")
+            if off:
+                self.info("mesh", "mesh-fine-feature", text)
+            else:
+                self.warn("mesh", "mesh-fine-feature", text)
         self._excitation(mesh, parts)
         self._ringdown(mesh, parts)
         lines = [mesh.get(a) for a in "xyz"]
@@ -1710,7 +1752,7 @@ class _Lint:
         try:
             check_design(d)
         except DesignError as e:
-            self.error(e.where or "", "expr" if ".group" in (e.where or "") else "structure", e.detail)
+            self.error(e.where or "", "expr" if ".group" in (e.where or "") or e.where == "mesh.refine_features" else "structure", e.detail)
             return self.out
         self.params()
         self.materials()

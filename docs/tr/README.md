@@ -26,7 +26,7 @@ toprak düzleminden bıçağın besleme diline kadar `g` aralığını köprüle
 `ht` yüksekliğindeki geçiş bıçağı `wb` taban genişliğine açar; `wt` genişliğindeki üst kenar
 `sweep` kadar arkaya kaydırılır. Açık sınırlar MUR'dur. Toprak düzleminin altı dahil her yönde
 0,7 GHz'de çeyrek dalga boyu (107 mm) hava vardır. Otomatik mesh, 1,05 GHz'de dalga boyu başına
-20 hücre kullanır (yaklaşık 137 000 hücre); bıçak ve toprak levhalarının yanında, onlara dik yönde
+20 hücre kullanır (yaklaşık 137 000 hücre; örneğin açık olan İnce ayrıntıları sıklaştırın ayarıyla yaklaşık 269 000, bkz. [MESHING.md](../../docs/MESHING.md)); bıçak ve toprak levhalarının yanında, onlara dik yönde
 hücre boyutu yarıya iner.
 
 Model, PCB yerine yalın bir metal bıçak kullanır. Çoğu İHA bıçak anteninde cam elyafı veya

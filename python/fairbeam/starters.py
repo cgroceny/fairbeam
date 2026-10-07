@@ -19,7 +19,7 @@ from .design import DESIGN_SCHEMA
 # the defaults every starter shares
 PML = "PML_8"
 END_DB = -60
-MESH = {"mode": "auto", "cells_per_wavelength": 20}
+MESH = {"mode": "auto", "cells_per_wavelength": 20, "refine_features": False}
 
 
 def _design(id_: str, name: str, description: str, **rest) -> dict:
@@ -228,7 +228,7 @@ def sleeve_dipole_design(id_: str, name: str) -> dict:
                 "direction": "z"}],
         resistors=[],
         # the example's 30 cells per wavelength: its match was tuned on that mesh
-        mesh={"mode": "auto", "cells_per_wavelength": 30},
+        mesh={"mode": "auto", "cells_per_wavelength": 30, "refine_features": False},
         far_field={"enabled": True, "frequencies": ["f0"]},
         monitors={"currents": ["f0"], "efficiency": {"points": 21}},
     )

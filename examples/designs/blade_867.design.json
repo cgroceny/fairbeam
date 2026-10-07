@@ -56,7 +56,7 @@
     {"type": "lumped", "number": 1, "R": 50, "start": [0, 0, 0], "stop": [0, 0, "g"], "direction": "z"}
   ],
   "resistors": [],
-  "mesh": {"mode": "auto", "cells_per_wavelength": 20},
+  "mesh": {"mode": "auto", "cells_per_wavelength": 20, "refine_features": true},
   "far_field": {"enabled": true, "frequencies": ["f0"]},
   "monitors": {"currents": ["f0"], "efficiency": {"points": 21}}
 }

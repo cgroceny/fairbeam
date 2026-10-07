@@ -332,7 +332,7 @@ export interface Bundle {
     x: number[]; y: number[]; z: number[]; cells: Vec3; total_cells: number; min_cell: number; max_cell: number;
     /** automatic mesh settings and report (Simulation.auto_mesh; docs/MESHING.md) */
     auto?: {
-      settings: Record<string, number | string | null>;
+      settings: Record<string, number | string | boolean | null>;
       notes?: Record<string, string>;
       cells: Vec3;
       total_cells: number;
@@ -345,6 +345,17 @@ export interface Bundle {
       timesteps_per_ns: number;
       memory_mb_estimate: number;
       warnings: string[];
+      fine_features?: {
+        kind: "strip" | "notch" | "gap" | "feed";
+        width: number; lo: Vec3; hi: Vec3; normal: Vec3; axes: number[];
+        shape_indices: number[]; edge_indices: number[];
+        cells_across: number; required_cells: number; resolved: boolean;
+      }[];
+      fine_feature_refinement?: {
+        baseline_cells: number; total_cells: number; added_cells: number; ratio: number;
+        cell_limit: number; required_cells_lower_bound: number; skipped_cell_limit: boolean;
+        enabled?: boolean; dropped_features?: number; retained_features?: number;
+      };
     };
   };
   domain: { min: Vec3; max: Vec3 };

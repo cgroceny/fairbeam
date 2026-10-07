@@ -330,7 +330,7 @@ class Build(unittest.TestCase):
         d = blank_design("mesh-options", "Mesh options")
         d["far_field"]["enabled"] = False
         baseline = to_python(d)
-        self.assertIn("sim.auto_mesh(cells_per_wavelength=20)", baseline)
+        self.assertIn("sim.auto_mesh(cells_per_wavelength=20, refine_features=False)", baseline)
         d["mesh"].update(edge_rule="edge", max_ratio="1 + 0.5", air_cells_per_wavelength="10", pad="sqrt(4)")
         source = to_python(d)
         self.assertIn("edge_rule='edge', max_ratio=1 + 0.5, air_cells_per_wavelength=10, pad=np.sqrt(4)", source)
@@ -338,13 +338,13 @@ class Build(unittest.TestCase):
             module_for(d).build({p.key: p.default for p in module_for(d).PARAMS})
             self.assertEqual(auto_mesh.call_args.kwargs,
                              {"cells_per_wavelength": 20.0, "edge_rule": "edge", "max_ratio": 1.5,
-                              "air_cells_per_wavelength": 10.0, "pad": 2.0})
+                              "air_cells_per_wavelength": 10.0, "pad": 2.0, "refine_features": False})
             exported = {}
             exec(source, exported)
             exported["build"]({p.key: p.default for p in exported["PARAMS"]})
             self.assertEqual(auto_mesh.call_args.kwargs,
                              {"cells_per_wavelength": 20.0, "edge_rule": "edge", "max_ratio": 1.5,
-                              "air_cells_per_wavelength": 10.0, "pad": 2.0})
+                              "air_cells_per_wavelength": 10.0, "pad": 2.0, "refine_features": False})
 
     def test_mesh_option_validation_paths(self):
         from fairbeam.simulation import Simulation

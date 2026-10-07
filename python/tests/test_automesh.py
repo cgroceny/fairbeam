@@ -326,7 +326,7 @@ def fill_full_scan(lines, cap, ratio, samples=400):
     return np.array(out)
 
 
-def fill_per_gap(lines, cap, ratio, samples=400):
+def fill_per_gap(lines, cap, ratio, samples=400, monotone=False, max_cells=None, boundary_cells=None):
     """fill() as it was before the gaps of a pass were computed together and unchanged gaps were
     reused: one gap at a time, every pass (the reference for FastPathTest and test_design)."""
     x = np.unique(np.asarray(lines, float))
@@ -335,14 +335,18 @@ def fill_per_gap(lines, cap, ratio, samples=400):
     w = np.diff(x)
     cx = np.asarray(cap(x), float)
     h = np.minimum(cx, np.minimum(np.r_[np.inf, w], np.r_[w, np.inf]))
+    if boundary_cells is not None:
+        h[[0, -1]] = np.minimum(h[[0, -1]], boundary_cells)
     g = 0.85 * (ratio - 1.0)
-    ts = [np.linspace(x[i], x[i + 1], samples) for i in range(len(w))]
+    fraction = (1 - np.cos(np.linspace(0, np.pi, samples))) / 2
+    ts = [(x[i] + w[i] * fraction if monotone else np.linspace(x[i], x[i + 1], samples))
+          for i in range(len(w))]
     caps = [np.minimum(np.full(samples, np.inf), cap(t)) for t in ts]
     right = np.full(len(x), np.inf)
     left = np.full(len(x), np.inf)
     idx = np.arange(len(x))
     grow = (1.0 + g) * g / np.expm1(g) if g > 0 else 1.0
-    for _ in range(30):
+    for _ in range(max(30, 2 * len(x)) if monotone else 30):
         out = [x[0]]
         new_r, new_l = np.full(len(x), np.inf), np.full(len(x), np.inf)
         hh = np.minimum(h, grow * np.minimum(right, left))
@@ -367,10 +371,14 @@ def fill_per_gap(lines, cap, ratio, samples=400):
             dens = 1.0 / size
             cum = np.r_[0.0, np.cumsum((dens[1:] + dens[:-1]) / 2 * np.diff(t))]
             n = 1 if cum[-1] <= 1.1 else int(np.ceil(cum[-1] - 1e-3))
+            if max_cells is not None and len(out) - 1 + n + len(w) - i - 1 > max_cells:
+                raise OverflowError("fine-feature refinement exceeds cell limit")
             inner = list(np.interp(np.arange(1, n) * cum[-1] / n, cum, t)) if n > 1 else []
             seg = [a] + inner + [b]
             new_r[i], new_l[i + 1] = seg[1] - seg[0], seg[-1] - seg[-2]
             out += inner + [b]
+        if monotone:
+            new_r, new_l = np.minimum(new_r, right), np.minimum(new_l, left)
         if np.allclose(new_r, right) and np.allclose(new_l, left):
             break
         right, left = new_r, new_l
@@ -584,7 +592,7 @@ class SheetNormalCellsTest(unittest.TestCase):
 
     def test_cells_next_to_a_blade_are_half_the_local_cell(self):
         sim = self.blade_sim()
-        sim.auto_mesh()
+        sim.auto_mesh(refine_features=False)
         y = lines(sim, "y")
         res = C0 / 1.05e9 * 1e3 / 20
         self.assertTrue(near(y, 0.0))
@@ -606,6 +614,10 @@ class SheetNormalCellsTest(unittest.TestCase):
 
     def test_a_denser_mesh_refines_the_sheet_too(self):
         coarse, dense = self.blade_sim(), self.blade_sim()
+        # With no feed gap the wavelength still controls the normal cell.
+        # A feed gap now sets its own local cap, independent of global density.
+        coarse.ports.clear()
+        dense.ports.clear()
         coarse.auto_mesh(cells_per_wavelength=20)
         dense.auto_mesh(cells_per_wavelength=40)
         near_sheet = lambda sim: np.diff(lines(sim, "y")[(lines(sim, "y") >= -1e-9) & (lines(sim, "y") <= 12)])[0]

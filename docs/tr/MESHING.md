@@ -27,10 +27,17 @@ Tüm düzenleyici şablonları (`python/templates/*.py`) bu yöntemi kullanır. 
 | `max_ratio` | 1,4 | Kademeli dolguda komşu hücreler arasındaki en büyük oran |
 | `min_cell` | istenen en ince hücrenin 0,45 katı | Bundan yakın çizgiler birleştirilir (aşağıya bakın) |
 | `pad` | λ(f_min) / 4 | Yapı ile emici sınırlar arasındaki hava (PML hücreleri buna eklenir). Tek sayı veya altı değer (x-, x+, y-, y+, z-, z+); 0, PML'e uzanan besleme dalga kılavuzunda (`pyramidal_horn.py`) o yüzü yapı üzerinde bırakır ve PML hücresi eklemez |
+| `refine_features` | `False` | Dar boşluk, çentik, ince veya eğik şerit gibi ince ayrıntıların çevresinde mesh'i yerel olarak sıklaştırır. Varsayılan olarak kapalıdır; aşağıya bakın. `mesh.refine_features` içermeyen tasarım JSON'u da `false` kullanır |
 | `keep_existing` | `True` | Izgaradaki mevcut çizgiler (modelin ekledikleri) sabit çizgi olarak korunur |
 | `verbose` | `False` | Raporu yazdırır |
 
-Tasarım dosyasında Simülasyon › Mesh ayarları penceresi *Otomatik* (`mesh.mode: "design"`, aşağıda açıklanır) ve *Otomatik (eski)* (`"auto"`; `mode` içermeyen tasarımın kullandığı mod da budur) modlarını sunar. `"manual"` çizgili tasarımda *Elle girilen çizgiler* görünür. Eski `auto` modundaki tasarım JSON'u, mevcut dalga boyu başına hücre ve hava payı alanlarının yanında `mesh.edge_rule`, `mesh.max_ratio` ve `mesh.air_cells_per_wavelength` ayarlayabilir. Bunları belirtmemek önceki mesh'i korur. Tasarımcının hücre ve süre tahminleri dönen mesh çizgilerini ve zaman adımını kullanır; böylece önizleme üretildikten sonra seçilen seçenekleri kapsar.
+Tasarım dosyasında Simülasyon › Mesh ayarları penceresi *Otomatik* (`mesh.mode: "design"`, aşağıda açıklanır) ve *Otomatik (eski)* (`"auto"`; `mode` içermeyen tasarımın kullandığı mod da budur) modlarını sunar. `"manual"` çizgili tasarımda *Elle girilen çizgiler* görünür. Eski `auto` modundaki tasarım JSON'u, mevcut dalga boyu başına hücre ve hava payı alanlarının yanında `mesh.edge_rule`, `mesh.max_ratio` ve `mesh.air_cells_per_wavelength` ayarlayabilir. Bunları belirtmemek önceki mesh'i korur. İnce ayrıntıların sıklaştırılması ayrıca `mesh.refine_features` ile denetlenir. Tasarımcının hücre ve süre tahminleri dönen mesh çizgilerini ve zaman adımını kullanır; böylece önizleme üretildikten sonra seçilen seçenekleri kapsar.
+
+Simülasyon ayarları › Mesh altındaki **İnce ayrıntıları sıklaştırın**, iki otomatik modda da tasarım düzeyindeki `mesh.refine_features` mantıksal değerini denetler. **Varsayılan olarak kapalıdır**: yeni tasarımlarda (`"refine_features": false`), bu alanı içermeyen kayıtlı tasarımlarda ve Python API'sinde (`refine_features=False`). Bir tasarımı açmak veya dışa aktarmak ayarı hiçbir zaman açmaz; bu yüzden bir güncelleme mesh'inizi korur. Elle girilen mesh çizgileri hiçbir zaman sıklaştırılmaz. Tasarımdan üretilen Python her zaman tasarımın geçerli değerini açıkça yazar.
+
+Ne zaman açılmalı: tasarımda otomatik mesh'in üç hücreden azıyla (eğik şeritte tek hücreyle) kapladığı dar boşluklar, çentikler, besleme aralıkları veya eğik ince şeritler varsa. Ayar kapalıyken mesh değişmez; yine de Denetimler listesi bu tür ayrıntıları `mesh-fine-feature` olarak bildirir (sayıyı ve en kötü genişlikleri içeren bir bilgi) ve ayarı açmanızı önerir. Ayarı açtıktan sonra önizlemeyi yeniden oluşturun, hücre sayısını ve denetimleri karşılaştırın.
+
+Maliyet ve doğruluk uyarısı: sıklaştırma hücre ve zaman adımı sayısını, dolayısıyla çalışma süresini artırır; paketlenmiş örneklerde hücre sayısı yaklaşık 2 katına kadar, bıçak anteninde hücre × zaman adımı maliyeti 7,5 katına kadar çıkar (aşağıdaki tablolara bakın). Ayrıca besleme çevresindeki ızgarayı değiştirir; bu da tel antenlerin giriş empedansını kaydırabilir: aşağıdaki kaba helis denetiminde giriş direnci %27,7 değişmiştir. Geometrik çözünürlük, elektromanyetik yakınsama demek değildir; bu yüzden empedansa güvenmeden önce ayar açıkken ve kapalıyken birer çalıştırmayı karşılaştırın veya [yakınsama çalışmasını](#convergence-study) yapın. Paketlenmiş İHA bıçak anteni örneği (`blade_867`) ayar açık olarak gelir.
 
 Uyarlamalı *Otomatik* modu `mesh: {"mode":"design", "overrides": {...}}` kullanır. İnce desenli metal levhalar için yaklaşık 30 hücre/λ ve tam levha kenarlarını, diğer durumlarda 24 hücre/λ ve üçte bir kuralını seçer. Hava çözünürlüğü şekil sayısıyla azalır (8 ile geometrik ayrıntı çözünürlüğü arasında sınırlıdır), varsa dielektrik katmanlar en az beş alt bölüme ayrılır ve kademelenme oranı 1,4'tür. Hava payı uzak alan hesaplanmıyorsa λ(f_min)/8, hesaplanıyorsa λ(f_min)/4'tür. NF2FF kutusu mesh çizgilerinden oluşturulur; openEMS, `Simulation.add_nf2ff_box` içinde asgari açıklık şartı getirmez. Daha büyük çeyrek dalga payı, ışıma sınırı için temkinli seçimdir. Alan değerleri `overrides` altında sabitlenebilir; bu değerler aynen raporlanır ve notları elle belirlenen ayarı gösterir. Uyarlamalı değerler oluşturma sırasında hesaplanır, tasarım JSON'una geri yazılmaz. Eksik mod ve `mode: auto` eski seçimleri korur.
 
@@ -64,8 +71,100 @@ Mesh oluşturucu tüm CSXCAD şekillerini (box, polygon, linpoly, cylinder, cyli
 | `timestep_s`, `timesteps_per_ns` | En küçük hücrelerden CFL zaman adımı tahmini |
 | `memory_mb_estimate` | Hücre başına yaklaşık 90 bayt (alanlar ve operatör) |
 | `warnings` | Örneğin `min_cell` değerinden yakın iki kesin çizgi |
+| `fine_features` | Algılanan ince ayrıntılar: tür, genişlik, etkilenen eksenler ve sınırlar, gereken hücre sayısı (eğik şeritlerde 1, diğerlerinde 3), ölçülen `cells_across` ve `resolved` |
+| `fine_feature_refinement` | Hücre sayısı etkisi: yerel sıklaştırmadan önceki `baseline_cells`, son `total_cells`, `added_cells` ve son/başlangıç `ratio` oranı. Sınır koruması ayrıca `skipped_cell_limit`, `cell_limit`, `required_cells_lower_bound`, `dropped_features` ve `retained_features` bildirir; `enabled` ayarın durumunu kaydeder |
 
+İnce ayrıntının enine hücre sayısı temkinli bir değerdir: ayrıntının genişliği, her eksendeki kesişen en geniş hücre genişliklerinin toplamına bölünür ve ayrıntının genişlik yönüne izdüşürülür. Bu, geometrik çözünürlüğü ölçer; elektromanyetik yakınsamayı değil. Ayrıntılar ayar kapalıyken de ölçülür. Önizleme üretildikten sonra, bildirilen bir ayrıntı gereken çözünürlüğün altındaysa tasarım denetimleri `mesh-fine-feature` bildirir: ayar kapalıysa ayarı açmanızı öneren bir bilgi, ayar açıkken hücre sınırı yüzünden bir ayrıntı yetersiz kalmışsa bir uyarı. Rapor ve hücre sayısı karşılaştırması işlem içi mesh önizlemesini kullanır; çözücüyü çalıştırmaz. Elle girilen mesh'te veya bu raporu içermeyen eski bir önizlemede ince ayrıntı değerlendirmesi yoktur. Sıklaştırma hücre eklediğinde Denetimler listesi başlangıç ve sıklaştırılmış toplamları, eklenen hücreleri ve oranı gösterir. Sıklaştırma her koordinat ekseni boyunca yereldir; Kartezyen mesh çizgileri bölge boyunca uzandığından uzun bir eğik şeridi sıklaştırmak yine de çok sayıda hücre ekleyebilir.
+
+## İnce ayrıntı mesh regresyonu
+
+Yeniden üretilebilir işlem içi karşılaştırma, `63e3550cbb5f07b92dd3c18dd22833ab6366251d` ana dal sürümünü ve gözden geçirilmiş sıklaştırma algoritmasını kullanır. Ayar varsayılan olarak kapalı olsa ve yalnızca bıçak örneği açık gelse de, kayıtlı her örnek karşılaştırma için açıkça açılmıştır. Tüm değerler `python/tests/fixtures/automesh_fine_features_comparison.json` dosyasındadır. Bunlar mesh ölçümleridir, elektriksel yakınsama ölçümleri değildir.
+
+Yapay bıçak test tasarımında üç adet 1 mm çentik, 0,4 mm eğik bir şerit ve 1,35 mm bir besleme vardır.
+
+| Ölçüm | Ana dal | Gözden geçirilmiş sıklaştırma |
+| --- | --- | --- |
+| Hücreler (x × y × z) | 106 × 28 × 72 | 206 × 50 × 263 |
+| Toplam hücre | 213.696 | 2.708.900 |
+| En küçük hücre (mm) | 0,19635 | 0,1788 |
+| En büyük komşu oranı | 1,4 | 1,398 |
+| Her 1 mm çentiğin enine hücre sayısı | 1,0, 1,0, 1,0 | 5,0, 5,0, 5,0 |
+| Beslemenin enine hücre sayısı | 1,0 | 4,0 |
+| Şeridin enine izdüşüm hücre sayısı | 0,12023 | 1,21603 |
+| Şerit orta noktası basamak bileşenleri | 9 | 1 |
+| Hücre × zaman adımı/ns (milyar) | 0,337 | 7,002 |
+
+Bağlantı, elektrik kenarı orta noktası şeridin içindeyse düğümleri birleştirir. Bu, geometrik bir basamak denetimidir. Gözden geçirilmiş test tasarımı 3 M hücrenin altındadır (önceki üç hücreli şerit hedefi 14.250.600 hücre üretmişti). Üç çentik ve besleme en az üç hücre korur.
+
+21 paketlenmiş değişken için maliyet sütunu, milyar cinsinden **hücre × tahmini zaman adımı/ns** değeridir ve ardından sonra/önce oranı gelir. CFL tahminini kullanarak eşit fiziksel süreleri karşılaştırır; duvar saatini veya yakınsama tahminini göstermez. On mesh aynı kalır. 25 mm üzerindeki helis z çizgileri başlangıçla birebir aynı kalır; beslemenin küçük hücreleri artık 200 mm'lik telin tamamına yayılmaz. Mevcut başlangıç kademelenme ihlalleri dokunulmamış bölgelerde kalabilir; bu örneklerin hiçbirinde en büyük komşu oranı daha kötü değildir.
+
+| Örnek | Hücre, ana dal → sıklaştırılmış | En küçük hücre (mm), ana dal → sıklaştırılmış | Maliyet (milyar), ana dal → sıklaştırılmış; oran |
+| --- | --- | --- | --- |
+| `branchline-coupler` | 81.090 → 81.090 | 0,14417 → 0,14417 | 0,205 → 0,205; 1,00× |
+| `dipole` | 240.120 → 295.200 | 0,16667 → 0,16667 | 0,615 → 0,830; 1,35× |
+| `helix-axial` | 1.360.800 → 1.535.960 | 1,33449 → 0,75000 | 0,463 → 0,984; 2,12× |
+| `inset-patch` | 240.786 → 304.668 | 0,31144 → 0,25000 | 0,290 → 0,495; 1,71× |
+| `lowpass-stepped` | 133.000 → 133.000 | 0,07811 → 0,07811 | 0,724 → 0,724; 1,00× |
+| `microstrip-line` | 3.106.880 → 3.106.880 | 0,13797 → 0,13797 | 7,398 → 7,398; 1,00× |
+| `minkowski-patch` | 143.640 → 143.640 | 0,32354 → 0,32354 | 0,157 → 0,157; 1,00× |
+| `patch-antenna` | 167.040 → 167.040 | 0,33969 → 0,33969 | 0,157 → 0,157; 1,00× |
+| `patch-array-2x1` | 115.872 → 115.872 | 0,33967 → 0,33967 | 0,109 → 0,109; 1,00× |
+| `patch-array-4x1` | 451.200 → 451.200 | 0,33963 → 0,33963 | 0,424 → 0,424; 1,00× |
+| `pyramidal-horn` | 1.103.856 → 1.103.856 | 0,20819 → 0,20819 | 2,121 → 2,121; 1,00× |
+| `sierpinski-monopole--iterations-0` | 9.687.972 → 9.900.352 | 0,18543 → 0,18543 | 22,963 → 24,070; 1,05× |
+| `sierpinski-monopole--iterations-3` | 28.387.072 → 28.908.000 | 0,03289 → 0,03289 | 334,632 → 340,773; 1,02× |
+| `wilkinson-divider` | 756.276 → 756.276 | 0,13046 → 0,13046 | 2,754 → 2,754; 1,00× |
+| `blade-867` | 136.500 → 269.040 | 1,40492 → 0,43767 | 0,038 → 0,283; 7,53× |
+| `collinear-867` | 3.516.544 → 3.713.820 | 0,08953 → 0,08953 | 13,352 → 14,120; 1,06× |
+| `meander-dipole-867` | 976.472 → 1.073.856 | 0,25599 → 0,25599 | 1,782 → 1,960; 1,10× |
+| `sleeve-dipole-867` | 442.800 → 509.733 | 0,26078 → 0,23791 | 0,758 → 0,918; 1,21× |
+| `ux-inset-patch-2-4-ghz` | 123.420 → 166.870 | 0,40000 → 0,25000 | 0,131 → 0,274; 2,09× |
+| `wideband-dipole-867` | 830.576 → 1.112.832 | 0,40000 → 0,40000 | 0,855 → 1,263; 1,48× |
+| `yagi-867` | 714.840 → 714.840 | 0,36511 → 0,36511 | 0,845 → 0,845; 1,00× |
+
+Yapay yoğun PCB'de 20 mm uzunluğunda, 0,4 mm genişliğinde eş düzlemli izler ve 0,2 mm aralıklar, 1–3 GHz bant, MUR sınırları ve 20 hücre/λ vardır. Bitişik tüm aralıklar üç hücre hedefini karşılar. Hücre sayıları, sıklaştırmanın tüm bölge boyunca yayılan Kartezyen maliyetini içerir.
+
+| İz sayısı | Hücre, ana dal → sıklaştırılmış | En küçük hücre (mm), ana dal → sıklaştırılmış | Maliyet (milyar), ana dal → sıklaştırılmış; oran |
+| --- | --- | --- | --- |
+| 20 | 692.496 → 876.960 | 0,06200 → 0,04660 | 4,602 → 7,238; 1,57× |
+| 60 | 1.781.136 → 2.306.080 | 0,06200 → 0,04994 | 11,837 → 18,270; 1,54× |
+| 120 | 3.414.096 → 4.449.760 | 0,06200 → 0,04660 | 22,689 → 36,725; 1,62× |
+
+Algılayıcı zamanlaması, aynı genişlik ve aralıkla 100 mm uzunluğunda 20 parçalı dikdörtgen iz dış çizgisi kullanır; `max_width=0.25 mm`. Bu, algılamayı mesh oluşturmadan ayırır. Önceki algılayıcı `efbbcfa` sürümüdür. Tekil çalıştırma süreleri iş yüküne özeldir, genel başarım garantisi değildir.
+
+| Kenar | Ön süzgeçten önce (s) | Ön süzgeçle (s) | Özellikler, her iki sürüm |
+| --- | --- | --- | --- |
+| 3.200 | 3,062 | 0,185 | 1.501 |
+| 10.000 | 27,611 | 0,661 | 4.731 |
+
+`python/` klasöründen, openEMS Python ortamıyla yeniden üretin:
+
+```bash
+nice -n 15 python -m tests.mesh_feature_measurements --examples --dense-pcb --detection
+nice -n 15 python -m tests.mesh_feature_measurements --examples --dense-pcb --reference-revision 63e3550cbb5f07b92dd3c18dd22833ab6366251d
+nice -n 15 python -m tests.mesh_feature_measurements --detection --detector-revision efbbcfa
+```
+
+Dipol ve yama kendi otomatik seçeneğini seçer; yalnızca elle mesh'li örnekler geometriden otomatik varsayılanlarla yeniden oluşturulur. Bu, iki tarafta da aynı girdileri bilerek ölçer.
+
+### Kaba helis alan doğrulaması
+
+Helis mesh'i değiştiği için, CPU üzerinde dört iş parçacığıyla, 20 hücre/λ, −30 dB durdurma ölçütü ve 60.000 adım sınırıyla ardışık olarak da çalıştırılmıştır. İkisi de durdurma ölçütüne ulaşmıştır. Örüntüler 2,4 GHz'de 5° teta ve 10° faz adımları kullanmıştır. Geçici çözücü çıktısı her çalıştırmadan sonra silinmiştir. Karşılaştırma betiği yalnızca ölçümleri ve çalıştırma ayarlarını bildirir.
+
+| 2,4 GHz'de | Ana dal | Sıklaştırılmış | Fark |
+| --- | --- | --- | --- |
+| Dmax | 12,100 | 11,996 | -0,104 dB |
+| Eksen yönünde eksenel oran | 1,120 | 0,834 | -0,286 dB |
+| Giriş direnci | 156,344 | 199,676 | +43,332 Ω |
+
+Giriş direnci değişimi büyüktür (yaklaşık %27,7); ayarın varsayılan olarak kapalı olmasının nedeni budur. Bu, çözülmemiş bir yakınsama sorusudur, elektriksel eşdeğerlik kanıtı değildir. İnce telin etkin yarıçapı basamaklı mesh'ine bağlıdır ve besleme sıklaştırması bu mesh'i yerel olarak değiştirir. Bu kaba denetimde Dmax ve eksenel oran birbirine yakındır. Ana çalıştırma ayrıca %100,2 ham ışıma verimi bildirmiştir; bu, küçük bir sayısal güç dengesi hatasıyla uyumludur. Bu çalıştırmalar değişen diğer örnekleri doğrulamaz ve yakınsamış empedans belirlemez.
+
+```bash
+nice -n 10 env OMP_NUM_THREADS=4 OPENBLAS_NUM_THREADS=1 python -m tests.helix_mesh_sanity --reference-revision 63e3550cbb5f07b92dd3c18dd22833ab6366251d
+```
 ## Doğrulama
+
+Bu bölümdeki alan sonuçları yerel ince ayrıntı sıklaştırmasından öncesine aittir; tarihsel doğrulama sonuçlarıdır. Yukarıdaki kaba helis denetimi bu sürümdeki tek yeni alan karşılaştırmasıdır; geri kalan mesh tablosu alan doğruluğunu belirlemez. Yalnızca mesh çözünürlüğüne bakan bir denetim, elektromanyetik yakınsamayı belirlemez.
 
 GPU motoru, −60 dB durdurma ölçütü. VALIDATION.md'deki yakınsamış, elle ayarlanmış sonuçlarla karşılaştırma:
 

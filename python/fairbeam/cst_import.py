@@ -2911,8 +2911,8 @@ class _Importer:
             over = dict(out)
             over.setdefault("air_cells_per_wavelength", out["cells_per_wavelength"])
             over["dielectric_cells"] = int(dc)
-            return {"mode": "design", "overrides": over}
-        return {"mode": "auto", **out}
+            return {"mode": "design", "overrides": over, "refine_features": m.get("refine_features", False)}
+        return {"mode": "auto", **out, "refine_features": m.get("refine_features", False)}
 
     # ---- the design
 

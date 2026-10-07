@@ -36,6 +36,8 @@ pyems and easyMesh4openEMS; this is an independent implementation):
 from __future__ import annotations
 
 import bisect
+import math
+import os
 
 import numpy as np
 
@@ -411,11 +413,14 @@ def _tip_width(m, a, local_res):
 def generate(sim, f_max: float | None = None, cells_per_wavelength: float = 20, edge_rule: str = "thirds",
              max_ratio: float = 1.4, min_cell: float | None = None, dielectric_cells: int = 4,
              pad: float | None = None, metal_cells: int = 6, edge_res: float | None = None,
-             keep_existing: bool = True, air_cells_per_wavelength: float | None = None) -> dict:
+             keep_existing: bool = True, air_cells_per_wavelength: float | None = None,
+             refine_features: bool = False) -> dict:
     """Mesh ``sim`` (an :class:`fairbeam.Simulation`) and return a report dict.
 
     Lengths are in drawing units (``sim.unit`` metres). ``f_max`` defaults to the simulation's.
     ``edge_res`` overrides the metal edge cell (default: half the local maximum cell).
+    ``refine_features`` (off by default) refines the mesh locally across narrow gaps, notches and
+    thin strips; the report lists the fine features either way (``fine_features``).
     """
     if edge_rule not in ("thirds", "edge"):
         raise ValueError("edge_rule must be 'thirds' or 'edge'")
@@ -426,6 +431,7 @@ def generate(sim, f_max: float | None = None, cells_per_wavelength: float = 20, 
     if air_cells_per_wavelength is not None and (not np.isfinite(air_cells_per_wavelength)
                                                   or not 0 < air_cells_per_wavelength <= cells_per_wavelength):
         raise ValueError("air_cells_per_wavelength must be finite, > 0 and <= cells_per_wavelength")
+    requested_min_cell = min_cell
     f_max = float(f_max or sim.f_max)
     unit = sim.unit
     lam_min = C0 / f_max / unit
@@ -742,9 +748,11 @@ def generate(sim, f_max: float | None = None, cells_per_wavelength: float = 20, 
             if len(ex):
                 L.add(a, ex, PRIO_HARD, "user line")
     # ---- 4. merge, fill and grade -----------------------------------------------------------------
+    required = []
     for a in range(3):
         fixed = [(c, p, t) for c, p, t in L.fixed[a] if dom_lo[a] - 1e-9 <= c <= dom_hi[a] + 1e-9]
         req = _resolve(fixed, min_cell, warnings, a)
+        required.append(req)
         opt = sorted((c, min(h, res_min)) for c, h in L.optional[a] if dom_lo[a] < c < dom_hi[a])
         # optional lines survive if they are more than 0.4 of their intended cell from a fixed line,
         # and more than half of it from the previous kept one (fills of neighbouring features
@@ -764,15 +772,74 @@ def generate(sim, f_max: float | None = None, cells_per_wavelength: float = 20, 
     settings = {
         "f_max": f_max, "cells_per_wavelength": cells_per_wavelength, "edge_rule": edge_rule,
         "max_ratio": max_ratio, "dielectric_cells": dielectric_cells, "metal_cells": metal_cells,
+        "refine_features": refine_features,
         "pad": pads if len(set(pads)) > 1 else pad_air, "min_cell": min_cell, "edge_res": edge_res}
     if air_cells_per_wavelength is not None:
         settings["air_cells_per_wavelength"] = air_cells_per_wavelength
+    # Measure the original grid first. Features already resolved keep exactly the
+    # same mesh, and this also gives the cell-count impact without a solver run.
+    from .mesh_refinement import (collect_features, measure_features, refinement_caps, cap_sizes,
+                                  refinement_cell_lower_bound, refine_axis)
+    # The features are measured even when refinement is off, so the checks can say that some are
+    # under-resolved and suggest turning the setting on.
+    features = collect_features(metals, feeds + list(getattr(sim, "lumped_elements", [])), 2 * res_feature)
+    baseline_lines = [np.asarray(grid.GetLines(a), float) for a in range(3)]
+    before = measure_features(features, baseline_lines)
+    unresolved = [f for f in before if not f["resolved"]]
+    baseline_cells = int(np.prod([len(x) - 1 for x in baseline_lines]))
+    cell_limit = int(float(os.environ.get("FAIRBEAM_MAX_CELLS", 40e6)))
+    skipped_cell_limit, required_lower_bound = False, baseline_cells
+    dropped = []
+    candidates = list(unresolved) if refine_features else []
+    grading_ratio = 1 + 0.9 * (max_ratio - 1)
+
+    def estimated_cost(feature):
+        # Largest Cartesian footprint first, including the small sheet-normal
+        # cells. This orders removals without allocating each candidate mesh.
+        caps = refinement_caps([feature], requested_min_cell)
+        return refinement_cell_lower_bound(caps, (dom_lo, dom_hi))
+
+    candidates.sort(key=estimated_cost)
+    while candidates:
+        caps = refinement_caps(candidates, requested_min_cell)
+        required_lower_bound = refinement_cell_lower_bound(caps, (dom_lo, dom_hi))
+        try:
+            if required_lower_bound > cell_limit:
+                raise OverflowError("fine-feature refinement exceeds cell limit")
+            refined_lines = list(baseline_lines)
+            for a in range(3):
+                if not caps[a]:
+                    continue
+                base_cap = lambda t, a=a: _cap_array(t, a, diel, res_air, res_feature)
+                refined_cap = lambda t, a=a, base_cap=base_cap: cap_sizes(t, base_cap, caps[a], grading_ratio)
+                other_cells = math.prod(len(refined_lines[b]) - 1 for b in range(3) if b != a)
+                refined_lines[a] = refine_axis(baseline_lines[a], required[a], refined_cap, grading_ratio,
+                                              cell_limit // max(1, other_cells))
+            if math.prod(len(lines) - 1 for lines in refined_lines) > cell_limit:
+                raise OverflowError("fine-feature refinement exceeds cell limit")
+            for a, lines in enumerate(refined_lines):
+                grid.SetLines(a, lines)
+            break
+        except OverflowError:
+            skipped_cell_limit = True
+            dropped.append(candidates.pop())
     report = mesh_report(sim, res_air, res_min, min_cell, warnings, settings)
+    report["fine_features"] = measure_features(features, [grid.GetLines(a) for a in range(3)])
+    report["fine_feature_refinement"] = {
+        "baseline_cells": baseline_cells, "total_cells": report["total_cells"],
+        "added_cells": report["total_cells"] - baseline_cells,
+        "ratio": report["total_cells"] / baseline_cells,
+        "cell_limit": cell_limit, "required_cells_lower_bound": required_lower_bound,
+        "skipped_cell_limit": skipped_cell_limit,
+        "enabled": refine_features, "dropped_features": len(dropped),
+        "retained_features": len(candidates),
+    }
     sim.mesh_report = report
     return report
 
 
-def fill(lines, cap, ratio: float, samples: int = 400) -> np.ndarray:
+def fill(lines, cap, ratio: float, samples: int = 400, monotone: bool = False,
+         max_cells: int | None = None, boundary_cells=None) -> np.ndarray:
     """Fill the gaps between sorted ``lines`` with smoothly graded cells.
 
     A size field s(x) = min_j (h_j + (ratio - 1) |x - x_j|), capped by ``cap(x)``, is built from
@@ -781,6 +848,11 @@ def fill(lines, cap, ratio: float, samples: int = 400) -> np.ndarray:
     with that ratio. Each gap then gets n = ceil(integral dx / s) cells, placed at equal steps of
     that integral, so cells follow the size field and land exactly on the given lines.
     ``cap(x)`` takes an array of positions and returns the largest allowed cell there.
+    ``monotone`` uses endpoint-dense quadrature and keeps the smallest realized
+    boundary sizes within a local refill window. Optional cover lines must not be
+    treated as fixed constraints during that refill. ``boundary_cells`` sets the
+    neighboring cell sizes just outside the window. The default retains existing
+    grids. ``max_cells`` guards line allocations.
     """
     x = np.unique(np.asarray(lines, float))
     if len(x) < 2:
@@ -788,10 +860,18 @@ def fill(lines, cap, ratio: float, samples: int = 400) -> np.ndarray:
     w = np.diff(x)
     cx = np.asarray(cap(x), float)
     h = np.minimum(cx, np.minimum(np.r_[np.inf, w], np.r_[w, np.inf]))
+    if boundary_cells is not None:
+        h[[0, -1]] = np.minimum(h[[0, -1]], boundary_cells)
     g = 0.85 * (ratio - 1.0)   # discretising the size field overshoots slightly; stay below ratio
     # every gap at once: row i holds the samples of gap i (the per-gap numpy calls were the cost of
     # meshing detailed geometry); each row gets the arithmetic the gap got on its own
-    ts = np.linspace(x[:-1], x[1:], samples, axis=1)
+    if monotone:
+        # Resolve steep size-field gradients near fixed endpoints without a
+        # huge uniform quadrature array in a long air interval.
+        fraction = (1 - np.cos(np.linspace(0, np.pi, samples))) / 2
+        ts = x[:-1, None] + w[:, None] * fraction
+    else:
+        ts = np.linspace(x[:-1], x[1:], samples, axis=1)
     c = np.asarray(cap(ts.ravel()), float)
     caps = np.minimum(np.full(ts.shape, np.inf), c.reshape(ts.shape) if c.shape == (ts.size,) else c)
     dts = np.diff(ts, axis=1)
@@ -803,11 +883,14 @@ def fill(lines, cap, ratio: float, samples: int = 400) -> np.ndarray:
     # across the line
     grow = (1.0 + g) * g / np.expm1(g) if g > 0 else 1.0
     m = len(w)
+    allocated_cells = m
+    if max_cells is not None and m > max_cells:
+        raise OverflowError("fine-feature refinement exceeds cell limit")
     # the outcome of each gap (its first and last cell, its inner lines) from the last pass that
     # computed it, and the inputs it was computed from: a gap whose inputs did not change between
     # passes is not computed again (the same arithmetic on the same numbers gives the same lines)
     first, last, inners, prev = w.copy(), w.copy(), {}, None
-    for _ in range(30):
+    for _ in range(max(30, 2 * len(x)) if monotone else 30):
         # a gap split into n cells makes the cell next to a line smaller than the h_j the field
         # assumed there; each gap grades from the cells actually placed on the far side of its end
         # lines (never from its own, which would feed back on itself): gap i takes h_i from `left`
@@ -852,14 +935,20 @@ def fill(lines, cap, ratio: float, samples: int = 400) -> np.ndarray:
             for k in np.nonzero(~split)[0].tolist():
                 g_i = int(i[k])
                 first[g_i] = last[g_i] = w[g_i]
-                inners.pop(g_i, None)
+                allocated_cells -= len(inners.pop(g_i, ()))
             for k in np.nonzero(split)[0].tolist():
                 g_i, n = int(i[k]), int(np.ceil(total[k] - 1e-3))
+                allocated_cells += n - 1 - len(inners.get(g_i, ()))
+                if max_cells is not None and allocated_cells > max_cells:
+                    raise OverflowError("fine-feature refinement exceeds cell limit")
                 inner = np.interp(np.arange(1, n) * total[k] / n, cum[k], t[k])
                 inners[g_i] = inner
                 first[g_i], last[g_i] = inner[0] - x[g_i], x[g_i + 1] - inner[-1]
         new_r, new_l = np.full(len(x), np.inf), np.full(len(x), np.inf)
         new_r[:-1], new_l[1:] = first, last
+        if monotone:
+            new_r = np.minimum(new_r, right)
+            new_l = np.minimum(new_l, left)
         if np.allclose(new_r, right) and np.allclose(new_l, left):
             break
         right, left = new_r, new_l

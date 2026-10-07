@@ -159,14 +159,14 @@ export default function SimSettingsDialog() {
   const setMode = (mode: string) => edit((x) => {
     if (x.mesh.mode === "manual") {
       const settings = x.mesh.automatic;
-      x.mesh = { ...(settings ?? { mode: "design", overrides: {} }), thin_metal: x.mesh.thin_metal };
+      x.mesh = { ...(settings ?? { mode: "design", overrides: {} }), thin_metal: x.mesh.thin_metal, refine_features: x.mesh.refine_features ?? settings?.refine_features };
     } else if (mode === "design") {
       if (x.mesh.mode !== "design") previousLegacy = JSON.parse(JSON.stringify(x.mesh));
       x.mesh.mode = "design";
       for (const key of ["cells_per_wavelength", "pad", "edge_rule", "max_ratio", "air_cells_per_wavelength"]) delete (x.mesh as Record<string, unknown>)[key];
       x.mesh.overrides ??= {};
     } else if (mode === "auto") {
-      x.mesh = previousLegacy ?? { mode: "auto", cells_per_wavelength: 20, thin_metal: x.mesh.thin_metal };
+      x.mesh = { ...(previousLegacy ?? { mode: "auto", cells_per_wavelength: 20, thin_metal: x.mesh.thin_metal }), refine_features: x.mesh.refine_features };
     }
   }, "mesh-mode");
   const est = () => draftEstimate(engine());
@@ -511,6 +511,14 @@ export default function SimSettingsDialog() {
               </div>
               <ExprField optional label={t("sim.mesh.airCpwEmpty")} value={d().mesh.air_cells_per_wavelength ?? ""}
                 path="mesh.air_cells_per_wavelength" onChange={(v) => edit((x) => { x.mesh.air_cells_per_wavelength = v === "" ? null : v; }, "air-cpw")} />
+              </Show>
+              <Show when={!manualMesh()}>
+                <label class="dz-check">
+                  <input type="checkbox" checked={d().mesh.refine_features ?? false}
+                    onChange={(e) => edit((x) => { x.mesh.refine_features = e.currentTarget.checked; }, "refine-features")} />
+                  {t("sim.mesh.refineFeatures")}
+                </label>
+                <p class="note">{t("sim.mesh.refineFeatures.hint")}</p>
               </Show>
               <label class="dz-field">
                 <span class="dz-label">{t("sim.mesh.thinMetal")}</span>
