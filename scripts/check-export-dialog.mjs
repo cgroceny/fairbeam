@@ -56,7 +56,8 @@ assert.equal(workspace.appMode(), "results");
 let html;
 assert.doesNotThrow(() => { html = mount(); }, "the export dialog mounts in results mode with the CST format");
 const shown = text(html);
-const stem = coupler.model.id.replace(/[^a-z0-9_-]+/gi, "_");
+// every export of a design shares its file stem: the workspace id, with "_" where the model id has "-"
+const stem = coupler.model.id.replace(/-/g, "_");
 assert.match(html, /<select[^>]*value="cst"/, "outside the Design tab the dialog opens on CST (.bas)");
 assert.ok(shown.includes(`${stem}.bas`), `the macro is named after the model (${stem}.bas)`);
 assert.ok(shown.includes("Sub Main"), "the macro preview is rendered on open");
@@ -65,7 +66,7 @@ assert.ok(!shown.includes(en["export.sourcePreparing"]), "a results bundle needs
 
 // a model id with characters CST does not take in a file name
 state.openBundle({ ...coupler, model: { ...coupler.model, id: "branch line/coupler v2" } }, "renamed.json");
-assert.ok(text(mount()).includes("branch_line_coupler_v2.bas"), "the file stem keeps letters, digits, _ and - only");
+assert.ok(text(mount()).includes("branch_line_coupler_v2.bas"), "the file stem keeps letters, digits and _ only");
 state.openBundle(coupler, "branchline-coupler.json");
 
 // ---- design mode: the preview arrives later (onMount, not run here) and the format starts as Blender

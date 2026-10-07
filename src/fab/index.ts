@@ -10,6 +10,7 @@ import { excellon } from "./excellon.ts";
 import { dxf, regionRings } from "./dxf.ts";
 import { regionArea } from "./polygon.ts";
 import { APP_VERSION } from "../lib/appVersion.ts";
+import { designStem } from "../lib/exportNames.ts";
 
 export { fabModel, DEFAULT_FAB_OPTIONS, type FabModel, type FabOptions } from "./layers.ts";
 
@@ -23,7 +24,6 @@ export interface FabFile {
   data: string;
 }
 
-const safe = (s: string) => s.replace(/[^A-Za-z0-9_-]+/g, "_") || "board";
 const r3 = (v: number) => Number(v.toFixed(3));
 const r4 = (v: number) => Number(v.toFixed(4));
 
@@ -37,7 +37,7 @@ export function isoLocal(d: Date): string {
 
 /** Stable file names of the set (without the fab/ prefix). */
 export function fabNames(b: Bundle, m: FabModel) {
-  const id = safe(b.model.id);
+  const id = designStem(b.model.id, "board");
   return {
     copper: (layer: string) => `${id}-${layer}.gbr`,
     profile: `${id}-Edge_Cuts.gbr`,

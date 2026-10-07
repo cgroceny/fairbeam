@@ -15,12 +15,13 @@ import { api } from "../runner/api";
 import NumberField from "./NumberField";
 import { DEFAULT_SHEET_THICKNESS_UM } from "../export/mesh";
 import type { Bundle } from "../types";
+import { designStem } from "../lib/exportNames";
 
 /** the macro's options; their label and hint are export.option.<key>.label / .hint */
 const OPTIONS: (keyof Omit<CstOptions, "component">)[] = ["mergeParts", "includePorts", "farfieldMonitors", "solverSettings"];
 type GeometryFormat = "blender" | "glb" | "stl" | "cst";
-/** the CST files' name (<stem>.bas, <stem>-cst.zip), from the model id */
-const cstFileStem = (modelId: string | undefined) => (modelId ?? "fairbeam").replace(/[^a-z0-9_-]+/gi, "_");
+/** the CST files' name (<stem>.bas, <stem>-cst.zip): the design's file stem, as every export of it */
+const cstFileStem = (modelId: string | undefined) => designStem(modelId);
 
 export default function ExportDialog() {
   let dialog!: HTMLDivElement;

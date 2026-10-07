@@ -10,6 +10,7 @@ import { CAMERA_VIEWS, VIEW_DIRECTIONS, cameraShortcut, isViewCommand, nearestAx
 import { CameraViewIcon } from "./CameraViewIcon";
 import { bundle, centerView, farfieldIndex, setFarfieldIndex, hiddenParts, hoverPart, layers, meshPlane, selectedPart, selectedShape, setHoverPart, setViewCursor, solidFade, theme } from "../state";
 import { keepCamera } from "../state";
+import { designStem } from "../lib/exportNames";
 import { previewGeometry } from "../designer/transforms";
 import { cssVar } from "../lib/cssvar";
 import { downloadFailedMessage, downloadMessage, revealDownloadedFile, saveDownloadUrl } from "../lib/download";
@@ -1250,7 +1251,7 @@ export default function Viewport() {
     const onShot = async () => {
       if (activeExportSurface() !== "viewport" || !geometryAvailable() || !bundle()?.parts.some(p=>p.primitives.length) || !host.getClientRects().length || host.closest("[inert],[hidden]")) { exportNotice(t("contextExport.noView")); return; }
       renderNow();
-      const name = `${(bundle()?.name ?? "fairbeam").replace(/[^a-z0-9._-]+/gi, "_")}.png`;
+      const name = `${designStem(bundle()?.model.id)}.png`;
       // the browser or WebView may save, ask, block or cancel without telling the page: say
       // "requested", not "saved" (src/lib/download.ts)
       let text: string;

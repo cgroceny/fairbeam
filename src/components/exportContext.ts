@@ -5,6 +5,7 @@ import { draft, exportPython, file } from "../designer/store";
 import { activeMainResult } from "../designer/mainTabsState";
 import { downloadMessage, saveDownload } from "../lib/download";
 import { t } from "../i18n";
+import { designStem } from "../lib/exportNames";
 import { setRenderDialogOpen } from "../render/state";
 export type ExportSurface = "viewport" | "drawing" | "design-result" | "examples-result";
 export interface SurfaceExports { ready:()=>boolean; screenshot?:()=>Promise<void>|void; actions:()=>ContextAction[] }
@@ -43,10 +44,10 @@ export function contextualExportActions():ContextAction[] {
   if(appMode()==="results" && surface==="viewport")actions.push(...(owners()["examples-result"]?.actions()??[]));
   if(appMode()==="design" && surface==="viewport" && file()) {
     actions.push({id:"design-json",label:t("contextExport.designJson"),run:async()=>{
-      const snapshot=JSON.stringify(draft,null,2),name=`${draft.model.id}.design.json`;
+      const snapshot=JSON.stringify(draft,null,2),name=`${designStem(file()?.id ?? draft.model.id)}.design.json`;
       exportNotice(downloadMessage(await saveDownload(name,snapshot,"application/json")));
     }},{id:"design-python",label:t("contextExport.designPython"),run:async()=>{
-      const name=`${draft.model.id}.py`,text=await exportPython();if(text)exportNotice(downloadMessage(await saveDownload(name,text,"text/x-python")));
+      const name=`${designStem(file()?.id ?? draft.model.id)}.py`,text=await exportPython();if(text)exportNotice(downloadMessage(await saveDownload(name,text,"text/x-python")));
       else exportNotice(t("contextExport.pythonFailed"));
     }});
   }

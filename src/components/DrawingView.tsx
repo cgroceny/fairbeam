@@ -9,6 +9,7 @@ import { downloadFailedMessage, downloadMessage, revealDownloadedFile } from "..
 import { exportNotice, geometryAvailable, registerSurfaceExports } from "../components/exportContext";
 import DrawingMoreOptions from "./DrawingMoreOptions";
 import { t } from "../i18n";
+import { designStem } from "../lib/exportNames";
 
 const KEY = "fairbeam.drawing";
 const MM = 96 / 25.4;
@@ -129,7 +130,7 @@ export default function DrawingView() {
     e.preventDefault();
   };
 
-  const baseName = () => `${(bundle()?.model.id ?? "fairbeam").replace(/[^A-Za-z0-9_-]+/g, "_")}_drawing_${opt.sheet}`;
+  const baseName = () => `${designStem(bundle()?.model.id)}_drawing_${opt.sheet}`;
   const run = async (label: string, fn: () => Promise<{ name: string; status: "requested" | "saved" | "cancelled" | "failed"; path?: string }>) => {
     setBusy(label);
     setError(null);

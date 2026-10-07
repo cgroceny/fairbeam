@@ -231,7 +231,8 @@ export function binaryStlParts(source: Bundle, options: MeshOptions = {}): { nam
     for (const item of items) parts.set(item.part, [...(parts.get(item.part) ?? []), item]);
     const used = new Set<string>();
     return [...parts].map(([part, list]) => {
-      const stem = (part.name || "solid").replace(/[^a-z0-9_-]+/gi, "_").replace(/^_+|_+$/g, "").slice(0, 60) || "solid";
+      // the label the tree shows (Ground plane.stl), else the internal name
+      const stem = (part.label || part.name || "solid").normalize("NFKD").replace(/[̀-ͯ]/g, "").replace(/[^a-z0-9_-]+/gi, "_").replace(/^_+|_+$/g, "").slice(0, 60) || "solid";
       let name = `${stem}.stl`;
       for (let n = 2; used.has(name.toLowerCase()); n++) name = `${stem}_${n}.stl`;
       used.add(name.toLowerCase());

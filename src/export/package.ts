@@ -19,6 +19,7 @@ import { comparisonMetrics, metricsRows } from "../import/metrics.ts";
 import type { RefBundle } from "../import/reference.ts";
 import { toCsv } from "./csv.ts";
 import { fabFiles, fabModel } from "../fab/index.ts";
+import { designStem } from "../lib/exportNames.ts";
 
 /**
  * N-port Touchstone writer, provided by the physics side in touchstone.ts (not edited here). The
@@ -90,7 +91,8 @@ export interface PackageFile {
 
 const p2 = (n: number) => String(n).padStart(2, "0");
 export const stamp = (d: Date) => `${d.getFullYear()}${p2(d.getMonth() + 1)}${p2(d.getDate())}-${p2(d.getHours())}${p2(d.getMinutes())}`;
-const safeId = (s: string) => s.replace(/[^A-Za-z0-9_-]+/g, "_") || "fairbeam";
+/** the design's file stem (src/lib/exportNames.ts): the package, its macro and its fab files share it */
+const safeId = (s: string) => designStem(s);
 
 export const packageName = (b: Bundle, now: Date) => `${safeId(b.model.id)}_${stamp(now)}.zip`;
 

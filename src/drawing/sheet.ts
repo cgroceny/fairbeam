@@ -117,7 +117,8 @@ export function materialRows(b: Bundle): string[][] {
     }
     if (p.material) {
       const m = p.material;
-      const tan = m.tan_d === null ? `σ ${m.kappa.toPrecision(3)} S/m` : `${fmtVal(m.tan_d)}${m.tan_d_freq ? ` @ ${fmtVal(m.tan_d_freq / 1e9)} GHz` : ""}`;
+      // an instant preview carries no loss: "—" (a run or a server preview has tan δ, or the conductivity)
+      const tan = m.tan_d == null ? (typeof m.kappa === "number" ? `σ ${m.kappa.toPrecision(3)} S/m` : "—") : `${fmtVal(m.tan_d)}${m.tan_d_freq ? ` @ ${fmtVal(m.tan_d_freq / 1e9)} GHz` : ""}`;
       return [label, m.mu_r !== 1 ? `Dielectric, μr ${fmtVal(m.mu_r)}` : "Dielectric", fmtVal(m.eps_r), tan];
     }
     return [label, p.type, "—", "—"];
