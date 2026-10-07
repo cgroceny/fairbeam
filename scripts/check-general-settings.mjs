@@ -70,3 +70,21 @@ assert.throws(() => writeGeneralSettings({ ...fonts, uiFont: "missing-font" }, a
 appearance.setItem("fairbeam.generalSettings", JSON.stringify({ ...fonts, theme: "invalid" }));
 assert.equal(readGeneralSettings(appearance).language, "tr", "invalid appearance does not discard unrelated preferences");
 console.log("appearance migration, fallback, independent font application and reset passed");
+
+// The settings dialog has a tab row between its head and its body. The shared .dialog grid has one
+// shrinkable track (head, body, foot), so the dialog declares its own rows: the tab row keeps its
+// height and only the body scrolls (otherwise the tabs shrink under the body and cannot be clicked).
+{
+  const { readFileSync } = await import("node:fs");
+  const tsx = readFileSync(new URL("../src/components/GeneralSettings.tsx", import.meta.url), "utf8");
+  const css = readFileSync(new URL("../src/styles/general-settings.css", import.meta.url), "utf8");
+  const dialog = tsx.match(/<div class="([^"]*\bdialog\b[^"]*)"[^>]*aria-labelledby="gs-title"/);
+  assert.ok(dialog, "the settings dialog element is found");
+  assert.match(dialog[1], /\bgs-dialog\b/, "the settings dialog carries the gs-dialog layout class");
+  const rows = css.match(/\.gs-dialog\s*\{[^}]*grid-template-rows:\s*([^;]+);/);
+  assert.ok(rows, ".gs-dialog declares its grid rows");
+  assert.equal(rows[1].trim().split(/\s+(?![^(]*\))/).length, 3, "head, tab row and body each get a track");
+  assert.match(rows[1], /^auto auto minmax\(0, 1fr\)$/, "only the body track shrinks");
+  assert.match(css, /\.gs-dialog > \.gs-body\s*\{[^}]*min-height:\s*0/, "the body can shrink below its content and scroll");
+  console.log("settings dialog layout: the tab row keeps its height and the body scrolls");
+}

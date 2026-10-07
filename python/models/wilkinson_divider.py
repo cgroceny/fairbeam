@@ -40,16 +40,16 @@ PARAMS = [
     Param("tan_d", 0.0027, "Loss tangent", "", minimum=0, maximum=0.2),
     Param("r_iso", 100.0, "Isolation resistor", "ohm", minimum=1, maximum=10000),
     Param("gap", 0.0, "Resistor gap", "mm",
-          "Gap between the arm ends that the resistor bridges; 0 = the 50 ohm strip width (1.9 mm, about an 0805 part), "
+          "Gap between the arm ends that the resistor bridges; 0 = the 50 Ω strip width (1.9 mm, about an 0805 part), "
           "which also keeps the mesh free of slivers", minimum=0, maximum=10),
     Param("offset", 5.0, "Arm offset from the centre line", "mm", minimum=1, maximum=50),
     Param("clearance", 3.0, "Output jog clearance", "mm",
           "Gap between an arm's return leg and its output jog", minimum=0.2, maximum=20),
     Param("arm_scale", 1.0, "Arm length scale", "", "Trims the quarter-wave arm length", minimum=0.5, maximum=1.5),
-    Param("feed_len", 10.0, "50 ohm line length at each port", "mm", minimum=2, maximum=100),
-    Param("strip_cells", 6, "Cells across a 50 ohm strip", "", minimum=1, maximum=12),
+    Param("feed_len", 10.0, "50 Ω line length at each port", "mm", minimum=2, maximum=100),
+    Param("strip_cells", 6, "Cells across a 50 Ω strip", "", minimum=1, maximum=12),
     Param("sub_cells", 6, "Cells across the substrate", "", minimum=1, maximum=12),
-    Param("mesh_div", 20, "Max cell = lambda(f_max) / mesh_div", "", minimum=8, maximum=60),
+    Param("mesh_div", 20, "Mesh: cells per λ at f max", "", minimum=8, maximum=60),
     Param("f_min", 1.0, "Band start", "GHz", minimum=0.01),
     Param("f_max", 4.0, "Band stop", "GHz", minimum=0.02),
 ]

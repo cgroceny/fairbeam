@@ -36,6 +36,11 @@ a:not([class]) { color: var(--al-link); text-underline-offset: 2px; }
   position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
   overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0;
 }
+/* the skip link (Header.tsx): the first Tab stop, visible only while it has the keyboard focus */
+.skip-link { position: fixed; z-index: 60; top: var(--al-space-2); left: var(--al-space-2); padding: var(--al-space-2) var(--al-space-3);
+  background: var(--al-surface); color: var(--al-text); border: 2px solid var(--al-focus); border-radius: var(--al-radius); box-shadow: var(--al-shadow-pop); font-weight: 600; text-decoration: none; }
+.skip-link:not(:focus) { width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
+main:focus { outline: none; }
 
 /* Icons (lucide): one stroke weight everywhere; size is set by the control that holds them. */
 svg.lucide { flex: none; stroke-width: var(--al-icon-stroke); }
@@ -203,7 +208,7 @@ svg.lucide { flex: none; stroke-width: var(--al-icon-stroke); }
 .seg-btn:hover { color: var(--al-text); background: var(--al-track-hover); }
 /* selected: a raised cell with a ring (>= 3:1 against the track and a hovered neighbour), not just a
    slightly darker fill; the inset focus ring below still wins on the focused segment */
-.seg-btn.active, .seg-btn[aria-checked="true"], .seg-btn[aria-pressed="true"] {
+.seg-btn.active, .seg-btn[aria-checked="true"], .seg-btn[aria-pressed="true"], .seg-btn[aria-current="page"] {
   background: var(--al-selected-bg); color: var(--al-text); box-shadow: inset 0 0 0 1px var(--al-selected-ring);
 }
 .seg-btn:focus-visible { box-shadow: inset 0 0 0 2px var(--al-focus); }
@@ -466,7 +471,6 @@ input[type="range"] { height: var(--al-control-h-sm); margin: 0; accent-color: v
 .vp-label-quiet { background: transparent; border: 0; color: var(--al-text-3); transform: none; }
 /* HUD: every overlay sits --al-pad-hud from the edge and shares one surface style */
 .vp-hud { position: absolute; z-index: 2; display: flex; align-items: center; gap: var(--al-space-2); pointer-events: none; }
-.vp-notice { position: absolute; z-index: 3; left: 50%; bottom: var(--al-pad-hud, 12px); transform: translateX(-50%); padding: var(--al-space-2) var(--al-space-3); border-radius: 8px; background: var(--al-surface); border: 1px solid var(--al-border); color: var(--al-text); font-size: var(--al-text-sm, 12px); box-shadow: 0 4px 16px rgb(0 0 0 / 0.18); pointer-events: none; }
 .vp-hud > * { pointer-events: auto; }
 .vp-hud-tl { top: var(--al-pad-hud); left: var(--al-pad-hud); max-width: calc(100% - 2 * var(--al-pad-hud)); flex-wrap: wrap; }
 .vp-hud-tl .seg { flex-wrap: wrap; }
@@ -610,9 +614,7 @@ input[type="range"] { height: var(--al-control-h-sm); margin: 0; accent-color: v
 .dock-tools .freq-chips { padding-block: 0; }
 .dock-hint { flex: none; font-size: var(--al-text-xs); color: var(--al-text-3); margin-right: var(--al-space-1); white-space: nowrap; }
 .dock-body { flex: 1; min-height: 0; position: relative; }
-.dock-data-status { display: inline-flex; align-items: center; gap: .45rem; color: var(--al-text-2); font-size: var(--al-text-xs); }
 .dock-copy.copied { color: var(--al-good); }
-.dock-reveal { border: 0; padding: 0; color: var(--al-accent-text); background: transparent; text-decoration: underline; cursor: pointer; font: inherit; }
 .pattern-view { display: grid; grid-template-columns: minmax(0, 1fr) minmax(224px, max-content); height: 100%; }
 .pattern-stats { align-content: start; padding: var(--al-space-3) var(--al-pad-panel); border-left: 1px solid var(--al-border); overflow: auto; }
 .data-table-wrap { height: 100%; overflow: auto; padding: 0 var(--al-pad-panel) var(--al-space-3); scrollbar-width: thin; }
@@ -809,6 +811,29 @@ input[type="range"] { height: var(--al-control-h-sm); margin: 0; accent-color: v
 .banner-warn { background: var(--al-warn-bg); color: var(--al-text); border-bottom: 1px solid var(--al-border); align-items: flex-start; }
 .banner-warn > svg { color: var(--al-warn); margin-top: 7px; }
 .banner-warn > span { padding: var(--al-space-1) 0; }
+/* Toasts (components/ToastHost.tsx): fixed over the app, never in the page flow, so a download
+   notice cannot push the header, the ribbon or the 3D view down. Above the scrim and the status bar. */
+.toast-region {
+  position: fixed; z-index: 45; right: var(--al-space-4); bottom: var(--al-space-7);
+  display: flex; flex-direction: column; align-items: flex-end; gap: var(--al-space-2);
+  width: min(440px, calc(100vw - 2 * var(--al-space-4))); pointer-events: none;
+}
+.toast {
+  pointer-events: auto; display: flex; align-items: flex-start; gap: var(--al-space-2); max-width: 100%;
+  padding: var(--al-space-2) var(--al-space-2) var(--al-space-2) var(--al-space-3);
+  background: var(--al-surface); color: var(--al-text); border: 1px solid var(--al-border); border-left: 3px solid var(--al-accent-line);
+  border-radius: var(--al-radius); box-shadow: var(--al-shadow-pop); font-size: var(--al-text-sm); line-height: var(--al-leading);
+}
+.toast > svg { width: var(--al-icon-sm); height: var(--al-icon-sm); margin-top: 3px; color: var(--al-accent-text); }
+.toast-error { border-left-color: var(--al-critical); background: var(--al-critical-bg); }
+.toast-error > svg { color: var(--al-critical); }
+.toast-text { flex: 1; min-width: 0; padding-block: 2px; overflow-wrap: anywhere; }
+.toast-action { flex: none; }
+.toast-close { flex: none; }
+@media (prefers-reduced-motion: no-preference) {
+  .toast { animation: toast-in var(--al-dur) var(--al-ease); }
+  @keyframes toast-in { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
+}
 /* the desktop app's update progress (components/UpdateProgress.tsx) */
 .up-banner { background: var(--al-accent-soft); color: var(--al-text); border-bottom: 1px solid var(--al-border); }
 .up-banner > svg { color: var(--al-accent-text); }

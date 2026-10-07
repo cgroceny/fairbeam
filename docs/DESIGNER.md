@@ -16,7 +16,7 @@ designer.
 
 ## Start screen
 
-![Start screen: a new project, your designs, the Python models and the examples](designer/start.png)
+![Start screen: a new design, your designs, the Python models and the examples](designer/start.png)
 
 The start screen opens when the run server is reachable. It has three parts:
 
@@ -38,7 +38,7 @@ The start screen opens when the run server is reachable. It has three parts:
   the file moves to the model history folder, so it can be restored. A design file that does not
   open (damaged, or made by a newer Fairbeam) stays in the list, grayed, with the reason.
 - **Python models** and **Examples**: open a model in the Run panel, or an example with its
-  results (in Examples mode). **Open as new project…** next to an example makes an editable
+  results (in Examples mode). **Open as new design…** next to an example makes an editable
   design of your own from it. The runs of your designs are not listed here: they open under the
   design (see [Running and results](#running-and-results)).
 
@@ -72,7 +72,7 @@ inner control handles it first.
 - **Examples** is the viewer described in the [README](../README.md) and [RESULTS.md](RESULTS.md),
   on the example projects: the bundled ones, with their results ready, and your runs of the Python
   models. The searchable project picker in the header (type to filter, grouped by model) lists
-  them; the runs of your designs are not among them. **Open as new project…** (next to the picker,
+  them; the runs of your designs are not among them. **Open as new design…** (next to the picker,
   and in the model panel) makes an editable design from the open example; it is disabled, with the
   reason as its tooltip, for an example the design format cannot hold or a project that is not a
   bundled example. **Open in designer** appears in the model panel when the project was simulated

@@ -75,7 +75,7 @@ export default {
    assert.equal(await s.ev((_,m)=>m.state.bundle().model.id,null,{state:'/src/state.ts'}),foreignId.replaceAll('_','-'));
    assert.deepEqual(await snapshot(),before);assert.deepEqual(await s.store((_,m)=>m.s.historyMark()),history);
    assert.equal(await s.ev((_,m)=>m.r.designResult().file,null,{r:'/src/runner/designRun.ts'}),localFile);
-   assert.ok(await s.page.$eval('.mode-switch [aria-checked="true"]',(e,label)=>e.textContent===label,await s.T('header.screen.results')));
+   assert.ok(await s.page.$eval('.mode-switch [aria-current="page"]',(e,label)=>e.textContent===label,await s.T('header.screen.results')));
    await s.ev((_,m)=>m.state.setDockTab('reflection'),null,{state:'/src/state.ts'});
    const count=await s.page.evaluate(()=>window.__overlayDownloads.length);
    await s.page.click('.dock button[title="'+await s.T('results.toolbar.csvTitle')+'"]');
@@ -84,7 +84,7 @@ export default {
    const firstFrequency=await s.ev((_,m)=>m.state.bundle().results.frequency[0],null,{state:'/src/state.ts'});
    assert.ok(csv.split('\n')[1].startsWith(String(firstFrequency / 1e9)+','),'CSV uses the viewed foreign result frequency grid');
    const filename=await s.page.evaluate(()=>window.__overlayFilenames.at(-1));assert.ok(filename.startsWith(foreignId.replaceAll('_','-')+'-')&&filename.includes('foreign'),'CSV filename retains the foreign model and run identity: '+filename);
-   await s.click('header.screen.design',{sel:'[role=radio]'});await s.wait('.rb');
+   await s.click('header.screen.design',{sel:'.mode-switch button'});await s.wait('.rb');
    assert.deepEqual(await snapshot(),before);assert.deepEqual(await s.store((_,m)=>m.s.historyMark()),history);
    await s.store((_,m)=>m.s.undo());assert.notDeepEqual(await snapshot(),before);
    await s.store((_,m)=>m.s.redo());assert.deepEqual(await snapshot(),before);
@@ -100,17 +100,17 @@ export default {
     assert.deepEqual(await snapshot(),before);assert.equal(await s.ev((_,m)=>m.w.appMode(),null,{w:'/src/workspace.ts'}),'design');
     await session.send('Fetch.disable');await s.page.click(`[data-open-result="${foreignFile}"]`);
     await s.waitFor(async()=>(await import('/src/workspace.ts')).appMode()==='results');
-    await s.click('header.screen.design',{sel:'[role=radio]'});await s.wait('.rb');
+    await s.click('header.screen.design',{sel:'.mode-switch button'});await s.wait('.rb');
     await s.ev((_,m)=>m.r.showView('sparams',undefined,'main'),null,{r:'/src/designer/runResults.ts'});await s.wait('.dw-result-bar');
     session.removeAllListeners('Fetch.requestPaused');const held=new Promise(r=>resolve=r);
     await session.send('Fetch.enable',{patterns:[{urlPattern:`${s.url}projects/${foreignFile}`,requestStage:'Response'}]});
     session.on('Fetch.requestPaused',event=>{paused=event;resolve();});
     await openCompare();await s.page.click(`[data-open-result="${foreignFile}"]`);let timer;try{await Promise.race([held,new Promise((_,reject)=>timer=setTimeout(()=>reject(new Error('open reply not intercepted')),15000))]);}finally{clearTimeout(timer);}
-    await s.click('header.screen.start',{sel:'[role=radio]'});await s.wait('.home');
+    await s.click('header.screen.start',{sel:'.mode-switch button'});await s.wait('.home');
     const completed=s.page.waitForResponse(r=>r.url().endsWith('/projects/'+foreignFile));await session.send('Fetch.continueResponse',{requestId:paused.requestId});paused=null;await(await completed).buffer();
     await s.page.evaluate(()=>new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r))));
     assert.equal(await s.ev((_,m)=>m.w.appMode(),null,{w:'/src/workspace.ts'}),'home');assert.deepEqual(await snapshot(),before);
-    await s.click('header.screen.design',{sel:'[role=radio]'});await s.wait('.rb');await s.ev((_,m)=>m.r.showView('sparams',undefined,'main'),null,{r:'/src/designer/runResults.ts'});await s.wait('.dw-result-bar');
+    await s.click('header.screen.design',{sel:'.mode-switch button'});await s.wait('.rb');await s.ev((_,m)=>m.r.showView('sparams',undefined,'main'),null,{r:'/src/designer/runResults.ts'});await s.wait('.dw-result-bar');
    }finally{if(paused)await session.send('Fetch.continueResponse',{requestId:paused.requestId});await session.send('Fetch.disable');await session.detach();}
   });
   await s.step('failed and invalid foreign bundles are explicit and can be retried or removed',async()=>{
@@ -122,7 +122,7 @@ export default {
     await s.page.click(`input[data-compare-overlay="${foreignFile}"]`);await s.wait('[data-compare-state="error"]');
     await capture('error');
     assert.equal(await s.ev((_,m)=>m.e.screenshotAvailable(),null,{e:'/src/components/exportContext.ts'}),false,'failed selections disable screenshots');
-    const downloads=await s.page.evaluate(()=>window.__overlayDownloads.length);await s.page.click('.dw-result-bar button[title="'+await s.T('results.toolbar.csvTitle')+'"]');await s.wait('.rdk-action-feedback.is-problem');assert.equal(await s.page.evaluate(()=>window.__overlayDownloads.length),downloads,'CSV failure produces no partial comparison');
+    const downloads=await s.page.evaluate(()=>window.__overlayDownloads.length);await s.page.click('.dw-result-bar button[title="'+await s.T('results.toolbar.csvTitle')+'"]');await s.wait('.toast-error');assert.equal(await s.page.evaluate(()=>window.__overlayDownloads.length),downloads,'CSV failure produces no partial comparison');
     await s.gone('#rdk-compare-popover');await openCompare();
     assert.deepEqual(await compared(),[]);assert.ok((await s.text('#rdk-compare-popover')).includes(await s.T('results.compare.failed')));
     status=200;const invalidReply=s.page.waitForResponse(response=>response.url().endsWith('/projects/'+foreignFile));await s.click('results.compare.retry',{within:'#rdk-compare-popover'});await(await invalidReply).buffer();await s.wait('[data-compare-state="error"]');
@@ -146,7 +146,7 @@ export default {
     assert.deepEqual(await compared(),[]);assert.ok(await s.page.$('[data-compare-state="loading"]'));
     await capture('loading');
     assert.equal(await s.ev((_,m)=>m.e.screenshotAvailable(),null,{e:'/src/components/exportContext.ts'}),false,'pending overlays disable screenshots');
-    await s.page.keyboard.press('Escape');await s.click('header.screen.start',{sel:'[role=radio]'});await s.wait('.home');
+    await s.page.keyboard.press('Escape');await s.click('header.screen.start',{sel:'.mode-switch button'});await s.wait('.home');
     await s.page.click(`[data-home-design="${foreignId}"] .home-item`);await s.wait('.rb');
     assert.equal(await s.store((_,m)=>m.s.file().id),foreignId);const next=await snapshot();
     const finished=s.page.waitForResponse(response=>response.url().endsWith('/projects/'+foreignFile),{timeout:10000});

@@ -25,7 +25,7 @@ export default {
    await s.ev((_,m)=>m.state.loadIndex(),null,{state:'/src/state.ts'});
    assert.ok((await s.ev((_,m)=>m.r.designRuns(),null,{r:'/src/designer/runResults.ts'})).some(r=>r.file===`${before.id}--run-home.json`));
    await s.page.evaluate(async ({id,name})=>{const r=await fetch('/api/designs',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id,name,template:'empty'})});if(!r.ok)throw new Error(await r.text());},{id:`other_${s.lang}_${ctx.stamp}`,name:duplicate});
-   await s.click('header.screen.start',{sel:'[role=radio]'});await s.wait('.home');await s.ev((_,m)=>m.r.refreshModels(),null,{r:'/src/runner/store.ts'});
+   await s.click('header.screen.start',{sel:'.mode-switch button'});await s.wait('.home');await s.ev((_,m)=>m.r.refreshModels(),null,{r:'/src/runner/store.ts'});
   });
   await s.step('keyboard menu, blank/duplicate validation and cancel preserve saved design',async()=>{
    await s.page.focus(`${row()} .home-item`);await s.page.keyboard.down('Shift');await s.page.keyboard.press('F10');await s.page.keyboard.up('Shift');await s.wait('[role=menu]');
@@ -62,7 +62,7 @@ export default {
    await s.waitFor(async()=>!(await import('/src/designer/store.ts')).dirty(),null,{what:'clean saved geometry'});
    assert.equal(await s.store((_,m)=>m.s.canUndo()),true);
    const mark=await s.store((_,m)=>m.s.historyMark());
-   await s.click('header.screen.start',{sel:'[role=radio]'});await s.wait('.home');
+   await s.click('header.screen.start',{sel:'.mode-switch button'});await s.wait('.home');
    const historyName=`History name ${s.lang} ${ctx.stamp}`;await saveName(historyName);
    await s.clickSel(`${row()} .home-item`);await s.wait('.rb');
    assert.equal(await s.store((mark,m)=>m.s.rollbackTo(mark),mark),false,'a pre-rename modal mark cannot restore old metadata');
@@ -84,7 +84,7 @@ export default {
    await s.click('ribbon.home.undo',{sel:'.rb-btn'});await s.click('common.save',{sel:'.rb-btn'});
    await s.waitFor(async()=>!(await import('/src/designer/store.ts')).dirty(),null,{what:'clean state retaining Redo'});
    assert.equal(await s.store((_,m)=>m.s.canRedo()),true);
-   await s.click('header.screen.start',{sel:'[role=radio]'});await s.wait('.home');await saveName(`Redo name ${s.lang} ${ctx.stamp}`);
+   await s.click('header.screen.start',{sel:'.mode-switch button'});await s.wait('.home');await saveName(`Redo name ${s.lang} ${ctx.stamp}`);
    await s.click('ribbon.home.undo',{within:'.home-design-action-note'});
    await s.waitFor(async name=>(await import('/src/designer/store.ts')).draft.model.name===name,historyName);
    await s.clickSel(`${row()} .home-item`);await s.wait('.rb');await s.click('ribbon.tab.home',{sel:'.rb-tab'});await s.click('ribbon.home.redo',{sel:'.rb-btn'});
@@ -105,7 +105,7 @@ export default {
    const count=request=>{if(new URL(request.url()).pathname.endsWith('/rename'))renameRequests++;};
    s.page.on('request',count);
    try {
-    await s.click('header.screen.start',{sel:'[role=radio]'});await s.wait('.home');await openRename();
+    await s.click('header.screen.start',{sel:'.mode-switch button'});await s.wait('.home');await openRename();
     assert.equal(await s.page.$eval('.home-rename-dialog button[type=submit]',e=>e.disabled),true);
     await s.fill('#home-rename-name',` ${current} `);
     assert.equal(await s.page.$eval('.home-rename-dialog button[type=submit]',e=>e.disabled),true);
@@ -147,7 +147,7 @@ export default {
     let timeout;try{await Promise.race([held,new Promise((_,reject)=>timeout=setTimeout(()=>reject(new Error('save response was not intercepted')),15000))]);}finally{clearTimeout(timeout);}
     assert.equal(paused.responseStatusCode,status,'the real backend completed the expected save/conflict');
     assert.equal(await s.store((_,m)=>m.s.saving()),true);
-    await s.click('header.screen.start',{sel:'[role=radio]'});await s.wait('.home');
+    await s.click('header.screen.start',{sel:'.mode-switch button'});await s.wait('.home');
     const name=`Delayed save ${status} ${s.lang} ${ctx.stamp}`;await saveName(name);
     const renamedFile=await s.store((_,m)=>JSON.parse(JSON.stringify(m.s.file())));
     const renamedHistory=await s.store((_,m)=>m.s.historyMark());

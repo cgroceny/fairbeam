@@ -24,7 +24,7 @@ PARAMS = [
     Param("eps_r", 3.38, "Substrate permittivity", "", minimum=1),
     Param("tan_d", 1e-3, "Loss tangent", "", minimum=0),
     Param("feed_x", -6.0, "Feed position (x)", "mm"),
-    Param("mesh_div", 30, "Max cell = lambda(f_max) / mesh_div", "",
+    Param("mesh_div", 30, "Mesh: cells per λ at f max", "",
           "30 is within 0.1 % of the converged resonance (docs/VALIDATION.md); 20 reads ~0.9 % low",
           minimum=8, maximum=80),
     Param("sub_cells", 4, "Mesh cells across the substrate thickness", "", minimum=1, maximum=16),

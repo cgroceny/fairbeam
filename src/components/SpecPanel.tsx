@@ -1,11 +1,20 @@
 import { For, Show } from "solid-js";
 import { CircleCheck, TriangleAlert } from "lucide-solid";
 import { bundle, farfieldIndex, setDockTab, setFarfieldIndex, setLayers } from "../state";
-import { BOUNDARY_LABEL, compact, GHz, num, seconds, timeUnit } from "../lib/format";
+import { compact, GHz, num, seconds, timeUnit } from "../lib/format";
 import { convergenceTextUi, efficiencyIssue, efficiencyWarningUi } from "../lib/runText";
 import ComparisonCard from "./ComparisonCard";
 import MeasuredTimes from "./MeasuredTimes";
 import { fmt, t } from "../i18n";
+
+// The solver card's terms in plain words: the method and the boundaries are translated where the
+// bundle carries a known value, and each has a tooltip for a newcomer (an unknown value shows as is).
+const FDTD_YEE = "FDTD (Yee, staircase)";
+const methodLabel = (method: string) => (method === FDTD_YEE ? t("spec.method.fdtdYee") : method);
+const methodTitle = (method: string) => (method === FDTD_YEE ? t("spec.method.fdtdYee.title") : undefined);
+const BOUNDARY_HINT: Record<string, string> = { MUR: "sim.bound.mur.hint", PML_8: "sim.bound.pml.hint", PEC: "sim.bound.pec.hint", PMC: "sim.bound.pmc.hint" };
+const boundaryLabel = (code: string) => (BOUNDARY_HINT[code] ? t(`spec.boundary.${code}`) : code);
+const boundaryHint = (code: string) => (BOUNDARY_HINT[code] ? t(BOUNDARY_HINT[code]) : undefined);
 
 export default function SpecPanel() {
   return (
@@ -143,11 +152,11 @@ export default function SpecPanel() {
                 <h3 class="section-label">{t("spec.solver")}</h3>
                 <dl class="kv">
                   <dt>{t("measured.engine")}</dt><dd>{b().solver.engine}<span class="mono kv-sub" title={b().generator.openems ?? undefined}>{b().generator.openems}</span></dd>
-                  <dt>{t("spec.method")}</dt><dd>{b().solver.method}</dd>
+                  <dt>{t("spec.method")}</dt><dd title={methodTitle(b().solver.method)}>{methodLabel(b().solver.method)}</dd>
                   <dt>{t("spec.excitation")}</dt>
                   <dd>
                     {b().solver.excitation.type === "gaussian-derivative" ? t("spec.gaussDerivative") : t("spec.modulatedGauss")}
-                    <Show when={b().solver.excitation.dc_free}><span class="chip">{t("spec.dcFree")}</span></Show>
+                    <Show when={b().solver.excitation.dc_free}><span class="chip" title={t("spec.dcFree.title")}>{t("spec.dcFree")}</span></Show>
                   </dd>
                   <dt>{t("spec.band")}</dt><dd class="mono">{num(b().solver.excitation.f_min / 1e9, 2)}–{num(b().solver.excitation.f_max / 1e9, 2)} GHz</dd>
                   <dt>{t("spec.endCriterion")}</dt><dd class="mono">{fmt.num(b().solver.end_criteria_db, 1)} dB</dd>
@@ -155,9 +164,9 @@ export default function SpecPanel() {
                 <div class="bc-grid" aria-label={t("spec.boundaries")}>
                   <For each={["x-", "x+", "y-", "y+", "z-", "z+"] as const}>
                     {(face) => (
-                      <div class="bc-cell" classList={{ pec: b().solver.boundaries[face] === "PEC" }}>
+                      <div class="bc-cell" classList={{ pec: b().solver.boundaries[face] === "PEC" }} title={boundaryHint(b().solver.boundaries[face])}>
                         <span class="mono bc-face">{face}</span>
-                        <span>{BOUNDARY_LABEL[b().solver.boundaries[face]] ?? b().solver.boundaries[face]}</span>
+                        <span>{boundaryLabel(b().solver.boundaries[face])}</span>
                       </div>
                     )}
                   </For>

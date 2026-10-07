@@ -40,6 +40,9 @@ export interface NavNode {
   /** a run's headline numbers ("2.415 GHz · −15.0 dB · 6.6 dBi"), on a second line under its name */
   metrics?: string;
   title?: string;
+  /** an empty section's whole hint ("none yet: Simulation › Run"): the row's tooltip and accessible
+   * description, while `sub` shows its short form ("none yet") */
+  hint?: string;
   /** Searchable geometry labels retained when a single-solid part uses one visible row. */
   searchText?: string;
   icon?: NavIcon;

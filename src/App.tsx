@@ -1,7 +1,9 @@
 import { captureActiveSurface, exportNotice, geometryAvailable } from "./components/exportContext";
 import PanelResizeHandles from "./components/PanelResizeHandles";
+import ToastHost from "./components/ToastHost";
+import { dismissToast, downloadToast, showToast } from "./lib/toast";
 import { createEffect, createSignal, For, lazy, on, onCleanup, onMount, Show } from "solid-js";
-import { ChevronsLeft, ChevronsRight, CircleAlert, PanelLeft, PanelRight, TriangleAlert } from "lucide-solid";
+import { ChevronsLeft, ChevronsRight, PanelLeft, PanelRight, TriangleAlert } from "lucide-solid";
 import Header from "./components/Header";
 import ModelPanel from "./components/ModelPanel";
 import SpecPanel from "./components/SpecPanel";
@@ -46,7 +48,6 @@ import { bundle, centerView, exportOpen, index, lastProject, failedProject, load
 import { createMenuActionRouter } from "./lib/menuActions";
 import { ShortcutHelp, showShortcutHelp } from "./designer/ShortcutHelp";
 import { exportResultTouchstone } from "./designer/resultTouchstone";
-import { downloadMessage } from "./lib/download";
 import { exampleEntries } from "./runner/examples";
 import { cstImportOpen, setCstImportOpen } from "./lib/cstImport";
 import { pcbImportOpen, setPcbImportOpen } from "./lib/pcbImport";
@@ -57,7 +58,7 @@ import UpdateProgress from "./components/UpdateProgress";
 import { watchUpdate } from "./lib/updateProgress";
 
 export default function App() {
-  const onScreenshot=()=>{void captureActiveSurface().catch(error=>exportNotice(t("contextExport.failed",{error:String(error)})));};
+  const onScreenshot=()=>{void captureActiveSurface().catch(error=>exportNotice(t("contextExport.failed",{error:String(error)}),{tone:"error"}));};
   onMount(()=>{window.addEventListener("fairbeam:screenshot",onScreenshot);onCleanup(()=>window.removeEventListener("fairbeam:screenshot",onScreenshot));});
   const [dragging, setDragging] = createSignal(false);
   // file drags only (a tree part drag is not a file drop, #87): project bundles open; anything
@@ -105,7 +106,15 @@ export default function App() {
   // model chosen on Start (Start > Python models: the user's own, or a bundled one) runs in this workspace.
   const resultsRunOpen = () => runOpen() && !DEMO && appMode() === "results"
     && (!currentModel()?.readonly || currentModel()?.key === startedPythonModel());
-  const [menuNotice, setMenuNotice] = createSignal("");
+  // a project that could not be opened: a persistent error toast with Retry. It goes when the user
+  // closes it or when the next open starts (which clears loadError).
+  createEffect(() => {
+    const error = loadError();
+    if (!error) { dismissToast("load-error"); return; }
+    const file = failedProject();
+    showToast(error, { tone: "error", key: "load-error", onClose: () => setLoadError(null),
+      action: file ? { label: t("common.retry"), run: () => void loadProject(file) } : undefined });
+  });
   let openInput: HTMLInputElement | undefined;
   const menuAction = createMenuActionRouter({
     "file-new": () => setAppMode("home"), "file-open": () => openInput?.click(),
@@ -117,7 +126,7 @@ export default function App() {
     "export-package": () => { if (bundle()) import("./state").then((s) => s.setPackageOpen(true)); },
     "export-python": () => { if (appMode() === "design") document.querySelector<HTMLButtonElement>(".rb-btn[data-action='open-python']")?.click(); },
     "export-touchstone": () => { const current = bundle(); if (!current?.results) { notice(t("app.notice.touchstoneNeedsResult")); return; }
-      void exportResultTouchstone(current, source() || current.model.id).then((result) => notice(downloadMessage(result))).catch((error) => notice(t("app.notice.touchstoneFailed", { error: String(error) }))); },
+      void exportResultTouchstone(current, source() || current.model.id).then((result) => { downloadToast(result); }).catch((error) => showToast(t("app.notice.touchstoneFailed", { error: String(error) }), { tone: "error" })); },
     "file-close": () => window.dispatchEvent(new Event("fairbeam:close-project")),
     "file-open-recent:": (id) => { if (id) void enterDesign(decodeURIComponent(id.slice("file-open-recent:".length))); },
     settings: () => window.dispatchEvent(new Event("fairbeam:open-settings")), about: () => window.dispatchEvent(new Event("fairbeam:open-about")),
@@ -220,7 +229,8 @@ export default function App() {
     onCleanup(() => compact.removeEventListener("change", syncCompact));
     (window as Window & { fairbeamMenuAction?: (raw: string) => boolean }).fairbeamMenuAction = menuAction;
     const onAction = (event: Event) => menuAction((event as CustomEvent<string>).detail);
-    const onNotice = (event: Event) => { setMenuNotice((event as CustomEvent<string>).detail ?? ""); window.setTimeout(() => setMenuNotice(""), 3500); };
+    // menu, export and download feedback: a toast over the app (lib/toast.ts), never a bar in the layout
+    const onNotice = (event: Event) => { const text = (event as CustomEvent<string>).detail; if (typeof text === "string") showToast(text); };
     // the desktop shell's update progress (downloading, installing, restarting); a failed install
     // restarts the server, which the store looks for again
     onCleanup(watchUpdate(undefined, () => window.setTimeout(() => void recheckServer(), 3000)));
@@ -256,7 +266,7 @@ export default function App() {
       {/* the one host of confirmDraftDiscard (the designer asks too, with the Run panel closed) */}
       <ConfirmDialog />
       <UpdateProgress />
-      <Show when={menuNotice()}><div class="banner" role="status">{menuNotice()}</div></Show>
+      <ToastHost />
       <input ref={openInput} type="file" accept=".json,application/json" hidden onChange={(e) => { const f = e.currentTarget.files?.[0]; if (f) void openUserProject(f); e.currentTarget.value = ""; }} />
       <ExampleCopyDialog />
       <Show when={!DEMO && cstImportOpen()}><CstImportDialog /></Show>
@@ -276,14 +286,6 @@ export default function App() {
             title={t("app.panels.rightTitle")}>
             <PanelRight aria-hidden="true" /> {t("app.panels.specs")}
           </button>
-        </div>
-      </Show>
-      <Show when={loadError()}>
-        <div class="banner banner-critical" role="alert">
-          <CircleAlert size={14} aria-hidden="true" />
-          <span>{loadError()}</span>
-          <Show when={failedProject()}>{(file) => <button class="btn btn-ghost btn-sm" onClick={() => void loadProject(file())}>{t("common.retry")}</button>}</Show>
-          <button class="btn btn-ghost btn-sm" onClick={() => setLoadError(null)}>{t("app.dismiss")}</button>
         </div>
       </Show>
       <Show when={loadWarnings().length}>
@@ -337,7 +339,6 @@ export default function App() {
               <PanelBoundary name="Ribbon" class="rb-wrap">
                 <div class="rb-stack">
                   <Ribbon />
-                  <DrawHint />
                 </div>
               </PanelBoundary>
               {/* the 3D view is the first of the main area's document tabs; result tabs open beside it */}
@@ -346,6 +347,8 @@ export default function App() {
                   <Viewport />
                 </PanelBoundary>
                 <MeshViewPanel />
+                {/* tool hints float over the top of the 3D view: the canvas keeps its size */}
+                <DrawHint />
               </MainArea>
               <PanelBoundary name="Checks" class="dock dw-dock-wrap">
                 <DesignDock />

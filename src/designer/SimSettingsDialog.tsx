@@ -325,7 +325,7 @@ export default function SimSettingsDialog() {
                     </div>
                   </fieldset>
                   <div class="ss-legend">
-                    <For each={TYPES}>{(ty) => <span><span class="ss-swatch" style={{ background: ty.color }} aria-hidden="true" />{typeLabel(ty)}</span>}</For>
+                    <For each={TYPES}>{(ty) => <span title={typeHint(ty)}><span class="ss-swatch" style={{ background: ty.color }} aria-hidden="true" />{typeLabel(ty)}</span>}</For>
                   </div>
                 </div>
               </div>

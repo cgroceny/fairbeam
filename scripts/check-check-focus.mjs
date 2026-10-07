@@ -90,7 +90,7 @@ assert.equal(frames.length, 0, 'one frame request per check click');
 // every radio); a check row names its severity in text; the dock tab and status bar count notes.
 const { readFileSync } = await import('node:fs');
 const src = (path) => readFileSync(`${root}src/${path}`, 'utf8');
-for (const [file, label] of [['components/Header.tsx', 'Screen'], ['editor/NewModelDialog.tsx', 'Model kind'], ['designer/DesignPane.tsx', 'Port type']]) {
+for (const [file, label] of [['editor/NewModelDialog.tsx', 'Model kind'], ['designer/DesignPane.tsx', 'Port type']]) {
   const text = src(file);
   // the label is a literal or a translated key (t("…")) whose English text is `label`
   const en = JSON.parse(src('i18n/en.json'));
@@ -102,6 +102,27 @@ for (const [file, label] of [['components/Header.tsx', 'Screen'], ['editor/NewMo
   assert.match(group.slice(0, group.indexOf('>')), /onKeyDown=\{radioGroupKeys\}/, `${label}: arrow keys`);
   const radios = group.split('role="radio"').slice(1);
   assert.ok(radios.length >= 2 && radios.every((r) => /^[^>]*tabindex=\{/.test(r)), `${label}: roving tabindex on every radio`);
+}
+// the screen switch is page navigation: a <nav> of buttons, the current one aria-current="page", one
+// Tab stop (roving tabindex) and the arrow keys moving between the screens
+{
+  const header = src('components/Header.tsx');
+  const at = header.indexOf('<nav class="seg seg-sm mode-switch" aria-label={t("header.screen")} onKeyDown={screenNavKeys}>');
+  assert.ok(at >= 0, 'Header: the Screen switch is a nav with arrow keys');
+  const nav = header.slice(at, header.indexOf('</nav>', at));
+  const buttons = nav.split('<button').slice(1);
+  assert.equal(buttons.length, 3, 'Header: Start, Design and Examples');
+  assert.ok(buttons.every((b) => /aria-current=\{appMode\(\) === "\w+" \? "page" : undefined\}/.test(b) && /tabindex=\{tabStop\(\)/.test(b)), 'Header: aria-current and a roving tabindex on every screen button');
+  assert.ok(!/role="radio/.test(nav), 'Header: not exposed as radio buttons');
+  // the first Tab stop skips to the current screen's main region; it is visible only when focused
+  assert.ok(header.indexOf('<a class="skip-link" href="#main" onClick={skipToMain}>') < header.indexOf('<header class="app-header">'), 'Header: the skip link comes before the header');
+  assert.match(header, /const main = document\.querySelector<HTMLElement>\("main"\);[\s\S]*?main\.focus\(\)/, 'Header: the skip link focuses <main>');
+  const css = readFileSync(`${root}src/styles/app.css`, 'utf8');
+  assert.match(css, /\.skip-link:not\(:focus\) \{[^}]*clip: rect\(0 0 0 0\)/, 'the skip link is visually hidden until focused');
+  // one h1 per screen: Start has its own, the designer a visually hidden "Design: <name>", Examples the example's name
+  assert.match(src('home/Home.tsx'), /<h1>\{t\("home\.title"\)\}<\/h1>/, 'Start: h1');
+  assert.match(src('designer/DesignWorkspace.tsx'), /<h1 class="visually-hidden">\{t\("ribbon\.designHeading", \{ name: /, 'Design: a visually hidden h1');
+  assert.match(src('components/ModelPanel.tsx'), /<h1 class="section-title">\{b\(\)\.model\.name\}<\/h1>/, 'Examples: the title is the h1');
 }
 // severity words and the notes count are translated keys (src/i18n/en.json has the English)
 const enText = JSON.parse(src('i18n/en.json'));

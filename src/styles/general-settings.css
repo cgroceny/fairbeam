@@ -16,6 +16,11 @@
 :root[data-unit-display="compact"] .th-unit,
 :root[data-unit-display="compact"] .rp-unit { display: none !important; }
 
+/* Settings has a tab row between the head and the body: the tab row keeps its height and only the
+   body track shrinks and scrolls (the generic dialog grid has one shrinkable row, which would be the tabs). */
+.gs-dialog { grid-template-rows: auto auto minmax(0, 1fr); }
+.gs-dialog > .gs-tabs { flex-wrap: wrap; }
+.gs-dialog > .gs-body { max-height: none; min-height: 0; }
 .gs-tabs { display: flex; gap: var(--al-gap-cluster); padding: var(--al-space-2) var(--al-pad-panel); border-bottom: 1px solid var(--al-border); }
 .gs-tabs [aria-selected="true"] { background: var(--al-selection); }
 .gs-panel { display: grid; gap: var(--al-space-4); min-width: 0; }
