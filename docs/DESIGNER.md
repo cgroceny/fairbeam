@@ -263,6 +263,13 @@ Shortcuts (or ? in the designer) lists them all.
   **Copy data** (Ctrl/⌘+C) and **CSV** in the result tab's toolbar write what the plot shows: the
   picked S_ij in dB or phase, the Smith port, every compared run named like the legend; the
   format menu beside them chooses As plotted, dB, dB + phase, Re/Im, Linear magnitude + phase or All.
+  The **Figure** menu beside them saves the plot as PNG (300 dpi) or SVG, with the design name,
+  view and frequency as a title, always in the light style on white paper whatever the app theme.
+  Figures, CSV and Touchstone files of a result share one name:
+  `<design>_<view>_<frequency>_<run time>` (for example
+  `patch_antenna_impedance_1.5-3GHz_2026-10-07T10-22-01+0300.csv`), with the frequency of a sweep or
+  of the selected far-field cut, the run time written without colons, and only letters, digits and
+  `_ . + -`, so the name is valid on Windows and macOS. Touchstone files use the view `sparams`.
 
 The **Filter** box at the top keeps the items whose name or detail contains every word typed, with
 the folders above them; Escape clears it. The tree works from the keyboard: Up/Down move, Right

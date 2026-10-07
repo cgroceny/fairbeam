@@ -43,9 +43,11 @@ import { resultDataFormat, tableFormat, writeResultDataFormat, type ResultDataFo
 import { exportResultTouchstone } from "./resultTouchstone";
 import { exportNotice, registerSurfaceExports } from "../components/exportContext";
 import { saveVisibleFigure, visibleFigureSvgs } from "../components/visibleFigure";
+import ResultFigureMenu from "../components/ResultFigureMenu";
+import { resultExportStem, resultFrequencyTag } from "../lib/resultExportNames";
 import FieldMapView from "./FieldMapView";
 import { ResultSummary } from "./RunSummaryView";
-import { fmt, t } from "../i18n";
+import { fmt, t, tEn } from "../i18n";
 import "../styles/designer-sim.css";
 import "../styles/result-views.css";
 
@@ -574,7 +576,19 @@ export function ResultToolbar(props: { view: MainResultView }) {
     if (designResult()?.file !== run.file || designResult()?.bundle !== run.bundle || (resultFocus() && resultFocus()?.file !== run.file) || selectedRuns().join("\n") !== files.join("\n")) throw new Error(t("results.compare.changed"));
     return loaded;
   };
-  const baseName = (file: string) => file.split(/[\\/]/).pop()!.replace(/\.json$/i, "");
+  const exportFrequency = () => props.view === "pattern" ? resultFocus()?.f ?? designResult()?.bundle.results?.farfield[0]?.f : undefined;
+  const exportBase = (b: Bundle) => resultExportStem(b, props.view, exportFrequency());
+  const plot = () => bar.closest(".dw-result")?.querySelector<HTMLElement>(".dw-result-plot") ?? null;
+  const ready = () => !!designResult()?.bundle.results && (!resultFocus() || resultFocus()?.file === designResult()?.file);
+  const figureReady = () => ready() && comparisonReady() && !["table", "summary", "fieldmap"].includes(props.view);
+  const exportFigure = async (format: "png" | "svg") => {
+    const run = designResult();
+    if (!run || !figureReady()) return;
+    try {
+      const title = [run.bundle.name, tEn(`results.tab.${props.view}`), resultFrequencyTag(run.bundle, exportFrequency())].filter(Boolean).join(" — ");
+      await saveVisibleFigure(plot(), exportBase(run.bundle), format, title);
+    } catch (error) { feedback(t("results.figure.failed", { error: String(error) }), true); }
+  };
   const copyData = async () => {
     const run = designResult();
     if (!run) return;
@@ -590,8 +604,9 @@ export function ResultToolbar(props: { view: MainResultView }) {
     if (!run) return;
     try {
       const frequency = resultFocus()?.f, options = dataOptions(selectedRuns().map(file => ({ file })));
+      const filename = `${exportBase(run.bundle)}.csv`;
       const runs = await comparedBundles(run);
-      saved(await exportResultCsv(run.bundle, props.view, `${baseName(run.file)}-${props.view}.csv`, frequency, runs, options));
+      saved(await exportResultCsv(run.bundle, props.view, filename, frequency, runs, options));
     } catch (error) { feedback(error instanceof Error ? error.message : t("results.toolbar.exportFailed"), true); }
   };
   const exportTouchstone = async () => {
@@ -599,14 +614,12 @@ export function ResultToolbar(props: { view: MainResultView }) {
     if (!run?.bundle.results) return;
     try {
       const runs = await comparedBundles(run);
-      saved(await exportResultTouchstone(run.bundle, baseName(run.file), runs));
+      saved(await exportResultTouchstone(run.bundle, resultExportStem(run.bundle, "sparams"), runs));
     } catch (error) { feedback(t("results.toolbar.touchstoneFailed", { error: error instanceof Error ? error.message : String(error) }), true); }
   };
   onMount(()=> {
-    const plot=()=>bar.closest(".dw-result")?.querySelector<HTMLElement>(".dw-result-plot")??null;
-    const ready=()=>!!designResult()?.bundle.results && (!resultFocus() || resultFocus()?.file===designResult()?.file);
     const chart=()=>ready() && comparisonReady() && visibleFigureSvgs(plot()).length>0;
-    const figure=(format:"png"|"svg")=>saveVisibleFigure(plot(),`${baseName(designResult()?.file??"result")}-${props.view}`,format);
+    const figure = exportFigure;
     onCleanup(registerSurfaceExports("design-result",{ready:chart,screenshot:()=>figure("png"),actions:()=>[
       {id:"result-csv",label:t("contextExport.resultCsv"),disabled:!ready()||!resultDataTable(designResult()?.bundle,props.view,resultFocus()?.f,dataOptions()).rows.length,reason:t("contextExport.noData"),run:exportData},
       {id:"result-touchstone",label:t("contextExport.touchstone"),disabled:!ready()||!sMatrix(designResult()!.bundle)?.pairs.length,reason:t("contextExport.noSParameters"),run:exportTouchstone},
@@ -706,6 +719,7 @@ export function ResultToolbar(props: { view: MainResultView }) {
       <button class="btn btn-ghost btn-sm rdk-copy" classList={{ copied: copied() }} onClick={() => void copyData()} title={t("results.toolbar.copyDataTitle")} aria-live="polite">
         <Show when={copied()} fallback={<><Copy size={14} aria-hidden="true" /> {t("results.toolbar.copyData")}</>}><Check size={14} aria-hidden="true" /> {t("results.toolbar.copied")}</Show>
       </button>
+      <ResultFigureMenu disabled={!figureReady()} save={exportFigure} />
       {/* CSV and Touchstone: their own icons and a short label that stays when the bar folds to icons */}
       <button class="btn btn-ghost btn-sm" onClick={exportData} title={t("results.toolbar.csvTitle")} aria-label={t("results.toolbar.csvTitle")}><FileSpreadsheet size={14} aria-hidden="true" /> <span class="btn-short">CSV</span></button>
       <Show when={designResult()?.bundle.results && props.view !== "summary"}>
