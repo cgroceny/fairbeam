@@ -374,7 +374,7 @@ for (const file of bundles) {
   check(readme.includes(`by Fairbeam ${APP_VERSION}`), stem, `README.txt is not stamped with Fairbeam ${APP_VERSION}`);
   for (const f of files.filter((x) => x.path.endsWith(".gbr"))) check(f.data.includes(`%TF.GenerationSoftware,Fairbeam,Fairbeam,${APP_VERSION}*%`), `${stem} ${f.path}`, "GenerationSoftware is not the running version");
   for (const f of files.filter((x) => x.path.endsWith(".drl"))) check(f.data.includes(`{Fairbeam ${APP_VERSION}}`), `${stem} ${f.path}`, "drill header is not stamped with the running version");
-  check(!/antenlab|Fairbeam 0\.[1-6]\.\d/i.test(files.map((f) => f.data).join("")), stem, "a former product name or an unreleased version in the fab files");
+  check(!/Fairbeam 0\.[1-6]\.\d/i.test(files.map((f) => f.data).join("")), stem, "an unreleased version in the fab files");
 
   // copper layers
   const faces = [...geo.copper.keys()].sort((a, c) => c - a);

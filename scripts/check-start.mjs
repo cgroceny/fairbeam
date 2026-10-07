@@ -13,14 +13,14 @@ const built = await build({
     resolveId(id) { if (id.endsWith('start-check-entry')) return '\0start-check-entry'; },
     load(id) {
       if (id !== '\0start-check-entry') return;
-      return ['runner/store', 'state', 'workspace', 'runner/api', 'runner/openProject'].map((path, i) =>
+      return ['runner/store', 'state', 'workspace', 'runner/api', 'runner/openProject', 'lib/legacy'].map((path, i) =>
         `export * as m${i} from ${JSON.stringify(`${root}src/${path}.ts`)};`).join('\n');
     },
   }],
   build: { write: false, minify: false, lib: { entry: 'start-check-entry', formats: ['es'] } },
 });
 const code = (Array.isArray(built) ? built[0] : built).output[0].code;
-const { m0: runner, m1: state, m2: workspace, m3: { api }, m4: openProject } =
+const { m0: runner, m1: state, m2: workspace, m3: { api }, m4: openProject, m5: { LEGACY_SCHEMAS } } =
   await import(`data:text/javascript;base64,${Buffer.from(code).toString('base64')}`);
 const { openUserProject } = openProject;
 const fixture = (file) => JSON.parse(readFileSync(`${root}public/projects/${file}.json`, 'utf8'));
@@ -177,7 +177,7 @@ try {
   const design = JSON.parse(readFileSync(`${root}examples/designs/ux_inset_patch_24.design.json`, 'utf8'));
   const asFile = (json) => ({ text: async () => JSON.stringify(json) });
   assert.equal((await openProject.designIn(asFile(design)))?.model.id, design.model.id, 'a design file is recognised');
-  assert.equal(await openProject.designIn(asFile({ ...design, schema: 'antenlab.design/1' })) !== null, true, 'a design file of the previous app too');
+  assert.equal(await openProject.designIn(asFile({ ...design, schema: Object.keys(LEGACY_SCHEMAS).find((id) => id.endsWith('.design/1')) })) !== null, true, 'a design file of the previous app too');
   assert.equal(await openProject.designIn(asFile(patch)), null, 'a result file is not a design');
   assert.equal(await openProject.designIn({ text: async () => '{ not json' }), null, 'unreadable JSON goes to the result loader, which reports it');
   assert.equal(openProject.importedDesignId('Export patch', []), 'export_patch');
