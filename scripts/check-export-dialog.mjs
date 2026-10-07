@@ -132,6 +132,23 @@ assert.ok(!/role="alertdialog"/.test(inlinePanel) && !new RegExp(`aria-label="${
 assert.equal(closed, 0, "rendering does not close anything");
 assert.deepEqual(logged, Array(2).fill("[fairbeam] Geometry export failed to render: broken on purpose"), "the error is logged (once per panel), for bug reports");
 
+// ---- the geometry formats: each says what it carries; an invalid sheet thickness is shown and blocks the export (no
+// silent 35 µm); the dialog keeps its height; the right pane does not repeat the header
+{
+  const src = read("src/components/ExportDialog.tsx"), css = read("src/styles/app.css");
+  assert.match(src, /format\(\) === "stl" \? "export\.stl\.scope" : format\(\) === "glb" \? "export\.glb\.scope" : "export\.blender\.scope"/, "glTF and STL have their own scope text");
+  for (const key of ["export.glb.scope", "export.stl.scope"]) assert.ok(!/render/i.test(en[key]), `${key} does not speak of the render`);
+  assert.doesNotMatch(src, /\?\? DEFAULT_SHEET_THICKNESS_UM/, "no fallback to 35 µm behind an invalid thickness");
+  assert.match(src, /\(isCst\(\) && !result\(\)\) \|\| sheetInvalid\(\)\}/, "an invalid thickness disables the export");
+  assert.match(src, /t\("export\.sheet\.range", \{ min: SHEET_THICKNESS_UM\.min, max: SHEET_THICKNESS_UM\.max \}\)/, "the error names the real range");
+  assert.ok(en["export.sheet.range"].includes("{min}") && en["export.sheet.range"].includes("{max}"));
+  assert.match(css, /\.export-dialog \.dialog-head p \{[^}]*min-height: 3lh/, "the header description reserves its lines");
+  const side = src.slice(src.indexOf('class="export-options export-side"'), src.indexOf("<pre class=\"code\""));
+  assert.ok(side && !side.includes("formatHint()"), "the right pane does not repeat the header's description");
+  assert.match(side, /class="export-summary"/, "the design and its solids are a summary row");
+  assert.doesNotMatch(src, /class="status-block" role="note"/, "the CST notes are plain muted text, aligned with the column");
+}
+
 // the dialogs are wired to close from their error panel, and navigation closes them
 const app = read("src/App.tsx");
 for (const [name, setter] of [["Geometry export", "setExportOpen"], ["Render image", "setRenderDialogOpen"], ["Package export", "setPackageOpen"]]) {
