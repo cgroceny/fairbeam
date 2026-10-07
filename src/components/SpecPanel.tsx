@@ -1,7 +1,8 @@
 import { For, Show } from "solid-js";
 import { CircleCheck, TriangleAlert } from "lucide-solid";
 import { bundle, farfieldIndex, setDockTab, setFarfieldIndex, setLayers } from "../state";
-import { compact, GHz, num, seconds, timeUnit } from "../lib/format";
+import { bandTexts } from "../lib/bands";
+import { compact, GHz, ghzText, num, seconds, timeUnit } from "../lib/format";
 import { bundleWriter } from "../lib/appVersion";
 import { convergenceTextUi, efficiencyIssue, efficiencyWarningUi } from "../lib/runText";
 import ComparisonCard from "./ComparisonCard";
@@ -37,26 +38,31 @@ export default function SpecPanel() {
                       <thead>
                         <tr>
                           <th>#</th>
-                          <th class="num">{t("spec.centre")}<span class="th-unit">GHz</span></th>
+                          <th class="num" title={t("spec.centre.title")}>{t("spec.centre")}<span class="th-unit">GHz</span></th>
+                          <th class="num" title={t("spec.bestMatch.title")}>{t("spec.bestMatch")}<span class="th-unit">GHz</span></th>
                           <th class="num">|S11| min<span class="th-unit">dB</span></th>
                           <th class="num">{t("spec.bw")}<span class="th-unit">%</span></th>
                         </tr>
                       </thead>
                       <tbody>
                         <For each={res()!.bands}>
-                          {(band, i) => (
-                            <tr>
-                              <td>{i() + 1}</td>
-                              <td class="num">{num(band.f_center / 1e9, 3)}</td>
-                              <td class="num">{num(band.s11_min_db, 1)}</td>
-                              <td class="num" title={`${num(band.f_lo / 1e9, 3)}–${num(band.f_hi / 1e9, 3)} GHz`}>
-                                {num(band.fractional_bw * 100, 1)}
-                              </td>
-                            </tr>
-                          )}
+                          {(band, i) => {
+                            // the centre is the middle of the edges; the |S11| minimum is the best match
+                            const c = bandTexts(band, (hz) => ghzText(hz / 1e9), fmt.fixed);
+                            return (
+                              <tr title={`${c.range} GHz${c.open ? ` · ${t("spec.bandOpen")}` : ""}`}>
+                                <td>{i() + 1}</td>
+                                <td class="num">{c.centre}</td>
+                                <td class="num">{c.best}</td>
+                                <td class="num">{num(band.s11_min_db, 1).replace(/^-/, "−")}</td>
+                                <td class="num">{c.percent}</td>
+                              </tr>
+                            );
+                          }}
                         </For>
                       </tbody>
                     </table>
+                    <Show when={res()!.bands.some((b) => b.edge_lo || b.edge_hi)}><p class="note">{t("spec.bandOpenNote")}</p></Show>
                   </Show>
                   <Show when={res()!.farfield.length}>
                     <table class="table table-ff">
@@ -86,7 +92,7 @@ export default function SpecPanel() {
                               <Show when={res()!.farfield.some((f) => f.port)}>
                                 <td class="mono">{ff.port ? `P${ff.port}` : "—"}</td>
                               </Show>
-                              <td class="num">{num(ff.f / 1e9, 3)}</td>
+                              <td class="num">{ghzText(ff.f / 1e9)}</td>
                               <td class="num">{num(ff.dmax_dbi, 2)}</td>
                               <td class="num">{ff.gain_dbi !== undefined ? num(ff.gain_dbi, 2) : "—"}</td>
                               <td class="num" classList={{ "cell-warn": !!efficiencyIssue(ff) }} title={efficiencyWarningUi(ff) ?? undefined}>

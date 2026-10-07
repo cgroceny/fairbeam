@@ -72,8 +72,8 @@ const ids = (rows) => rows.map((r) => r.id);
   const kids = runChildren("r.json", runContent(b));
   eq(kids.map((k) => k.label), ["1D Results", "Far fields", "2D/3D Results", "Tables", "Log"], "result folders, in order");
   eq(kids[0].children.map((k) => k.action.view), ["sparams", "impedance", "vswr", "smith", "efficiency"], "1D views (the efficiency with them)");
-  eq(kids[1].children.map((k) => [k.label, k.action.view, k.action.f]), [["Far field (f = 2.4 GHz)", "pattern", 2.4e9], ["3D pattern (f = 2.4 GHz)", "pattern3d", 2.4e9],
-    ["Far field (f = 2.5 GHz)", "pattern", 2.5e9], ["3D pattern (f = 2.5 GHz)", "pattern3d", 2.5e9]], "per far-field frequency: its cuts and its 3D pattern");
+  eq(kids[1].children.map((k) => [k.label, k.action.view, k.action.f]), [["Far field (f = 2.400 GHz)", "pattern", 2.4e9], ["3D pattern (f = 2.400 GHz)", "pattern3d", 2.4e9],
+    ["Far field (f = 2.500 GHz)", "pattern", 2.5e9], ["3D pattern (f = 2.500 GHz)", "pattern3d", 2.5e9]], "per far-field frequency: its cuts and its 3D pattern");
   eq(kids[2].children[0].action, { kind: "result", file: "r.json", view: "currents", f: 2.4e9 }, "a current map focuses its frequency");
   eq(kids[4].action, { kind: "result", file: "r.json", view: "log" }, "the log is a leaf");
   eq(runChildren("r.json", null).map((k) => k.label), ["1D Results", "Tables", "Log"], "before the bundle is read: the fixed folders");

@@ -381,12 +381,12 @@ each with its own reflection from the run in which it was driven.
 | Field | Type | Description |
 | --- | --- | --- |
 | `f_lo`, `f_hi` | number | First and last sample below the threshold, in Hz |
-| `f_center` | number | Frequency of minimum S11 within the band, in Hz |
+| `f_center` | number | Frequency of minimum S11 within the band, in Hz. The app shows it as the band's "Best match"; its band "Center" is (f_lo + f_hi) / 2 ([RESULTS.md](RESULTS.md)) |
 | `s11_min_db` | number | Minimum S11 in dB |
 | `fractional_bw` | number | `(f_hi − f_lo) / f_center` |
 | `edge_lo`, `edge_hi` | boolean | The band touches the start or end of the simulated range, so its true edge lies outside it |
 
-**FarField.** The pattern frequencies are the band centers (at most 4). If there are no bands, the frequency of minimum S11 is used. A model can choose its own (`sim.pattern_freqs`, e.g. the band edges and center of a broadband horn). `--pattern` overrides all of these.
+**FarField.** The pattern frequencies are the bands' `f_center` values, the frequency of minimum S11 in each band (at most 4). If there are no bands, the frequency of minimum S11 is used. A model can choose its own (`sim.pattern_freqs`, e.g. the band edges and center of a broadband horn). `--pattern` overrides all of these.
 
 | Field | Type | Description |
 | --- | --- | --- |
@@ -707,7 +707,8 @@ boundary hold absorbed, non-physical fields.
 | `file` | string | Bundle file name, relative to the index |
 | `name`, `model`, `created` | string | Copied from the bundle (`model` is `model.id`) |
 | `simulated` | boolean | `results` is present |
-| `bands` | number[] | Band centers in **GHz**, 3 decimals |
+| `bands` | number[] | Each band's `f_center` (the frequency of minimum S11) in **GHz**, 3 decimals |
+| `band_ranges` | object[]? | Each band's edges in **GHz** (4 decimals) and whether it touches the simulated range: `{lo, hi, edge_lo, edge_hi}`. The example picker shows a band by the middle of its edges, or by its range when it touches the simulated range. Absent when there are no bands, and in older indexes (the picker then shows `bands`) |
 | `cells` | number | `mesh.total_cells` |
 | `engine` | string? | `"CPU"`, `"Metal"`, `"CUDA"` or `"GPU"`: what ran the simulation (from `run.engine` and the log). Absent without a run |
 | `params` | object? | The model parameters set to something other than their default, `{key: value}`. Absent when there are none |

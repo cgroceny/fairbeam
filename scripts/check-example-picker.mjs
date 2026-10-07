@@ -58,7 +58,7 @@ eq(all.length, flatItems(groups).length, "every example is in exactly one catego
 for (const c of EXAMPLE_CATEGORIES) check(typeof JSON.parse(read("src/i18n/en.json"))[`examples.group.${c}`] === "string" && typeof JSON.parse(read("src/i18n/tr.json"))[`examples.group.${c}`] === "string", `heading ${c} in both languages`);
 const ms = all.find((i) => i.file === "microstrip-line.json");
 eq(ms?.label, "Microstrip line (50 ohm, two-port)", "the full example name is the row label");
-eq(ms?.detail, "2.67 GHz · 49.6 k cells", "secondary line: matched band and mesh size");
+eq(ms?.detail, "≥\u00a00.5–6 GHz · 49.6 k cells", "secondary line: the line is matched over the whole simulated range (at least 0.5–6 GHz), and the mesh size");
 eq(exampleDetail({ bands: [3.303, 6.219, 7.297], cells: 1964256 }), "3.3, 6.22, 7.3 GHz · 1.96 M cells", "several bands are listed");
 eq(exampleDetail({ bands: [], cells: 0 }), "", "no bands and no cells: an empty secondary line");
 eq(exampleDetail({ bands: [2.4], cells: 1000, engine: "CUDA" }), "2.4 GHz · 1000 cells · CUDA", "the engine is named when the index has it");
@@ -79,7 +79,8 @@ eq(names("patch"), ["Inset-fed patch (FR4, 2.4 GHz)", "Minkowski fractal patch",
 eq(names("PATCH array"), ["Patch array 2 x 1", "Patch array 4 x 1"], "terms are case-insensitive and all must match");
 eq(names("array patch"), names("patch array"), "term order does not matter");
 eq(names("wr-90"), ["Pyramidal horn (WR-90, 10 GHz)"], "the name's own text matches");
-eq(names("11.16 ghz"), ["Pyramidal horn (WR-90, 10 GHz)"], "the secondary line (band) matches");
+eq(names("8–12 ghz"), ["Pyramidal horn (WR-90, 10 GHz)"], "the secondary line (band) matches: the horn is matched over at least 8–12 GHz");
+eq(names("11.16 ghz"), [], "not by its |S11| minimum: the band text is the band, not where it is deepest");
 eq(names("lowpass"), ["Stepped-impedance low-pass filter"], "the group key / file name matches");
 eq(names("iterations=3"), ["Sierpinski gasket monopole · iterations=3"], "a suffix matches");
 eq(names("zzz"), [], "no match: no rows");

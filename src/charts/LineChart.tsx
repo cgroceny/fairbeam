@@ -1,11 +1,13 @@
-import { createEffect, createMemo, createSignal, For, Index, type JSX, onCleanup, Show } from "solid-js";
+import { createMemo, createSignal, For, Index, type JSX, onCleanup, Show } from "solid-js";
 import { niceDomain, ticks, tickLabel, extent } from "./scale";
 import { useSize } from "./useSize";
 import { declutter, type LabelBox, localDecimal, minus, MONO_ADVANCE, SANS_ADVANCE } from "./labels";
 import { findResonances, globalExtrema, isReflectionTrace, nearestFiniteSample, nextMinimum, pickTraceSample } from "./markerMath";
-import { initialMarkerMode, toggleMarkerMode } from "./markerMode";
+import { chartMarkers, markSeries, nextMarkId, toggleMarkerMode, type ChartMarkers, type UserMark } from "./markerMode";
+import { ghzPlain } from "../lib/format";
 import { t, tEn } from "../i18n";
 import NumberField from "../components/NumberField";
+import "../styles/charts.css";
 
 export interface Series {
   id: string;
@@ -44,11 +46,14 @@ export interface Marker {
   active?: boolean;
 }
 
-interface Props {
+export interface LineChartProps {
   series: Series[];
   xLabel: string;
   yLabel: string;
   yDomain?: [number, number];
+  /** fixed y ticks (the phase axis: −180, −90, 0, 90, 180), thinned to every other one on a short plot */
+  yTickValues?: number[];
+  /** tooltip format of x; a frequency axis in GHz always uses the frequency format (lib/format.ts ghzPlain) */
   xFormat?: (v: number) => string;
   yFormat?: (v: number) => string;
   hlines?: { y: number; label: string }[];
@@ -61,45 +66,35 @@ interface Props {
   /** extra rows appended to the crosshair tooltip for the hovered index */
   extra?: (i: number) => { label: string; value: string }[];
   ariaLabel: string;
-  inspection?: { key: string; kind: "reflection" | "other" };
+  /** the marker inspector: `key` names the plotted quantity, `chart` the chart it belongs to (its marker
+   * mode, markers and table are kept per chart, markerMode.ts; default: `key`); `toolbar: false` for the
+   * lower panes of a stack, which follow the top pane's Markers button */
+  inspection?: { key: string; kind: "reflection" | "other"; chart?: string; toolbar?: boolean };
 }
 
-type UserMark = { id: number; seriesId: string; x: number };
-const inspectorMarks = new Map<string, UserMark[]>();
-
-
-export default function LineChart(props: Props) {
+export default function LineChart(props: LineChartProps) {
   let box: HTMLDivElement | undefined;
   const size = useSize(() => box);
   const [hover, setHover] = createSignal<number | null>(null);
-  const [threshold, setThreshold] = createSignal(-10);
-  const [thresholdInput, setThresholdInput] = createSignal("-10");
-  const [enabled, setEnabled] = createSignal(true);
-  const [markerState, setMarkerState] = createSignal(initialMarkerMode);
-  const markerMode = () => markerState().active;
-  const autoShown = () => markerState().everOpened;
-  const toggleMode = () => setMarkerState(toggleMarkerMode);
-  const [tableOpen, setTableOpen] = createSignal(true);
-  const [userMarks, setUserMarks] = createSignal<UserMark[]>(props.inspection ? [...(inspectorMarks.get(props.inspection.key) ?? [])] : []);
+  // the inspector's state lives in the chart's entry of the marker store (one per chart, not per quantity)
+  const chartKey = () => (props.inspection ? props.inspection.chart ?? props.inspection.key : undefined);
+  const inspector = () => chartMarkers.get(chartKey());
+  const change = (f: (s: ChartMarkers) => ChartMarkers) => chartMarkers.update(chartKey(), f);
+  const threshold = () => inspector().threshold;
+  const [thresholdInput, setThresholdInput] = createSignal(String(threshold()));
+  const enabled = () => inspector().auto;
+  const markerMode = () => !!props.inspection && inspector().mode.active;
+  const autoShown = () => !!props.inspection && inspector().mode.everOpened;
+  const toggleMode = () => change((s) => ({ ...s, mode: toggleMarkerMode(s.mode) }));
+  const tableOpen = () => inspector().tableOpen;
+  const ownsToolbar = () => props.inspection?.toolbar !== false;
+  const userMarks = () => (props.inspection ? inspector().marks : []);
   const [status, setStatus] = createSignal("");
   let dragging: number | null = null;
   // reactive: the active marker is highlighted, and the toolbar acts on it
   const [selectedId, setSelectedId] = createSignal<number | null>(null);
-  let nextId = Math.max(0, ...(props.inspection ? inspectorMarks.get(props.inspection.key) ?? [] : []).map(m => m.id)) + 1;
-  let inspectionKey = props.inspection?.key;
-  createEffect(() => {
-    if (inspectionKey !== props.inspection?.key) {
-      inspectionKey = props.inspection?.key;
-      const restored = props.inspection ? [...(inspectorMarks.get(props.inspection.key) ?? [])] : [];
-      setUserMarks(restored);
-      nextId = Math.max(0, ...restored.map(m => m.id)) + 1;
-      setSelectedId(null);
-    }
-  });
-  const saveMarks = (marks: UserMark[]) => {
-    setUserMarks(marks);
-    if (props.inspection) inspectorMarks.set(props.inspection.key, marks);
-  };
+  const saveMarks = (marks: UserMark[]) => change((s) => ({ ...s, marks }));
+  const seriesOf = (m: UserMark) => markSeries(props.series, m.seriesId);
   const nearestFinite = (s: Series, x: number) => nearestFiniteSample(s.x, s.y, x)?.index ?? -1;
   // the legend strip wraps (many compared runs): the plot starts below its measured height
   const [legendH, setLegendH] = createSignal(16);
@@ -197,13 +192,23 @@ export default function LineChart(props: Props) {
     const c = Math.min(hi, Math.max(lo, v));
     return M.t + (1 - (c - lo) / (hi - lo || 1)) * H();
   };
-  // y ticks depend on the plot height only (not on the left gutter), so no cycle with M.l
-  const yTicks = createMemo(() => ticks(yDom()[0], yDom()[1], Math.max(2, Math.floor((size().h - M.t - M.b) / 44))));
+  // y ticks depend on the plot height only (not on the left gutter), so no cycle with M.l: at least three
+  // on a plot tall enough for them (a short stacked pane), one per 44 px above that
+  const yTicks = createMemo(() => {
+    const h = size().h - M.t - M.b;
+    const [lo, hi] = yDom();
+    if (props.yTickValues?.length) {
+      const inside = props.yTickValues.filter((v) => v >= lo - 1e-9 && v <= hi + 1e-9);
+      return inside.length > 3 && h / (inside.length - 1) < 22 ? inside.filter((_, i) => i % 2 === 0) : inside;
+    }
+    return ticks(lo, hi, Math.max(h >= 56 ? 3 : 2, Math.floor(h / 44)));
+  });
   // axis ticks use step-aware precision (0, −10, −20 rather than 0.0, −10.0); tooltips use x/yFormat
   const fx = (v: number) => localDecimal(minus(tickLabel(v, (xTicks()[1] ?? 1) - (xTicks()[0] ?? 0))));
   const fy = (v: number) => localDecimal(minus(tickLabel(v, (yTicks()[1] ?? 1) - (yTicks()[0] ?? 0))));
-  // plain: with the decimal point (the copied marker table); tx/ty: as shown
-  const txPlain = (v: number) => (props.xFormat ? props.xFormat(v) : v.toFixed(4));
+  // plain: with the decimal point (the copied marker table); tx/ty: as shown. A frequency in GHz has one
+  // format everywhere it is read off a chart (four significant digits: lib/format.ts ghzPlain)
+  const txPlain = (v: number) => (xUnit() === "GHz" ? ghzPlain(v) : props.xFormat ? props.xFormat(v) : v.toFixed(4));
   const tyPlain = (v: number) => minus((props.yFormat ?? ((n: number) => n.toFixed(2)))(v));
   const tx = (v: number) => localDecimal(txPlain(v));
   const ty = (v: number) => localDecimal(tyPlain(v));
@@ -245,8 +250,8 @@ export default function LineChart(props: Props) {
   }));
   const inspectionRows = createMemo(() => {
     const rows: any[] = [...autoRows()];
-    for (const m of userMarks()) { const s = props.series.find(q => q.id === m.seriesId); const i = s ? nearestFinite(s, m.x) : -1; if (s && i >= 0) rows.push({ marker: `M${m.id}`, trace: s.label, f: s.x[i], value: s.y[i] }); }
-    const shown = userMarks().flatMap(m => { const s = props.series.find(q => q.id === m.seriesId); const p = s && nearestFiniteSample(s.x, s.y, m.x); return p ? [{ f: p.x, v: p.y }] : []; });
+    for (const m of userMarks()) { const s = seriesOf(m); const i = s ? nearestFinite(s, m.x) : -1; if (s && i >= 0) rows.push({ marker: `M${m.id}`, trace: s.label, f: s.x[i], value: s.y[i] }); }
+    const shown = userMarks().flatMap(m => { const s = seriesOf(m); const p = s && nearestFiniteSample(s.x, s.y, m.x); return p ? [{ f: p.x, v: p.y }] : []; });
     if (shown.length === 2) rows.push({ marker: "Δ", trace: null, f: shown[1].f - shown[0].f, value: shown[1].v - shown[0].v });
     return rows;
   });
@@ -258,7 +263,7 @@ export default function LineChart(props: Props) {
       const p = props.inspection?.kind === "reflection" ? findResonances(s.x, s.y, threshold())[0] : null;
       const point = p ?? globalExtrema(s.x, s.y).min;
       if (!point) return null;
-      mark = { id: nextId++, seriesId: s.id, x: point.x };
+      mark = { id: nextMarkId(userMarks()), seriesId: s.id, x: point.x };
       setSelectedId(mark.id);
       saveMarks([...userMarks(), mark]);
     }
@@ -266,7 +271,7 @@ export default function LineChart(props: Props) {
   };
   const jumpMinimum = (id: number | null, direction: -1 | 1) => {
     const mark = id === null ? ensureSelected() : userMarks().find(m => m.id === id) ?? ensureSelected();
-    const s = mark && props.series.find(q => q.id === mark.seriesId);
+    const s = mark && seriesOf(mark);
     if (!mark || !s) return;
     const from = nearestFinite(s, mark.x);
     const next = nextMinimum(s.x, s.y, from, direction);
@@ -276,10 +281,10 @@ export default function LineChart(props: Props) {
   // keyboard route to a new marker: the next minimum after the active one, or the first resonance
   const addMarker = () => {
     const from = userMarks().find(m => m.id === selectedId());
-    const s = from && props.series.find(q => q.id === from.seriesId);
+    const s = from && seriesOf(from);
     const next = s && nextMinimum(s.x, s.y, nearestFinite(s, from!.x), 1);
     if (!s || !next) { setSelectedId(null); ensureSelected(); return; }
-    const mark = { id: nextId++, seriesId: s.id, x: next.x };
+    const mark = { id: nextMarkId(userMarks()), seriesId: s.id, x: next.x };
     setSelectedId(mark.id);
     saveMarks([...userMarks(), mark]);
   };
@@ -287,10 +292,11 @@ export default function LineChart(props: Props) {
     saveMarks(userMarks().filter(m => m.id !== id));
     if (selectedId() === id) setSelectedId(null);
   };
-  // table/TSV cells: frequencies to 0.1 MHz on GHz axes (bandwidth edges need more than the
-  // 10 MHz tooltip precision); an open-ended band shows its known bound and a lower-bound %
-  const fxCellPlain = (v: number) => (xUnit() === "GHz" ? minus(v.toFixed(4)) : txPlain(v));
+  // table/TSV cells: the frequency format of the readouts and tooltips (four significant digits in GHz);
+  // an open-ended band shows its known bound and a lower-bound %
+  const fxCellPlain = (v: number) => minus(txPlain(v));
   const fxCell = (v: number) => localDecimal(fxCellPlain(v));
+  const withUnit = (v: string, unit: string) => (unit ? `${v} ${unit}` : v);
   // plain: the copied table (English, decimal point, like Copy data); else as shown
   const cells = (r: any, plain = false): string[] => {
     const tr = plain ? tEn : t, X = plain ? fxCellPlain : fxCell, Y = plain ? tyPlain : ty, D = plain ? (s: string) => s : localDecimal;
@@ -300,7 +306,8 @@ export default function LineChart(props: Props) {
       r.low === undefined ? "" : `${r.edgeLow ? "≤ " : ""}${X(r.low)}`,
       r.high === undefined ? "" : `${r.edgeHigh ? "≥ " : ""}${X(r.high)}`,
       r.percent === undefined || !Number.isFinite(r.percent) ? "" : `${r.edgeLow || r.edgeHigh ? "≥ " : ""}${D(r.percent.toFixed(2))}%`,
-      flags || (r.marker === "Δ" ? tr("chart.deltaCell", { df: X(r.f), dv: Y(r.value) }) : ""),
+      // the difference of the two user markers, with the axes' units: "Δf −0.2196 GHz · Δ 9.7 dB"
+      flags || (r.marker === "Δ" ? tr("chart.deltaCell", { df: withUnit(X(r.f), xUnit()), dv: withUnit(Y(r.value), yUnit()) }) : ""),
     ];
   };
   const unitSuffix = (u: string) => (u ? ` (${u})` : "");
@@ -311,9 +318,9 @@ export default function LineChart(props: Props) {
   const inspectPointer = (e: PointerEvent) => {
     const r = e.currentTarget instanceof SVGSVGElement ? e.currentTarget.getBoundingClientRect() : box!.getBoundingClientRect();
     const xval = xDom()[0] + (((e.clientX - r.left) - M.l) / (W() || 1)) * (xDom()[1] - xDom()[0]);
-    if (dragging !== null) { const mark = userMarks().find(m => m.id === dragging); if (mark) { const s = props.series.find(q => q.id === mark.seriesId); const p = s && nearestFiniteSample(s.x, s.y, xval); if (p) saveMarks(userMarks().map(m => m.id === dragging ? { ...m, x: p.x } : m)); } return; }
+    if (dragging !== null) { const mark = userMarks().find(m => m.id === dragging); if (mark) { const s = seriesOf(mark); const p = s && nearestFiniteSample(s.x, s.y, xval); if (p) saveMarks(userMarks().map(m => m.id === dragging ? { ...m, x: p.x } : m)); } return; }
     const best = pickTraceSample(props.series, xval, e.clientY - r.top, sy);
-    if (best && props.inspection) { const mark = { id: nextId++, seriesId: best.trace.id, x: best.point.x }; setSelectedId(mark.id); saveMarks([...userMarks(), mark]); }
+    if (best && props.inspection) { const mark = { id: nextMarkId(userMarks()), seriesId: best.trace.id, x: best.point.x }; setSelectedId(mark.id); saveMarks([...userMarks(), mark]); }
   };
 
   // Tooltip sits beside the crosshair and flips to the left in the right half of the plot.
@@ -355,28 +362,35 @@ export default function LineChart(props: Props) {
   // Labels of the automatic markers (R1, min, max) and the user's (M1, M2, …) go through one declutter
   // pass, so two markers on the same dip stack upward instead of overprinting. The end labels and the
   // bandwidth captions are obstacles that stay where they are.
-  const markLabelY = createMemo(() => {
+  // A label centred on a point near the plot's left or right end is moved inside the plot, so it never
+  // sits over the y-axis tick labels (a far-field marker at the first frequency read "−28.00").
+  const insideX = (x: number, text: string) => {
+    const half = (text.length * MONO_ADVANCE) / 2 + 2;
+    return W() > 2 * half ? Math.min(Math.max(x, M.l + half), M.l + W() - half) : x;
+  };
+  const markLabels = createMemo(() => {
     const items: (LabelBox & { key: string })[] = [];
     const fixed: LabelBox[] = endLabels().map((d) => ({ x: d.x, y: d.y, text: d.text, anchor: d.anchor, mono: d.mono, fixed: true }));
     for (const r of autoRows()) {
       const s = props.series.find((q) => q.id === r.sid);
       const p = s && nearestFiniteSample(s.x, s.y, r.f);
       if (!p) continue;
-      items.push({ key: `a:${r.marker}:${r.sid}`, x: sx(p.x), y: sy(p.y) - 7, text: `${r.marker}${r.edgeLow ? " ◀" : ""}${r.edgeHigh ? " ▶" : ""}`, anchor: "middle", mono: true });
+      const text = `${r.marker}${r.edgeLow ? " ◀" : ""}${r.edgeHigh ? " ▶" : ""}`;
+      items.push({ key: `a:${r.marker}:${r.sid}`, x: insideX(sx(p.x), text), y: sy(p.y) - 7, text, anchor: "middle", mono: true });
       const bw = bwText(r);
       // drawn at -17; the obstacle sits a little higher so the marker label just under it is not pushed above it
       if (bw) fixed.push({ x: sx(p.x), y: sy(p.y) - 22, text: bw, anchor: "middle", mono: true, fixed: true });
     }
     for (const m of userMarks()) {
-      const s = props.series.find((q) => q.id === m.seriesId);
+      const s = seriesOf(m);
       const i = s ? nearestFinite(s, m.x) : -1;
-      if (s && i >= 0) items.push({ key: `m:${m.id}`, x: sx(s.x[i]), y: sy(s.y[i]) - 10, text: `M${m.id}`, anchor: "middle", mono: true });
+      if (s && i >= 0) items.push({ key: `m:${m.id}`, x: insideX(sx(s.x[i]), `M${m.id}`), y: sy(s.y[i]) - 10, text: `M${m.id}`, anchor: "middle", mono: true });
     }
     const out = items.length ? declutter([...items, ...fixed], { top: M.t + 11, bottom: M.t + H() - 2 }, 1, true) : [];
-    return new Map(items.map((it, i) => [it.key, out[i].y]));
+    return new Map(items.map((it, i) => [it.key, { x: it.x, y: out[i].y }]));
   });
 
-  // Marker labels: below the dot unless that would reach the x-axis tick labels; decluttered.
+  // Marker labels: below the dot unless that would reach the x-axis tick labels; inside the plot; decluttered.
   const markerPos = createMemo(() => {
     const s0 = props.series[0];
     const arr = s0?.x ?? [];
@@ -385,10 +399,17 @@ export default function LineChart(props: Props) {
       for (let j = 1; j < arr.length; j++) if (Math.abs(arr[j] - m.x) < Math.abs(arr[k] - m.x)) k = j;
       const cx = sx(m.x);
       const cy = sy(s0?.y[k] ?? 0);
-      return { cx, cy, x: cx, y: cy + 20 > M.t + H() - 2 ? cy - 11 : cy + 20, text: m.label, anchor: "middle" as const, mono: true };
+      return { cx, cy, x: insideX(cx, m.label), y: cy + 20 > M.t + H() - 2 ? cy - 11 : cy + 20, text: m.label, anchor: "middle" as const, mono: true };
     });
     const labels = declutter(pts, { top: M.t + 11, bottom: M.t + H() - 2 });
     return pts.map((p, i) => ({ cx: p.cx, cy: p.cy, lx: labels[i].x, ly: labels[i].y }));
+  });
+  // the y-axis title fits the plot's height: shortened with an ellipsis (the full title as a tooltip)
+  // rather than cut off at the chart's edge on a short pane
+  const yTitle = createMemo(() => {
+    // centred on the plot: the top margin is the narrower side
+    const room = Math.max(3, Math.floor((H() + 2 * M.t - 4) / SANS_ADVANCE));
+    return props.yLabel.length <= room ? props.yLabel : `${props.yLabel.slice(0, Math.max(1, room - 1))}…`;
   });
 
   return (
@@ -451,7 +472,9 @@ export default function LineChart(props: Props) {
         </For>
         <line x1={M.l} x2={M.l + W()} y1={M.t + H()} y2={M.t + H()} class="c-axis" />
         <text x={M.l + W()} y={size().h - 4} class="c-label" text-anchor="end">{props.xLabel}</text>
-        <text x={14} y={M.t + H() / 2} class="c-label" text-anchor="middle" transform={`rotate(-90 12 ${M.t + H() / 2})`}>{props.yLabel}</text>
+        <text x={14} y={M.t + H() / 2} class="c-label" text-anchor="middle" transform={`rotate(-90 12 ${M.t + H() / 2})`}>
+          <Show when={yTitle() !== props.yLabel}><title>{props.yLabel}</title></Show>{yTitle()}
+        </text>
 
         <For each={props.hlines ?? []}>
           {(h) => (
@@ -496,7 +519,7 @@ export default function LineChart(props: Props) {
                 </Show>
               </Show>
               <circle cx={sx(p!.x)} cy={sy(p!.y)} r="3.5" class="c-marker-dot"><title>{r.low !== undefined ? t("chart.dip") : r.marker} {fxCell(r.f)} {xUnit()}, {ty(r.value)} {yUnit()}</title></circle>
-              <text x={sx(p!.x)} y={markLabelY().get(`a:${r.marker}:${r.sid}`) ?? sy(p!.y) - 7} class="c-marker-label c-halo" text-anchor="middle">{r.marker}{r.edgeLow ? " ◀" : ""}{r.edgeHigh ? " ▶" : ""}</text>
+              <text x={markLabels().get(`a:${r.marker}:${r.sid}`)?.x ?? sx(p!.x)} y={markLabels().get(`a:${r.marker}:${r.sid}`)?.y ?? sy(p!.y) - 7} class="c-marker-label c-halo" text-anchor="middle">{r.marker}{r.edgeLow ? " ◀" : ""}{r.edgeHigh ? " ▶" : ""}</text>
             </g>
           </Show>;
         }}</For>
@@ -533,7 +556,7 @@ export default function LineChart(props: Props) {
         </For>
 
         <Index each={userMarks()}>{(m) => {
-          const s = () => props.series.find(q => q.id === m().seriesId);
+          const s = () => seriesOf(m());
           const i = () => s() ? nearestFinite(s()!, m().x) : -1;
           return <Show when={s() && i() >= 0}>
             <g class="c-marker" classList={{ active: selectedId() === m().id }} tabindex={0} role="button" aria-label={t("chart.markerAria", { id: `M${m().id}` })}
@@ -553,7 +576,7 @@ export default function LineChart(props: Props) {
                 }
               }}>
               <circle cx={sx(s()!.x[i()])} cy={sy(s()!.y[i()])} r={7} class="c-marker-dot" style={{ stroke: `var(${s()!.color})` }} />
-              <text x={sx(s()!.x[i()])} y={markLabelY().get(`m:${m().id}`) ?? sy(s()!.y[i()]) - 10} class="c-marker-label c-halo" text-anchor="middle">M{m().id}</text>
+              <text x={markLabels().get(`m:${m().id}`)?.x ?? sx(s()!.x[i()])} y={markLabels().get(`m:${m().id}`)?.y ?? sy(s()!.y[i()]) - 10} class="c-marker-label c-halo" text-anchor="middle">M{m().id}</text>
             </g>
           </Show>;
         }}</Index>
@@ -593,13 +616,16 @@ export default function LineChart(props: Props) {
         </div>
       </Show>
       </div>
-      <Show when={props.inspection}>
-        <section class="chart-inspector-panel" aria-label={t("chart.inspector")}>
-          <div class="chart-inspector-toolbar"><button type="button" class="btn btn-ghost btn-sm" aria-pressed={markerMode()} onClick={toggleMode}>{t("markers.toggle")}</button></div>
-          <Show when={markerMode()}><div class="chart-inspector-tools">
-            <label><input type="checkbox" checked={enabled()} onChange={e => setEnabled(e.currentTarget.checked)} /> {t("markers.automatic")}</label>
+      <Show when={props.inspection && (ownsToolbar() || markerMode())}>
+        <section class="chart-inspector-panel" classList={{ "is-open": markerMode() && tableOpen() }} aria-label={t("chart.inspector")}>
+          {/* one Markers button per chart: the lower panes of a stack follow the top pane's */}
+          <Show when={ownsToolbar()}>
+            <div class="chart-inspector-toolbar"><button type="button" class="btn btn-ghost btn-sm" aria-pressed={markerMode()} onClick={toggleMode}>{t("markers.toggle")}</button></div>
+          </Show>
+          <Show when={markerMode() && ownsToolbar()}><div class="chart-inspector-tools">
+            <label><input type="checkbox" checked={enabled()} onChange={e => { const auto = e.currentTarget.checked; change((s) => ({ ...s, auto })); }} /> {t("markers.automatic")}</label>
             <Show when={props.inspection?.kind === "reflection"}>
-              <label>{t("markers.threshold")} <NumberField aria-label={t("markers.thresholdAria")} value={thresholdInput()} onInput={e => { const raw = e.currentTarget.value; setThresholdInput(raw); const n = Number(raw); if (raw.trim() !== "" && Number.isFinite(n)) setThreshold(n); }} /> dB</label>
+              <label>{t("markers.threshold")} <NumberField aria-label={t("markers.thresholdAria")} value={thresholdInput()} onInput={e => { const raw = e.currentTarget.value; setThresholdInput(raw); const n = Number(raw); if (raw.trim() !== "" && Number.isFinite(n)) change((s) => ({ ...s, threshold: n })); }} /> dB</label>
             </Show>
             <button type="button" class="btn btn-ghost btn-sm" onClick={addMarker}>{t("markers.add")}</button>
             <button type="button" class="btn btn-ghost btn-sm" onClick={() => jumpMinimum(selectedId(), -1)}>{t("markers.previousMinimum")}</button>
@@ -611,10 +637,10 @@ export default function LineChart(props: Props) {
               } catch { setStatus(t("markers.copyFailed")); }
             }}>{t("markers.copy")}</button>
             <button type="button" class="btn btn-ghost btn-sm" onClick={() => { saveMarks([]); setSelectedId(null); }}>{t("markers.clear")}</button>
-            <button type="button" class="btn btn-ghost btn-sm" aria-expanded={tableOpen()} onClick={() => setTableOpen(v => !v)}> {tableOpen() ? t("markers.hideTable") : t("markers.showTable")}</button>
+            <button type="button" class="btn btn-ghost btn-sm" aria-expanded={tableOpen()} onClick={() => change((s) => ({ ...s, tableOpen: !s.tableOpen }))}> {tableOpen() ? t("markers.hideTable") : t("markers.showTable")}</button>
             <span role="status" aria-live="polite">{status()}</span>
-          </div>
-          <Show when={tableOpen()}><div class="chart-inspector-table-wrap">
+          </div></Show>
+          <Show when={markerMode() && tableOpen()}><div class="chart-inspector-table-wrap">
             <table class="chart-inspector-table">
               <thead><tr><For each={headers()}>{(h) => <th scope="col">{h}</th>}</For><th><span class="visually-hidden">{t("common.delete")}</span></th></tr></thead>
               <tbody>
@@ -638,7 +664,7 @@ export default function LineChart(props: Props) {
             }}</Index>
               </tbody>
             </table>
-          </div></Show></Show>
+          </div></Show>
         </section>
       </Show>
     </div>

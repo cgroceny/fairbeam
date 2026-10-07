@@ -1,0 +1,15 @@
+/* The far-field card of the 3D view (components/FarfieldCard.tsx): its value rows keep "−1.22 dB" whole
+   (a no-break space in the text), and a short window (a 1366 × 768 screen with the dock open) folds the
+   colour scale so the gain and efficiency rows show without scrolling the card: a shorter ramp, the
+   caption in the ramp's tooltip and the unit on the top tick. */
+.ff-tick-unit { display: none; }
+/* the scale keeps its height when the card is taller than the view (the card scrolls, the ramp does not shrink) */
+.ff-card .colorbar-body { flex: none; }
+@media (max-height: 820px) {
+  .ff-card .colorbar-body { height: 50px; padding: 6px 0; }
+  .ff-card .colorbar-ticks-round { min-height: 38px; }
+  .ff-card .colorbar-ticks-round > span { white-space: nowrap; }
+  .ff-card .ff-scale-unit { display: none; }
+  .ff-card .ff-tick-unit { display: inline; }
+  .ff-card-kv { line-height: 17px; }
+}

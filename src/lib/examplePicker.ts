@@ -2,6 +2,7 @@
 // and the keyboard movement over the filtered rows. Pure, so scripts/check-example-picker.mjs can
 // exercise it without a DOM.
 import type { ProjectIndexEntry } from "../types";
+import { pickerBands } from "./bands.ts";
 import { compact } from "./format.ts";
 import { labelOf, projectLabels } from "./projectLabels.ts";
 import { listKeyTarget } from "./tabKeys.ts";
@@ -42,12 +43,14 @@ export function exampleCategory(model: string): ExampleCategory {
   return "other";
 }
 
-/** "2.41 GHz · 75.7 k cells"; bands and cells are left out when the index does not have them. */
-export function exampleDetail(p: Pick<ProjectIndexEntry, "bands" | "cells" | "engine">): string {
-  const bands = (p.bands ?? []).filter((f) => Number.isFinite(f) && f > 0);
+/** "2.41 GHz · 75.7 k cells", "≥ 8–12 GHz · …" for a band that runs past the simulated range (the
+ * band centres and ranges of src/lib/bands.ts); bands and cells are left out when the index does not
+ * have them. */
+export function exampleDetail(p: Pick<ProjectIndexEntry, "bands" | "band_ranges" | "cells" | "engine">): string {
+  const bands = pickerBands(p, ghz);
   const parts: string[] = [];
   // Turkish numbers have a decimal comma, so its bands are separated by a semicolon
-  if (bands.length) parts.push(`${bands.map(ghz).join(decimalComma() ? "; " : ", ")} GHz`);
+  if (bands.length) parts.push(`${bands.join(decimalComma() ? "; " : ", ")} GHz`);
   if (Number.isFinite(p.cells) && p.cells > 0) parts.push(t("examples.detail.cells", { cells: compact(p.cells) }));
   if (p.engine) parts.push(p.engine);
   return parts.join(" · ");

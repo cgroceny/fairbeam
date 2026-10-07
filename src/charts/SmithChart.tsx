@@ -1,6 +1,7 @@
 import { createMemo, createSignal, For, type JSX, onCleanup, Show } from "solid-js";
 import { useSize } from "./useSize";
-import { declutter, localDecimal, minus } from "./labels";
+import { declutter, localDecimal, minus, MONO_ADVANCE } from "./labels";
+import { freqText } from "../lib/format";
 import { t } from "../i18n";
 
 interface Props {
@@ -110,6 +111,20 @@ export default function SmithChart(props: Props) {
       return hits(x0, x1, above - 10, above + 3) && !hits(x0, x1, below - 10, below + 3) ? below : above;
     });
   });
+  /** The real-axis labels that fit: on a small chart they crowd towards the rim, so they are placed
+   * by importance (1, 0.5, 2, 0.2, 5) and one that would touch a placed one is left out ("0.5" and "1"
+   * printed over each other as "0.51" on a 130 px chart). */
+  const shownAxis = createMemo(() => {
+    const placed: [number, number][] = [];
+    const keep = new Set<number>();
+    for (const r of [1, 0.5, 2, 0.2, 5]) {
+      const x0 = X((r - 1) / (r + 1)) + 3, x1 = x0 + localDecimal(String(r)).length * MONO_ADVANCE;
+      if (placed.some(([a, b]) => x0 < b + 4 && a < x1 + 4)) continue;
+      placed.push([x0, x1]);
+      keep.add(r);
+    }
+    return keep;
+  });
   // Marker labels: the real-axis labels sit just above the axis (below it where the trace crosses
   // them), so markers near it label below; nearby markers are decluttered so their labels never overprint.
   const markerPos = createMemo(() => {
@@ -119,7 +134,7 @@ export default function SmithChart(props: Props) {
       const cy = Y(props.im[k]);
       return { cx, cy, x: cx, y: props.im[k] > 0.12 ? cy - 10 : cy + 18, text: m.label, anchor: "middle" as const, mono: true };
     });
-    const axis = R_CIRCLES.map((r, i) => ({ x: X((r - 1) / (r + 1)) + 3, y: axisLabelY()[i], text: String(r), anchor: "start" as const, mono: true, fixed: true }));
+    const axis = R_CIRCLES.flatMap((r, i) => (shownAxis().has(r) ? [{ x: X((r - 1) / (r + 1)) + 3, y: axisLabelY()[i], text: String(r), anchor: "start" as const, mono: true, fixed: true }] : []));
     const labels = declutter([...pts, ...axis], { top: 14, bottom: size().h - 4 });
     return pts.map((p, i) => ({ cx: p.cx, cy: p.cy, lx: labels[i].x, ly: labels[i].y }));
   });
@@ -146,7 +161,7 @@ export default function SmithChart(props: Props) {
           </For>
         </g>
         <For each={R_CIRCLES}>
-          {(r, i) => <text x={X((r - 1) / (r + 1)) + 3} y={axisLabelY()[i()]} class="c-tick c-halo">{localDecimal(String(r))}</text>}
+          {(r, i) => <Show when={shownAxis().has(r)}><text x={X((r - 1) / (r + 1)) + 3} y={axisLabelY()[i()]} class="c-tick c-halo">{localDecimal(String(r))}</text></Show>}
         </For>
         <For each={X_ARCS}>
           {(x) => {
@@ -186,7 +201,7 @@ export default function SmithChart(props: Props) {
       </svg>
       <Show when={hover() !== null}>
         <div class="chart-tip" style={sideLegend() ? { right: "12px", top: "8px" } : { left: "12px", top: `${hasLegend() ? legend().h + 16 : 8}px` }}>
-          <div class="tip-head">{localDecimal((props.f[hover()!] / 1e9).toFixed(3))} GHz</div>
+          <div class="tip-head">{freqText(props.f[hover()!])}</div>
           <div class="tip-row"><span class="tip-val">{localDecimal(props.zRe[hover()!].toFixed(1))} {props.zIm[hover()!] >= 0 ? "+" : "−"} j{localDecimal(Math.abs(props.zIm[hover()!]).toFixed(1))} Ω</span><span class="tip-lbl">Zin</span></div>
           <div class="tip-row"><span class="tip-val">{localDecimal(minus((20 * Math.log10(Math.hypot(props.re[hover()!], props.im[hover()!]))).toFixed(2)))} dB</span><span class="tip-lbl">|{props.quantity ?? "S11"}|</span></div>
         </div>

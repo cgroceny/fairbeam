@@ -9,6 +9,7 @@ import type { Selection } from "./types";
 import { newestResults } from "../runner/resultsIndex.ts";
 import { projectLabels } from "../lib/projectLabels.ts";
 import { studySub } from "./convergence.ts";
+import { freqText } from "../lib/format.ts";
 import { fmt, localeTag, t } from "../i18n/index.ts";
 
 export type NavSection = "parameters" | "components" | "materials" | "ports" | "lumped" | "results" | "optimizations";
@@ -261,7 +262,8 @@ export function runContent(b: unknown): RunContent {
   };
 }
 
-const ghz = (f: number) => `${fmt.num(+(f / 1e9).toPrecision(4), 9)} GHz`;
+// a monitor frequency as every result view prints it (four significant digits: 2.400 GHz)
+const ghz = freqText;
 
 /** The children of a run node: 1D results, far fields, 2D/3D results, tables and the log
  * (result folders). Far fields and currents are listed once the run's bundle has been read. */

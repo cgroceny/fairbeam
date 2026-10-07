@@ -13,6 +13,8 @@ import { bundleMetrics, deepestBand, deltaLabel, deltaText, indexMetrics, metric
 import { activeResultDataTable, resultDataCsv, resultDataTable } from "../src/designer/resultData.ts";
 import { isMainResultView, MAIN_RESULT_VIEWS, MAIN_TAB_LABELS } from "../src/designer/resultTabs.ts";
 import { runChildren } from "../src/designer/navModel.ts";
+import { bandCentre, bandTexts, pickerBands } from "../src/lib/bands.ts";
+import { columnDecimals } from "../src/lib/format.ts";
 import { fmt, setDecimalChoice } from "../src/i18n/index.ts";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
@@ -164,7 +166,16 @@ assert.ok(metrics.size >= 10, "the example bundles were read");
   near(col(one, "Bandwidth -10 dB (MHz)"), 37.5, 1e-9, "bandwidth in MHz");
   near(col(one, "Dmax (dBi)"), 6.789, 1e-9, "Dmax");
   assert.equal(col(one, "Verdict"), "converged");
-  assert.match(col(one, "Bands -10 dB (GHz)"), /^\d\.\d{3}-\d\.\d{3}$/);
+  // the band as two numbers (a "2.098-2.287" text reads as a date or a subtraction in a spreadsheet)
+  assert.equal(one.header.includes("Bands -10 dB (GHz)"), false, "no band range text");
+  near(col(one, "Band low (GHz)"), a.results.bands[0].f_lo / 1e9, 1e-6, "the band's low edge");
+  near(col(one, "Band high (GHz)"), a.results.bands[0].f_hi / 1e9, 1e-6, "the band's high edge");
+  {
+    const helix = load("helix-axial.json");
+    const hb = summaryTable([{ label: "H", file: "helix-axial.json", bundle: helix }, { label: "P", file: "p.json", bundle: a }]);
+    assert.deepEqual(hb.header.filter((h) => h.startsWith("Band ")), ["Band 1 low (GHz)", "Band 1 high (GHz)", "Band 2 low (GHz)", "Band 2 high (GHz)"], "numbered when a run has several bands");
+    assert.equal(hb.rows[1][hb.header.indexOf("Band 2 low (GHz)")], null, "a run with fewer bands leaves the cells empty");
+  }
   const key = a.model.params[0].key;
   assert.equal(one.header.some((h) => h.startsWith(key)), false, "one run has no differing parameter column");
   const two = summaryTable([{ label: "A", file: "a.json", bundle: a }, { label: "B", file: "b.json", bundle: b }]);
@@ -434,6 +445,67 @@ assert.ok(metrics.size >= 10, "the example bundles were read");
   // the tree lists it under Tables, before the sweep table
   const tables = runChildren("r.json", null).find((k) => k.id === "grp:r.json:tables");
   assert.deepEqual(tables.children.map((k) => k.action.view), ["summary", "table"], "Tables: Summary, then the S-parameter table");
+}
+
+// ---- the reference run select shows the reference (each option says so; a value set on the select before
+// its options exist leaves the browser on the first option, the shown run), in EN and TR alike
+{
+  const view = read("src/designer/RunSummaryView.tsx");
+  assert.ok(/<option value=\{row\.file\} selected=\{row\.file === refFile\(\)\}>/.test(view), "each option is selected when it is the reference");
+  assert.equal(/<select[^>]*value=\{rows\(\)\[refIdx\(\)\]\.file\}/.test(view), false, "no value on the select itself");
+  assert.ok(/const refFile = \(\) => rows\(\)\[refIdx\(\)\]\.file;/.test(view), "the reference is the run the differences are taken from");
+}
+
+// ---- matched bands: the centre is the middle of the edges, the |S11| minimum is the best match, and a
+// band that runs past the simulated range is marked (the horn: below -10 dB over the whole 8-12 GHz)
+{
+  const g = (hz) => (hz / 1e9).toFixed(3);
+  const horn = load("pyramidal-horn.json").results.bands[0];
+  assert.equal(bandCentre(horn), 10e9, "the horn's band centre is 10 GHz, not its |S11| minimum");
+  const h = bandTexts(horn, g, (v, d) => v.toFixed(d));
+  assert.deepEqual([h.centre, h.best, h.range, h.bwMhz, h.open], ["10.000", "11.160", "≤\u00a08.000–≥\u00a012.000", "≥\u00a04000", true], "the open band's cells");
+  const blade = load("blade-867.json").results.bands[0];
+  const b = bandTexts(blade, g, (v, d) => v.toFixed(d));
+  assert.equal(b.centre.startsWith("≥\u00a0"), true, "a band open at the top: its centre is a lower bound");
+  assert.equal(b.range, `${g(blade.f_lo)}–≥\u00a0${g(blade.f_hi)}`, "the mark stays with its number (a no-break space)");
+  const dip = load("dipole.json").results.bands[0];
+  const d = bandTexts(dip, g, (v, k) => v.toFixed(k));
+  assert.deepEqual([d.centre, d.best, d.open], [g((dip.f_lo + dip.f_hi) / 2), g(dip.f_center), false], "a closed band: no marks");
+  assert.equal(d.percent, (((dip.f_hi - dip.f_lo) / bandCentre(dip)) * 100).toFixed(1), "the width as a share of the centre");
+  // the example picker reads the same centre: the horn is "≥ 8–12 GHz", not "11.16 GHz"
+  const index = JSON.parse(read("public/projects/index.json")).projects;
+  const hornEntry = index.find((e) => e.file === "pyramidal-horn.json");
+  assert.deepEqual(pickerBands(hornEntry, (f) => String(f)), ["≥\u00a08–12"], "the picker: the horn's open band as its range");
+  const dipEntry = index.find((e) => e.file === "dipole.json");
+  near(Number(pickerBands(dipEntry, (f) => String(f))[0]), (dip.f_lo + dip.f_hi) / 2e9, 1e-3, "the picker: a closed band's centre");
+  assert.deepEqual(pickerBands({ bands: [2.4] }, String), ["2.4"], "an older index: its band list");
+  for (const e of index.filter((x) => x.simulated)) {
+    const bundle = load(e.file);
+    assert.equal(e.band_ranges?.length ?? 0, bundle.results.bands.length, `${e.file}: the index lists every band's edges`);
+  }
+  // the Summary card, the Examples panel and the S-parameter side panel use these cells
+  for (const p of ["src/designer/RunSummaryView.tsx", "src/components/SpecPanel.tsx", "src/designer/ResultViews.tsx"]) assert.ok(/bandTexts\(/.test(read(p)), `${p}: the band cells`);
+  const en = JSON.parse(read("src/i18n/en.json")), tr = JSON.parse(read("src/i18n/tr.json"));
+  for (const k of ["spec.bestMatch", "spec.bestMatch.title", "spec.centre.title", "spec.bandOpen", "spec.bandOpenNote"]) assert.ok(en[k] && tr[k], `${k} in both languages`);
+  assert.match(en["spec.bandOpenNote"], /continues past the simulated range/);
+}
+
+// ---- number formats: a parameter column has one number of decimals (the most precise value's, at most
+// four) in the UI language's separator; the run letter sits on the text baseline
+{
+  assert.equal(columnDecimals([0.466, 0.4194, 0.5126]), 4, "the sweep of k: four decimals for every row");
+  assert.equal(columnDecimals([2, 3, 4]), 0, "integers");
+  assert.equal(columnDecimals([1.5, 2.25, "x", null]), 2, "non-numbers are ignored");
+  assert.equal(columnDecimals([0.123456]), 4, "at most four");
+  setDecimalChoice("comma");
+  assert.deepEqual([0.466, 0.4194].map((v) => fmt.fixed(v, columnDecimals([0.466, 0.4194]))), ["0,4660", "0,4194"], "Turkish: a decimal comma in the parameter cells");
+  setDecimalChoice("language");
+  const dock = read("src/designer/RunDock.tsx"), view = read("src/designer/RunSummaryView.tsx");
+  assert.ok(/columnDecimals\(rows\(\)\.map\(\(r\) => paramValue\(r\.bundle, p\.key\)\)\)/.test(dock) && /fmt\.fixed\(v, paramDigits\(\)\.get\(key\) \?\? 0\)/.test(dock), "Runs table: the parameter cells");
+  assert.ok(/columnDecimals\(rows\(\)\.map\(\(r\) => paramValue\(r\.bundle, p\.key\)\)\)/.test(view), "Summary: the parameter cells");
+  assert.ok(/<RunQualityBadge compact q=\{bundleQuality\(row\.bundle\)\} \/>/.test(view), "Summary: the badge is an icon next to the name");
+  const css = read("src/styles/run-summary.css");
+  assert.ok(/\.rs-compare :is\(th, td\):last-child \{ padding-right/.test(css), "Summary: the last column keeps its padding");
 }
 
 console.log("check-run-summary: ok");

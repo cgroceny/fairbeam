@@ -107,7 +107,7 @@ eq(madeLabels([undefined, "bad"]), ["—", "—"], "no timestamp: a dash");
 
 // ---- wiring: tree, dock, ribbon, keys, markers and the shortcut sheet
 const tree = read("src/designer/NavTree.tsx");
-check(/case "result": focusResult\(\{[^\n]*\}, "main"\)/.test(tree), "a tree result node opens its main-area tab");
+check(/case "result":[^\n]*focusResult\(\{[^\n]*\}, "main"\)/.test(tree), "a tree result node opens its main-area tab");
 check(/case "select": focusResult\(null\); activateMainTab\("3d"\)/.test(tree), "a geometry node brings the 3D tab to the front");
 const focus = read("src/designer/resultFocus.ts");
 const routed = [];
@@ -167,6 +167,33 @@ const card = read("src/components/FarfieldCard.tsx");
 check(/aria-expanded=\{!collapsed\(\)\}/.test(card) && /role="radiogroup" aria-label=\{t\("farfield\.frequency"\)\} onKeyDown=\{radioGroupKeys\}/.test(card) && en["farfield.frequency"] === "Far-field frequency", "the card collapses (aria-expanded) and its chips are a radio group");
 check(/t\("farfield\.total"\)/.test(card) && /t\("farfield\.mainLobe"\)/.test(card) && /t\("farfield\.drivenPort"\)/.test(card)
   && en["farfield.total"] === "Total efficiency" && en["farfield.mainLobe"] === "Main lobe" && en["farfield.drivenPort"] === "Driven port", "the card lists total efficiency, main lobe and the driven port");
+
+// ---- room for the result views at 1366 × 768: the dock leaves the view above it a usable height (its
+// default and a remembered height alike), a result tab keeps its plot about 260 px tall and scrolls
+// when the window is shorter, and the splitter shows that it can be dragged
+{
+  const handle = read("src/components/DockResizeHandle.tsx");
+  check(/export const MIN_VIEW_ABOVE = 320;/.test(handle) && /Math\.floor\(room - MIN_VIEW_ABOVE\)/.test(handle), "the dock's maximum leaves MIN_VIEW_ABOVE for the view above it");
+  check(/if \(natural > maximum\(\) \+ 1\) \{ center\.style\.setProperty\("--al-dock-user-h", `\$\{maximum\(\)\}px`\); capped = true;/.test(handle), "the CSS default is capped on a short window, and follows the window back");
+  check(/<span class="dock-grip" aria-hidden="true" \/>/.test(handle) && /title=\{t\("resize\.dock\.title"\)\}/.test(handle), "the splitter has a grip and a tooltip");
+  const css = read("src/styles/result-views.css");
+  check(/\.dw-result \{ overflow-y: auto;/.test(css) && /\.dw-result > \.dw-result-plot \{ flex: 1 0 auto; min-height: 260px; height: 0; \}/.test(css), "a result tab keeps a 260 px plot and scrolls");
+  check(/\.dock-tools > select\.btn\.result-format, \.dw-result-bar > select\.btn\.result-format/.test(css) && /width: auto; min-width: 7rem; max-width: 16rem/.test(css), "the data format select is as wide as 'Linear magnitude + phase'");
+  check(/class="btn btn-ghost btn-sm result-format"/.test(views) && /class="btn btn-ghost btn-sm result-format"/.test(read("src/components/Dock.tsx")), "both toolbars use the wide select");
+  check(/\.dw-result-bar\.is-narrow > button\.btn:has\(> \.btn-short\)/.test(css), "CSV and Touchstone keep their short labels in a narrow bar");
+  check(/\.rdk-runs \.rdk-run-btn \{ font-family: var\(--al-font-sans\)/.test(css), "the run letter sits on the row's baseline");
+  const fieldMap = read("src/styles/field-map.css");
+  check(/\.fm-side \{[^}]*overflow: hidden auto;/.test(fieldMap), "the field map's side card scrolls down only (one scrollbar)");
+  const ffCss = read("src/styles/farfield-card.css");
+  check(/@media \(max-height: 820px\)/.test(ffCss) && /\.ff-card \.ff-scale-unit \{ display: none; \}/.test(ffCss) && /\.ff-card \.colorbar-body \{ flex: none; \}/.test(ffCss), "a short 3D view folds the far-field card's scale so its efficiency rows show");
+}
+
+// ---- the result views' readouts: a compared trace reads "|S11| · E", values keep their units
+{
+  check(/label: pairLabel\(p\), suffix: t\.label/.test(read("src/compare/series.ts")) && /label: "S11", suffix: t\.label/.test(views), "compared traces: the bars around S11 only");
+  check(/export const totalEffText = /.test(card) && /totalEffText\(summary\(\)!\.totalEff!\)/.test(views) && /totalEffText\(ffSummary\(\)!\.totalEff!\)/.test(read("src/components/Dock.tsx")), "the total efficiency keeps '−1.22 dB' whole everywhere");
+  check(en["format.percent"] === "{value} %", "a percentage keeps its sign on its line");
+}
 
 console.log(`check-results-tabs: ${checks - failures}/${checks} passed`);
 process.exit(failures ? 1 : 0);

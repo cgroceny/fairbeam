@@ -199,7 +199,7 @@
   "chart.col.marker": "Marker",
   "chart.col.trace": "Trace",
   "chart.col.value": "Value",
-  "chart.deltaCell": "Δf {df} · Δvalue {dv}",
+  "chart.deltaCell": "Δf {df} · Δ {dv}",
   "chart.dip": "Dip",
   "chart.flag.openAbove": "open above the last sample",
   "chart.flag.openBelow": "open below the first sample",
@@ -1055,6 +1055,7 @@
   "editor.savedNoBuild": "Saved, but the model does not build",
   "editor.savedNoLoad": "Saved, but the model does not load",
   "efficiency.aria": "Mismatch efficiency versus frequency, with the radiation and total efficiency at the far-field frequencies",
+  "efficiency.details": "Details",
   "efficiency.ariaCompared": "Mismatch efficiency of each compared run versus frequency, with the total efficiency at the far-field frequencies",
   "efficiency.axisDb": "Efficiency (dB)",
   "efficiency.axisPct": "Efficiency (%)",
@@ -1072,11 +1073,23 @@
     "one": "{count} value above 100 %: unphysical for a passive antenna (the radiated and accepted powers are separate numerical measurements), so gain and total efficiency are overestimated there.",
     "other": "{count} values above 100 %: unphysical for a passive antenna (the radiated and accepted powers are separate numerical measurements), so gain and total efficiency are overestimated there."
   },
+  "efficiency.overUnityLine": {
+    "one": "{count} value above 100 % (the worst: {eta} % at {f} GHz)",
+    "other": "{count} values above 100 % (the worst: {eta} % at {f} GHz)"
+  },
   "efficiency.overUnityShort": "above 100 %: unphysical",
   "efficiency.radiation": "Radiation",
   "efficiency.radiationUnreliable": "Radiation, unreliable",
   "efficiency.total": "Total",
   "efficiency.unit": "Efficiency unit",
+  "efficiency.unreliableLine": {
+    "one": "{count} value unreliable",
+    "other": "{count} values unreliable"
+  },
+  "efficiency.unreliableNote": {
+    "one": "{count} value of the band-wide radiation efficiency is unreliable: the port accepts little power there and the run stopped before the fields had decayed enough. It is left out of the curves and drawn as a ringed point; a lower end criterion makes more of the band reliable.",
+    "other": "{count} values of the band-wide radiation efficiency are unreliable: the port accepts little power there and the run stopped before the fields had decayed enough. They are left out of the curves and drawn as ringed points; a lower end criterion makes more of the band reliable."
+  },
   "efficiency.unreliableWhy": "unreliable: the port accepts too little of the incident power here for the run's end criterion (see the note)",
   "exampleCopy.carried": "Carried over:",
   "exampleCopy.carried.body": "shapes and their dimensions, the solids' names and labels, materials (with the example's names), ports, band, boundaries, the description, the example's mesh lines and its parameters. A dimension that is a linear formula of a parameter becomes an expression, so the copy can be swept and optimized by that parameter.",
@@ -1293,7 +1306,7 @@
   "figure.formatAria": "File format",
   "figure.zin": "Input impedance",
   "format.minutesSeconds": "{m} min {s} s",
-  "format.percent": "{value} %",
+  "format.percent": "{value}\u00a0%",
   "format.unit.h": "h",
   "format.unit.min": "min",
   "format.unit.s": "s",
@@ -2052,8 +2065,8 @@
   "pointTools.vertex": "Vertex",
   "progress.aria": "Simulation progress",
   "progress.bandCentres": {
-    "one": "Band center",
-    "other": "Band centers"
+    "one": "|S11| minimum of the matched band at",
+    "other": "|S11| minima of the matched bands at"
   },
   "progress.cells": "{cells} cells",
   "progress.chartAria": "Field energy versus timestep, with the end criterion",
@@ -2422,6 +2435,8 @@
   "quality.banner.otherUncoupled": "The port of run {run} does not seem to be coupled:",
   "quality.banner.suspicious": "Check these results: some values look unphysical.",
   "quality.banner.uncoupled": "The port does not seem to be coupled to the antenna: almost nothing is accepted or radiated.",
+  "quality.details.hide": "Hide the reasons",
+  "quality.details.show": "Show the reasons",
   "quality.reason.efficiency": "Radiation efficiency is {eta} % at {f} GHz, above 100 %, so gain is overestimated. See the efficiency note for what to change.",
   "quality.reason.s11": "|S11| reaches {db} dB at {f} GHz (port {port}), which a passive antenna cannot do. Refine the mesh, move the boundaries away from the model, or lower the end criterion, and run again.",
   "quality.reason.timestepLimit": "The field energy had not fallen to the end criterion when the timestep limit was reached. Raise max timesteps, or relax the end criterion, and run again.",
@@ -3352,10 +3367,15 @@
   "spec.allThreads": "all",
   "spec.aria": "Simulation details",
   "spec.band": "Band",
+  "spec.bandOpen": "band continues past the simulated range",
+  "spec.bandOpenNote": "≤ / ≥: the band continues past the simulated range; its width is at least the one shown.",
   "spec.bandsCaption": "Matched bands, |S11| below −10 dB",
+  "spec.bestMatch": "Best match",
+  "spec.bestMatch.title": "Frequency of the |S11| minimum in the band",
   "spec.boundaries": "Boundary conditions",
   "spec.bw": "BW",
   "spec.centre": "Center",
+  "spec.centre.title": "Middle of the band edges, (f low + f high) / 2",
   "spec.dcFree": "DC-free",
   "spec.dcFree.title": "The excitation pulse has no DC (0 Hz) part, so no static charge is left in the model",
   "spec.empty": "Open an example or a result file to see its setup and results.",

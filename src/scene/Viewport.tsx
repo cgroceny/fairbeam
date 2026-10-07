@@ -15,7 +15,7 @@ import { previewGeometry } from "../designer/transforms";
 import { cssVar } from "../lib/cssvar";
 import { downloadFailedMessage, saveDownloadUrl } from "../lib/download";
 import { downloadToast } from "../lib/toast";
-import { dims, GHz, num } from "../lib/format";
+import { dims, freqText, num } from "../lib/format";
 import { fmt, t } from "../i18n";
 import type { Bundle, Part } from "../types";
 import {
@@ -1398,7 +1398,7 @@ export default function Viewport() {
         <Show when={layers.current && bundle()?.fields && shownFieldFrequency(bundle()!, ff()?.f ?? null)}>
           {(fs) => (
             <div class="colorbar" role="group" aria-label={t("viewport.current.aria", { excitation: fieldExcitation(bundle()!).text })}>
-              <div class="colorbar-title">{t("model.layer.current")} · {GHz(fs(), 3)}</div>
+              <div class="colorbar-title">{t("model.layer.current")} · {freqText(fs())}</div>
               {/* the one excitation the maps were recorded with (#90); unknown for older bundles without it */}
               <div class="colorbar-port" classList={{ "colorbar-port-unknown": fieldExcitation(bundle()!).port == null }}>{fieldExcitation(bundle()!).text}</div>
               <Show when={hasCurrentPhase(bundle()!, ff()?.f ?? null)} fallback={<div class="colorbar-note">{t("viewport.current.noPhase")}</div>}>

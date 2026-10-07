@@ -162,7 +162,7 @@ export function compareSParamQuantities(ts: Trace[], pairs: [number, number][], 
     return pairs.flatMap((p, k) => {
       const c = m.get(p[0], p[1]);
       if (!c) return [];
-      return [{ id: `cmp-${i}-${p[0]},${p[1]}`, label: `${pairLabel(p)} · ${t.label}`, color: SERIES_COLORS[i], dash: PAIR_DASHES[k] ?? "", x,
+      return [{ id: `cmp-${i}-${p[0]},${p[1]}`, label: pairLabel(p), suffix: t.label, color: SERIES_COLORS[i], dash: PAIR_DASHES[k] ?? "", x,
         re: interp(grids[i], c.re, x), im: interp(grids[i], c.im, x) }];
     });
   });
