@@ -182,9 +182,10 @@ eq(focus.leaveResultsFor('model'), false, 'a result tab of the main area is a se
 focus.focusResult(null);
 
 // ------------------------------------------------------------------ banners belong to their moment
-// a success banner clears on the next unrelated selection change or edit, an error banner on the next
-// edit (the fixed expression), a "Duplicated ..." banner on undo; an action's own selection change or
-// edit (the same task) leaves the banner it just showed
+// a success banner clears on the next unrelated selection change or edit, a warning note on the next
+// selection change, both after 6 s; an error banner on the next edit (the fixed expression), a
+// "Duplicated ..." banner on undo; a sticky warning (a lasting condition) only when its owner clears
+// it; an action's own selection change or edit (the same task) leaves the banner it just showed
 {
   const later = () => new Promise((resolve) => setTimeout(resolve, 0));
   store.setSelection({ type: 'design' });
@@ -194,11 +195,39 @@ focus.focusResult(null);
   await later();
   store.setSelection({ type: 'part', i: 1 });
   eq(store.message(), null, 'a success banner clears when the selection changes later');
-  store.setMessage({ tone: 'warn', text: 'Careful.' });
+  store.setMessage({ tone: 'warn', text: 'That shape has no area.' });
   await later();
   store.setSelection({ type: 'design' });
-  ok(store.message()?.text === 'Careful.', 'a warning stays until it is dealt with');
+  eq(store.message(), null, 'a warning note clears when the selection changes later');
+  store.setMessage({ tone: 'warn', text: 'The file changed on disk.', sticky: true });
+  await later();
+  store.setSelection({ type: 'part', i: 0 });
+  store.edit((d) => { d.model.name = 'Sticky'; }, 'model.name');
+  ok(store.message()?.text === 'The file changed on disk.', 'a sticky warning (a lasting condition) stays until its owner clears it');
   store.setMessage(null);
+  store.undo();
+  // a note clears itself after NOTE_MS: the timer it schedules, run at once
+  {
+    const realTimeout = globalThis.setTimeout;
+    const timers = [];
+    const show = (m) => {
+      globalThis.setTimeout = (fn, ms) => { timers.push({ fn, ms }); return 0; };
+      try { store.setMessage(m); } finally { globalThis.setTimeout = realTimeout; }
+    };
+    show({ tone: 'warn', text: 'Cannot be recomputed.', sticky: true });
+    show({ tone: 'critical', text: 'Not saved.' });
+    eq(timers.length, 0, 'sticky warnings and errors get no timer');
+    show({ tone: 'warn', text: 'Nothing was added.' });
+    eq(timers.map((x) => x.ms), [6000], 'a warning note gets a 6 s timer');
+    timers[0].fn();
+    eq(store.message(), null, 'the warning note is gone when its timer fires');
+    show({ tone: 'good', text: 'Added.' });
+    show({ tone: 'good', text: 'Newer.' });
+    timers[1].fn();
+    ok(store.message()?.text === 'Newer.', "an older note's timer never clears a newer banner");
+    timers[2].fn();
+    eq(store.message(), null, 'a success note is gone when its own timer fires');
+  }
   store.setMessage({ tone: 'critical', text: 'The expression is not valid.' });
   store.edit((d) => { d.model.name = 'Fixed'; }, 'model.name');
   ok(store.message()?.text === 'The expression is not valid.', 'the action that shows an error may edit after it');
