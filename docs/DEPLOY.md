@@ -9,7 +9,7 @@ Vercel builds the site from the public source repository, and only the build out
 
 | On the site (in `site-dist/`) | Not on the site |
 | --- | --- |
-| `landing/` (landing page, `guide.html`, `privacy.html`, CSS, a small script; the roadmap board is rendered into the page at build time), the scroll story under `/story/`, `tokens.css` copied from `design-system/` | Python package, models, install scripts, tests |
+| `landing/` (the home page, `features.html`, `roadmap.html`, `docs/`, `guide.html`, `privacy.html`, CSS and small scripts; the roadmap board is rendered into `roadmap.html` at build time), the scroll story under `/story/`, `tokens.css` copied from `design-system/` | Python package, models, install scripts, tests |
 | The viewer built with `--mode demo` under `/app/` (minified JS/CSS) | `src/` as source code (only the minified bundle ships) |
 | The 14 example projects in `public/projects/` (bundle JSON, listed in `index.json`) | The local run server; the demo never calls `/api` |
 | Four example SVGs from `examples/drawings/`, IBM Plex woff2 files (OFL) | `.sim/`, raw openEMS output, anything git-ignored |
@@ -35,7 +35,7 @@ the export package.
 It also sets these headers on every path: `X-Content-Type-Options: nosniff`,
 `Referrer-Policy: strict-origin-when-cross-origin`, `X-Frame-Options: SAMEORIGIN`,
 `Content-Security-Policy: frame-ancestors 'self'` and a restrictive `Permissions-Policy`. Same-origin
-framing stays allowed so the landing page can embed the demo on request. The cache rules are:
+framing stays allowed, so a site page can embed the demo. The cache rules are:
 
 - `/app/assets/*` and `/fonts/*`: one year, immutable. App assets have hashed names, and the font files are fixed.
 - `/media/*`: one day.
@@ -98,6 +98,7 @@ that project's per-deployment `*.vercel.app` URLs; the repository's homepage is 
 
 The demo ships exactly what is committed in `public/projects/` (bundles and `index.json`) and the SVGs
 listed in `scripts/build-site.mjs` (`MEDIA`). To show another project, run it locally, commit its
-bundle and the updated `index.json`, then redeploy. To change the landing page, edit `landing/`.
+bundle and the updated `index.json`, then redeploy. To change the site pages, edit `landing/`; `npm run build:site` also checks their size budgets
+(the home page HTML and images, every page's HTML, and `media/`).
 Colors and spacing come from `design-system/tokens.css`, which is copied in at build time; do not
 duplicate token values in `landing/styles.css`.

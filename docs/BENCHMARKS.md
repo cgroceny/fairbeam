@@ -156,7 +156,7 @@ timestep), the CUDA results agree within 0.1 dB in every S-parameter above −30
 Dmax. The raw numbers are in
 [benchmarks/windows-7900x-rtx3060-cuda.json](benchmarks/windows-7900x-rtx3060-cuda.json).
 
-The website's "Solver time" table (`landing/index.html`, `#results`) made from these numbers, at desktop and phone width:
+The website's "Solver time" table (`landing/features.html`, `#results`) made from these numbers, at desktop and phone width:
 
 ![Solver time table, desktop](benchmarks/solver-time-desktop.png)
 
