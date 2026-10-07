@@ -6,7 +6,7 @@ be read back, so the example is rebuilt with each parameter moved and every numb
 that is an exact linear function of the parameters becomes an expression over them; the rest stay
 numbers, and the parameters that drive nothing are left out.
 
-The copy keeps the example's name for each part (and its label and colour), its materials' names
+The copy keeps the example's name for each part (and its label and color), its materials' names
 and its description. What the conversion did is in ``model.conversion`` (shown as the conversion
 notes in the designer's Properties), as notes with a code the app translates.
 """
@@ -305,7 +305,7 @@ def _read_design(module, values: dict, source_path: Path):
     far_field and monitors (no model, params or mesh), with plain numbers throughout.  Every metal
     of the source keeps its own material, named like the source's metal ("patch", "gnd"); identical
     dielectrics share one design material, named after the first.  The parts keep their names,
-    labels ("Patch", "Ground plane") and colours."""
+    labels ("Patch", "Ground plane") and colors."""
     try:
         sim = module.build(values)
     except ExampleConversionError:
