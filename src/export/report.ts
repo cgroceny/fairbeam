@@ -5,6 +5,7 @@ import type { Bundle } from "../types";
 import { efficiencyWarning, energyText, finalEnergy } from "../lib/run.ts";
 import { APP_VERSION } from "../lib/appVersion.ts";
 import { designStem } from "../lib/exportNames.ts";
+import { bandTexts } from "../lib/bands.ts";
 
 const f3 = (hz: number) => (hz / 1e9).toFixed(3);
 const fx = (v: number | null | undefined, d = 2) => (v === null || v === undefined || !Number.isFinite(v) ? "—" : v.toFixed(d));
@@ -168,9 +169,12 @@ export function readmeReport(bundle: Bundle, opt: ReportOptions): string {
     push(
       res.bands.length
         ? table(
-            ["f_lo (GHz)", "f_hi (GHz)", "Centre (GHz)", "S11 min (dB)", "Bandwidth (MHz)", "Fractional BW (%)", "Note"],
-            res.bands.map((x) => [f3(x.f_lo), f3(x.f_hi), f3(x.f_center), fx(x.s11_min_db, 2), fx((x.f_hi - x.f_lo) / 1e6, 1), fx(x.fractional_bw * 100, 2), x.edge_lo || x.edge_hi ? "touches the simulated range" : ""]),
-            ["r", "r", "r", "r", "r", "r", "l"],
+            ["f_lo (GHz)", "f_hi (GHz)", "Center (GHz)", "Best match (GHz)", "S11 min (dB)", "Bandwidth (MHz)", "Fractional BW (%)", "Note"],
+            res.bands.map((x) => {
+              const bt = bandTexts(x, f3, fx);
+              return [f3(x.f_lo), f3(x.f_hi), bt.centre, bt.best, fx(x.s11_min_db, 2), bt.bwMhz, bt.percent, bt.open ? "touches the simulated range" : ""];
+            }),
+            ["r", "r", "r", "r", "r", "r", "r", "l"],
           )
         : "No band reaches −10 dB.",
       "",
