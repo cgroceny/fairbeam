@@ -45,6 +45,16 @@ The start screen opens when the run server is reachable. It has three parts:
 The footer's **Send feedback** links open the public issue tracker in your browser; see
 [Feedback](#feedback).
 
+Start lists your own Python models first, then the bundled examples' models, marked *example,
+read-only*: a click opens one in the Run panel (a bundled one asks to copy it or to run it as it is),
+and its copy button makes an editable design of it. On Start, the header's **Run a Python model…**
+scrolls to this list. The Examples card groups the examples like the header's picker, with their
+bands and mesh sizes. A new design's file name is the ASCII form of its name; a name that is a
+bundled example's ID gets a number (Patch antenna is saved as `patch_antenna_2.design.json`), as the
+line under the Name field shows. **Save as…** (Home ribbon › Project, the header's More menu,
+Shift+Ctrl+S or ⇧⌘S where the browser leaves it to the page, and File › Save As in the desktop app)
+saves a copy of the open design under a new name.
+
 The header's **Start · Design · Examples** switch moves between the start screen, the designer and
 the examples:
 
@@ -1147,7 +1157,13 @@ and the search goes on. Sweeps run every point as it is.
   your models folder, all for UAV telemetry at 867 MHz: a swept blade antenna, a slotted wideband
   planar dipole, a printed meander dipole for airframes without a metal skin, a printed sleeve
   dipole, a printed 2-element collinear and a ground-station 5-element Yagi, each with its results
-  and how to scale it to other bands.
+  and how to scale it to other bands. The desktop app installs them in the workspace's models folder,
+  read-only, as the sources of the 867 MHz examples: **Open as new design…** on one of them makes an
+  editable copy. Their IDs, like those of the bundled Python models, are reserved for them.
+- **Copies of examples**: a copy of a bundled Python example keeps the example's description, the
+  names and labels of its solids and the names of its materials. What the conversion did (the
+  parameters it carried over, the ones it fixed) is in `model.conversion`, shown as **Conversion
+  notes** in the design's Properties.
 - **Command line**: a design runs like a model file:
   `fairbeam run python/models/my_patch.design.json --set W=30` ([CLI.md](CLI.md)).
 - **Python export**: ribbon Post-processing › Report and export › **Python** (also File › Export

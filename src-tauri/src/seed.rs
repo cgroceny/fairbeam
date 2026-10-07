@@ -2,7 +2,9 @@
 // folder is seeded only while it does not exist or is empty, so the user's files are never touched.
 // On every start the app-owned example bundles (the files the bundled index lists) are refreshed
 // as well, so an update's new or regenerated examples reach existing workspaces; user runs and
-// copies are other files and stay as they are.
+// copies are other files and stay as they are. The examples' sources (the Python models and the
+// 867 MHz example designs, read-only in the app) that are missing from the models folder are
+// copied too, so every example can be opened as a new design; a file already there is kept.
 
 use std::fs;
 use std::io;
@@ -103,6 +105,32 @@ pub fn refresh_examples(src: &Path, dst: &Path) -> io::Result<Vec<String>> {
     Ok(copied)
 }
 
+/// Copy the examples' sources in `src` (`*.py` models and `*.design.json` designs) that `dst` lacks.
+/// A file already in `dst` is never replaced (a source is read-only in the app; a file of that name
+/// stays as it is). Returns the files that were copied.
+pub fn add_missing_sources(src: &Path, dst: &Path) -> io::Result<Vec<String>> {
+    if !src.is_dir() || !dst.is_dir() {
+        return Ok(Vec::new());
+    }
+    let mut names: Vec<String> = fs::read_dir(src)?
+        .filter_map(|e| e.ok())
+        .filter(|e| e.file_type().map(|t| t.is_file()).unwrap_or(false))
+        .map(|e| e.file_name().to_string_lossy().into_owned())
+        .filter(|n| n.ends_with(".py") || n.ends_with(".design.json"))
+        .collect();
+    names.sort();
+    let mut copied = Vec::new();
+    for name in names {
+        let to = dst.join(&name);
+        if to.exists() {
+            continue;
+        }
+        fs::copy(src.join(&name), &to)?;
+        copied.push(name);
+    }
+    Ok(copied)
+}
+
 /// Seed the workspace; returns the folders that were filled.
 pub fn seed(ws: &Workspace, res: &Res) -> Result<Vec<String>, String> {
     if ws.checkout {
@@ -118,6 +146,9 @@ pub fn seed(ws: &Workspace, res: &Res) -> Result<Vec<String>, String> {
     // a failed refresh only means older examples: it never stops the start
     if let Err(e) = refresh_examples(&res.projects, &ws.projects) {
         eprintln!("could not refresh the bundled examples in {}: {e}", ws.projects.display());
+    }
+    if let Err(e) = add_missing_sources(&res.models, &ws.models) {
+        eprintln!("could not add the examples' sources to {}: {e}", ws.models.display());
     }
     for d in [&ws.jobs, &ws.sim] {
         fs::create_dir_all(d).map_err(|e| format!("could not create {}: {e}", d.display()))?;
@@ -158,6 +189,25 @@ mod tests {
 
         // a second start changes nothing
         assert!(refresh_examples(&src, &dst).unwrap().is_empty());
+        let _ = fs::remove_dir_all(&src);
+        let _ = fs::remove_dir_all(&dst);
+    }
+
+    #[test]
+    fn missing_example_sources_are_added_and_existing_files_kept() {
+        let (src, dst) = (dir("src3"), dir("dst3"));
+        fs::write(src.join("dipole.py"), "bundled dipole").unwrap();
+        fs::write(src.join("yagi_867.design.json"), "bundled yagi").unwrap();
+        fs::write(src.join("notes.txt"), "not a source").unwrap();
+        fs::create_dir_all(src.join("__pycache__")).unwrap();
+        fs::write(dst.join("dipole.py"), "kept as it is").unwrap();
+
+        let copied = add_missing_sources(&src, &dst).unwrap();
+        assert_eq!(copied, vec!["yagi_867.design.json".to_string()]);
+        assert_eq!(fs::read_to_string(dst.join("yagi_867.design.json")).unwrap(), "bundled yagi");
+        assert_eq!(fs::read_to_string(dst.join("dipole.py")).unwrap(), "kept as it is");
+        assert!(!dst.join("notes.txt").exists() && !dst.join("__pycache__").exists());
+        assert!(add_missing_sources(&src, &dst).unwrap().is_empty());
         let _ = fs::remove_dir_all(&src);
         let _ = fs::remove_dir_all(&dst);
     }

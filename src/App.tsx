@@ -12,7 +12,7 @@ import { importReferenceFile } from "./compare/store";
 import Home from "./home/Home";
 import { DesignDock, DesignKeys, DesignSide, DesignTreePanel, DrawHint, Ribbon } from "./designer/DesignWorkspace";
 import { file as designFile, draft as designDraft, removeSelected, canRemove, save as saveDesign, enterDesign, reopenLastDesign, undo as undoDesign, redo as redoDesign } from "./designer/store";
-import SaveAsDialog from "./designer/SaveAsDialog";
+import SaveAsDialog, { canSaveAs, openSaveAs, saveAsOpen, setSaveAsOpen } from "./designer/SaveAsDialog";
 import { MeshViewPanel } from "./designer/MeshView";
 import MainArea from "./designer/MainArea";
 import StatusBar from "./designer/StatusBar";
@@ -36,7 +36,8 @@ const UsageStatsPrompt = lazy(() => import("./components/UsageStatsPrompt"));
 import { PreviewBadge, RunNotice } from "./runner/Overlays";
 import { openUserProject } from "./runner/openProject";
 import { fileDropHandlers } from "./lib/fileDrop";
-import { currentModel, probeServer, recheckServer, runOpen, watchServer } from "./runner/store";
+import { currentModel, probeServer, recheckServer, runOpen, setRunOpen, watchServer } from "./runner/store";
+import { setStartedPythonModel, startedPythonModel } from "./runner/startPython";
 import { DEMO } from "./env";
 import { panelTab } from "./editor/store";
 import ExampleCopyDialog from "./runner/ExampleCopyDialog";
@@ -80,6 +81,14 @@ export default function App() {
   // Examples) closes them, and with them a dialog's error panel. A running render
   // keeps its dialog: closing it would cancel the render (e.g. File > Open from the native menu mid-render).
   createEffect(on(appMode, () => { setExportOpen(false); if (!renderBusy()) setRenderDialogOpen(false); setPackageOpen(false); }, { defer: true }));
+  // The Run panel belongs to the Examples screen (a Python model opened from Start). Leaving it closes
+  // the panel, so Design gets its Properties back instead of another model's Run panel; it is only
+  // hidden (closeRunPanel would put back the project from before the preview, over the design's).
+  createEffect(on(appMode, (mode, previous) => {
+    if (previous !== "results" || mode === "results") return;
+    setStartedPythonModel(null);
+    if (runOpen()) setRunOpen(false);
+  }));
   createEffect(() => {
     if (runOpen() && appMode() === "design") {
       setSidePanelCollapsed(false);
@@ -92,18 +101,18 @@ export default function App() {
   // screen, and building the 3D view first only to drop it again (a WebGL context and its shaders)
   // cost ~130 ms of the start screen's first paint
   const [probed, setProbed] = createSignal(DEMO);
-  // Examples are a read-only viewer: no Run panel for a bundled (read-only) example there. A user's
-  // own Python model (Start > Python models) still runs in this workspace.
-  const resultsRunOpen = () => runOpen() && !DEMO && appMode() === "results" && !currentModel()?.readonly;
+  // Examples are a read-only viewer: no Run panel for a bundled (read-only) example there. A Python
+  // model chosen on Start (Start > Python models: the user's own, or a bundled one) runs in this workspace.
+  const resultsRunOpen = () => runOpen() && !DEMO && appMode() === "results"
+    && (!currentModel()?.readonly || currentModel()?.key === startedPythonModel());
   const [menuNotice, setMenuNotice] = createSignal("");
-  const [saveAsOpen, setSaveAsOpen] = createSignal(false);
   let openInput: HTMLInputElement | undefined;
   const menuAction = createMenuActionRouter({
     "file-new": () => setAppMode("home"), "file-open": () => openInput?.click(),
     "file-import-cst": () => { if (DEMO) notice(t("app.notice.cstImportDesktop")); else setCstImportOpen(true); },
     "file-import-pcb": () => { if (DEMO) notice(t("app.notice.pcbImportDesktop")); else setPcbImportOpen(true); },
     "file-save": () => { if (appMode() === "design" && designFile()) void saveDesign(); else window.dispatchEvent(new Event("fairbeam:menu-notice")); },
-    "file-save-as": () => { if (appMode() === "design" && designFile()) setSaveAsOpen(true); },
+    "file-save-as": () => { if (appMode() === "design" && designFile()) openSaveAs(); },
     "export-cst": () => { if (appMode() !== "home" && geometryAvailable()) import("./state").then((s) => s.setExportOpen(true)); },
     "export-package": () => { if (bundle()) import("./state").then((s) => s.setPackageOpen(true)); },
     "export-python": () => { if (appMode() === "design") document.querySelector<HTMLButtonElement>(".rb-btn[data-action='open-python']")?.click(); },
@@ -148,7 +157,7 @@ export default function App() {
     const hasViewport = !!currentBundle && viewportPresent() && (mode === "design" || mode === "results");
     const availability: Record<string, boolean> = {
       "file-save": inDesign,
-      "file-save-as": inDesign,
+      "file-save-as": canSaveAs(),
       "file-close": hasDesign,
       "export-cst": appMode() !== "home" && geometryAvailable(),
       "export-python": inDesign,
@@ -252,7 +261,7 @@ export default function App() {
       <ExampleCopyDialog />
       <Show when={!DEMO && cstImportOpen()}><CstImportDialog /></Show>
       <Show when={!DEMO && pcbImportOpen()}><PcbImportDialog /></Show>
-      <Show when={saveAsOpen() && appMode() === "design" && designFile()}>
+      <Show when={saveAsOpen() && canSaveAs()}>
         <SaveAsDialog source={{ id: designFile()!.id, name: designDraft.model?.name ?? designFile()!.id }} close={() => setSaveAsOpen(false)} />
       </Show>
       <Show when={!DEMO}><CloseProjectHost /></Show>
@@ -372,16 +381,16 @@ export default function App() {
         <PanelBoundary name="Model panel" class="panel panel-left">
           <ModelPanel />
         </PanelBoundary>
-        <main class="center">
+        <main class="center" classList={{ "center-no-dock": !bundle() }}>
           <Show
             when={bundle() || index().length}
             fallback={
               <Show when={!booting()} fallback={<div class="loading" role="status">{t("app.loadingProject")}</div>}>
                 <div class="empty">
                   <h1>{t("app.noProjects.title")}</h1>
-                  <p>{t("app.noProjects.run")}</p>
-                  <pre class="code code-inline">fairbeam run python/models/patch_antenna.py</pre>
+                  <p>{t(DEMO || isDesktopShell() ? "app.noProjects.body" : "app.noProjects.bodyServer")}</p>
                   <p class="muted">{t("app.noProjects.drop")}</p>
+                  <Show when={!DEMO}><button class="btn btn-primary" onClick={() => setAppMode("home")}>{t("app.noDesign.startScreen")}</button></Show>
                 </div>
               </Show>
             }
@@ -400,9 +409,12 @@ export default function App() {
               </Show>
             </div>
           </Show>
-          <PanelBoundary name="Results dock" class="dock">
-            <Dock />
-          </PanelBoundary>
+          {/* nothing open: no result tabs to show */}
+          <Show when={bundle()}>
+            <PanelBoundary name="Results dock" class="dock">
+              <Dock />
+            </PanelBoundary>
+          </Show>
           <PreviewBadge />
         </main>
         <Show

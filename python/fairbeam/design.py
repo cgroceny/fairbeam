@@ -42,6 +42,11 @@ H (``quantity``; ``component`` "abs" (default), "x", "y" or "z") on a plane norm
 ``position`` (mm) across the whole domain (fairbeam.field_planes, bundle ``field_planes``); the
 build sets ``Simulation.field_plane_monitors``, as ``fairbeam run --field-plane`` does.
 
+``model.conversion`` (optional, informational) records how a design was made from a bundled
+example (fairbeam.example_design): ``{"source": "patch-antenna.json", "notes": [{"code":
+"meshLines", "text": "...", "values": {...}}]}``. The designer shows the notes in Properties, in the
+interface language (``code`` and ``values``); ``text`` is the English sentence. The build ignores it.
+
 Units: lengths in mm, frequencies in GHz. Every number may instead be an expression over the
 parameters (``"W/2 + 0.5"``, ``"wavelength(f0) / 4"``), evaluated by a small safe evaluator (no
 attribute access, no calls other than the whitelisted maths functions; plain decimal numbers).
@@ -448,6 +453,13 @@ def check_design(d: dict) -> None:
     for k in ("id", "name"):
         if not isinstance(m.get(k), str) or not m[k].strip():
             raise DesignError(f"{k!r} must be a non-empty string", f"model.{k}")
+    if "conversion" in m:
+        conversion = m["conversion"]
+        notes = conversion.get("notes") if isinstance(conversion, dict) else None
+        if not isinstance(notes, list) or not all(
+                isinstance(n, dict) and isinstance(n.get("code"), str) and isinstance(n.get("text"), str)
+                and isinstance(n.get("values", {}), dict) for n in notes):
+            raise DesignError("conversion is {source, notes: [{code, text, values}]}", "model.conversion")
     if "python_source_model" in d:
         source_model = d["python_source_model"]
         source_hash = d.get("python_source_hash")

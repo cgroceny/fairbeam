@@ -158,8 +158,14 @@ textarea.dz-autogrow { resize: none; overflow-y: auto; min-height: 0; max-height
 .home-tpl-list .nm-option { padding: var(--al-space-1) var(--al-space-2); gap: var(--al-space-2); }
 .home-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; }
 .home-list-cols { grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); }
-/* examples: wide enough for the full name; the copy action is a small icon at the row's end */
+/* examples: grouped like the header picker; the full name wraps (two Sierpinski runs differ only at
+   the end), the copy action is a small icon at the row's end */
 .home-examples .home-list-cols { grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); }
+.home-ex-group { display: grid; gap: var(--al-space-1); }
+.home-ex-group + .home-ex-group { margin-top: var(--al-space-2); }
+.home-examples .home-item-name { white-space: normal; overflow-wrap: anywhere; }
+.home-examples .home-row { align-items: flex-start; }
+.home-examples .home-row > .home-copy { margin-top: var(--al-space-1); padding-inline: 0; }
 .home-item {
   display: grid; gap: 1px; width: 100%; padding: var(--al-space-2) var(--al-space-3); border: 1px solid transparent; border-radius: var(--al-radius);
   background: transparent; color: var(--al-text); text-align: left; cursor: pointer;
