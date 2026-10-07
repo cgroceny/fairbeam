@@ -2,6 +2,7 @@ import type { Bundle } from "../types.ts";
 import { touchstoneNPort, touchstoneS1p } from "../export/touchstone.ts";
 import { sMatrix } from "../lib/sparams.ts";
 import { saveDownload, type DownloadResult } from "../lib/download.ts";
+import { resultExportStem } from "../lib/resultExportNames.ts";
 import { countUsage } from "../lib/telemetry.ts";
 import { t } from "../i18n/index.ts";
 
@@ -9,9 +10,9 @@ type Run = { file: string; bundle: Bundle };
 
 function safeBase(value: string): string {
   const leaf = String(value ?? "").replace(/\\/g, "/").split("/").pop() ?? "";
-  const clean = leaf.replace(/\.[^.]*$/, "").normalize("NFKC")
+  const clean = leaf.replace(/\.(?:json|zip|s\d+p)$/i, "").normalize("NFKC")
     .replace(/[<>:"|?*\x00-\x1f]/g, "_").replace(/[. ]+$/g, "").trim();
-  return clean.replace(/\s+/g, "_").slice(0, 100) || "results";
+  return clean.replace(/\s+/g, "_").slice(0, 220) || "results";
 }
 
 function checkedText(bundle: Bundle, label: string): { text: string; ports: number[] } {
@@ -59,13 +60,6 @@ function checkedText(bundle: Bundle, label: string): { text: string; ports: numb
   return { text, ports: matrix.ports };
 }
 
-function memberStem(file: string): string {
-  const leaf = String(file ?? "").replace(/\\/g, "/").split("/").pop() ?? "run";
-  const stem = leaf.replace(/\.[^.]*$/, "").normalize("NFKC")
-    .replace(/[<>:"|?*\x00-\x1f/\\]/g, "_").replace(/[. ]+$/g, "").trim();
-  return stem.slice(0, 100) || "run";
-}
-
 /** Every Touchstone export of the app; counted for the usage statistics (docs/TELEMETRY.md) once saved. */
 export async function exportResultTouchstone(bundle: Bundle, filenameBase: string, runs?: Run[]): Promise<DownloadResult> {
   const result = await writeResultTouchstone(bundle, filenameBase, runs);
@@ -85,7 +79,7 @@ async function writeResultTouchstone(bundle: Bundle, filenameBase: string, runs?
   for (const run of runs) {
     const { text, ports } = checkedText(run.bundle, run.file || t("results.touchstone.run"));
     const suffix = ports.length === 1 ? ".s1p" : `.s${ports.length}p`;
-    const stem = memberStem(run.file);
+    const stem = resultExportStem(run.bundle, "sparams");
     let uniqueStem = stem;
     for (let n = 2; used.has(`${uniqueStem}${suffix}`.toLowerCase()); n++) uniqueStem = `${stem}_${n}`;
     const name = `${uniqueStem}${suffix}`;

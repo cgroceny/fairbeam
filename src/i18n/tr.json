@@ -4520,5 +4520,9 @@
   "quality.hint.matchBelow": "Rezonans {f} GHz'de, tasarım frekansının ({f0} GHz) %{pct} altında ve orada |S11| {db} dB. Yapı f0 için elektriksel olarak fazla büyük: rezonansı yukarı taşımak için kısaltın.",
   "quality.hint.matchAbove": "Rezonans {f} GHz'de, tasarım frekansının ({f0} GHz) %{pct} üstünde ve orada |S11| {db} dB. Yapı f0 için elektriksel olarak fazla küçük: rezonansı aşağı taşımak için uzatın.",
   "quality.hint.matchPoor": "En iyi |S11| {f} GHz'de {db} dB, yani {limit} dB'den sığ: gücün çoğu geri yansıyor.",
-  "quality.hint.matchFeed": "Besleme uyumlu değil: girintili besleme, çeyrek dalga dönüştürücü ya da bir uyum devresi deneyin."
+  "quality.hint.matchFeed": "Besleme uyumlu değil: girintili besleme, çeyrek dalga dönüştürücü ya da bir uyum devresi deneyin.",
+  "results.figure.export": "Geçerli şekli dışa aktarın",
+  "results.figure.button": "Şekil",
+  "results.figure.hint": "Geçerli grafiği başlıklı, açık temalı bir şekil olarak kaydedin (PNG veya SVG).",
+  "results.figure.failed": "Şekil dışa aktarılamadı: {error}"
 }

@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { resultExportStem } from '../src/lib/resultExportNames.ts';
 import { unzipSync } from 'fflate';
 import { exportResultTouchstone } from '../src/designer/resultTouchstone.ts';
 import { parseTouchstone, parseTouchstoneNPort } from '../src/export/touchstone.ts';
@@ -49,9 +50,10 @@ await exportResultTouchstone(one, 'compare', [
 ]);
 assert.equal(offered.name, 'compare.zip');
 const members = unzipSync(new Uint8Array(await downloaded()));
-assert.deepEqual(Object.keys(members).sort(), ['same.case.s1p', 'same.case.s2p']);
-const zip1 = parseTouchstone(new TextDecoder().decode(members['same.case.s1p']));
-const zip2 = parseTouchstoneNPort(new TextDecoder().decode(members['same.case.s2p']), 2);
+const stem = resultExportStem(one, 'sparams');
+assert.deepEqual(Object.keys(members).sort(), [`${stem}.s1p`, `${stem}.s2p`]);
+const zip1 = parseTouchstone(new TextDecoder().decode(members[`${stem}.s1p`]));
+const zip2 = parseTouchstoneNPort(new TextDecoder().decode(members[`${stem}.s2p`]), 2);
 assert.deepEqual(zip1.f, one.results.frequency);
 assert.deepEqual(zip2.f, two.results.frequency);
 
@@ -64,3 +66,11 @@ const inconsistent = structuredClone(one);
 inconsistent.results.ports['1'].s11_re = [0.9, ...inconsistent.results.ports['1'].s11_re.slice(1)];
 await assert.rejects(() => exportResultTouchstone(inconsistent, 'bad'), /sweep and matrix S11 data disagree/);
 console.log('Result Touchstone checks passed');
+
+await exportResultTouchstone(one, resultExportStem(one, 'sparams'), [
+  { file: 'a.json', bundle: one }, { file: 'b.json', bundle: one },
+]);
+assert.deepEqual(Object.keys(unzipSync(new Uint8Array(await downloaded()))).sort(), [`${stem}.s1p`, `${stem}_2.s1p`]);
+const decimal = { ...one, results: { ...one.results, frequency: [1.25e9, 2.45e9] } };
+await exportResultTouchstone(decimal, resultExportStem(decimal, 'sparams'));
+assert.equal(offered.name, 'fixture_sparams_1.25-2.45GHz.s1p');

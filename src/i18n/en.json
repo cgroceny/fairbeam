@@ -4601,5 +4601,9 @@
   "quality.hint.matchBelow": "The resonance is at {f} GHz, {pct} % below the design frequency ({f0} GHz), and |S11| is {db} dB there. The structure is electrically too large for f0: shorten it to move the resonance up.",
   "quality.hint.matchAbove": "The resonance is at {f} GHz, {pct} % above the design frequency ({f0} GHz), and |S11| is {db} dB there. The structure is electrically too small for f0: lengthen it to move the resonance down.",
   "quality.hint.matchPoor": "The best |S11| is {db} dB at {f} GHz, shallower than {limit} dB: most of the power is reflected.",
-  "quality.hint.matchFeed": "The feed is not matched: try an inset feed, a quarter-wave transformer or a matching network."
+  "quality.hint.matchFeed": "The feed is not matched: try an inset feed, a quarter-wave transformer or a matching network.",
+  "results.figure.export": "Export current figure",
+  "results.figure.button": "Figure",
+  "results.figure.hint": "Save the current plot as a light figure with a title (PNG or SVG).",
+  "results.figure.failed": "Could not export the figure: {error}"
 }
