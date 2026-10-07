@@ -6,7 +6,18 @@ short overview. To contribute, read [CONTRIBUTING.md](../CONTRIBUTING.md) and th
 [AI policy](../AI_POLICY.md).
 
 The user guides and the reference are also published at https://fairbeam.org/docs/ (the list is
-`landing/docs.json`; the pages are built from these files).
+`landing/docs.json`; the pages are built from these files). Turkish editions are published at
+https://fairbeam.org/docs/tr/ from `docs/tr/<source basename>.md`, including sources outside
+`docs/`. Keep the heading order and levels, code blocks, commands and numeric values in step with
+the English source. Relative links use the English source location; the site preserves its heading
+IDs so links and language switching keep the same section. Page and group titles use `titleTr` in
+`landing/docs.json`; shared site strings remain in `landing/language.js`.
+
+Run `npm run check:docs-translations` and `npm run check:links` after editing translations. The
+build also rejects changed code examples or heading structure. Missing translations render the
+English body with a Turkish note; the completeness check requires every published page to be
+translated. To check a locally served site in Chrome, run `npm run check:docs-language` with
+`FAIRBEAM_DOCS_URL` pointing to it; `FAIRBEAM_SCREENSHOT_DIR` optionally saves the screenshots.
 
 ## Using Fairbeam
 

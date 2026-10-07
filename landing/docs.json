@@ -1,5 +1,5 @@
 {
-  "$comment": "The documentation pages of the site, in sidebar order. scripts/build-site.mjs renders each Markdown file (the single source; it stays in the repository) to site-dist/docs/<slug>.html with scripts/docs-render.mjs, and docs/index.html from the groups and descriptions below. title is the sidebar name (the page itself keeps the file's first heading); description is the line on the overview page and the page's meta description. hideImages: images the Markdown shows on GitHub that the site leaves out, each with its reason (the build fails on an entry that no longer leaves anything out).",
+  "$comment": "The documentation pages of the site, in sidebar order. scripts/build-site.mjs renders each Markdown file (the single source; it stays in the repository) to site-dist/docs/<slug>.html with scripts/docs-render.mjs, and docs/index.html from the groups and descriptions below. title is the sidebar name (the page itself keeps the file's first heading); description is the line on the overview page and the page's meta description. hideImages: images the Markdown shows on GitHub that the site leaves out, each with its reason (the build fails on an entry that no longer leaves anything out). Turkish sources live in docs/tr/<source basename>.md and render under /docs/tr/. titleTr names groups and pages in Turkish. Relative Markdown links resolve against the English source location; translated headings retain the corresponding English heading IDs. Missing translations show the English body with a Turkish notice.",
   "site": "https://fairbeam.org",
   "repo": "https://github.com/ismailakdag/fairbeam",
   "branch": "main",
@@ -10,62 +10,69 @@
   "groups": [
     {
       "title": "Get started",
+      "titleTr": "Başlarken",
       "pages": [
-        { "source": "docs/GETTING-STARTED.md", "slug": "getting-started", "title": "Getting started", "description": "Install the desktop app, then design, simulate and read the results of a patch antenna in about five minutes." }
+        {"source": "docs/GETTING-STARTED.md", "slug": "getting-started", "title": "Getting started", "description": "Install the desktop app, then design, simulate and read the results of a patch antenna in about five minutes.", "titleTr": "Başlarken"}
       ]
     },
     {
       "title": "Designer",
+      "titleTr": "Tasarımcı",
       "pages": [
-        { "source": "docs/DESIGNER.md", "slug": "designer", "title": "The designer", "description": "The visual workspace: modeling, checks, simulation settings, the mesh, running and reading results, design files, and importing VBA macros and PCB artwork." },
-        { "source": "docs/APPEARANCE.md", "slug": "appearance", "title": "Appearance", "description": "Interface presets, accent colors, chart palettes and custom colors under General settings › Appearance." },
-        { "source": "examples/designs/README.md", "slug": "example-designs", "title": "Example designs", "description": "Six 867 MHz antennas as designer files, with their parameters, results and how to scale them." }
+        {"source": "docs/DESIGNER.md", "slug": "designer", "title": "The designer", "description": "The visual workspace: modeling, checks, simulation settings, the mesh, running and reading results, design files, and importing VBA macros and PCB artwork.", "titleTr": "Tasarımcı"},
+        {"source": "docs/APPEARANCE.md", "slug": "appearance", "title": "Appearance", "description": "Interface presets, accent colors, chart palettes and custom colors under General settings › Appearance.", "titleTr": "Görünüm"},
+        {"source": "examples/designs/README.md", "slug": "example-designs", "title": "Example designs", "description": "Six 867 MHz antennas as designer files, with their parameters, results and how to scale them.", "titleTr": "Örnek tasarımlar"}
       ]
     },
     {
       "title": "Simulation",
+      "titleTr": "Simülasyon",
       "pages": [
-        { "source": "docs/MESHING.md", "slug": "meshing", "title": "Automatic meshing", "description": "How the automatic mesh is built from the geometry: options, rules, the mesh report and checks against hand-made meshes." },
-        { "source": "docs/RUN-SERVER.md", "slug": "run-server", "title": "Run server and Run panel", "description": "The local run server behind the Run panel: run setup, your own materials, optimization and comparing projects." },
-        { "source": "docs/STUDIES.md", "slug": "studies", "title": "Sweeps and studies", "description": "Parameter sweeps, mesh convergence studies, the study file format and Touchstone export from the command line." },
-        { "source": "docs/OPTIMIZE.md", "slug": "optimize", "title": "Optimizer", "description": "Tuning a model or a design towards goals: parameters, goals, algorithms, the output and measured examples." },
-        { "source": "docs/MULTIPORT.md", "slug": "multiport", "title": "Multi-port structures", "description": "One run per driven port, the S-matrix, and the S-parameter and array views in the viewer." },
-        { "source": "docs/GPU.md", "slug": "gpu", "title": "GPU engine", "description": "The optional GPU build of openEMS, Metal on Apple silicon and CUDA on Windows, with measured timings." }
+        {"source": "docs/MESHING.md", "slug": "meshing", "title": "Automatic meshing", "description": "How the automatic mesh is built from the geometry: options, rules, the mesh report and checks against hand-made meshes.", "titleTr": "Otomatik mesh oluşturma"},
+        {"source": "docs/RUN-SERVER.md", "slug": "run-server", "title": "Run server and Run panel", "description": "The local run server behind the Run panel: run setup, your own materials, optimization and comparing projects.", "titleTr": "Çalıştırma sunucusu ve Simülasyon çalıştır paneli"},
+        {"source": "docs/STUDIES.md", "slug": "studies", "title": "Sweeps and studies", "description": "Parameter sweeps, mesh convergence studies, the study file format and Touchstone export from the command line.", "titleTr": "Taramalar ve çalışmalar"},
+        {"source": "docs/OPTIMIZE.md", "slug": "optimize", "title": "Optimizer", "description": "Tuning a model or a design towards goals: parameters, goals, algorithms, the output and measured examples.", "titleTr": "Optimizasyon aracı"},
+        {"source": "docs/MULTIPORT.md", "slug": "multiport", "title": "Multi-port structures", "description": "One run per driven port, the S-matrix, and the S-parameter and array views in the viewer.", "titleTr": "Çok portlu yapılar"},
+        {"source": "docs/GPU.md", "slug": "gpu", "title": "GPU engine", "description": "The optional GPU build of openEMS, Metal on Apple silicon and CUDA on Windows, with measured timings.", "titleTr": "GPU motoru"}
       ]
     },
     {
       "title": "Results and export",
+      "titleTr": "Sonuçlar ve dışa aktarma",
       "pages": [
-        { "source": "docs/RESULTS.md", "slug": "results", "title": "How results are computed", "description": "The excitation, end criterion, S11, bands, far field, efficiency and gain, with notes on accuracy." },
-        { "source": "docs/ARRAYS.md", "slug": "arrays", "title": "Arrays and beam steering", "description": "Embedded element patterns, normalization, beam steering and the 2 × 1 and 4 × 1 patch arrays." },
-        { "source": "docs/EXPORTS.md", "slug": "exports", "title": "Drawings, figures and fabrication", "description": "Screenshots, technical drawings, publication figures, the export package, the PDF report and fabrication files." },
-        { "source": "docs/BLENDER.md", "slug": "blender", "title": "Blender export", "description": "The Blender render package and the GLB model: what they contain and how to render them." }
+        {"source": "docs/RESULTS.md", "slug": "results", "title": "How results are computed", "description": "The excitation, end criterion, S11, bands, far field, efficiency and gain, with notes on accuracy.", "titleTr": "Sonuçlar nasıl hesaplanır"},
+        {"source": "docs/ARRAYS.md", "slug": "arrays", "title": "Arrays and beam steering", "description": "Embedded element patterns, normalization, beam steering and the 2 × 1 and 4 × 1 patch arrays.", "titleTr": "Diziler ve hüzme yönlendirme"},
+        {"source": "docs/EXPORTS.md", "slug": "exports", "title": "Drawings, figures and fabrication", "description": "Screenshots, technical drawings, publication figures, the export package, the PDF report and fabrication files.", "titleTr": "Çizimler, grafikler ve üretim"},
+        {"source": "docs/BLENDER.md", "slug": "blender", "title": "Blender export", "description": "The Blender render package and the GLB model: what they contain and how to render them.", "titleTr": "Blender dışa aktarımı"}
       ]
     },
     {
       "title": "Python and CLI",
+      "titleTr": "Python ve komut satırı",
       "pages": [
-        { "source": "docs/MODELS.md", "slug": "models", "title": "Writing models", "description": "Python model files, the included models, non-planar geometry and waveguide ports, the material library and editing models in the app." },
-        { "source": "docs/CLI.md", "slug": "cli", "title": "CLI reference", "description": "The fairbeam commands, the CPU and GPU engines, importing existing geometry and the raw simulation data." },
-        { "source": "docs/BUNDLE.md", "slug": "bundle", "title": "Project bundle format", "description": "The project bundle, fairbeam.project/1, field by field." }
+        {"source": "docs/MODELS.md", "slug": "models", "title": "Writing models", "description": "Python model files, the included models, non-planar geometry and waveguide ports, the material library and editing models in the app.", "titleTr": "Model yazma"},
+        {"source": "docs/CLI.md", "slug": "cli", "title": "CLI reference", "description": "The fairbeam commands, the CPU and GPU engines, importing existing geometry and the raw simulation data.", "titleTr": "CLI başvuru kılavuzu"},
+        {"source": "docs/BUNDLE.md", "slug": "bundle", "title": "Project bundle format", "description": "The project bundle, fairbeam.project/1, field by field.", "titleTr": "Proje paketi biçimi"}
       ]
     },
     {
       "title": "From source",
+      "titleTr": "Kaynaktan kurulum",
       "pages": [
-        { "source": "docs/FROM-SOURCE.md", "slug": "from-source", "title": "Running from source", "description": "Building openEMS and installing Fairbeam from the repository on macOS, a first run and the test suite." },
-        { "source": "docs/WINDOWS.md", "slug": "windows", "title": "Fairbeam on Windows", "description": "Running simulations locally on Windows 10 and 11: openEMS, the Python package, the run server and the viewer." },
-        { "source": "docs/LINUX.md", "slug": "linux", "title": "Fairbeam on Linux", "description": "The CPU solver, the run server and the viewer in a local browser on Linux, set up from source." }
+        {"source": "docs/FROM-SOURCE.md", "slug": "from-source", "title": "Running from source", "description": "Building openEMS and installing Fairbeam from the repository on macOS, a first run and the test suite.", "titleTr": "Kaynaktan çalıştırma"},
+        {"source": "docs/WINDOWS.md", "slug": "windows", "title": "Fairbeam on Windows", "description": "Running simulations locally on Windows 10 and 11: openEMS, the Python package, the run server and the viewer.", "titleTr": "Windows'ta Fairbeam"},
+        {"source": "docs/LINUX.md", "slug": "linux", "title": "Fairbeam on Linux", "description": "The CPU solver, the run server and the viewer in a local browser on Linux, set up from source.", "titleTr": "Linux'ta Fairbeam"}
       ]
     },
     {
       "title": "Reference",
+      "titleTr": "Başvuru",
       "pages": [
-        { "source": "docs/VALIDATION.md", "slug": "validation", "title": "Validation", "description": "Results compared with closed-form theory, mesh convergence and the recommended solver settings." },
-        { "source": "docs/BENCHMARKS.md", "slug": "benchmarks", "title": "Benchmarks", "description": "The 14 example projects on reference machines under Windows and macOS: results and solver times." },
-        { "source": "docs/openems-lumped-resistor.md", "slug": "openems-lumped-resistor", "title": "Lumped resistors in openEMS", "description": "openEMS lumped resistors measured at the element, and where an apparent error in a test fixture comes from." },
-        { "source": "AI_POLICY.md", "slug": "ai-policy", "title": "AI policy", "description": "How Fairbeam uses AI coding assistants, and what the project asks of AI-assisted contributions." },
-        { "source": "CONTRIBUTING.md", "slug": "contributing", "title": "Contributing", "description": "Reporting problems, pull requests and the ground rules for contributions." }
+        {"source": "docs/VALIDATION.md", "slug": "validation", "title": "Validation", "description": "Results compared with closed-form theory, mesh convergence and the recommended solver settings.", "titleTr": "Doğrulama"},
+        {"source": "docs/BENCHMARKS.md", "slug": "benchmarks", "title": "Benchmarks", "description": "The 14 example projects on reference machines under Windows and macOS: results and solver times.", "titleTr": "Performans ölçümleri"},
+        {"source": "docs/openems-lumped-resistor.md", "slug": "openems-lumped-resistor", "title": "Lumped resistors in openEMS", "description": "openEMS lumped resistors measured at the element, and where an apparent error in a test fixture comes from.", "titleTr": "openEMS'te toplu dirençler"},
+        {"source": "AI_POLICY.md", "slug": "ai-policy", "title": "AI policy", "description": "How Fairbeam uses AI coding assistants, and what the project asks of AI-assisted contributions.", "titleTr": "Yapay zekâ politikası"},
+        {"source": "CONTRIBUTING.md", "slug": "contributing", "title": "Contributing", "description": "Reporting problems, pull requests and the ground rules for contributions.", "titleTr": "Katkıda bulunma"}
       ]
     }
   ]
