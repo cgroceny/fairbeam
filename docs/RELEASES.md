@@ -169,13 +169,14 @@ editing them, or the prefill stops working.
 One entry per release, newest first. The installers are on the
 [release page](https://github.com/ismailakdag/fairbeam-releases/releases) of each version.
 
-### Unreleased
+### 0.7.1, 2026-10-07
 
-- New setting Refine fine features (Simulation settings › Mesh, `mesh.refine_features`) refines the automatic mesh locally across narrow gaps, notches, feed gaps and slanted thin strips. It is off by default for every design, because it adds cells and can shift the input impedance of wire antennas; the Checks list suggests it when fine features are under-resolved. The UAV blade example turns it on. See [MESHING.md](MESHING.md).
+- **VBA macro import:** degree trig functions (sind, cosd, tand, atnd and inverses), ThickenSheetAdvanced and Loft between two planar profiles; unsupported items are reported by name instead of being dropped. A tetrahedral or surface mesh setting no longer sets the FDTD density.
+- **Mesh:** new setting Refine fine features (Simulation settings › Mesh, `mesh.refine_features`) refines the automatic mesh locally across narrow gaps, notches, feed gaps and slanted thin strips. It is off by default for every design, because it adds cells and can shift the input impedance of wire antennas; the Checks list suggests it when fine features are under-resolved. The UAV blade example turns it on. See [MESHING.md](MESHING.md).
+- **Results:** a Figure menu exports the current plot as PNG or SVG; figure, CSV and Touchstone files share one naming scheme. Matched bands show their Center (band middle) and Best match (|S11| minimum) separately, also in the Summary, the reports and the CSV exports (`f_center_GHz` now means the band middle, `f_best_GHz` the minimum; the sweep CSV has `band_center_ghz` and `band_best_ghz`).
+- **Simulation:** mesh mode names agree between Settings and the Run dialog, the threads setting reaches the Run dialog, and the live run panel no longer reports the excitation as still running on short runs.
+- **Interface and docs:** Turkish texts reviewed, Turkish documentation, third-party license notices in the app (About).
 
-- Sweep CSV now exports band edges, their middle as `band_center_ghz`, and the |S11| minimum as `band_best_ghz`; RunHistory labels that minimum frequency Best match.
-
-- Matched-band CSV `f_center_GHz` now means the band middle; `f_best_GHz` holds the |S11| minimum, and fractional bandwidth uses the middle, matching the tables and Summary CSV/TSV.
 
 ### 0.7.0 — first release of Fairbeam, 2026-10-06
 
