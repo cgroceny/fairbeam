@@ -3,7 +3,7 @@
 // the selection on the right, checks and results at the bottom. Helper dialogs set the work plane
 // (WCS) and add transforms. The inspector, fields and checks come from DesignPane.tsx; drawing is
 // src/designer/draw.ts + src/scene/drawOverlay.ts.
-import { createEffect, createSignal, For, type JSX, lazy, on, onCleanup, onMount, Show } from "solid-js";
+import { createEffect, createSignal, For, type JSX, lazy, on, onCleanup, onMount, Show, Suspense } from "solid-js";
 import {
   Box, CircleDot, Cone, Cylinder, Eye, EyeOff, FileCode, Globe, Grid3x3, Hexagon, Home, Layers, LayoutGrid, Library,
   Camera, FileText, Radio, Waves, History, Move3d,
@@ -696,7 +696,8 @@ export function Ribbon() {
         <RunDialog />
       </Show>
       <OptimizeDialog />
-      <Show when={sweepDialogOpen()}><SweepDialog /></Show>
+      {/* lazily loaded: its own boundary, so loading it never swaps the ribbon for a placeholder */}
+      <Show when={sweepDialogOpen()}><Suspense><SweepDialog /></Suspense></Show>
       <ConvergenceDialog />
       <Show when={simSettingsOpen()}>
         <SimSettingsDialog />

@@ -14,6 +14,18 @@ const puppeteer = puppeteerModule.default ?? puppeteerModule;
 let stack;
 let browser;
 
+// Source contracts first (no browser): a resource read inside a dialog must not suspend the region
+// that hosts the dialog. The Run, Sweep and Optimize dialogs live in the ribbon; PreflightNote's
+// pending check swapped the whole ribbon for its loading placeholder, which detached the opener.
+{
+  const { readFileSync } = await import("node:fs");
+  const read = (p) => readFileSync(new URL(`../${p}`, import.meta.url), "utf8");
+  const note = read("src/designer/PreflightNote.tsx");
+  assert.match(note, /createResource/, "PreflightNote asks the server with a resource");
+  assert.match(note, /return \(\s*<Suspense>[\s\S]*pre\(\)[\s\S]*<\/Suspense>\s*\);/, "PreflightNote has its own Suspense boundary around the resource read");
+  assert.match(read("src/designer/DesignWorkspace.tsx"), /<Show when=\{sweepDialogOpen\(\)\}><Suspense><SweepDialog \/><\/Suspense><\/Show>/, "the lazily loaded Sweep dialog has its own boundary");
+}
+
 const isFocused = (page, selector) => page.$eval(selector, (el) => document.activeElement === el);
 const inDialog = (page, selector) => page.$eval(selector, (el) => el.contains(document.activeElement));
 const moveFocusOutside = (page, selector) => page.$eval(selector, (el) => {
@@ -40,7 +52,8 @@ try {
     if (path.includes("/scene/viewport.tsx")) viewportRequests.push(request.url());
   });
   await page.goto(stack.url, { waitUntil: "domcontentloaded" });
-  await page.waitForSelector(".app-header button[aria-label='General settings']");
+  // the first load of a cold Vite server optimizes its dependencies: allow it longer than one step
+  await page.waitForSelector(".app-header button[aria-label='General settings']", { timeout: 90000 });
   await page.waitForSelector("main.home");
   await new Promise((resolve) => setTimeout(resolve, 150));
   assert.equal(threeRequests.length, 0, "the Start screen does not request three.js before opening the 3D viewer");
@@ -68,7 +81,7 @@ try {
     assert.equal(await inDialog(page, about), true, "focus moved outside About is redirected back inside");
 
     const first = `${about} .dialog-head button`;
-    const last = `${about} .gs-body p:last-of-type a[href]`;
+    const last = `${about} .gs-body p:last-of-type a[href]:last-of-type`;
     await page.$eval(first, (el) => el.focus());
     await page.keyboard.down("Shift");
     await page.keyboard.press("Tab");
@@ -138,6 +151,42 @@ try {
 
   await moveFocusOutside(page, launcher);
   assert.equal(await isFocused(page, launcher), true, "modal listeners are removed after the last modal closes");
+
+  // a scrolling body without controls is a keyboard stop in Chromium: Tab continues after it
+  await page.click("#modal-fixture-scroll-launcher");
+  await page.waitForSelector("#modal-fixture-scroll");
+  const activeId = () => page.evaluate(() => document.activeElement?.id || document.activeElement?.tagName);
+  await page.$eval("#modal-fixture-scroll-body", (el) => { el.tabIndex = -1; el.focus(); el.removeAttribute("tabindex"); });
+  await page.keyboard.press("Tab");
+  assert.equal(await activeId(), "modal-fixture-scroll-done", "Tab from the scrolling body goes on to the next control (Done), not back to the first");
+  await page.$eval("#modal-fixture-scroll-body", (el) => { el.tabIndex = -1; el.focus(); el.removeAttribute("tabindex"); });
+  await page.keyboard.down("Shift"); await page.keyboard.press("Tab"); await page.keyboard.up("Shift");
+  assert.equal(await activeId(), "modal-fixture-scroll-close", "Shift+Tab from the scrolling body goes to the control before it");
+  await page.keyboard.press("Tab");
+  if (await activeId() === "modal-fixture-scroll-body") await page.keyboard.press("Tab");
+  assert.equal(await activeId(), "modal-fixture-scroll-done", "Close, (list), Done");
+  await page.keyboard.press("Tab");
+  assert.equal(await activeId(), "modal-fixture-scroll-close", "Done wraps to Close");
+  await page.keyboard.press("Escape");
+  await page.waitForSelector("#modal-fixture-scroll", { hidden: true });
+  assert.equal(await isFocused(page, "#modal-fixture-scroll-launcher"), true, "the scroll fixture returns focus to its launcher");
+
+  // the opener's region re-renders while its dialog opens: focus returns to the same command, found again
+  await page.click("#modal-fixture-region button");
+  await page.waitForSelector("#modal-fixture-rerendered");
+  assert.equal(await isFocused(page, "#modal-fixture-rerendered-first"), true, "the dialog takes focus although its opener was replaced");
+  assert.equal(await page.$eval("#modal-fixture-region button", (el) => el.dataset.version), "2", "the opener node was re-created");
+  await page.keyboard.press("Escape");
+  await page.waitForSelector("#modal-fixture-rerendered", { hidden: true });
+  assert.equal(await isFocused(page, "#modal-fixture-region button[aria-label='Re-rendered opener']"), true, "focus returns to the re-created opener, not to <body>");
+
+  // the opener loses focus (disabled while it prepares) before its dialog comes: it is still the opener
+  await page.click("#modal-fixture-busy");
+  await page.waitForSelector("#modal-fixture-prepared");
+  assert.equal(await isFocused(page, "#modal-fixture-prepared-first"), true, "the prepared dialog takes focus");
+  await page.keyboard.press("Escape");
+  await page.waitForSelector("#modal-fixture-prepared", { hidden: true });
+  assert.equal(await isFocused(page, "#modal-fixture-busy"), true, "focus returns to the command that dropped focus while preparing");
   await page.evaluate(() => {
     const dispose = (window).__disposeModalFocusFixture;
     dispose?.();
@@ -162,7 +211,7 @@ try {
     throw new Error(`The opened example did not mount its 3D viewport: ${JSON.stringify(state)}`);
   }
   assert.ok(viewportRequests.length > 0, "the 3D viewport module loads only when the example is opened");
-  console.log("Modal and startup browser checks passed: repeated open, focus entry and containment, inert restoration, nested Escape and return focus, listener cleanup, and deferred viewport load.");
+  console.log("Modal and startup browser checks passed: repeated open, focus entry and containment, inert restoration, nested Escape and return focus, listener cleanup, Tab past a scrolling body, return focus to a re-rendered or briefly unfocused opener, and deferred viewport load.");
 } finally {
   await browser?.close();
   await stack?.stop();
