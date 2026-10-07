@@ -143,7 +143,7 @@
   "boolean.operations": "Operation",
   "boolean.overlap.aria": "Overlapping solids",
   "boolean.overlap.cancel": "Cancel edit",
-  "boolean.overlap.insert": "Insert ({a} − {b}, keep {b})",
+  "boolean.overlap.insert": "Cut {b} out of {a}, keep {b}",
   "boolean.overlap.keep": "Keep both",
   "boolean.overlap.subtract": "Subtract {a} − {b}",
   "boolean.overlap.text": "{a} overlaps {b} ({common}). Point at a choice to preview it:",

@@ -141,7 +141,7 @@
   "boolean.operations": "İşlem",
   "boolean.overlap.aria": "Çakışan katılar",
   "boolean.overlap.cancel": "Düzenlemeyi iptal et",
-  "boolean.overlap.insert": "Ekle (içine) ({a} − {b}, {b} kalır)",
+  "boolean.overlap.insert": "Kes: {a} içinden {b}, {b} kalır",
   "boolean.overlap.keep": "İkisini de tut",
   "boolean.overlap.subtract": "Çıkar: {a} − {b}",
   "boolean.overlap.text": "{a} ile {b} çakışıyor ({common}). Önizlemek için bir seçeneğin üzerine gelin:",

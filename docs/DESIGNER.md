@@ -520,8 +520,10 @@ chosen as **Operation**:
 - **Mirror** across the plane through a **Point on plane** whose **Plane normal axis** is x, y or
   z; **Keep original (add mirrored copy)** decides whether the original stays.
 
-**Duplicate** (Home › Edit, or Ctrl/Cmd+D) copies the selected solid, shape or port; **Delete**
-removes the selection.
+**Duplicate** (Home › Edit, or Ctrl/Cmd+D) copies the selected solid, shape, port, lumped element,
+parameter or material; **Delete** removes the selection (a material or a parameter only while nothing
+uses it). A duplicated solid lies on its original on purpose, so it raises no overlap prompt; moving or
+editing it into another solid does.
 
 **Selection in the 3D view.** The selected solid gets a red tint, an outline and an x-ray fill drawn
 over everything. When one shape of a solid is selected in the tree, only that shape gets the full
@@ -570,7 +572,7 @@ on picked geometry:
 
 - **Boolean** combines two parts, A (kept) and B: **Add** (union), **Subtract** (A − B), **Intersect**
   and **Insert** (A − B with B kept). Select A, choose the operation (or press + − * / with A then
-  B selected). With A selected, the Tools › Boolean menu and the right-click › Boolean submenu list the other
+  B selected: the 3D view previews A op B, Enter or the same key again applies it). With A selected, the Tools › Boolean menu and the right-click › Boolean submenu list the other
   solids: **Subtract ›** (or **Add ›**, **Intersect ›**, **Insert ›**) and one pick applies the
   Boolean at once, in one undo step. Without a selection, choose the operation, then pick B.
   The 3D view previews the result with the operands in color; **Apply** (Enter) keeps it,
