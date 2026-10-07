@@ -5,7 +5,7 @@ import { type Check, parseLimit } from "./checks";
 import { checkMessage } from "./checkText";
 import { paramKeyError } from "./expr";
 import { shown as fmt } from "./displayNumber.ts";
-import { addParam, checks, draft, edit, fieldId, focusPath, issues, names, selection, setSelection } from "./store";
+import { addParam, checks, draft, duplicateParam, edit, fieldId, focusPath, issues, names, paramKeyProblem, removeParam, renameParam, selection, setSelection } from "./store";
 import { mode, runOpen } from "../runner/store";
 import { parameterRanges, setParameterRanges } from "./dockState";
 import type { DesignParam } from "./types";
@@ -163,7 +163,20 @@ export default function ParametersDock() {
               return true;
             });
           };
+          // The key as typed, not yet applied: a rename rewrites every expression that uses the key, so it
+          // applies once, on Enter or when the cell is left, never per keystroke (a half-typed key would
+          // break every field that names it). An invalid or taken key stays here with its error.
+          const [keyText, setKeyText] = createSignal<string | null>(null);
+          const commitKey = (): boolean => {
+            const typed = keyText();
+            if (typed === null) return true;
+            if (renameParam(i(), typed)) return false;
+            setKeyText(null);
+            return true;
+          };
           const keyError = () => {
+            const typed = keyText();
+            if (typed !== null) return typed.trim() === p.key ? null : paramKeyProblem(i(), typed.trim());
             const bad = paramKeyError(p.key);
             return bad ? `${bad[0].toUpperCase()}${bad.slice(1)}.`
               : draft.params.some((q, j) => j !== i() && q.key === p.key) ? t("params.keyTwice") : issues()[path("key")]?.message;
@@ -175,11 +188,19 @@ export default function ParametersDock() {
           // the row as last committed (Enter, or moving to another cell): what Escape returns to
           const rowEdit = createRowEdit<DesignParam>();
           const snapshot = (): DesignParam => JSON.parse(JSON.stringify(p));
-          const text = (key: "key" | "unit" | "description" | "label", label: string) => <input autocomplete="off" class="rp-input dz-input" id={fieldId(path(key))}
-            aria-label={`${p.key}: ${label}`} aria-invalid={key === "key" && !!keyError()}
-            aria-describedby={key === "key" && keyError() ? `${fieldId(path("key"))}-error` : undefined}
-            title={key === "key" ? paramLabelText(p.label) || p.key : p[key] ?? ""}
-            placeholder={key === "description" && !p.description ? paramLabelText(p.label) : undefined} value={p[key] ?? ""} onInput={(e) => { const v = e.currentTarget.value; set((q) => { q[key] = key === "key" ? v.trim() : v; }, key); }} />;
+          const text = (key: "unit" | "description" | "label", label: string) => <input autocomplete="off" class="rp-input dz-input" id={fieldId(path(key))}
+            aria-label={`${p.key}: ${label}`} title={p[key] ?? ""}
+            placeholder={key === "description" && !p.description ? paramLabelText(p.label) : undefined} value={p[key] ?? ""} onInput={(e) => { const v = e.currentTarget.value; set((q) => { q[key] = v; }, key); }} />;
+          const keyInput = () => <input autocomplete="off" class="rp-input dz-input" id={fieldId(path("key"))}
+            aria-label={`${p.key}: ${t("params.col.key")}`} aria-invalid={!!keyError()}
+            aria-describedby={keyError() ? `${fieldId(path("key"))}-error` : undefined}
+            title={paramLabelText(p.label) || p.key} value={keyText() ?? p.key}
+            onInput={(e) => setKeyText(e.currentTarget.value)} onBlur={() => commitKey()}
+            onKeyDown={(e) => {
+              // Enter applies the new key; a refused one keeps the focus here (the row's Enter does not move on)
+              if (e.key === "Enter" && !e.isComposing && !commitKey()) e.preventDefault();
+              else if (e.key === "Escape") setKeyText(null);
+            }} />;
           return <tr ref={row} tabindex={0} data-noprompt class="row-select" classList={{ selected: selection().type === "param" && (selection() as { i: number }).i === i(), "param-row-error": !!keyError() || rowChecks().some((c) => c.severity === "error") }}
             aria-label={t("params.row", { key: p.key })} onFocusIn={(e) => {
               setSelection({ type: "param", i: i() });
@@ -210,7 +231,7 @@ export default function ParametersDock() {
                 }
               }
             }}>
-            <td>{text("key", t("params.col.key"))}<div class="param-errors"><Show when={keyError()}><span id={`${fieldId(path("key"))}-error`} class="dz-value dz-bad">{keyError()}</span></Show>
+            <td>{keyInput()}<div class="param-errors"><Show when={keyError()}><span id={`${fieldId(path("key"))}-error`} class="dz-value dz-bad">{keyError()}</span></Show>
               <For each={keyCellChecks()}>{(c) => <button class="linklike param-check" classList={{ "param-check-error": c.severity === "error" }} onClick={() => focusPath(c.path)} title={checkMessage(c)}><TriangleAlert size={12} />{c.code}: {checkMessage(c)}</button>}</For>
             </div></td>
             <td><div class="param-expression">
@@ -232,14 +253,14 @@ export default function ParametersDock() {
             <td><div class="param-actions">
               <details class="param-label" classList={{ "param-label-set": !!p.label }}><summary class="icon-btn icon-btn-sm" title={t("params.label.edit")} aria-label={t("params.label.editKey", { key: p.key })}><Tag size={14} aria-hidden="true" /></summary><div>{text("label", t("params.label"))}</div></details>
               <button class="icon-btn icon-btn-sm" aria-label={t("params.duplicate", { key: p.key })} onClick={() => {
-                const copy: DesignParam = JSON.parse(JSON.stringify(p));
-                let n = 2; while (draft.params.some((q) => q.key === `${p.key}_${n}`)) n++;
-                copy.key = `${p.key}_${n}`;
-                edit((d) => { d.params.splice(i() + 1, 0, copy); }); focusPath(`params[${i() + 1}].key`);
+                const at = i();
+                duplicateParam(at); focusPath(`params[${at + 1}].key`);
               }}><Copy size={14} /></button>
+              {/* a parameter a field still uses is not deleted: the banner names the fields (store.removeParam) */}
               <button class="icon-btn icon-btn-sm" aria-label={t("params.delete", { key: p.key })} onClick={() => {
-                edit((d) => { d.params.splice(i(), 1); });
-                if (draft.params.length) focusPath(`params[${Math.min(i(), draft.params.length - 1)}].key`);
+                const at = i();
+                if (!removeParam(at)) return;
+                if (draft.params.length) focusPath(`params[${Math.min(at, draft.params.length - 1)}].key`);
                 else setSelection({ type: "design" });
               }}><Trash2 size={14} /></button>
             </div></td>

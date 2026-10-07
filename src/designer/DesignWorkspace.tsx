@@ -363,7 +363,7 @@ function BooleanMenuButton() {
                   {(op) => <BooleanTargets op={op()} a={selectedPartIndex()} itemClass="btn btn-ghost btn-sm bool-menu-item" onBack={() => setListOp(null)} onDone={() => close(true)} />}
                 </Show>
                 <Show when={!listOp() && booleanHistory().length}><button class="btn btn-ghost btn-sm" type="button" role="menuitem"
-                  title={booleanHistory().map(h=>`${BOOLEAN_LABELS[h.operation]}: ${h.a}, ${h.b} → ${h.result}`).join("\n")}
+                  title={booleanHistory().map(h=>`${BOOLEAN_LABELS[h.operation]}: ${h.a} ${BOOLEAN_SYMBOLS[h.operation]} ${h.b} → ${h.result}`).join("\n")}
                   onClick={() => { setBooleanPending({a:-1,operation:"add"}); close(true); }}>{t("ribbon.tools.booleanHistory")}</button></Show>
               </div>
             </Show>
@@ -706,7 +706,7 @@ export function Ribbon() {
       <ShapeDialogHost />
       <WcsDialogHost />
       <FaceExtrudeDialog />
-      <Show when={booleanPending()?.a === -1}><div class="rb-pop dm-boolean-history" role="dialog" aria-label={t("boolean.history")}><h3 class="dz-h">{t("boolean.history")}</h3><For each={booleanHistory()}>{h=><p>{BOOLEAN_LABELS[h.operation]}: {h.a} + {h.b} → {h.result} <button class="btn btn-ghost btn-sm" onClick={()=>restoreBooleanPart(h.index)}>{t("boolean.restore")}</button></p>}</For><button class="btn btn-ghost btn-sm" onClick={()=>setBooleanPending(null)}>{t("common.close")}</button></div></Show>
+      <Show when={booleanPending()?.a === -1}><div class="rb-pop dm-boolean-history" role="dialog" aria-label={t("boolean.history")}><h3 class="dz-h">{t("boolean.history")}</h3><For each={booleanHistory()}>{h=><p>{BOOLEAN_LABELS[h.operation]}: {h.a} {BOOLEAN_SYMBOLS[h.operation]} {h.b} → {h.result} <button class="btn btn-ghost btn-sm" onClick={()=>restoreBooleanPart(h.index)}>{t("boolean.restore")}</button></p>}</For><button class="btn btn-ghost btn-sm" onClick={()=>setBooleanPending(null)}>{t("common.close")}</button></div></Show>
       <NewParamHost />
       <ContextMenu />
       <ColorPopoverHost />

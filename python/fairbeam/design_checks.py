@@ -917,14 +917,16 @@ class _Lint:
         self.cut_checks()
         self.void_checks(parts)
         containers: dict = {}   # id(part) -> _BoxIndex of its primitives, shared by every part's test
+        titles = {part["name"]: part["title"] for part in parts}
         for part in parts:
             if not part["prims"]:
                 continue
             by = self._hidden_by(part, parts, self._bbox, containers)
             if by is not None:
+                # the solids as the designer names them (a duplicate is "Patch copy", not its internal "patch2")
                 self.warn(f"parts[{part['index']}]", "part-hidden",
-                          f"{part['name']!r} lies completely inside {by!r}, which has the same or a higher priority: "
-                          "it has no effect (raise its priority or remove it)")
+                          f"{part['title']!r} lies completely inside {titles.get(by, by)!r}, which has the same or a higher "
+                          "priority: it has no effect (raise its priority or remove it)")
         # metal placement needs the whole geometry as meant: not with shapes that did not resolve,
         # nor while errors (an inverted brick, a value out of range) make the drawing unreliable
         if not self.partial and not any(c["severity"] == "error" for c in self.out):
@@ -1321,7 +1323,8 @@ class _Lint:
             if total > MAX_PRIMITIVES:
                 self.partial = True
                 break
-            out.append({"index": i, "name": pt["name"], "metal": metal,
+            # "title": the name the designer shows for the solid (its label), for messages
+            out.append({"index": i, "name": pt["name"], "title": pt.get("label") or pt["name"], "metal": metal,
                         "dielectric": materials[pt["material"]]["kind"] == "dielectric", "prims": prims,
                         "voids": voids, "copies": len(maps)})
         return out

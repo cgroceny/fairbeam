@@ -1,7 +1,7 @@
-import { createEffect, createMemo, createRoot, createSignal, on } from "solid-js";
+import { createEffect, createMemo, createRoot, createSignal, on, untrack } from "solid-js";
 import type { BooleanOperation, Design, DesignPart, Selection } from "./types";
 export type { BooleanOperation } from "./types";
-import { draft, edit, names, selection, setSelection, registerPostEditObserver, registerDocumentChangeObserver, registerDeriveHook, revertObservedEdit, setMessage } from "./store";
+import { draft, edit, message, names, selection, setSelection, registerPostEditObserver, registerDocumentChangeObserver, registerDeriveHook, revertObservedEdit, setMessage } from "./store";
 import { appliedText, BOOLEAN_SYMBOLS, booleanOverlap, booleanPreview, booleanResult, materialiseBoolean, removedMeasure } from "./booleanParts";
 import { quickBundle } from "./geometry";
 import { flashRemoved, setBooleanPreviewGeometry } from "./booleanPreview";
@@ -26,7 +26,8 @@ export const BOOLEAN_LABELS: Readonly<Record<BooleanOperation, string>> = {
   get insert() { return t("boolean.op.insert"); },
 };
 export { BOOLEAN_SYMBOLS };
-export const booleanHistory = () => draft.parts.flatMap((p, index) => p.booleanHistory ? [{ index, a: p.booleanHistory.A.name, b: p.booleanHistory.B.name, operation: p.booleanHistory.operation, result: p.name }] : []);
+/** The Boolean results, named as the tree names solids (their labels). */
+export const booleanHistory = () => draft.parts.flatMap((p, index) => p.booleanHistory ? [{ index, a: p.booleanHistory.A.label || p.booleanHistory.A.name, b: p.booleanHistory.B.label || p.booleanHistory.B.name, operation: p.booleanHistory.operation, result: p.label || p.name }] : []);
 export const partTitle = (i: number) => draft.parts[i]?.label || draft.parts[i]?.name || "?";
 
 /** The part of a part or shape selection (a drawn or added shape selects the shape), else -1. */
@@ -99,7 +100,7 @@ function commitBoolean(a: number, b: number, operation: BooleanOperation): boole
     // no common volume to show (a sheet cut by a volume): the cutter itself flashes
     flash = removed === "none" ? [] : shapes(common.length ? { name: "__boolean_removed", material: A.material, primitives: common } : B);
   }
-  booleanEdit(result.parts!, `Boolean ${operation}: ${A.name} ${BOOLEAN_SYMBOLS[operation]} ${B.name}`);
+  booleanEdit(result.parts!, `Boolean ${operation}: ${A.label || A.name} ${BOOLEAN_SYMBOLS[operation]} ${B.label || B.name}`);
   setBooleanPending(null); setBooleanNotice(""); setSelection({ type: "design" });
   setMessage({ tone: removed === "none" ? "warn" : "good", text: appliedText(operation, A, B, result.parts!.find((p) => p.name === A.name && p.booleanHistory), removed) });
   flashRemoved(flash);
@@ -165,11 +166,12 @@ export function booleanKeysActive(): boolean {
 }
 
 /**
- * A Boolean key (Keypad + − * /): with a solid selected it starts that operation with the
- * selected solid as A (the first one, kept), and the solid picked next in the tree or the 3D view is B (Enter applies,
- * Esc cancels). The order is always first selected, then picked, whatever was selected before. While a Boolean is
- * being set up, a key changes its operation, and the same key again applies it once B is chosen. False when there is
- * nothing to combine (the key keeps its other use).
+ * A Boolean key (Keypad + − * /), as the Boolean menu: with two solids selected one after the other
+ * (A first, then B: selectedPair) it previews A op B (Enter or the same key again applies, Esc
+ * cancels); with one solid selected it starts that operation with it as A (kept), and the solid picked
+ * next in the tree or the 3D view is B. While a Boolean is being set up, a key changes its operation,
+ * and the same key again applies it once B is chosen. False when there is nothing to combine (the key
+ * keeps its other use).
  */
 export function booleanShortcut(operation: BooleanOperation): boolean {
   const p = booleanPending();
@@ -179,6 +181,12 @@ export function booleanShortcut(operation: BooleanOperation): boolean {
     return true;
   }
   if (!booleanKeysActive()) return false;
+  const pair = selectedPair();
+  if (pair) {
+    setBooleanNotice("");
+    setBooleanPending({ a: pair[0], b: pair[1], operation });
+    return true;
+  }
   armBoolean(operation, selectedPartIndex());
   return true;
 }
@@ -188,12 +196,19 @@ const insertPair = (x: DesignPart, y: DesignPart) =>
   (x.booleanHistory?.live && x.booleanHistory.operation === "insert" && x.booleanHistory.B.name === y.name)
   || (y.booleanHistory?.live && y.booleanHistory.operation === "insert" && y.booleanHistory.B.name === x.name);
 
-// Geometry-only comparison intentionally ignores labels, materials and inspector metadata.
-const geometryKey = (p: Design["parts"][number]) => JSON.stringify({ primitives: p.primitives, transforms: p.transforms, cuts: p.cuts });
+// Geometry-only comparison intentionally ignores labels, materials and inspector metadata, and the
+// order and repetition of shapes: a duplicated shape (lying on its original) adds no volume.
+const geometryKey = (p: Design["parts"][number]) =>
+  JSON.stringify({ primitives: [...new Set(p.primitives.map((q) => JSON.stringify(q)))].sort(), transforms: p.transforms, cuts: p.cuts });
 registerPostEditObserver((before, after) => {
   if (!before.parts || !after.parts || applyingBoolean) { setAutomaticOverlap(null); return; }
   const old = new Map(before.parts.map(p => [p.name, geometryKey(p)]));
-  const candidates = after.parts.map((p, i) => ({ p, i })).filter(({ p }) => old.get(p.name) !== geometryKey(p));
+  const existing = new Set(old.values());
+  // A new solid that is an exact copy of one that was there (Duplicate) lies on its original on
+  // purpose: no decision to ask for until the copy is moved or edited into an overlap (that edit
+  // changes its geometry and is asked about then).
+  const copy = (p: DesignPart) => !old.has(p.name) && existing.has(geometryKey(p));
+  const candidates = after.parts.map((p, i) => ({ p, i })).filter(({ p }) => old.get(p.name) !== geometryKey(p) && !copy(p));
   for (const { p, i } of candidates) {
     // the two sides of a live Insert overlap by design (the inserted shape sits in what it was cut from)
     const b = after.parts.findIndex((other, j) => j !== i && !insertPair(p, other) && booleanOverlap(p, other, names().names));
@@ -207,6 +222,22 @@ registerPostEditObserver((before, after) => {
 // shapes under an unchanged Boolean history: a draft restored by undo, redo or a history jump is
 // recomputed, never frozen.
 const liveKeys = new Map<string, { key: string; result: string }>();
+/** The live result that could not be recomputed and the banner that says so (sticky: it stays while
+ * the cause lasts). Every later derive and every draft change (an undo too) asks again, and the
+ * banner goes once every live result builds. */
+const [recomputeFailure, setRecomputeFailure] = createSignal<{ part: string; note: NonNullable<ReturnType<typeof message>> } | null>(null);
+function failedToRecompute(part: DesignPart, error: unknown) {
+  const h = part.booleanHistory!;
+  const note = { tone: "warn" as const, sticky: true, text: t("boolean.cannotRecompute", { part: part.label || part.name, op: BOOLEAN_LABELS[h.operation].toLocaleLowerCase(localeTag()), error: (error as Error).message }) };
+  setRecomputeFailure({ part: part.name, note });
+  setMessage(note);
+}
+function recomputed(part: DesignPart) {
+  const f = recomputeFailure();
+  if (!f || f.part !== part.name) return;
+  setRecomputeFailure(null);
+  if (message() === f.note) setMessage(null);
+}
 registerDeriveHook((d, values, before) => {
   const was = new Map((before.parts ?? []).map((p) => [p.name, p]));
   for (const part of d.parts ?? []) {
@@ -234,13 +265,32 @@ registerDeriveHook((d, values, before) => {
       const result = JSON.stringify(primitives);
       if (result !== own) part.primitives = primitives;
       liveKeys.set(part.name, { key, result });
+      recomputed(part);
     } catch (e) {
       liveKeys.set(part.name, { key, result: own });
-      setMessage({ tone: "warn", text: t("boolean.cannotRecompute", { part: part.label || part.name, op: BOOLEAN_LABELS[h.operation].toLocaleLowerCase(localeTag()), error: (e as Error).message }) });
+      failedToRecompute(part, e);
     }
   }
 });
-registerDocumentChangeObserver(() => { setAutomaticOverlap(null); setBooleanNotice(""); setBooleanPending(null); });
+// An undo, a redo or a history jump restores a draft without a derive: the banner about a result that
+// could not be recomputed is checked against the draft as it now is (only while there is one).
+createRoot(() => createEffect(() => {
+  const f = recomputeFailure();
+  if (!f) return;
+  const values = names().names;
+  const live = (draft.parts ?? []).filter((p) => p.booleanHistory?.live);
+  let failing: { part: DesignPart; error: unknown } | null = null;
+  for (const p of live) {
+    try {
+      if (!materialiseBoolean(JSON.parse(JSON.stringify(p.booleanHistory)), values).length) throw Error(t("boolean.emptyResult"));
+    } catch (error) { failing = { part: p, error }; break; }
+  }
+  untrack(() => {
+    if (!failing) { setRecomputeFailure(null); if (message() === f.note) setMessage(null); }
+    else if (failing.part.name !== f.part && message() === f.note) failedToRecompute(JSON.parse(JSON.stringify(failing.part)), failing.error);
+  });
+}));
+registerDocumentChangeObserver(() => { setAutomaticOverlap(null); setBooleanNotice(""); setBooleanPending(null); setRecomputeFailure(null); });
 
 /** The overlap prompt's choices, worded with the parts' names (new: the part just edited). */
 export function overlapChoices(o: AutomaticOverlap): [OverlapChoice, string][] {
