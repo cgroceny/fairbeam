@@ -172,7 +172,6 @@ fairbeam/
 │   │   ├── array.py         array patterns from embedded element patterns, steering, active reflection
 │   │   ├── touchstone.py    Touchstone .s1p/.sNp writer/reader
 │   │   ├── network.py       opt-in ideal circuit references (TEM lines, lumped elements), matched-feed plane shifts
-│   │   ├── telemetry.py     opt-in usage counts of the run server (off in every build so far)
 │   │   └── cli.py           fairbeam run | params | geometry | import-cst | index | serve | app | clean-sim | sweep | converge | touchstone | optimize
 │   ├── models/              models (dipole, patch_antenna, inset_patch, sierpinski_monopole, microstrip_line,
 │   │                        wilkinson_divider, patch_array_2x1/4x1, branchline_coupler, lowpass_stepped,
