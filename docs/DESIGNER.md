@@ -434,8 +434,10 @@ The Modeling tab's Draw on the work plane group draws with the mouse on the work
 - **Polygon**: click the corners; click the first point again, double-click or press Enter to close
   it.
 
-A hint under the ribbon says what to click next and how many points are placed. Escape cancels
-(first the points, then the tool), Backspace removes the last point. A finished shape opens the
+A hint under the ribbon says what to click next and how many points are placed. Escape or Backspace
+removes the last point (the first one too, staying in the tool); Escape with no point placed stops
+drawing, and a tool armed again starts with no points. Enter before the first click opens the tool's
+shape dialog with default values. A finished shape opens the
 shape dialog, prefilled with what you drew, unless "Confirm drawn shapes in a dialog" is off in the
 group's Options panel; then it goes straight into a new part. Finishing a shape also leaves the
 drawing mode: OK in the dialog ends with the new shape selected and no tool left to

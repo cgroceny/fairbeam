@@ -23,13 +23,26 @@ import {
 import type { PickedFace } from "./faceTransforms.ts";
 
 export type DrawTool = "brick" | "cylinder" | "polygon";
-export type DrawEscapeAction = "open-dialog" | "step-back" | "none";
-/** Shared Esc decision for the view handler and the focused state check. */
+export type DrawEscapeAction = "leave" | "step-back" | "none";
+/** What Esc does with a drawing tool armed (cancel() does it): with no point placed it leaves the
+ * tool; otherwise it steps back, from the height to the base, else by removing the last point (the
+ * first point too, staying in the tool), so a second Esc then leaves. */
 export function drawEscapeAction(active: DrawTool | null, pointCount: number, inHeightStep: boolean): DrawEscapeAction {
   if (!active) return "none";
   if (inHeightStep || pointCount > 0) return "step-back";
-  return "open-dialog";
+  return "leave";
 }
+export type DrawEnterAction = "open-dialog" | "finish" | "none";
+/** What Enter does with a drawing tool armed (outside the height step, where it finishes the
+ * extrusion): before the first point it opens the tool's shape dialog with default values, with a
+ * polygon of three or more points it closes the polygon. */
+export function drawEnterAction(active: DrawTool | null, pointCount: number): DrawEnterAction {
+  if (!active) return "none";
+  if (pointCount === 0) return "open-dialog";
+  return active === "polygon" && pointCount >= 3 ? "finish" : "none";
+}
+/** The shape a drawing tool makes (its shape dialog's kind). */
+export const toolShape = (active: DrawTool): "box" | "cylinder" | "polygon" => (active === "brick" ? "box" : active);
 export interface WorkPlane { normal: Axis; /** stored as given: a number or an expression */ elevation: Expr; originU: Expr; originV: Expr }
 /** A placed point: its value on the plane and the expressions it keeps (numbers when clicked). */
 export interface DrawPoint {
@@ -231,16 +244,21 @@ export const HINTS: Readonly<Record<DrawTool, string>> = {
   get polygon() { return t("draw.hint.polygon"); },
 };
 
+/** Arm a drawing tool (null: leave drawing). Arming or leaving always starts from no points, so a
+ * tool armed again never shows the points of an earlier attempt. */
 export function startTool(t: DrawTool | null) {
   setHeightPending(false);
+  setHeightPreview(0);
   setDrawn([]);
   setTool(t);
 }
 
+/** Esc (drawEscapeAction): back from the height to the base, else remove the last point, else
+ * leave the tool. */
 export function cancel() {
   if (heightPending()) { setHeightPending(false); setHeightPreview(0); if (tool() !== "polygon") setDrawn((p) => p.slice(0, 1)); return; }
-  if (drawn().length) setDrawn([]);
-  else setTool(null);
+  if (drawn().length) setDrawn((p) => p.slice(0, -1));
+  else startTool(null);
 }
 
 export function undoPoint() {
@@ -454,7 +472,7 @@ export function finishHeight(value?: Expr) {
   if (!heightPending()) return;
   if (value !== undefined) setHeightPreview(value);
   const active = tool();
-  if (!active) { setHeightPending(false); setDrawn([]); return; }
+  if (!active) { startTool(null); return; }
   const prim = primitiveFor(active, drawn());
   const capturedFrame = captureDrawingFrame();
   const transforms = capturedFrame.transforms;
@@ -471,7 +489,7 @@ export function finishHeight(value?: Expr) {
   const into = -1;
   // The shape is finished: leave the drawing mode. OK in the dialog, or the shape added at once,
   // then ends with the new part selected and no tool left to cancel with Esc.
-  setTool(null);
+  startTool(null);
   const frameInfo = capturedFrame.local ? { frameTransforms: transforms, frame: capturedFrame.frame, frameNormal: capturedFrame.normal } : {};
   if (confirmShapes()) setShapeRequest({ prim, into, drawn: true, ...frameInfo });
   else insertShape(prim, { into, transforms });
