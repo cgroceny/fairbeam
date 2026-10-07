@@ -13,7 +13,7 @@ export interface SheetRow { id: ShortcutId | ExtraId; label: string; context: st
 
 /** group order and, in each group, the row order: the common commands first */
 export const SHEET_ORDER: Readonly<Record<SheetGroup, readonly (ShortcutId | ExtraId)[]>> = {
-  edit: ["save", "undo", "redo", "duplicate", "delete", "rename", "transform", "close", "cancel"],
+  edit: ["save", "undo", "redo", "saveAs", "duplicate", "delete", "rename", "transform", "close", "cancel"],
   view: ["fit", "cameras", "mainTabs", "mainTabsLocal", "closeShown", "markers"],
   panels: ["help", "tree", "dock", "side", "ribbon", "panes"],
   tools: ["run", "brick", "drawSolid", "base", "extrudeFace", "export"],

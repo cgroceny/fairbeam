@@ -152,7 +152,7 @@ ok(/const room = toolbar\.clientWidth;/.test(ws) && /const left = room - used\(\
 
 // ---- one vocabulary: design (never model or project) for the user's file, result file for a run's .json
 for (const key of ["designId.exists", "contextExport.noView"]) ok(/\bdesign\b/.test(en[key]) && !/\bmodel\b/.test(en[key]), `${key} says design: ${en[key]}`);
-ok(/a design or a Python model/.test(en["app.noProjects.run"]), "the Examples empty state names a design (or a Python model, which the command runs)");
+ok(/a design from the designer/.test(en["home.python.none"]) && !/\bmodel\b(?! in this)/.test(en["designId.exists"]), "the Python empty state names a design (and Python models stay Python models)");
 for (const key of ["header.screen.resultsTitle", "results.compare.currentProject", "results.compare.otherProjects", "results.compare.overlayHint", "home.designs.unknownModified"]) {
   ok(!/project/i.test(en[key]), `${key} does not say project: ${en[key]}`);
   ok(!/proje/i.test(tr[key]), `${key} (tr) does not say proje: ${tr[key]}`);
@@ -184,7 +184,7 @@ for (const [key, text] of allTr) {
   if (key === "ribbon.draw.optionsTitle") continue; // a list of option names
   ok(!informal.test(text), `${key}: a tooltip uses the polite imperative ("seçin", "kaydedin"): ${text}`);
 }
-eq(tr["ribbon.home.selectionNeeded"], "Çoğaltmak veya silmek için bir katı ya da şekil seçin.", "the Duplicate/Delete reason is polite too");
+eq(tr["ribbon.home.selectionNeeded"], "Çoğaltmak ya da silmek için bir katı, şekil, port, toplu eleman, parametre ya da malzeme seçin.", "the Duplicate/Delete reason is polite too");
 // a timestep count is a count, and "≤" never breaks from its value
 for (const key of ["runText.energy.valueAt", "runText.energy.boundAt"]) ok(!/\{timestep\}\./.test(tr[key]), `${key}: no ordinal timestep ("29.073." reads as one number)`);
 for (const table of [en, tr]) ok(/≤ \{criterion\} dB/.test(table["runText.converged.value"]) && /≤ \{value\} dB/.test(table["runText.energy.boundAt"]), "a no-break space after ≤ and before dB");
