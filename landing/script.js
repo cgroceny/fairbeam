@@ -1,5 +1,6 @@
-// Fairbeam landing: theme toggle (shared with the app through the same localStorage key), the
-// scroll-pinned chapters and the on-demand demo iframe. No framework, no tracking.
+// Fairbeam site: theme toggle (shared with the app through the same localStorage key), the
+// scroll-pinned chapters, the designer views on the home page, the roadmap board and the guide's
+// contents list. No framework, no tracking.
 (() => {
   const KEY = "fairbeam.theme";
   const order = { system: "light", light: "dark", dark: "system" };
@@ -43,54 +44,24 @@
     if (event.key === KEY || event.key === null) apply(read());
   });
 
-  // The live demo is loaded only when asked for: it pulls in three.js and the example projects.
-  const load = document.getElementById("load-demo");
-  load?.addEventListener("click", () => {
-    const host = load.parentElement;
-    const frame = document.createElement("iframe");
-    frame.src = host.dataset.src;
-    frame.title = "Fairbeam demo viewer";
-    frame.loading = "eager";
-    host.replaceChildren(frame);
-    frame.focus();
-  });
+  // Sections that moved from the home page to their own pages: old links keep working.
+  if (document.body.dataset.page === "home") {
+    const moved = { results: "features.html#results", files: "features.html#files", status: "features.html#status", roadmap: "roadmap.html" };
+    const target = moved[location.hash.slice(1)];
+    if (target && !document.getElementById(location.hash.slice(1))) location.replace(target);
+  }
 
   // ---------------------------------------------------------------- pinned chapters
   // Each .chapter is several screens tall with a sticky .chapter-pin inside. The scroll position
   // through it picks the step (li.on, data-step) and sets --f, the progress within that step, for
-  // CSS. The 3D chapters' stage reads the same scroll itself (story/story.js).
+  // CSS. The 3D stage behind the chapters reads the same scroll itself (story/story.js).
   const chapters = [...document.querySelectorAll(".chapter")].map((el) => ({
     el,
     n: Number(el.dataset.steps) || 1,
     steps: [...el.querySelectorAll(".chapter-steps > li")],
-    counters: [...el.querySelectorAll("[data-count]")],
-    zoom: el.querySelector(".screen-zoom"),
-    hl: el.querySelector(".screen-hl"),
-    title: el.querySelector("[data-title-target]"),
     step: -1,
   }));
   const header = document.querySelector(".site-header");
-
-  /** the app screenshot: zoom so the step's region (x, y, w, h in % of the image) fills the view */
-  function frameRegion(c, li) {
-    if (!c.zoom) return;
-    const r = (li?.dataset.hl || "").split(",").map(Number);
-    if (r.length !== 4 || r.some(Number.isNaN)) {
-      c.zoom.style.transform = "";
-      c.hl?.classList.remove("on");
-      return;
-    }
-    const [x, y, w, h] = r;
-    const s = Math.max(1, Math.min(2.2, 0.92 * Math.min(100 / w, 100 / h)));
-    const clamp = (v, lo) => Math.min(0, Math.max(lo, v));
-    const tx = clamp(50 - (x + w / 2) * s, 100 - 100 * s);
-    const ty = clamp(50 - (y + h / 2) * s, 100 - 100 * s);
-    c.zoom.style.transform = `translate(${tx}%, ${ty}%) scale(${s})`;
-    if (c.hl) {
-      Object.assign(c.hl.style, { left: `${x}%`, top: `${y}%`, width: `${w}%`, height: `${h}%` });
-      c.hl.classList.add("on");
-    }
-  }
 
   function updateChapters() {
     const hh = header ? header.offsetHeight : 56;
@@ -107,14 +78,8 @@
         c.step = step;
         c.el.dataset.step = String(step);
         c.steps.forEach((li, i) => li.classList.toggle("on", i === step));
-        frameRegion(c, c.steps[step]);
-        if (c.title && c.steps[step]?.dataset.title) c.title.textContent = c.steps[step].dataset.title;
       }
       c.el.style.setProperty("--f", f.toFixed(3));
-      for (const el of c.counters) {
-        if (Number(el.closest("[data-panel]")?.dataset.panel) !== step) continue;
-        el.textContent = `${(Math.min(1, f / 0.85) * Number(el.dataset.count)).toFixed(1)}${el.dataset.unit || ""}`;
-      }
     }
   }
   if (chapters.length) {
@@ -128,6 +93,45 @@
     window.addEventListener("scroll", queue, { passive: true });
     window.addEventListener("resize", queue);
     updateChapters();
+  }
+
+  // ---------------------------------------------------------------- the designer views (home page)
+  // Without JS the views simply follow one another. With JS they become tabs: one view at a time,
+  // all in the same place, arrow keys between the tabs. A film that is playing pauses when hidden.
+  const showcase = document.getElementById("showcase");
+  if (showcase) {
+    const tablist = showcase.querySelector("[role=tablist]");
+    const tabs = [...showcase.querySelectorAll("[role=tab]")];
+    const panels = tabs.map((t) => document.getElementById(t.getAttribute("aria-controls")));
+    if (tablist && tabs.length && panels.every(Boolean)) {
+      const select = (i, focus) => {
+        tabs.forEach((t, k) => {
+          t.setAttribute("aria-selected", String(k === i));
+          t.tabIndex = k === i ? 0 : -1;
+          panels[k].hidden = k !== i;
+          if (k !== i) panels[k].querySelector("video")?.pause();
+        });
+        if (focus) tabs[i].focus();
+      };
+      panels.forEach((p, k) => {
+        p.setAttribute("role", "tabpanel");
+        p.setAttribute("aria-labelledby", tabs[k].id);
+        // a view without controls of its own is reachable with Tab after its tab
+        if (!p.querySelector("a[href], button, video[controls]")) p.tabIndex = 0;
+      });
+      tabs.forEach((t, i) => {
+        t.addEventListener("click", () => select(i, false));
+        t.addEventListener("keydown", (e) => {
+          const to = { ArrowRight: i + 1, ArrowLeft: i - 1, Home: 0, End: tabs.length - 1 }[e.key];
+          if (to === undefined) return;
+          e.preventDefault();
+          select((to + tabs.length) % tabs.length, true);
+        });
+      });
+      tablist.hidden = false;
+      showcase.classList.add("js-showcase");
+      select(Math.max(0, tabs.findIndex((t) => t.getAttribute("aria-selected") === "true")), false);
+    }
   }
 
   // ---------------------------------------------------------------- roadmap board
