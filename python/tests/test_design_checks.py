@@ -311,6 +311,40 @@ class MeshChecks(unittest.TestCase):
             else:
                 os.environ["FAIRBEAM_MAX_CELLS"] = old
 
+    def test_cell_limit_hint_names_the_cause(self):
+        """Over the cell limit the hint follows the cause, without the server's environment variable:
+        a very wide band asks to lower f max (with the cell size it sets) even though the domain is
+        then mostly air too; a usual band in a box of air asks for a smaller boundary distance; a
+        usual band without much air asks for coarser cells."""
+        d = blank_design("t", "T")   # a patch in a domain that is mostly air
+        b = build_preview(None, {}, design=d)["bundle"]
+        big = copy.deepcopy(b)
+        big["mesh"]["total_cells"] = 667_500_000
+        big["mesh"]["min_cell"] = 0.0177
+        wide = copy.deepcopy(d)
+        wide["simulation"]["f_min"], wide["simulation"]["f_max"] = 1.68, 240
+        msg = errors(lint(wide, None, big))[0]["message"]
+        self.assertIn("over the server limit of 40 M cells", msg)
+        self.assertNotIn("FAIRBEAM_MAX_CELLS", msg)
+        self.assertIn("lower f max (cells of 0.0177 mm at 240 GHz): f max / f min = 143 is a very wide band", msg)
+        self.assertNotIn("mostly air", msg, "the band is the cause; the air is its symptom")
+        # the usual band of the same patch: the air around it is the cause
+        msg = errors(lint(d, None, big))[0]["message"]
+        self.assertIn("is mostly air: the open boundaries sit a quarter wavelength at f min", msg)
+        self.assertNotIn("FAIRBEAM_MAX_CELLS", msg)
+        # little air: the cells are the cause
+        tight = copy.deepcopy(big)
+        tight["domain"] = {"min": [-31.0, -31.0, -1.0], "max": [31.0, 31.0, 2.5]}
+        msg = errors(lint(d, None, tight))[0]["message"]
+        self.assertRegex(msg, r": lower f max or the cells per wavelength \(cells of 0\.0177 mm at [\d.]+ GHz\)$")
+        # below the limit only a clear cause is added to the warning
+        tight["mesh"]["total_cells"] = 25_000_000
+        warning = [c for c in lint(d, None, tight) if c["code"] == "mesh-cells"][0]["message"]
+        self.assertEqual(warning, "the mesh has 25.0 M cells: a long run and several GB of memory")
+        big["mesh"]["total_cells"] = 25_000_000
+        warning = [c for c in lint(wide, None, big) if c["code"] == "mesh-cells"][0]["message"]
+        self.assertIn("; lower f max (cells of 0.0177 mm at 240 GHz)", warning)
+
     def test_feature_between_mesh_lines(self):
         d = blank_design("t", "T")
         # a 1 µm rod (a plate that thin would be built as a sheet, see ThinMetal below)
