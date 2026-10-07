@@ -7,7 +7,7 @@ import { createEffect, createSignal, For, type JSX, lazy, on, onCleanup, onMount
 import {
   Box, CircleDot, Cone, Cylinder, Eye, EyeOff, FileCode, Globe, Grid3x3, Hexagon, Home, Layers, LayoutGrid, Library,
   Camera, FileText, Radio, Waves, History, Move3d,
-  MousePointer2, MousePointerClick, Pencil, Play, Plus, Redo2, Save, Settings2, Cog, SlidersHorizontal, Spline, Torus, Trash2, Triangle, Undo2, X, Zap, Keyboard,
+  MousePointer2, MousePointerClick, Pencil, Play, Plus, Redo2, Save, SaveAll, Settings2, Cog, SlidersHorizontal, Spline, Torus, Trash2, Triangle, Undo2, X, Zap, Keyboard,
   ChevronDown, ChevronUp, ChevronsRight, FileUp, Activity, Gauge, Layers2, CircuitBoard, ClipboardList, LocateFixed, Shapes, ScanLine, ChartNoAxesCombined, SlidersVertical,
   ArrowUpFromLine, Combine, Circle, PenTool, Fullscreen, AudioWaveform, Radar, Package, Omega, Timer, ChartScatter, ChartLine, Grid2x2, Diamond, Anvil, CopyPlus, Clipboard,
   SquareDashed, RectangleHorizontal, Rotate3d, LayoutDashboard, Gem, Aperture,
@@ -18,6 +18,7 @@ import { setPcbImportOpen } from "../lib/pcbImport";
 import { CLOSE_KEY, requestCloseProject } from "./CloseProject";
 import { bundle, layers, setLayers, setSelectedPart, setSelectedShape, type Layers as LayerState } from "../state";
 import { SAVE_KEY } from "../editor/store";
+import { openSaveAs } from "./SaveAsDialog";
 import { openSimSettings, runDialogOpen, setRunDialogOpen, setSimSettingsOpen, simSettingsOpen, sweepDialogOpen } from "../runner/designRun";
 import { EFFICIENCY_POINTS_DEFAULT } from "./checks";
 import FeedCreationDialog from "./FeedCreationDialog";
@@ -371,7 +372,7 @@ function BooleanMenuButton() {
                   {(op) => <BooleanTargets op={op()} a={selectedPartIndex()} itemClass="btn btn-ghost btn-sm bool-menu-item" onBack={() => setListOp(null)} onDone={() => close(true)} />}
                 </Show>
                 <Show when={!listOp() && booleanHistory().length}><button class="btn btn-ghost btn-sm" type="button" role="menuitem"
-                  title={booleanHistory().map(h=>`${BOOLEAN_LABELS[h.operation]}: ${h.a}, ${h.b} → ${h.result}`).join("\n")}
+                  title={booleanHistory().map(h=>`${BOOLEAN_LABELS[h.operation]}: ${h.a} ${BOOLEAN_SYMBOLS[h.operation]} ${h.b} → ${h.result}`).join("\n")}
                   onClick={() => { setBooleanPending({a:-1,operation:"add"}); close(true); }}>{t("ribbon.tools.booleanHistory")}</button></Show>
               </div>
             </Show>
@@ -522,6 +523,8 @@ export function Ribbon() {
           <RButton icon={FileUp} label={t("ribbon.home.importCst")} title={t("ribbon.home.importCstTitle")} onClick={() => setCstImportOpen(true)} />
           <RButton icon={CircuitBoard} label={t("ribbon.home.importPcb")} title={t("ribbon.home.importPcbTitle")} onClick={() => setPcbImportOpen(true)} />
           <RButton icon={Save} label={saving() ? t("ribbon.home.saving") : t("common.save")} title={saving() ? t("ribbon.home.saving") : !dirty() && !conflict() ? t("ribbon.home.noChanges") : t("ribbon.home.saveTitle", { key: SAVE_KEY })} onClick={save} disabled={saving() || (!dirty() && !conflict())} />
+          <RButton icon={SaveAll} label={t("ribbon.home.saveAs")} action="save-as" title={t("ribbon.home.saveAsTitle", { key: SHORTCUTS.saveAs.key })} onClick={openSaveAs} disabled={saving()}
+            ariaKeyShortcuts={isMacPlatform() ? "Meta+Shift+S" : "Control+Shift+S"} />
           <RButton icon={X} label={t("common.close")} title={health()?.desktop ? t("ribbon.home.closeTitle", { key: CLOSE_KEY }) : t("ribbon.home.closeProject")} onClick={requestCloseProject} />
           <RButton icon={Keyboard} label={t("ribbon.home.shortcuts")} title={t("ribbon.home.shortcutsTitle", { key: SHORTCUTS.help.key })} onClick={showShortcutHelp} />
         </RGroup>
@@ -720,7 +723,7 @@ export function Ribbon() {
       <ShapeDialogHost />
       <WcsDialogHost />
       <FaceExtrudeDialog />
-      <Show when={booleanPending()?.a === -1}><div class="rb-pop dm-boolean-history" role="dialog" aria-label={t("boolean.history")}><h3 class="dz-h">{t("boolean.history")}</h3><For each={booleanHistory()}>{h=><p>{BOOLEAN_LABELS[h.operation]}: {h.a} + {h.b} → {h.result} <button class="btn btn-ghost btn-sm" onClick={()=>restoreBooleanPart(h.index)}>{t("boolean.restore")}</button></p>}</For><button class="btn btn-ghost btn-sm" onClick={()=>setBooleanPending(null)}>{t("common.close")}</button></div></Show>
+      <Show when={booleanPending()?.a === -1}><div class="rb-pop dm-boolean-history" role="dialog" aria-label={t("boolean.history")}><h3 class="dz-h">{t("boolean.history")}</h3><For each={booleanHistory()}>{h=><p>{BOOLEAN_LABELS[h.operation]}: {h.a} {BOOLEAN_SYMBOLS[h.operation]} {h.b} → {h.result} <button class="btn btn-ghost btn-sm" onClick={()=>restoreBooleanPart(h.index)}>{t("boolean.restore")}</button></p>}</For><button class="btn btn-ghost btn-sm" onClick={()=>setBooleanPending(null)}>{t("common.close")}</button></div></Show>
       <NewParamHost />
       <ContextMenu />
       <ColorPopoverHost />
@@ -932,6 +935,7 @@ export function DesignKeys() {
       // Save works everywhere, as before the shortcut table: while typing in a field, in a dialog,
       // with a drawing tool active. Always suppress the browser's "Save page as".
       if (matchesShortcut("save", e)) { e.preventDefault(); if (!e.repeat) void save(); return; }
+      if (matchesShortcut("saveAs", e)) { e.preventDefault(); if (!e.repeat && !t?.closest?.(".dialog, .scrim, dialog[open]")) openSaveAs(); return; }
       // Save remains ahead of the field/dialog/drawing guard (`if (inField || inOverlay || tool()) return;`).
       // Tree and viewport handlers run first and own their local keys.
       if (e.defaultPrevented && !(desktop && mod && ["t", "n", "w", "r"].includes(k))) return;

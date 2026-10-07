@@ -146,17 +146,18 @@ export default function ModelPanel() {
             <section class="section">
               <h3 class="section-label">{t("model.layers")}</h3>
               <div class="toggle-list">
-                <For each={LAYERS}>
+                {/* the infinite ground plane exists only in a model with a PEC half-space: elsewhere the
+                    layer is left out; a layer this result has no data for is off and says why */}
+                <For each={LAYERS.filter((l) => l.key !== "ground" || !!b().half_space)}>
                   {(l) => {
                     const disabled = () =>
                       (l.key === "pattern" && !(b().results?.farfield?.length)) ||
-                      (l.key === "current" && !(b().fields?.planes?.length)) ||
-                      (l.key === "ground" && !b().half_space);
+                      (l.key === "current" && !(b().fields?.planes?.length));
                     return (
-                      <label class="toggle" classList={{ disabled: disabled() }} title={t(`model.layer.${l.key}.hint`)}>
+                      <label class="toggle" classList={{ disabled: disabled() }} title={t(disabled() ? `model.layer.${l.key}.none` : `model.layer.${l.key}.hint`)}>
                         <input
                           type="checkbox"
-                          checked={layers[l.key]}
+                          checked={layers[l.key] && !disabled()}
                           disabled={disabled()}
                           onChange={(e) => setLayers(l.key, e.currentTarget.checked)}
                         />

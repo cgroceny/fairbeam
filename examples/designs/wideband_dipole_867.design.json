@@ -3,7 +3,7 @@
   "model": {
     "id": "wideband-dipole-867",
     "name": "Slotted wideband planar dipole (867 MHz)",
-    "description": "Printed fat dipole for a UAV with a composite (non-metal) fuselage: two wide arms on a vertical 1.6 mm FR-4 strip, fed by a balanced 50 ohm lumped port across a centre gap, no ground plane (x: flight axis, z: up). Transverse slots cut in from both outer edges of each arm lengthen the edge current path and shorten the antenna; the wide arms keep a wide band so that radome and FR-4 detuning do not matter. Vertically polarised, omnidirectional in azimuth, for the 863-870 MHz SRD / LoRa band: 110 x 40 mm of copper (19 % shorter than without the slots), |S11| about -19 dB at 867 MHz and a -10 dB band of about 0.81-0.97 GHz (18 %). See examples/designs/README.md in the fairbeam repository."
+    "description": "Printed fat dipole for a UAV with a composite (non-metal) fuselage: two wide arms on a vertical 1.6 mm FR-4 strip, fed by a balanced 50 ohm lumped port across a centre gap, no ground plane (x: flight axis, z: up). Transverse slots cut in from both outer edges of each arm lengthen the edge current path and shorten the antenna; the wide arms keep a wide band so that radome and FR-4 detuning do not matter. Vertically polarised, omnidirectional in azimuth, for the 863-870 MHz SRD / LoRa band: 110 x 40 mm of copper (19 % shorter than without the slots), |S11| about -19 dB at 867 MHz and a -10 dB band of about 0.81-0.97 GHz (18 %). Its tuning, its results and how to scale it to other bands are described with the example designs in the Fairbeam documentation."
   },
   "params": [
     {"key": "f0", "default": 0.867, "label": "Design frequency", "unit": "GHz", "min": 0.1, "max": 6},

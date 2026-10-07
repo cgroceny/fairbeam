@@ -6,23 +6,24 @@ import { createEffect, createMemo, createSignal, For, on, onMount, Show } from "
 import { Box, CircuitBoard, CopyPlus, FilePlus2, FileCode, FileUp, FolderOpen, LoaderCircle, MessageSquare, PenTool, Pencil, Play, Plus, Search, Star, Trash2 } from "lucide-solid";
 import { ApiError } from "../runner/api";
 import { models, openRunPanel, openExampleCopy, probeServer, refreshModels, serverState } from "../runner/store";
+import { isDesktopShell } from "../lib/telemetry";
 import { confirmReplaceDraft, createDesign, deleteDesign, dirty, enterDesign, file } from "../designer/store";
 import { openUserProject } from "../runner/openProject";
 import { index } from "../state";
-import { labelOf, projectLabels } from "../lib/projectLabels";
+import { exampleGroups } from "../lib/examplePicker";
 import { exampleEntries, exampleSourceFor } from "../runner/examples";
 import { setAppMode } from "../workspace";
 import { dialog, file as editorFile, setDialog, setNewModelKind, setPanelTab } from "../editor/store";
 import NewModelDialog from "../editor/NewModelDialog";
-import { pythonHint, runPythonModel, setPythonHint } from "../runner/startPython";
+import { pythonHint, runnablePythonModels, runPythonModel, setPythonHint } from "../runner/startPython";
 import { DEMO } from "../env";
 import FeedbackLink from "../components/FeedbackLink";
 import { setCstImportOpen } from "../lib/cstImport";
 import { setPcbImportOpen } from "../lib/pcbImport";
-import { designIdError, suggestDesignId } from "../lib/designId";
+import { designFileHint, designIdError, freeDesignId } from "../lib/designId";
 import { TEMPLATE_GROUPS, type TemplateKey } from "../designer/templates";
 import { openPythonModelAsDesign } from "../designer/pythonModel";
-import { t } from "../i18n";
+import { locale, t } from "../i18n";
 import { createDesignActions } from "./DesignActions";
 import { hasUndatedProjects, visibleProjects, type ProjectSort } from "./projectList";
 
@@ -60,7 +61,8 @@ function persistHome(key: string, value: string) {
 
 export default function Home() {
   const examples = createMemo(() => exampleEntries(index()));
-  const labels = createMemo(() => projectLabels(examples()));
+  // the header picker's groups and detail lines (frequency, cells), from the same helper
+  const exampleList = createMemo(() => exampleGroups(examples(), (c) => t(`examples.group.${c}`)));
   const [name, setName] = createSignal("");
   const [template, setTemplate] = createSignal<TemplateKey>("empty");
   const [busy, setBusy] = createSignal(false);
@@ -71,27 +73,31 @@ export default function Home() {
   const [favoritesOnly, setFavoritesOnly] = createSignal(storedFavoritesOnly());
   const online = () => serverState() === "online";
   // The name field starts filled in from the chosen starter ("Half-wave dipole", or "… 2" when a
-  // design has that name), and follows the starter until the user types a name of their own. The
-  // name is in the interface language; the file name is its ASCII form (suggestDesignId).
+  // design has that name), and follows the starter, and the interface language, until the user
+  // types a name of their own. The file name is its ASCII form, with a suffix when that is a
+  // bundled example's id (freeDesignId: "Patch antenna" is saved as patch_antenna_2).
   const [autoName, setAutoName] = createSignal("");
+  const modelKeys = () => models().map((m) => m.key);
   const starterName = (key: TemplateKey) => {
     const tpl = TEMPLATE_GROUPS.flatMap((g) => g.templates).find((x) => x.key === key);
     const base = tpl ? t(tpl.name) : "";
     let n = base, k = 2;
-    while (base && models().some((m) => m.key === suggestDesignId(n)) && k < 100) n = `${base} ${k++}`;
+    while (base && models().some((m) => m.key === freeDesignId(n, modelKeys()).id) && k < 100) n = `${base} ${k++}`;
     return n;
   };
-  createEffect(on([template, online], () => {
+  createEffect(on([template, online, locale], () => {
     if (!online() || (name().trim() && name() !== autoName())) return;
     const n = starterName(template());
     setAutoName(n);
     setName(n);
   }));
-  const id = () => suggestDesignId(name());
-  const idError = () => (!name().trim() ? "" : designIdError(id(), models().map((m) => m.key)));
+  const id = () => freeDesignId(name(), modelKeys()).id;
+  const idError = () => (!name().trim() ? "" : designIdError(id(), modelKeys()));
   // designs that do not load stay listed (greyed, with the reason) rather than vanishing: a file
-  // made by a newer fairbeam, or a hand edit, would otherwise look lost. A failed entry has no kind.
-  const designs = createMemo(() => models().filter((m) => m.error ? m.file?.endsWith(".design.json") : m.kind === "design"));
+  // made by a newer Fairbeam, or a hand edit, would otherwise look lost. A failed entry has no kind.
+  // The bundled example designs (read-only) are not the user's: they are only the sources of
+  // "Open as new design…" for their examples.
+  const designs = createMemo(() => models().filter((m) => !m.readonly && (m.error ? m.file?.endsWith(".design.json") : m.kind === "design")));
   const designActions = createDesignActions(designs);
   const shownDesigns = createMemo(() => visibleProjects(designs(), designQuery(), designSort(), favoritesOnly(), favoriteKeys()));
   const showUnknownModifiedNote = () => designSort() === "modified" && hasUndatedProjects(designs());
@@ -126,7 +132,7 @@ export default function Home() {
       focusAfterRender("home-delete-note");
     }
   };
-  const pythonModels = createMemo(() => models().filter((m) => m.kind !== "design" && !m.error && !m.readonly));
+  const pythonModels = createMemo(runnablePythonModels);
 
   onMount(() => {
     if (!DEMO && online()) refreshModels();
@@ -231,7 +237,7 @@ export default function Home() {
                     <input autocomplete="off" class="field-text" type="text" maxLength={80} value={name()} placeholder={t("home.newProject.placeholder")} aria-invalid={!!idError()}
                       aria-describedby={error() ? "home-name-hint home-create-error" : "home-name-hint"}
                       onInput={(e) => { setName(e.currentTarget.value); setError(""); }} />
-                    <span id="home-name-hint" class={idError() ? "rp-error nm-hint" : "rp-hint nm-hint"} aria-live="polite">{idError() || (name().trim() ? `${id()}.design.json` : t("home.newProject.fileHint"))}</span>
+                    <span id="home-name-hint" class={idError() ? "rp-error nm-hint" : "rp-hint nm-hint"} aria-live="polite">{idError() || (name().trim() ? designFileHint(name(), modelKeys()) : t("home.newProject.fileHint"))}</span>
                   </label>
                   <div class="home-templates" role="radiogroup" aria-label={t("home.newProject.startFrom")}>
                     <For each={TEMPLATE_GROUPS}>{(g, i) => (
@@ -351,23 +357,34 @@ export default function Home() {
                 <designActions.Note />
                 <Show when={delNote()}><p id="home-delete-note" class={delNote()!.tone === "bad" ? "rp-error" : "note home-del-note"}
                   role={delNote()!.tone === "bad" ? "alert" : "status"} tabIndex={-1}>{delNote()!.text}</p></Show>
-                <h2 class="home-h2b"><FileCode size={16} aria-hidden="true" /> {t("home.python.title")}</h2>
+                <h2 class="home-h2b" id="home-python-title"><FileCode size={16} aria-hidden="true" /> {t("home.python.title")}</h2>
+                {/* the header's "Run a Python model…" scrolls here and focuses the first model
+                    (runPythonFromStart); the highlighted note is only for a workspace without any */}
                 <Show when={!pythonModels().length} fallback={<Show when={pythonHint()}>
-                  <p id="home-python-hint" tabIndex={-1} class="note home-python-hint" role="status">{t("home.python.choose")}</p>
+                  <p id="home-python-hint" tabIndex={-1} class="muted" role="status">{t("home.python.choose")}</p>
                 </Show>}>
                   <p id="home-python-hint" tabIndex={-1} class={pythonHint() ? "note home-python-hint" : "muted"} role={pythonHint() ? "status" : undefined}>{t("home.python.none")}</p>
                 </Show>
-                <ul class="home-list">
+                <ul class="home-list" id="home-python-list" aria-labelledby="home-python-title">
                   <For each={pythonModels()}>{(m) => (
                     <li><div class="home-row">
-                      <button class="home-item" data-run-python-model={m.key} disabled={pythonDesignBusy()} onClick={() => runModel(m.key)} title={t("home.python.openTitle")}>
+                      <button class="home-item" data-run-python-model={m.key} disabled={pythonDesignBusy()} onClick={() => runModel(m.key)}
+                        title={m.readonly ? t("home.python.openExampleTitle") : t("home.python.openTitle")}>
                         <span class="home-item-name">{m.model?.name ?? m.key}</span>
-                        <span class="home-item-sub mono"><Play size={11} aria-hidden="true" /> {m.file}</span>
+                        <span class="home-item-sub"><Play size={11} aria-hidden="true" /> <span class="mono">{m.file}</span>
+                          <Show when={m.readonly}><span class="home-item-tag">{t("home.python.exampleTag")}</span></Show></span>
                       </button>
-                      <button class="btn btn-ghost btn-sm home-copy home-python-design" data-python-model={m.key} disabled={!online() || pythonDesignBusy()}
-                        onClick={() => void openPythonAsDesign(m.key)} title={t("home.python.openDesignTitle")}>
-                        <PenTool size={14} aria-hidden="true" /><span>{t("home.python.openDesign")}</span>
-                      </button>
+                      <Show when={m.readonly} fallback={
+                        <button class="btn btn-ghost btn-sm home-copy home-python-design" data-python-model={m.key} disabled={!online() || pythonDesignBusy()}
+                          onClick={() => void openPythonAsDesign(m.key)} title={t("home.python.openDesignTitle")}>
+                          <PenTool size={14} aria-hidden="true" /><span>{t("home.python.openDesign")}</span>
+                        </button>
+                      }>
+                        <button class="btn btn-ghost btn-sm home-copy home-python-design" data-python-model={m.key} disabled={!online() || pythonDesignBusy()}
+                          onClick={() => openExampleCopy(m.key)} title={t("home.python.copyExampleTitle")}>
+                          <CopyPlus size={14} aria-hidden="true" /><span>{t("home.examples.openAsNew")}</span>
+                        </button>
+                      </Show>
                     </div></li>
                   )}</For>
                 </ul>
@@ -384,26 +401,38 @@ export default function Home() {
           </Show>
         </Show>
 
-        <section class="home-card home-examples">
-          <h2><FolderOpen size={16} aria-hidden="true" /> {t("home.examples.title")}</h2>
-          <ul class="home-list home-list-cols">
-            <For each={examples()}>{(p) => {
-              const sourceModel = () => exampleSourceFor(models(), p.model);
-              return <li>
-                <div class="home-row">
-                  <button class="home-item" onClick={() => openUserProject(p.file)} title={p.file}>
-                    <span class="home-item-name" title={labelOf(labels(), p)}>{labelOf(labels(), p)}</span>
-                    <span class="home-item-sub">{p.simulated === false ? t("home.examples.geometryOnly") : t("home.examples.withResults")}</span>
-                  </button>
-                  <button class="btn btn-ghost btn-sm home-copy" disabled={!online() || !sourceModel()} aria-label={t("home.examples.openAsNew")}
-                    title={!sourceModel() ? t("home.examples.noSource") : t("home.examples.copyTitle")}
-                    onClick={() => { if (sourceModel()) openExampleCopy(sourceModel()!.key, p.file); }}>
-                    <CopyPlus size={14} aria-hidden="true" /> <span>{t("home.examples.openAsNew")}</span>
-                  </button>
-                </div>
-              </li>;
-            }}</For>
-          </ul>
+        <section class="home-card home-examples" aria-labelledby="home-examples-title">
+          <h2 id="home-examples-title"><FolderOpen size={16} aria-hidden="true" /> {t("home.examples.title")}</h2>
+          <Show when={exampleList().length} fallback={
+            <p class="muted" role="status">{t(DEMO || isDesktopShell() ? "home.examples.empty" : "home.examples.emptyServer")}</p>
+          }>
+            <For each={exampleList()}>{(group, g) => (
+              <div class="home-ex-group" role="group" aria-labelledby={`home-ex-group-${g()}`}>
+                <h3 id={`home-ex-group-${g()}`} class="home-tpl-label">{group.label}</h3>
+                <ul class="home-list home-list-cols">
+                  <For each={group.items}>{(p) => {
+                    const model = () => examples().find((e) => e.file === p.file)?.model;
+                    const sourceModel = () => exampleSourceFor(models(), model());
+                    const copyReason = () => !online() ? t("examples.copy.cantOpen", { reason: t("examples.copy.noServer") })
+                      : !sourceModel() ? t("home.examples.noSource") : null;
+                    return <li>
+                      <div class="home-row">
+                        <button class="home-item" onClick={() => openUserProject(p.file)} title={p.file}>
+                          <span class="home-item-name">{p.label}</span>
+                          <span class="home-item-sub">{[p.detail, p.results ? "" : t("home.examples.geometryOnly")].filter(Boolean).join(" · ")}</span>
+                        </button>
+                        <button class="icon-btn icon-btn-sm home-copy" disabled={!!copyReason()} data-example-copy={p.file}
+                          aria-label={t("home.examples.openAsNewAria", { name: p.label })} title={copyReason() ?? t("home.examples.copyTitle")}
+                          onClick={() => { if (sourceModel()) openExampleCopy(sourceModel()!.key, p.file); }}>
+                          <CopyPlus size={14} aria-hidden="true" />
+                        </button>
+                      </div>
+                    </li>;
+                  }}</For>
+                </ul>
+              </div>
+            )}</For>
+          </Show>
         </section>
 
         <footer class="home-foot">
@@ -415,7 +444,8 @@ export default function Home() {
         </footer>
       </div>
       <designActions.View />
-      <Show when={dialog() && creatingModel() !== undefined}><NewModelDialog /></Show>
+      {/* a new Python model opens as a linked design (openPythonAsDesign above); the dialog says so */}
+      <Show when={dialog() && creatingModel() !== undefined}><NewModelDialog opensDesign /></Show>
     </main>
   );
 }

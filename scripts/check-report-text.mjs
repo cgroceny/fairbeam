@@ -77,6 +77,12 @@ eq(pathText("mesh.cells_per_wavelength", design, shape), "Mesh (cells per wavele
 eq(pathText("far_field.frequencies[1]", design, shape), "Far field (frequency 2)", "a far-field frequency");
 eq(pathText("", design, shape), "design", "the design itself");
 eq(pathText("params[9].expr", design, shape), "Parameters (expression)", "an index the design does not have");
+// a solid is named as the tree names it: its label, never only its internal name
+{
+  const labelled = { ...design, parts: [{ name: "patch2", label: "Patch copy", primitives: [{ kind: "box" }] }] };
+  eq(pathText("parts[0].primitives[0].stop[2]", labelled, shape), "Patch copy › Brick 1 › stop z", "a shape of a labelled solid");
+  eq(pathText("parts[0].booleanHistory.B.primitives[0].start[0]", labelled, shape), "Patch copy › booleanHistory › B › shape 1 › start x", "a field inside a Boolean history belongs to the result");
+}
 eq(humanizePaths("params[1].expr: unknown name 'wx' in '2*wx'", design, shape), "Parameter W (expression): unknown name 'wx' in '2*wx'", "a path inside a message");
 ok(!/\[\d+\]|\bparams\b|\bparts\b/.test(humanizePaths("parts[0].primitives[1].radius must be > 0", design, shape)), "no bracket path is left in a message");
 setLanguage("tr");

@@ -36,6 +36,6 @@
 .param-label > div { position: absolute; right: 0; top: 100%; width: 200px; padding: var(--al-space-1); background: var(--al-surface); border: 1px solid var(--al-border); z-index: 4; }
 
 .param-create { display: flex; flex-wrap: wrap; align-items: center; gap: var(--al-space-1); padding-block: var(--al-space-1); font-size: var(--al-text-xs); }
-.param-create .rp-input { flex: 1 1 80px; width: 80px; min-width: 0; }
+.param-create .rp-input { flex: 1 1 80px; width: 80px; }
 .param-expression:has(.param-create) { align-items: start; }
 .param-limits-off { display: block; padding: 0 var(--al-space-1); font-size: var(--al-text-xs); color: var(--al-text-3); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
