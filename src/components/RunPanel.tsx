@@ -1,4 +1,4 @@
-import { createEffect, createSignal, For, on, onCleanup, onMount, Show, untrack } from "solid-js";
+import { batch, createEffect, createSignal, For, on, onCleanup, onMount, Show, untrack } from "solid-js";
 import { CircleAlert, LoaderCircle, Play, Plus, RefreshCw, RotateCcw, X } from "lucide-solid";
 import ParamForm from "../runner/ParamForm";
 import ProgressCard from "../runner/ProgressCard";
@@ -52,6 +52,7 @@ import { confirmDiscard, dialog, dirty, panelTab, setDialog, setPanelTab } from 
 import { confirmDiscard as confirmDesignDiscard, dirty as designDirty, enterDesign } from "../designer/store";
 import { appMode } from "../workspace";
 import { openPythonModelAsDesign } from "../designer/pythonModel";
+import { setStartedPythonModel } from "../runner/startPython";
 import { t } from "../i18n";
 import NumberField from "./NumberField";
 
@@ -316,7 +317,9 @@ export default function RunPanel() {
             e.currentTarget.value = modelKey();
             void (async () => {
               if (!(await confirmDiscard()) || !(await confirmDesignDiscard())) return;
-              selectModel(select, bundle()); resetAxes(); runPreview();
+              // choosing a model here (a bundled one too) keeps this panel open: it is the model the Run panel follows
+              batch(() => { selectModel(select, bundle()); setStartedPythonModel(select); });
+              resetAxes(); runPreview();
             })();
           }}>
             <Show when={!modelKey()}><option value="">{t("runPanel.chooseModel")}</option></Show>

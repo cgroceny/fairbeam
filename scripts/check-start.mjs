@@ -219,6 +219,9 @@ try {
   assert.match(app, /<p>\{t\(DEMO \|\| isDesktopShell\(\) \? "app\.noProjects\.body" : "app\.noProjects\.bodyServer"\)\}<\/p>/, 'Examples without any project: a user-oriented text');
   assert.doesNotMatch(app, /fairbeam run python\/models\/patch_antenna\.py/, 'no source-tree command in the empty Examples screen');
   assert.match(app, /<Show when=\{bundle\(\)\}>\s*<PanelBoundary name="Results dock" class="dock">/, 'no empty dock tabs without a project');
+  // the Run panel follows the model it is showing: choosing a bundled model in its own picker keeps it open
+  const runPanel = read('src/components/RunPanel.tsx');
+  assert.match(runPanel, /batch\(\(\) => \{ selectModel\(select, bundle\(\)\); setStartedPythonModel\(select\); \}\)/, 'the Run panel stays open when its model picker chooses a bundled model');
   // disabled controls look disabled
   const ux = read('src/styles/designer-ux.css');
   assert.match(ux, /\.home-copy:disabled, \.home-row:hover \.home-copy:disabled \{ opacity: 0\.3;/, 'a disabled copy action stays faint on a hovered row');
