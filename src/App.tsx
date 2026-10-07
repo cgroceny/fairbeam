@@ -48,7 +48,7 @@ import { bundle, centerView, exportOpen, index, lastProject, failedProject, load
 import { createMenuActionRouter } from "./lib/menuActions";
 import { ShortcutHelp, showShortcutHelp } from "./designer/ShortcutHelp";
 import { exportResultTouchstone } from "./designer/resultTouchstone";
-import { exampleEntries } from "./runner/examples";
+import { exampleEntries, linkedExample } from "./runner/examples";
 import { cstImportOpen, setCstImportOpen } from "./lib/cstImport";
 import { pcbImportOpen, setPcbImportOpen } from "./lib/pcbImport";
 import { isDesktopShell } from "./lib/telemetry";
@@ -245,7 +245,8 @@ export default function App() {
     if (!DEMO) onCleanup(watchServer());
     const list = exampleEntries(await loadIndex());
     const last = lastProject();
-    const pick = list.find((p) => p.file === last) ?? list.find((p) => p.simulated) ?? list[0];
+    const pick = (DEMO ? linkedExample(list, window.location.search) : undefined)
+      ?? list.find((p) => p.file === last) ?? list.find((p) => p.simulated) ?? list[0];
     if (pick) await loadProject(pick.file);
     setBooting(false);
     // a reload does not drop the open design: it comes back once the example bundle is in (it must

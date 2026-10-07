@@ -86,8 +86,9 @@ if (docs.problems.length) {
 
 resetBuildOutput();
 
-// 1. demo app -> site-dist/app (base /app/, VITE_FAIRBEAM_DEMO=1 from .env.demo)
-await build({ root, mode: "demo", logLevel: "warn", build: { outDir: join(out, "app"), emptyOutDir: true } });
+// 1. Read-only demo app -> site-dist/app; the site build sets the flag explicitly.
+await build({ root, mode: "demo", define: { "import.meta.env.VITE_FAIRBEAM_DEMO": JSON.stringify("1") },
+  logLevel: "warn", build: { outDir: join(out, "app"), emptyOutDir: true } });
 
 // 2. landing page and the shared tokens (copied, not duplicated)
 cpSync(join(root, "landing"), out, { recursive: true, filter: (src) => !src.endsWith(".md") && !src.endsWith("roadmap.json") && !src.endsWith("docs.json") });

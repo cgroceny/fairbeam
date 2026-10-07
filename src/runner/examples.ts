@@ -18,6 +18,12 @@ export const isExample = (entry: Pick<ProjectIndexEntry, "file">) => bundledExam
 
 export const exampleEntries = (entries: readonly ProjectIndexEntry[]) => entries.filter(isExample);
 
+/** Resolve a demo link only against shipped filenames, never an arbitrary fetch path. */
+export function linkedExample(entries: readonly ProjectIndexEntry[], search: string): ProjectIndexEntry | undefined {
+  const id = new URLSearchParams(search).get("example");
+  return id ? entries.find((entry) => isExample(entry) && entry.file === `${id}.json`) : undefined;
+}
+
 /** The user's design that a bundle's model was made from, for "Open in designer"; only designs can be
  * edited there, and a bundled example design (read-only) is only the source of its example's copy. */
 export const designFor = (models: readonly ModelEntry[], modelId: string | undefined): ModelEntry | undefined =>
