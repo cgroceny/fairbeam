@@ -8,7 +8,8 @@ use tauri::AppHandle;
 #[cfg(feature = "telemetry")]
 use std::time::Duration;
 
-pub const BUILD_ENABLED: bool = cfg!(feature = "telemetry");
+// Release builds only: a debug build (cargo run, tauri dev) never asks and never sends.
+pub const BUILD_ENABLED: bool = cfg!(feature = "telemetry") && !cfg!(debug_assertions);
 pub const ENDPOINT: &str = "https://fairbeam.org/api/ping";
 static FILES: Mutex<()> = Mutex::new(());
 fn disabled() -> bool { env_disabled_value(std::env::var("FAIRBEAM_NO_TELEMETRY").ok().as_deref()) }
