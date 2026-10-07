@@ -136,7 +136,11 @@ requirements = re.findall(r'^([\w-]+)==([^\s\\]+)', (ROOT / 'runtime/requirement
 def python_package(pair):
     name, version = pair
     meta = json.loads(get(f'https://pypi.org/pypi/{name}/{version}/json'))
-    urls = meta['urls']
+    requirement_block = re.search(rf'^{re.escape(name)}=={re.escape(version)}[\s\S]*?(?=^[\w-]+==|\Z)', (ROOT / 'runtime/requirements.txt').read_text(), re.M).group()
+    locked_hashes = set(re.findall(r'--hash=sha256:([0-9a-f]{64})', requirement_block))
+    urls = [p for p in meta['urls'] if p['digests']['sha256'] in locked_hashes]
+    if not urls:
+        raise ValueError(f'No published distribution matches the runtime lock: {name}')
     # Both supported platforms; include binary wheel notices (vendored native dependencies).
     chosen = []
     for platform in ('macosx', 'win_amd64'):

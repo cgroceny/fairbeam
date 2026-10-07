@@ -7573,7 +7573,7 @@
     "scripts/licenses/render.mjs": "4dba0be35aede3efcad2ee37f3c4b0eae6bd9681bb5811c1fd648f360b689579",
     "scripts/licenses/solver-components.json": "3a0b894e5f477c87e364b1205755f2c01bcacb073cff88d25579fadea364a5fe",
     "scripts/third-party-licenses.mjs": "6896f66f279889136b8ae73313f55bddaeb326165346ddfc21e21c44460bdd1c",
-    "scripts/third-party-licenses.py": "3d10437168cd47e92c2075874ea2e770050fda57e6ae6c2de50d7823699520f4",
+    "scripts/third-party-licenses.py": "e154fbb04e5d5a9c3325b2db5ed84c4391fa02cb92e2a618bcd7728586162214",
     "src-tauri/Cargo.lock": "2eee4e27a55055c231d7222bc57afb759da6c53ee6b8d740c3dfc7c5ff4968f6",
     "src-tauri/Cargo.toml": "f2f843003478106a1b028aae5b3483ab8d45cf9d7598d92474b8cdc7ea24a252",
     "vite.config.ts": "ca5cb3909da097442d8bbf9850f099264f48e63ccc79c96c9ce7cbe2c4351050",
