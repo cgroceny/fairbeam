@@ -806,6 +806,7 @@
     "one": "This note appears once in the macro",
     "other": "The same note appears {count} times in the macro"
   },
+  "cstImport.partialGeometry": "This import is incomplete. A radiating element or other required shape may be missing. Review the named items below and inspect the geometry before simulation.",
   "cstImport.report": "Import report",
   "cstImport.sev.info": "Note",
   "cstImport.sev.missing": "Missing",

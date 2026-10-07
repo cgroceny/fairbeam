@@ -1420,8 +1420,14 @@ class ReportGaps(unittest.TestCase):
         for files in (None, {}, {"other.stl": "solid x\nendsolid x\n"}):
             report = import_cst(text, filename="pyramidal-horn.bas", files=files)["report"]
             refused = [n for n in report["notes"] if n["severity"] == "refused"]
-            self.assertEqual(len(refused), 4, refused)
-            self.assertTrue(all("was not supplied" in n["message"] and ".stl" in n["message"] for n in refused), refused)
+            missing = [n for n in refused if "was not supplied" in n["message"]]
+            dependent = [n for n in refused if "dependent shape" in n["message"]]
+            self.assertEqual(len(missing), 4, refused)
+            self.assertTrue(all(".stl" in n["message"] for n in missing), missing)
+            self.assertEqual(len(dependent), 8, refused)  # material changes and Boolean operands
+            self.assertEqual(len(refused), len(missing) + len(dependent))
+            for suffix in range(5, 9):
+                self.assertEqual(sum(f"fairbeam:horn_{suffix}" in n["message"] for n in dependent), 2)
             self.assertEqual(report["counts"]["part"], 1)   # the rest of the horn is still imported
 
     def test_unreadable_stl_is_refused(self):

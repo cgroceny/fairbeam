@@ -793,6 +793,7 @@
   "cstImport.repeated": {
     "other": "Aynı not makroda {count} kez geçiyor"
   },
+  "cstImport.partialGeometry": "Bu içe aktarma eksiktir. Işıma elemanı veya gerekli başka bir şekil eksik olabilir. Simülasyondan önce aşağıda adları belirtilen öğeleri ve geometriyi inceleyin.",
   "cstImport.report": "İçe aktarma raporu",
   "cstImport.sev.info": "Not",
   "cstImport.sev.missing": "Eksik",

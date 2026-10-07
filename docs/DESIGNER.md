@@ -1206,16 +1206,24 @@ here. The command line does the same: `fairbeam import-cst model.bas --out my.de
 
 What is read (`python/fairbeam/cst_import.py`, `SUPPORTED`): units; parameters (`StoreParameter`,
 `MakeSureParameterExists`, ...) as design parameters, a value as an independent one and an
-expression as a derived one (VBA `^`, `Sqr`, `Atn`, `Mod`, `\`, `Pi`, `clight`, ... translated);
+expression as a derived one (VBA `^`, `Sqr`, `Atn`, `Mod`, `\`, `Pi`, `clight`, ... translated, and the degree
+functions `Sind`, `Cosd`, `Tand`, `Asind`, `Acosd` and `Atnd`, whose angles and results are in degrees);
 materials (Normal: εr and tan δ, a conductivity as the equivalent tan δ; PEC; lossy metals as PEC,
 with a note); bricks, cylinders and tubes, cones, spheres, tori, polygons and rectangles or circles
-covered or extruded, point-list extrusions; components; `Solid.Add` (a union), `Solid.Subtract`,
+covered or extruded, point-list extrusions; `Solid.ThickenSheetAdvanced` on a planar sheet (Inside,
+Outside or Centered, taken relative to the sheet's face normal); a straight `Loft` (zero tangency) between two
+convex, parallel sheets of the same outline, as a polyhedron; components; `Solid.Add` (a union), `Solid.Subtract`,
 `Intersect` and `Insert` as live Booleans where the designer's Booleans can hold them (bricks,
 sheets, polygons); transforms (translate, rotations by any angle, mirror, uniform scale, with copies);
 axis-aligned local working coordinate systems; the frequency range, boundaries, the mesh density
 (lines per wavelength), discrete ports, resistors, waveguide ports with given ranges, far-field and
 H-field monitors. Coordinates are converted to mm and rounded to 1e-6 mm, the precision of the
 mesh lines, so ports sit on mesh lines. VBA code itself (variables, `If`, `For`) is not run.
+
+No shape is dropped silently: every object or operation that cannot be imported is named in the report
+(for example a `Loft` with tangency or non-matching profiles). A loft that cannot be imported keeps its
+profile sheets, and the dialog warns that the geometry is incomplete, so rebuild the connecting solid
+before simulating.
 
 Mesh density is read from `Mesh.LinesPerWavelength` and from `MeshSettings` blocks explicitly
 marked `SetMeshType "Hex"` or `"HexTLM"`. In those blocks, `StepsPerWaveNear` sets cells per

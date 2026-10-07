@@ -1,0 +1,47 @@
+' Synthetic parallel profiles and a straight connecting solid.
+With Polygon3D
+ .Reset
+ .Name "lower"
+ .Curve "profiles"
+ .Point "0", "0", "0"
+ .Point "4", "0", "0"
+ .Point "4", "4", "0"
+ .Point "0", "4", "0"
+ .Create
+End With
+With CoverCurve
+ .Reset
+ .Name "lower"
+ .Component "antenna"
+ .Material "PEC"
+ .Curve "profiles:lower"
+ .Create
+End With
+With Polygon3D
+ .Reset
+ .Name "upper"
+ .Curve "profiles"
+ .Point "1", "1", "6"
+ .Point "3", "1", "6"
+ .Point "3", "3", "6"
+ .Point "1", "3", "6"
+ .Create
+End With
+With CoverCurve
+ .Reset
+ .Name "upper"
+ .Component "antenna"
+ .Material "PEC"
+ .Curve "profiles:upper"
+ .Create
+End With
+Pick.PickFaceFromId "antenna:lower", "1"
+Pick.PickFaceFromId "antenna:upper", "1"
+With Loft
+ .Reset
+ .Name "parasitic"
+ .Component "antenna"
+ .Material "PEC"
+ .Tangency "0"
+ .CreateNew
+End With

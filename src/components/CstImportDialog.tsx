@@ -191,6 +191,9 @@ export default function CstImportDialog() {
                   <span class="ci-bad">{t("cstImport.gaps", { count: gaps().total, list: gapList() })}</span> {t("cstImport.listedBelow")}
                 </Show>
               </p>
+              <Show when={gaps().refused || gaps().missing}>
+                <p class="ci-bad" role="alert">{t("cstImport.partialGeometry")}</p>
+              </Show>
               <Show when={errorsOf("error").length || errorsOf("warning").length}>
                 <p class={errorsOf("error").length ? "rp-error" : "note"}>
                   {t("cstImport.checks", { list: [errorsOf("error").length ? t("status.checks.errors", { count: errorsOf("error").length }) : "", errorsOf("warning").length ? t("status.checks.warnings", { count: errorsOf("warning").length }) : ""].filter(Boolean).join(", ") })}
