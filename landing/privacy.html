@@ -3,7 +3,7 @@
 <head>
   <!--
     What the desktop app's usage statistics would collect. Keep in step with docs/TELEMETRY.md and
-    api/_ping-schema.json (the only list of counter keys).
+    api/_ping-schema.json (the report fields and legacy validation limits).
   -->
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -94,18 +94,9 @@
 <li>
 <a href="#summary">Current release</a>
 </li>
-<li>
-<a href="#collected">Optional usage reports — disabled</a>
-</li>
-<li>
-<a href="#never">Report contents and network metadata</a>
-</li>
-<li>
-<a href="#where">Future processing and retention</a>
-</li>
-<li>
-<a href="#off">Controls in an enabled build</a>
-</li>
+<li><a href="#collected">If you turn on usage counts</a></li>
+<li><a href="#downloads">Downloads and updates</a></li>
+<li><a href="#off">Controls</a></li>
 <li>
 <a href="#website">The website</a>
 </li>
@@ -117,87 +108,29 @@
 <p>Usage counts and sign-in are built but OFF in Fairbeam 0.7.0. No usage counts are recorded or sent, and no usage-consent dialog appears.</p>
 <p>Update checks contact GitHub (fairbeam-releases). App and runtime downloads come from GitHub and upstream hosts. This website is hosted on Vercel. These services see your IP address and request data as any web server does; request-log retention is set by the hosting provider.</p>
 <p>Startup update checks can be disabled in General settings. On Windows, the WebView2 component follows Microsoft’s own diagnostic-data settings.</p>
-<p>Before any usage counting is enabled, a full notice will be published identifying the controller, purposes, processors, retention periods, rights and transfer arrangements. For privacy questions or rights requests, contact ismail@fairbeam.org. Do not post personal information in public issues.</p>
+
 </section>
 <section aria-labelledby="collected">
-<h2 id="collected">Optional usage reports — disabled</h2>
-<p>The following describes the optional implementation, which would require an enabled build and your consent. It sends at most one report per UTC day for a previous day of use.</p>
-<p>Reports use a resettable, random pseudonymous install ID, not your name or account. The server replaces it with a keyed pseudonym that can link counts from the same installation across days.</p>
-<p>View what would be sent shows the report format; in Fairbeam 0.7.0 it is an example only and is not sent.</p>
-<p>An enabled report contains schema, install_id, app_version, os, arch, gpu_available, day and counters. The accepted fields and counter names are defined in the published report schema.</p>
-<p>
-<a href="https://github.com/ismailakdag/fairbeam/blob/main/api/_ping-schema.json">Report schema</a>
-</p>
-<div class="guide-table">
-<table>
-<thead>
-<tr>
-<th>Field</th>
-<th>Meaning</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<th scope="row">
-<code>schema</code>
-</th>
-<td>Report format version</td>
-</tr>
-<tr>
-<th scope="row">
-<code>install_id</code>
-</th>
-<td>Resettable random installation identifier</td>
-</tr>
-<tr>
-<th scope="row">
-<code>app_version</code>
-</th>
-<td>Fairbeam version</td>
-</tr>
-<tr>
-<th scope="row">
-<code>os, arch</code>
-</th>
-<td>Operating system and processor type</td>
-</tr>
-<tr>
-<th scope="row">
-<code>gpu_available</code>
-</th>
-<td>Whether the openEMS build has the GPU engine</td>
-</tr>
-<tr>
-<th scope="row">
-<code>day</code>
-</th>
-<td>UTC day the counts describe</td>
-</tr>
-<tr>
-<th scope="row">
-<code>counters</code>
-</th>
-<td>Integer counts under the published names</td>
-</tr>
-</tbody>
-</table>
-</div>
-<p>App counts cover starts, new installs and updates, including the previous version. Started and finished simulations are grouped by engine and model source. Failed simulations are grouped by engine and error category, canceled simulations by engine, and refused runs by reason. Finished runs also count duration and cell-count ranges; error messages are excluded.</p>
-<p>Other counters cover far-field, surface-current, efficiency and field-plane monitors; sweep size ranges and optimizer methods; VBA macro import and export, Touchstone export and PDF reports.</p>
+<h2 id="collected">If you turn on usage counts</h2>
+<p>Draft KVKK information notice and GDPR-style privacy notice. The maintainer must review this text with a lawyer before enabling usage counts.</p>
+<p>Controller: İsmail Akdağ. Contact: ismail@fairbeam.org.</p>
+<p>Purpose: estimate installations using each version and operating system to prioritize platform support. Totals count reports, not unique people or verified installations.</p>
+<p>Data and collection: with your explicit consent, the desktop app sends only the report schema, app version, operating system and CPU architecture over HTTPS to fairbeam.org/api/ping, at most once every seven days. No install ID, account, feature counters, designs, files or paths are sent.</p>
+<p>The hosting provider transiently processes your IP address to deliver the request. Fairbeam does not store IP addresses or user agents. Provider infrastructure may keep its own request logs under its policies; this draft does not promise that providers keep no logs.</p>
+<p>Legal basis: explicit consent under KVKK Article 5 and consent under GDPR Article 6(1)(a), where applicable. Sharing is optional and does not affect app functionality. Choose Off in Settings › General › Usage statistics to withdraw at any time. Withdrawal stops future requests without affecting the lawfulness of earlier processing.</p>
+<p>Recipients and processors: Vercel hosts the website and usage API; GitHub hosts releases, updates and the aggregate statistics repository. Only aggregate counts reach the repository. Their roles, contracts and infrastructure logging must be confirmed before activation.</p>
+<p>International transfer: requests are delivered to servers outside Türkiye. This draft proposes explicit consent for the transfer under KVKK Article 9, with information about the risks of transfer without an adequacy decision or appropriate safeguards. The current Article 9 consent exception is limited to incidental transfers; recurring weekly requests may not qualify. Counsel must establish a valid transfer mechanism under KVKK and, where applicable, GDPR Chapter V before activation. No valid mechanism is asserted by this draft.</p>
+<p>Retention: Fairbeam keeps aggregate totals by UTC week, version, operating system and architecture for platform planning, without a scheduled deletion date. No raw event log is created. Locally, only the consent choice and last request date are stored for usage counting; that date also limits retries after failures.</p>
+<p>Rights: KVKK Article 11 includes learning about processing, its purpose and recipients, seeking correction or deletion, notification to recipients, objecting to adverse automated decisions and seeking compensation for unlawful processing. GDPR Articles 15–21 provide access, rectification, erasure, restriction, portability and objection where applicable. There are no automated decisions based on usage reports.</p>
+<p>To exercise your rights, write to ismail@fairbeam.org with your request. Do not send designs or post personal information in public issues. Reasonable identity verification may be needed. Totals have no installation identifier, so a particular installation’s contribution cannot be located or removed. You may complain to the KVKK Kurulu or your EU supervisory authority, subject to applicable procedures.</p>
 </section>
-<section aria-labelledby="never">
-<h2 id="never">Report contents and network metadata</h2>
-<p>Usage-report bodies exclude file names, design contents, model names, parameter names and values, paths, error messages, email addresses, user names, computer names and IP addresses. The receiving infrastructure still processes the source IP address and request metadata. The endpoint rejects fields and counters outside its published schema.</p>
-</section>
-<section aria-labelledby="where">
-<h2 id="where">Future processing and retention</h2>
-<p>If enabled, reports would be sent over HTTPS to fairbeam.org/api/ping on Vercel, and count records stored through GitHub in a configured repository. The intended purpose is aggregate product-usage analysis. Access permissions and processor arrangements must be restricted and documented before collection begins.</p>
-<p>Count records exclude IP addresses and exact timestamps. Hosting logs and storage metadata may contain network and timing information. Provider log retention is set by the hosting provider; count-record retention and transfer arrangements will be specified in the full notice before activation.</p>
+<section aria-labelledby="downloads">
+<h2 id="downloads">Downloads and updates</h2>
+<p>GitHub release asset download counts are read as public totals by version and platform. They require no usage counting in the app and do not identify unique users or installs. Repeated downloads and updater requests can increase the totals.</p>
 </section>
 <section aria-labelledby="off">
-<h2 id="off">Controls in an enabled build</h2>
-<p>If usage counting is enabled in a future release, Settings › General › Usage statistics › Off stops counting and deletes unsent counts. Reset id creates a new random identifier; it does not delete records already uploaded.</p>
-<p>Set FAIRBEAM_NO_TELEMETRY=1 in the environment used to launch Fairbeam. It overrides consent and other usage-count settings for that process.</p>
+<h2 id="off">Controls</h2>
+<p>Usage counts are off by default and remain disabled in default builds. Only a build compiled with the telemetry feature can ask once for consent. Dismissing that dialog means Off. Nothing is sent while Off; the choice can be changed in Settings. FAIRBEAM_NO_TELEMETRY=1 overrides consent for that process. View what would be sent shows the four report fields, or an example in a disabled build.</p>
 </section>
 <section aria-labelledby="website">
 <h2 id="website">The website</h2>

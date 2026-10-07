@@ -9,7 +9,6 @@ import { useModal } from "../lib/dialog";
 import { arrayWeights, hasArray } from "../lib/arrayStore";
 import { reference } from "../compare/store";
 import { downloadFailedMessage, downloadMessage, revealDownloadedFile, saveDownload } from "../lib/download";
-import { countUsage } from "../lib/telemetry";
 import { hasKey, t } from "../i18n";
 import { appMode } from "../workspace";
 import { designResultState, exportBundle } from "../designer/activeResult";
@@ -110,7 +109,6 @@ export default function PackageDialog() {
       await new Promise((r) => setTimeout(r, 0));
       const files = packageFiles(b, want, { isoPng, drawingPdf, reportPdf, arrayWeights: hasArray() ? arrayWeights() : null, reference: reference(), model }, now);
       const r = await saveDownload(file, zipPackage(files, file.replace(/\.zip$/, ""), now), "application/zip");
-      if (reportPdf && r.status !== "cancelled" && r.status !== "failed") countUsage("feature.pdf_report");
       setNote(problems.length
         ? { text: downloadMessage(r, t("package.filesWithout", { count: files.length, missing: problems.join(", ") })), warn: true, path: r.status === "saved" ? r.path : undefined }
         : { text: downloadMessage(r, t("package.files", { count: files.length })), warn: r.status === "failed" || r.status === "cancelled", path: r.status === "saved" ? r.path : undefined });
@@ -132,7 +130,6 @@ export default function PackageDialog() {
     const file = packageName(b, now).replace(/\.zip$/, "_report.pdf");
     try {
       const r = await saveDownload(file, await reportPdfFor(b, now, hasArray() ? arrayWeights() : null, reference(), { model: modelFileOf(b) }), "application/pdf");
-      if (r.status !== "cancelled" && r.status !== "failed") countUsage("feature.pdf_report");
       setNote({ text: downloadMessage(r), warn: r.status === "failed" || r.status === "cancelled", path: r.status === "saved" ? r.path : undefined });
     } catch (e) {
       console.error(e);

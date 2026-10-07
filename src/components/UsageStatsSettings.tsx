@@ -1,8 +1,6 @@
-// General settings › Usage statistics (docs/TELEMETRY.md): Off / On, "View what would be sent",
-// "Reset id". Off by default. In a build without the telemetry feature the choice is disabled and
-// says so; the preview then shows only an example of the format.
+// Opt-in usage counts and an exact payload preview.
 import { createSignal, onMount, Show } from "solid-js";
-import { openPrivacyPage, resetUsageId, setUsageConsent, USAGE_SUMMARY, usagePreview, usageStatus, type UsagePreview, type UsageStatus } from "../lib/telemetry";
+import { openPrivacyPage, setUsageConsent, USAGE_SUMMARY, usagePreview, usageStatus, type UsagePreview, type UsageStatus } from "../lib/telemetry";
 import { t } from "../i18n";
 import "../styles/usage-stats.css";
 
@@ -22,11 +20,6 @@ export default function UsageStatsSettings() {
     if (preview()) setPreview(await usagePreview());
   });
   const show = () => run("usage.error.readCounts", async () => { setPreview(preview() ? null : await usagePreview()); });
-  const reset = () => run("usage.error.resetId", async () => {
-    setStatus(await resetUsageId());
-    if (preview()) setPreview(await usagePreview());
-    setMessage(t("usage.resetDone"));
-  });
   const pretty = (v: unknown) => JSON.stringify(v, null, 2);
   return <Show when={status()}>
     <hr />
@@ -42,7 +35,6 @@ export default function UsageStatsSettings() {
       <p class="note">{USAGE_SUMMARY.never} {USAGE_SUMMARY.where} {USAGE_SUMMARY.off}</p>
       <div class="us-actions">
         <button class="btn btn-ghost btn-sm" disabled={busy()} aria-expanded={!!preview()} onClick={() => void show()}>{preview() ? t("usage.hidePreview") : t("usage.showPreview")}</button>
-        <button class="btn btn-ghost btn-sm" disabled={!usable() || busy()} onClick={() => void reset()}>{t("usage.resetId")}</button>
         <button class="btn btn-ghost btn-sm" onClick={() => void openPrivacyPage().catch((e) => setMessage(t("usage.error.openPage", { error: String(e) })))}>{t("usage.whatIsCollected")}</button>
       </div>
       <Show when={preview()}>{(p) => <>
@@ -50,8 +42,6 @@ export default function UsageStatsSettings() {
         <Show when={!p().example}>
           <p class="note">{p().status.active ? t("usage.nextPing") : t("usage.nextPingOff")}</p>
           <pre class="us-json mono">{p().next ? pretty(p().next) : t("usage.nothingToSend")}</pre>
-          <p class="note">{t("usage.today")}</p>
-          <pre class="us-json mono">{p().today ? pretty(p().today) : t("usage.nothingYet")}</pre>
         </Show>
       </>}</Show>
       <Show when={message()}><p role="status" class="note">{message()}</p></Show>

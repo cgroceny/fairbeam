@@ -35,7 +35,6 @@ const ALLOW = [
   { glob: ".github/workflows/ci.yml", line: /check[:-]no-antenlab/, reason: "the name of this guard" },
   { glob: "scripts/check-legal.mjs", line: /check[:-]no-antenlab/, reason: "the name of this guard" },
   { glob: "vercel.json", line: /"value": "antenlab\.akdag\.dev"/, reason: "the host the redirect to fairbeam.org matches (pages only; old apps keep pinging its /api)" },
-  { glob: "scripts/check-telemetry-api.mjs", line: /antenlab\.akdag\.dev/, reason: "proof that pings and the redirect rule for the old host still work" },
 ].map((e) => ({ ...e, re: globToRegExp(e.glob), used: false }));
 
 /** The allowlist entries that cover `path`: whole-file ones and per-line ones. */

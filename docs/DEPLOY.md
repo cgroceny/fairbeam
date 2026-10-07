@@ -50,7 +50,7 @@ branches other than `main` do not deploy (`git.deploymentEnabled` in `vercel.jso
 The site also has one serverless function, `api/ping.js`, which receives the desktop app's usage
 statistics (see [TELEMETRY.md](TELEMETRY.md)). Vercel deploys every file in `api/` whose name does
 not start with `_`. `vercel.json` `functions` bundles `api/_ping-schema.json` with the function. The
-function is disabled: without the `STATS_GITHUB_TOKEN` and `STATS_SALT` environment variables it
+function is disabled: without the `STATS_GITHUB_TOKEN` environment variable it
 answers 503 and does nothing. The static build ignores `api/`.
 
 ## Check locally before deploying

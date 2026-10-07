@@ -14,8 +14,6 @@ tauri-plugin-dialog = "2.7"
 tauri-plugin-updater = "2"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
-# usage statistics (docs/TELEMETRY.md): the random install id
-uuid = { version = "1", features = ["v4"] }
 # optional sign-in (docs/ACCOUNTS.md): only with `--features accounts`, off by default
 # (reqwest and rustls are also the HTTP client of the `telemetry` feature)
 keyring = { version = "3.6", optional = true, features = ["apple-native", "windows-native"] }

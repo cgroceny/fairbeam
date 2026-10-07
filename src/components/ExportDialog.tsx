@@ -6,7 +6,6 @@ import { bundle, setExportOpen } from "../state";
 import { cstInsertPairs, cstMacro, DEFAULT_CST_OPTIONS, type CstOptions } from "../export/cst";
 import { useModal } from "../lib/dialog";
 import { downloadFailedMessage, downloadMessage, revealDownloadedFile, saveDownload } from "../lib/download";
-import { countUsage } from "../lib/telemetry";
 import { t } from "../i18n";
 import { cssVar } from "../lib/cssvar";
 import { appMode } from "../workspace";
@@ -127,7 +126,6 @@ export default function ExportDialog() {
       const outcome = zip
         ? await saveDownload(name, zipSync({ [fileName()]: strToU8(r.text), ...Object.fromEntries(r.files.map((f) => [f.name, strToU8(f.data)])) }), "application/zip")
         : await saveDownload(name, r.text, "text/plain");
-      if (outcome.status !== "cancelled" && outcome.status !== "failed") countUsage("feature.cst_export");
       setNote({ text: downloadMessage(outcome), warn: outcome.status === "cancelled" || outcome.status === "failed", path: outcome.status === "saved" ? outcome.path : undefined });
     } catch (e) {
       console.error(e);
