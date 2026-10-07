@@ -86,6 +86,15 @@ ok(/fmt\.num\(p\.value, 6\)/.test(read("src/components/ModelPanel.tsx")), "the P
 ok(/decimalNote/.test(read("src/designer/DesignPane.tsx")), "the Design panel says inputs keep the point");
 ok(en["checks.msg.expr.unexpectedComma"] === "unexpected ','", "a comma typed in an expression is answered (Turkish hint)");
 
+// ---- Properties facts (a run, a parameter, an optimization): label/value rows, one notation for Dmax
+const propsExtras = read("src/designer/PropsExtras.tsx");
+ok(/out\.push\(\["Dmax", `\$\{num\(x\.farfield\.dmaxDbi, 2\)\} dBi`\]\)/.test(propsExtras), "Properties shows Dmax with two decimals");
+ok(/num\(m\(\)!\.farfield!\.dmaxDbi, 2\)/.test(read("src/designer/RunDock.tsx")), "the Runs table shows Dmax with the same two decimals");
+const designerCss = read("src/styles/designer.css");
+ok(/\.dz-facts \{[^}]*display: grid;[^}]*grid-template-columns: minmax\(88px, 1fr\) minmax\(0, max-content\)/.test(designerCss), "facts are a two-column grid like the example panel's rows");
+ok(/\.dz-facts dt \{[^}]*color: var\(--al-text-3\)/.test(designerCss) && /\.dz-facts dd \{[^}]*margin: 0;[^}]*text-align: right/.test(designerCss), "a muted label left, the value right (no browser indent on dd)");
+ok((propsExtras.match(/<dl class="dz-facts">/g) ?? []).length >= 5, "the run, parameter and optimization facts use the styled list");
+
 // ---- stale banners (behaviour: check-designer-feedback.mjs)
 const core = read("src/designer/sessionCore.ts");
 ok(/retireMessage\(\["good", "critical"\]\);\s*effects\.edited/.test(core), "an edit retires success and error banners");
