@@ -1,6 +1,8 @@
 // The CST import report (python/fairbeam/cst_import.py) as the dialog states it: the summary is
 // computed from the rows the report lists, never from a flag of its own, so a report cannot say
 // "everything was imported" above rows that say a solid is missing.
+import en from "../i18n/en.json" with { type: "json" };
+import tr from "../i18n/tr.json" with { type: "json" };
 import type { CstImportReport } from "../runner/api.ts";
 
 export type ReportNote = CstImportReport["notes"][number];
@@ -10,10 +12,16 @@ export type ReportNote = CstImportReport["notes"][number];
 export type NoteKind = "missing" | "refused" | "warning" | "info";
 export const noteKind = (n: ReportNote): NoteKind => (n.kind === "missing" ? "missing" : n.severity);
 
-/** A row's message in the interface language: a row the server words in both languages carries `message_tr`
- * too; every other row is in English only and stays so. */
-export const noteText = (n: ReportNote, lang: string): string =>
-  lang === "tr" && typeof n.message_tr === "string" && n.message_tr ? n.message_tr : n.message;
+/** Prefer server-provided Turkish text, then the translated mesh mapping notes.
+ * Other report messages keep their English text. */
+export const noteText = (n: ReportNote, lang: string): string => {
+  if (lang !== "tr") return n.message;
+  if (typeof n.message_tr === "string" && n.message_tr) return n.message_tr;
+  for (const key of ["home.importCst.meshHex", "home.importCst.meshIgnored"] as const) {
+    if (n.message === en[key]) return tr[key];
+  }
+  return n.message;
+};
 
 /** Identical rows (same severity, place and message) once, with their `count`. The server merges
  * them already; this covers a report from an older server. */
