@@ -26,7 +26,7 @@ export function auditInPage(scope) {
     const cs = getComputedStyle(e);
     return cs.visibility !== 'hidden' && cs.display !== 'none' && cs.opacity !== '0';
   };
-  const skip = (e) => e.closest('svg, canvas, [data-audit-skip], .cm-editor, script, style, .visually-hidden') || ['INPUT', 'TEXTAREA', 'SELECT', 'OPTION', 'CANVAS'].includes(e.tagName);
+  const skip = (e) => e.closest('svg, canvas, [data-audit-skip], .cm-editor, script, style, .visually-hidden, .skip-link:not(:focus)') || ['INPUT', 'TEXTAREA', 'SELECT', 'OPTION', 'CANVAS'].includes(e.tagName);
   const add = (kind, e, extra = '') => {
     const key = `${kind}|${label(e)}|${text(e)}`;
     if (!seen.has(key)) { seen.add(key); out.push(`${kind}: ${label(e)} "${text(e)}"${extra}`); }
