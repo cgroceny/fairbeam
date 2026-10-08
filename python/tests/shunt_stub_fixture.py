@@ -7,13 +7,18 @@ No gallery geometry, production port or bundle schema is changed.
 import hashlib
 import json
 from pathlib import Path
+import subprocess
+import sys
+import time
 
 import numpy as np
 from openEMS.ports import UI_data
+from openEMS import ports as native_ports
 from openEMS.physical_constants import C0
 
 from fairbeam import Simulation, excitation, simulation
 from fairbeam.analytic import microstrip_eps_eff, microstrip_width
+from fairbeam.procutil import popen_group, release_group, terminate_group
 from tests.microstrip_fixture import graded
 
 F0, Z0, LOAD_R, LOAD_X = 2e9, 50., 60., -80.
@@ -24,7 +29,7 @@ W = microstrip_width(Z0, ER, H)
 EPS_EFF = microstrip_eps_eff(ER, H, W)
 WAVELENGTH_MM = C0/F0/np.sqrt(EPS_EFF)*1e3
 MESHES, KINDS = (4, 6, 8), ('uniform', 'bare', 'stub', 'matched')
-PROTOCOL, END_DB, THREADS = 'planar-shunt-stub-v1', -90., 4
+PROTOCOL, END_DB, THREADS = 'planar-shunt-stub-v2', -90., 4
 BASE_STEPS, CASE_SECONDS = 200000, 1800.
 MEAS_PLANES = (-8., -6.)
 LIMITS = dict(z_target_rel=.03, gamma_target_abs=.02, z_mesh_rel=.01,
@@ -98,7 +103,7 @@ def _axis(anchors, delta, maximum):
 
 
 def mesh_lines(n, expanded=False):
-    if isinstance(n, bool) or n not in MESHES or not isinstance(expanded, bool):
+    if isinstance(n, bool) or not isinstance(n, int) or n not in MESHES or not isinstance(expanded, bool):
         raise ValueError('declared integer mesh and boolean enclosure required')
     delta, maximum = H/n, 4*H/n
     air = 6. if expanded else 3.
@@ -186,7 +191,8 @@ def line_parameters(v, current, dx):
 
 def source_ids():
     paths = [Path(__file__), Path(__file__).with_name('test_shunt_stub.py'),
-             Path(simulation.__file__), Path(excitation.__file__)]
+             Path(__file__).with_name('microstrip_fixture.py'),
+             Path(simulation.__file__), Path(excitation.__file__), Path(native_ports.__file__)]
     return {p.name: hashlib.sha256(p.read_bytes()).hexdigest() for p in paths}
 
 
@@ -220,4 +226,48 @@ def acquire(out, n, kind, expanded=False):
         pulse_end_s=excitation.dgauss_duration_s(sim.f_max),
         input_sha256=hashlib.sha256((out/'input.xml').read_bytes()).hexdigest())
     (out/'report.json').write_text(json.dumps(meta, indent=2)+'\n', encoding='utf-8')
+    return meta
+
+
+def clocks():
+    return time.monotonic(), time.time()
+
+
+def serial(out, n, kind, expanded=False):
+    """Only the owned worker group is stopped at the suspend-inclusive deadline."""
+    out = Path(out).resolve()
+    if out.exists():
+        raise ValueError('fresh acquisition directory required')
+    out.parent.mkdir(parents=True, exist_ok=True)
+    command = [sys.executable, '-m', 'tests.test_shunt_stub', '--fdtd', '--worker',
+               '--mesh', str(n), '--kind', kind, '--out', str(out)]
+    if expanded:
+        command.append('--expanded')
+    start = clocks()
+    elapsed = lambda: max(a-b for a, b in zip(clocks(), start))
+    with out.with_name(out.name+'.log').open('w', encoding='utf-8') as log:
+        proc = popen_group(command, stdout=log, stderr=subprocess.STDOUT,
+                           cwd=Path(__file__).resolve().parents[1])
+        try:
+            while True:
+                remaining = CASE_SECONDS-elapsed()
+                if remaining <= 0:
+                    raise TimeoutError('30-minute case deadline including suspend')
+                try:
+                    code = proc.wait(timeout=min(1., remaining))
+                    break
+                except subprocess.TimeoutExpired:
+                    pass
+            seconds = elapsed()
+            if code or seconds > CASE_SECONDS:
+                raise RuntimeError('native case failed or exceeded its deadline; retained log')
+        finally:
+            if proc.poll() is None:
+                terminate_group(proc.pid, grace=0, job=proc.win_job)
+                proc.wait(timeout=15)
+            release_group(proc)
+    path = out/'report.json'
+    meta = json.loads(path.read_text(encoding='utf-8'))
+    meta['case_elapsed_s'] = seconds
+    path.write_text(json.dumps(meta, indent=2)+'\n', encoding='utf-8')
     return meta
