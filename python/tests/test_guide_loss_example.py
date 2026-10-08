@@ -54,9 +54,21 @@ class GuideFixtureTests(unittest.TestCase):
 
     def test_invalid_mode_band_or_fractional_sections_are_refused(self):
         for values in ({"mode": "TM11"}, {"mode": "TE00"}, {"f_min": 8},
-                       {"f_max": 14}, {"length_sections": 1.5}):
+                       {"f_max": 14}, {"length_sections": 1.5},
+                       {"end_criteria_db": True}, {"end_criteria_db": float("nan")},
+                       {"end_criteria_db": -101}, {"end_criteria_db": -19}):
             with self.subTest(values=values), self.assertRaises(ValueError):
                 self.model.build(self.values | values)
+
+    def test_stricter_energy_stop_is_opt_in_and_preserves_geometry(self):
+        default = self.model.build(self.values)
+        strict = self.model.build(self.values | {"end_criteria_db": -80})
+        self.assertEqual(default.end_criteria_db, -70)
+        self.assertEqual(strict.end_criteria_db, -80)
+        self.assertEqual(default.ports, strict.ports)
+        self.assertEqual(default.excitation, strict.excitation)
+        for axis in "xyz":
+            np.testing.assert_array_equal(default.mesh.GetLines(axis), strict.mesh.GetLines(axis))
 
     def test_one_sided_mapping_matches_resistive_halfspace_limit(self):
         p = self.values | {"wall_model": "halfspace"}
@@ -82,33 +94,72 @@ class GuideFixtureTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "ambiguous"):
             propagation(short, long, .06, beta + np.pi / .06)
 
-    def test_failed_coarse_energy_cannot_be_hidden_by_two_matching_mesh_pairs(self):
+    def synthetic_cohort(self, root, coarse_energy=True):
         compare = runpy.run_path(str(EXAMPLE.with_name("guide_loss_compare.py")))
         f = np.linspace(14.5e9, 15.5e9, 201)
+        for cpw in (20, 30, 40):
+            for loss in compare["LOSSES"]:
+                for sections in (1, 3):
+                    p = self.values | {"cpw": cpw, "length_sections": sections,
+                        "tan_d": .0004 if loss in ("dielectric", "both") else 0,
+                        "wall_sigma": 5.8e7 if loss in ("copper", "both", "native_sheet") else 0,
+                        "wall_model": "halfspace" if loss in ("copper", "both") else "sheet"}
+                    ref = self.model.analytical(f, p)
+                    gamma = .0002 + ref["alpha"] + 1j * ref["beta"]
+                    s = np.zeros((201, 2, 2), complex)
+                    s[:, 1, 0] = s[:, 0, 1] = np.exp(-gamma * .03 * sections)
+                    dest = root / f"m{cpw}-{sections}-{loss}"
+                    dest.mkdir()
+                    np.savez(dest / "data.npz", f=f, s=s, **ref)
+                    columns = [{"port": pn, "dt_s": 1e-12, "signal_steps": 5730,
+                                "threads": 4, "exact_endcriteria": True,
+                                "run": {"timesteps": 6000, "converged": True,
+                                        "engine": "cpu", "final_energy_bound_db": -70}}
+                               for pn in (1, 2)]
+                    meta = {"parameters": p, "run": {"converged": coarse_energy or cpw != 20},
+                            "excitation": "gaussian", "dt_s": 1e-12,
+                            "protocol": compare["PROTOCOL"], "source_ids": compare["source_ids"](),
+                            "source_columns": columns, "cells": 1000 * sections}
+                    (dest / "report.json").write_text(json.dumps(meta), encoding="utf-8")
+        return compare
+
+    def test_failed_coarse_energy_cannot_be_hidden_by_two_matching_mesh_pairs(self):
         with tempfile.TemporaryDirectory() as folder:
             root = Path(folder)
-            for cpw in (20, 30, 40):
-                for loss in compare["LOSSES"]:
-                    for sections in (1, 3):
-                        p = self.values | {"cpw": cpw, "length_sections": sections,
-                            "tan_d": .0004 if loss in ("dielectric", "both") else 0,
-                            "wall_sigma": 5.8e7 if loss in ("copper", "both", "native_sheet") else 0,
-                            "wall_model": "halfspace" if loss in ("copper", "both") else "sheet"}
-                        ref = self.model.analytical(f, p)
-                        gamma = .0002 + ref["alpha"] + 1j * ref["beta"]
-                        s = np.zeros((201, 2, 2), complex)
-                        s[:, 1, 0] = s[:, 0, 1] = np.exp(-gamma * .03 * sections)
-                        dest = root / f"m{cpw}-{sections}-{loss}"
-                        dest.mkdir()
-                        np.savez(dest / "data.npz", f=f, s=s, **ref)
-                        meta = {"parameters": p, "run": {"converged": cpw != 20},
-                                "excitation": "gaussian", "dt_s": 1e-12,
-                                "cells": 1000 * sections}
-                        (dest / "report.json").write_text(json.dumps(meta), encoding="utf-8")
+            compare = self.synthetic_cohort(root, coarse_energy=False)
             rows = compare["analyse"](root, [20, 30, 40])
             fine = [r for r in rows if r["cpw"] == 40]
             self.assertTrue(all(r["matches"] and r["mesh_pair_passes"] for r in fine))
             self.assertTrue(all(not r["validated_scope"] for r in fine))
+
+    def test_both_ports_and_lengths_must_finish_the_source_on_every_mesh(self):
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder)
+            compare = self.synthetic_cohort(root)
+            fine = lambda: [r for r in compare["analyse"](root, [20, 30, 40])
+                            if r["cpw"] == 40 and r["loss"] != "native_sheet"]
+            self.assertTrue(all(r["validated_scope"] for r in fine()))
+            for sections in (1, 3):
+                path = root / f"m20-{sections}-dielectric/report.json"
+                original = path.read_text(encoding="utf-8")
+                for pn in (1, 2):
+                    with self.subTest(sections=sections, port=pn):
+                        meta = json.loads(original)
+                        meta["source_columns"][pn-1]["run"]["timesteps"] = 5729
+                        path.write_text(json.dumps(meta), encoding="utf-8")
+                        rows = fine()
+                        self.assertTrue(all(r["matches"] and r["mesh_pair_passes"] for r in rows))
+                        self.assertFalse(next(r for r in rows if r["loss"] == "dielectric")["validated_scope"])
+                        self.assertTrue(all(r["validated_scope"] for r in rows if r["loss"] != "dielectric"))
+                        path.write_text(original, encoding="utf-8")
+                for key, value in (("source_columns", []), ("source_ids", {}), ("protocol", "old"),
+                                   ("parameters", json.loads(original)["parameters"] |
+                                    {"end_criteria_db": float("nan")})):
+                    meta = json.loads(original)
+                    meta[key] = value
+                    path.write_text(json.dumps(meta), encoding="utf-8")
+                    self.assertFalse(compare["sources_completed"](meta))
+                    path.write_text(original, encoding="utf-8")
 
 
 if __name__ == "__main__":
