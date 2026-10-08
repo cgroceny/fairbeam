@@ -728,8 +728,11 @@ Kayıt model parametrelerimizi, denklemleri ve sayısal sonuçları içerir; gal
 
 [Bölüm 3 kaydı](benchmarks/pozar-chapter-03.md), Örnek 3.1–3.7 için hedefi ve mesh
 ölçütlerini sağlayan büyüklükleri, çoğaltma komutları ve açık model sınırlarıyla toplar.
-Taşınmadan önceki koşu grupları ve yeni Fairbeam taşıma kontrolleri, özgün kaynak
-bilgilerini korur. Kabul yalnızca listelenen büyüklük ve geometri için geçerlidir.
+Örnek 3.1, kaynak darbesi tamamlanmış ve tam -80 dB duruşlu yeni 20/30/40 koşu
+grubunu kullanır; tarihsel erken durdurulmuş kolonlar kapsam dışında kalır. Diğer
+eski gruplar ve taşıma kontrolleri özgün kaynak bilgilerini korur. Kayıt sonlu mesh
+farkı sınırlarını ve monoton olmayan değişimi açıkça belirtir; kabul yalnızca
+listelenen büyüklük ve geometri için geçerlidir, asimptotik sıra iddiası taşımaz.
 
 İletken kaybı sapmaları, kabul edilmeyen mikroşerit empedans/kayıp sonuçları, eksik 3.8
 mesh dizisi ve yukarıda belirtilen ayrı grup hızı sınırlaması bu kapsamın dışındadır.
