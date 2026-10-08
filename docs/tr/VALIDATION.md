@@ -734,3 +734,15 @@ bilgilerini korur. Kabul yalnızca listelenen büyüklük ve geometri için geç
 İletken kaybı sapmaları, kabul edilmeyen mikroşerit empedans/kayıp sonuçları, eksik 3.8
 mesh dizisi ve yukarıda belirtilen ayrı grup hızı sınırlaması bu kapsamın dışındadır.
 Hiçbir galeri modeli veya üretilmiş paket değişmez.
+
+## 20. Bölüm 4 karşılaştırma kapsamları
+
+[Bölüm 4 kaydı](benchmarks/pozar-chapter-04.md), 4.2 için hedefi ve mesh ölçütlerini
+sağlayan karmaşık TE10 S matrisini, 4.8 için ideal akımla hesaplanan modal genlik ve
+giriş direncini toplar. Her kapsam kesin enerji duruşlarından sonra iki ardışık mesh
+farkı, bağımsız sınır kontrolü ve kendi hedef/kalite ölçütlerini sağlar.
+
+Filament reaktansı, pratik beslemeler ve genel mod dönüşümü kapsam dışındadır.
+Probun hedef hataları monoton değildir; sınır/prob üçlüsü duyarlılığı doğruluk iddiasını
+belirlenen toleranslarla sınırlar. Yalnız hesap içeren altı örnek yeni FDTD gerektirmez.
+Hiçbir galeri modeli veya üretilmiş paket değişmez.
