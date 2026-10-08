@@ -91,7 +91,7 @@ SCENARIOS.push({
       assert.deepEqual(await retained(),[JSON.stringify(legacy),JSON.stringify(older)]);
       await s.click('ribbon.tab.home',{sel:'.rb-tab'});await s.click('common.close',{sel:'.rb-btn'});await s.wait('.home');
       assert.deepEqual(await retained(),[JSON.stringify(legacy),JSON.stringify(older)]);
-      await s.page.click(`[data-home-design="${saved.id}"] .home-item`);await s.wait('.rb');
+      await s.page.locator(`[data-home-design="${saved.id}"] .home-item`).click();await s.wait('.rb');
       assert.deepEqual(await snapshot(),edited);assert.equal(await s.store((_,m)=>m.s.dirty()),false);
       await s.wait('.dw-right .dz-msg',await s.T('store.legacyBackup'));
       assert.deepEqual(await retained(),[JSON.stringify(legacy),JSON.stringify(older)]);
@@ -103,7 +103,7 @@ SCENARIOS.push({
       await session.send('Fetch.enable',{patterns:[{urlPattern:`${s.url}api/designs/${saved.id}`,requestStage:'Request'}]});
       session.on('Fetch.requestPaused',event=>session.send('Fetch.fulfillRequest',{requestId:event.requestId,responseCode:200,responseHeaders:[{name:'Content-Type',value:'application/json'}],body:Buffer.from(JSON.stringify({...record,backup_scope:'unverified-server-scope'})).toString('base64')}));
       try{
-        await s.page.click(`[data-home-design="${saved.id}"] .home-item`);await s.wait('.rb');
+        await s.page.locator(`[data-home-design="${saved.id}"] .home-item`).click();await s.wait('.rb');
         await s.wait('.dw-right .dz-msg',await s.T('store.backupScopeUnavailable'));
         assert.deepEqual(await snapshot(),record.design);
       }finally{await session.send('Fetch.disable');await session.detach();}

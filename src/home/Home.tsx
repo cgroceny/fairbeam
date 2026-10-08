@@ -320,7 +320,7 @@ export default function Home() {
                               </div>
                             }>
                               <button class="home-item" onClick={() => enterDesign(m.key)}>
-                                <span class="home-item-name">{m.model?.name ?? m.key}</span>
+                                <span class="home-item-name" title={m.model?.name ?? m.key}>{m.model?.name ?? m.key}</span>
                                 <span class="home-item-sub mono">{m.file}</span>
                               </button>
                             </Show>
@@ -370,7 +370,7 @@ export default function Home() {
                     <li><div class="home-row">
                       <button class="home-item" data-run-python-model={m.key} disabled={pythonDesignBusy()} onClick={() => runModel(m.key)}
                         title={m.readonly ? t("home.python.openExampleTitle") : t("home.python.openTitle")}>
-                        <span class="home-item-name">{m.model?.name ?? m.key}</span>
+                        <span class="home-item-name" title={m.model?.name ?? m.key}>{m.model?.name ?? m.key}</span>
                         <span class="home-item-sub"><Play size={11} aria-hidden="true" /> <span class="mono">{m.file}</span>
                           <Show when={m.readonly}><span class="home-item-tag">{t("home.python.exampleTag")}</span></Show></span>
                       </button>
@@ -418,7 +418,7 @@ export default function Home() {
                     return <li>
                       <div class="home-row">
                         <button class="home-item" onClick={() => openUserProject(p.file)} title={p.file}>
-                          <span class="home-item-name">{p.label}</span>
+                          <span class="home-item-name" title={p.label}>{p.label}</span>
                           <span class="home-item-sub">{[p.detail, p.results ? "" : t("home.examples.geometryOnly")].filter(Boolean).join(" · ")}</span>
                         </button>
                         <button class="icon-btn icon-btn-sm home-copy" disabled={!!copyReason()} data-example-copy={p.file}

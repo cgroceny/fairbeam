@@ -11,7 +11,7 @@ export default {
   const renamed=`Renamed ${s.lang} ${ctx.stamp}`, duplicate=`Other ${s.lang} ${ctx.stamp}`;
   const backend=()=>s.page.evaluate(async id=>(await(await fetch(`/api/designs/${id}`)).json()),before.id);
   const row=()=>`[data-home-design="${before.id}"]`;
-  const openRename=async()=>{await s.page.click(row(),{button:'right'});await s.wait('[role=menu]');await s.click('home.designs.rename',{sel:'[role=menuitem]'});await s.wait('.home-rename-dialog');};
+  const openRename=async()=>{await s.page.locator(row()).click({button:'right'});await s.wait('[role=menu]');await s.click('home.designs.rename',{sel:'[role=menuitem]'});await s.wait('.home-rename-dialog');};
   const saveName=async name=>{await openRename();await s.fill('#home-rename-name',name);await s.click('home.designs.renameSave',{within:'.home-rename-dialog'});await s.gone('.home-rename-dialog');};
   await s.step('create Empty Design and attach an existing result fixture',async()=>{
    console.log(`  S14 owned stack PIDs: ${ctx.stack.pids.join(', ')}`);
@@ -43,15 +43,15 @@ export default {
    assert.deepEqual((await backend()).design,before.design);await saveName(renamed);
   });
   await s.step('Explorer browser fallback is honest; native transport uses resolved path',async()=>{
-   await s.page.click(row(),{button:'right'});await s.click('home.designs.reveal',{sel:'[role=menuitem]'});await s.waitFor(text=>document.querySelector('.home-design-action-note')?.textContent.includes(text),await s.T('home.designs.revealDesktop'));
+   await s.page.locator(row()).click({button:'right'});await s.click('home.designs.reveal',{sel:'[role=menuitem]'});await s.waitFor(text=>document.querySelector('.home-design-action-note')?.textContent.includes(text),await s.T('home.designs.revealDesktop'));
    await s.page.evaluate(()=>{window.__revealCalls=[];window.__TAURI_INTERNALS__={invoke:async(command,args)=>{window.__revealCalls.push({command,args});}};});
-   try{await s.page.click(row(),{button:'right'});await s.click('home.designs.reveal',{sel:'[role=menuitem]'});await s.waitFor(()=>window.__revealCalls.length===1);
+   try{await s.page.locator(row()).click({button:'right'});await s.click('home.designs.reveal',{sel:'[role=menuitem]'});await s.waitFor(()=>window.__revealCalls.length===1);
     const call=await s.page.evaluate(()=>window.__revealCalls[0]);const location=await s.page.evaluate(async id=>(await(await fetch(`/api/designs/${id}/location`)).json()),before.id);
     assert.deepEqual(call,{command:'reveal_design',args:{id:before.id,path:location.path}});
    }finally{await s.page.evaluate(()=>{delete window.__TAURI_INTERNALS__;delete window.__revealCalls;});}
   });
   await s.step('reopen retains renamed display, geometry, model identity and result association',async()=>{
-   await s.page.click(`${row()} .home-item`);await s.wait('.rb');const file=await s.store((_,m)=>JSON.parse(JSON.stringify(m.s.file())));
+   await s.page.locator(`${row()} .home-item`).click();await s.wait('.rb');const file=await s.store((_,m)=>JSON.parse(JSON.stringify(m.s.file())));
    assert.equal(file.id,before.id);assert.equal(file.file,before.file);assert.deepEqual(file.design,{...before.design,model:{...before.design.model,name:renamed}});
    assert.equal(await s.store((_,m)=>m.s.draft.model.name),renamed);
    assert.ok((await s.ev((_,m)=>m.r.designRuns(),null,{r:'/src/designer/runResults.ts'})).some(r=>r.file===`${before.id}--run-home.json`));assert.equal(readFileSync(runPath,'utf8'),runBytes);
@@ -64,7 +64,7 @@ export default {
    const mark=await s.store((_,m)=>m.s.historyMark());
    await s.click('header.screen.start',{sel:'.mode-switch button'});await s.wait('.home');
    const historyName=`History name ${s.lang} ${ctx.stamp}`;await saveName(historyName);
-   await s.clickSel(`${row()} .home-item`);await s.wait('.rb');
+   await s.page.locator(`${row()} .home-item`).click();await s.wait('.rb');
    assert.equal(await s.store((mark,m)=>m.s.rollbackTo(mark),mark),false,'a pre-rename modal mark cannot restore old metadata');
    const rebased=await s.store((_,m)=>m.s.historyMark());
    assert.equal(rebased.position,mark.position);assert.equal(rebased.undo.length,mark.undo.length);
@@ -87,7 +87,7 @@ export default {
    await s.click('header.screen.start',{sel:'.mode-switch button'});await s.wait('.home');await saveName(`Redo name ${s.lang} ${ctx.stamp}`);
    await s.click('ribbon.home.undo',{within:'.home-design-action-note'});
    await s.waitFor(async name=>(await import('/src/designer/store.ts')).draft.model.name===name,historyName);
-   await s.clickSel(`${row()} .home-item`);await s.wait('.rb');await s.click('ribbon.tab.home',{sel:'.rb-tab'});await s.click('ribbon.home.redo',{sel:'.rb-btn'});
+   await s.page.locator(`${row()} .home-item`).click();await s.wait('.rb');await s.click('ribbon.tab.home',{sel:'.rb-tab'});await s.click('ribbon.home.redo',{sel:'.rb-btn'});
    assert.equal(await s.store((_,m)=>m.s.draft.model.name),historyName,'Home rename Undo also rebases a retained Redo');
    assert.equal(await s.store((_,m)=>m.s.draft.parts.some(p=>p.name==='history_geometry')),true);
    await s.click('common.save',{sel:'.rb-btn'});
@@ -118,7 +118,7 @@ export default {
    assert.deepEqual(await s.store((_,m)=>m.s.historyMark()),mark,'idempotent sync preserves snapshots and revision');
    assert.equal(await s.store((mark,m)=>m.s.rollbackTo(mark),mark),true,'unchanged name does not invalidate an existing mark');
    assert.deepEqual(await backend(),saved);
-   await s.clickSel(`${row()} .home-item`);await s.wait('.rb');await s.click('ribbon.tab.home',{sel:'.rb-tab'});
+   await s.page.locator(`${row()} .home-item`).click();await s.wait('.rb');await s.click('ribbon.tab.home',{sel:'.rb-tab'});
    await s.click('ribbon.home.undo',{sel:'.rb-btn'});
    assert.equal(await s.store((_,m)=>m.s.draft.model.name),previous,'designer name edit remains undoable');
    await s.click('ribbon.home.redo',{sel:'.rb-btn'});

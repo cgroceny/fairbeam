@@ -642,6 +642,8 @@ input[type="range"] { height: var(--al-control-h-sm); margin: 0; accent-color: v
 .legend-item { display: inline-flex; align-items: center; gap: var(--al-space-2); white-space: nowrap; }
 /* legend strip spanning the chart, with a units note at its end (wraps under the entries if needed) */
 .chart-legend-full { right: var(--al-space-3); }
+.line-chart-legend .legend-item { min-width: 0; max-width: 100%; white-space: normal; overflow-wrap: anywhere; }
+.line-chart-legend .legend-key { flex: none; }
 .legend-note { margin-left: auto; color: var(--al-text-3); white-space: nowrap; }
 .legend-key { width: 14px; height: 2px; border-radius: 1px; }
 /* point sets (LineChart points): the symbol drawn on the plot */

@@ -55,7 +55,9 @@ export default {
    assert.deepEqual(await geometryOf(s),geometry,'all eight world vertices of every physical box are retained');
    assert.deepEqual(await portsOf(s),ports,'port endpoints stay fixed');
    assert.equal(await s.store((_,m)=>m.s.historyIndex()),history+1,'Apply is one edit');
-   await s.click('ribbon.tab.home',{sel:'.rb-tab'});await s.click('ribbon.home.undo',{sel:'.rb-btn'});
+   await s.click('ribbon.tab.home',{sel:'.rb-tab'});
+   if(!await s.find('.rb-btn',await s.T('ribbon.home.undo'))) await s.click('ribbon.home.clipboard',{sel:'.rb-group-toggle'});
+   await s.click('ribbon.home.undo',{sel:'.rb-btn'});
    assert.deepEqual(await draftOf(s),before,'one toolbar Undo restores complete original Design');
   });
  }
