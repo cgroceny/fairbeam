@@ -737,10 +737,11 @@ Hiçbir galeri modeli veya üretilmiş paket değişmez.
 
 ## 20. Bölüm 4 karşılaştırma kapsamları
 
-[Bölüm 4 kaydı](benchmarks/pozar-chapter-04.md), 4.2 için hedefi ve mesh ölçütlerini
-sağlayan karmaşık TE10 S matrisini, 4.8 için ideal akımla hesaplanan modal genlik ve
-giriş direncini toplar. Her kapsam kesin enerji duruşlarından sonra iki ardışık mesh
-farkı, bağımsız sınır kontrolü ve kendi hedef/kalite ölçütlerini sağlar.
+[Bölüm 4 kaydı](benchmarks/pozar-chapter-04.md), 4.8 için hedefi ve mesh ölçütlerini
+sağlayan ideal akımla hesaplanan modal genlik ve giriş direncini toplar. Darbe
+tamamlanıp kesin -90 dB enerji duruşuna ulaşıldıktan sonra iki ardışık mesh farkı,
+bağımsız sınır kontrolü ve kendi hedef/kalite ölçütlerini sağlar. 4.2 arayüzü,
+yeni sınır kontrolü enerji duruşunu sağlayamadığı için kapsam dışında kalır.
 
 Filament reaktansı, pratik beslemeler ve genel mod dönüşümü kapsam dışındadır.
 Probun hedef hataları monoton değildir; sınır/prob üçlüsü duyarlılığı doğruluk iddiasını
