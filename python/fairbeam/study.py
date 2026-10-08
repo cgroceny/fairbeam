@@ -60,6 +60,7 @@ def summarize(bundle: dict) -> dict:
     """Compact metrics used by study files and the convergence report."""
     res = bundle.get("results") or {}
     run = bundle.get("run") or {}
+    features = ((bundle.get("mesh") or {}).get("auto") or {}).get("fine_features")
     fr = first_resonance(bundle)
     ff_list = res.get("farfield", [])
     ff = None
@@ -91,7 +92,9 @@ def summarize(bundle: dict) -> dict:
         "max_cell": (bundle.get("mesh") or {}).get("max_cell"),
         "timesteps": run.get("timesteps"),
         "wall_time_s": run.get("wall_time_s"),
-        "converged": run.get("converged"),
+        "converged": (run.get("converged") if all(p.get("converged") is True
+                                                for p in run.get("port_runs", [])) else False),
+        "fine_features_resolved": (None if features is None else all(f.get("resolved") is True for f in features)),
     }
 
 
@@ -219,9 +222,12 @@ def convergence_report(summaries: list[dict], tol_f_pct: float = 0.5, tol_d_db: 
         da, db = a.get("dmax_dbi"), b.get("dmax_dbi")
         df = None if not (fa and fb) else 100.0 * (fb - fa) / fa
         dd = None if da is None or db is None else db - da
-        ok = df is not None and abs(df) < tol_f_pct and (dd is None or abs(dd) < tol_d_db)
+        energy_ok = a.get("converged") is True and b.get("converged") is True
+        local_ok = all(m.get("fine_features_resolved") is not False for m in (a, b))
+        ok = energy_ok and local_ok and df is not None and abs(df) < tol_f_pct and (dd is None or abs(dd) < tol_d_db)
         step = {"df_pct": None if df is None else round(df, 4),
-                "d_dmax_db": None if dd is None else round(dd, 4), "converged": bool(ok)}
+                "d_dmax_db": None if dd is None else round(dd, 4), "converged": bool(ok),
+                "solver_converged": energy_ok, "fine_features_resolved": local_ok}
         if "network" in a or "network" in b:
             step["network"] = compare_network(a.get("network"), b.get("network"))
             step["converged"] &= step["network"]["converged"]

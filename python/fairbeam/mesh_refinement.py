@@ -44,7 +44,11 @@ def measure_features(features, lines):
 
     For a slanted pair, a Cartesian cell spans |nx| dx + |ny| dy across its
     normal. Using the worst intersecting cell on each axis avoids mistaking a
-    handful of lines near one tip for resolution along the entire strip.
+    handful of lines near one tip for resolution along the entire strip. For a
+    feed, also check the cells touching each zero-width transverse coordinate:
+    refining only along the gap does not resolve the source's fringing field.
+    ``cells_across`` is the worst of those width/cell-size ratios; the separate
+    axial and transverse values make the limiting direction inspectable.
     """
     measured = []
     for f in features:
@@ -61,7 +65,22 @@ def measure_features(features, lines):
                 break
             projected += abs(component) * float(widths.max())
         across = float(f["width"] / projected) if projected > 0 else 0.0
-        measured.append({**f, "cells_across": across, "required_cells": required_cells(f),
+        details = {}
+        if f.get("kind") == "feed":
+            transverse = {}
+            for a in range(3):
+                if abs(f["hi"][a] - f["lo"][a]) >= 1e-9:
+                    continue
+                x = np.asarray(lines[a], float)
+                c = f["lo"][a]
+                # Include both adjacent cells when c is a line. At a domain
+                # boundary only the interior cell exists and must be resolved.
+                widths = np.diff(x)[(x[:-1] <= c + 1e-9) & (x[1:] >= c - 1e-9)]
+                transverse["xyz"[a]] = (float(f["width"] / widths.max())
+                                          if len(widths) and x[0] <= c <= x[-1] else 0.0)
+            details = {"axial_cells_across": across, "transverse_cells_across": transverse}
+            across = min([across, *transverse.values()])
+        measured.append({**f, **details, "cells_across": across, "required_cells": required_cells(f),
                          "resolved": across >= required_cells(f) * (1 - 1e-6)})
     return measured
 

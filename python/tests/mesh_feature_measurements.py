@@ -108,6 +108,7 @@ def example_measurements():
         rows[name] = {**mesh_cost(report), **{key: report[key] for key in ("cells", "total_cells", "min_cell", "max_neighbour_ratio")}}
         if "fine_feature_refinement" in report:
             rows[name]["fine_feature_refinement"] = report["fine_feature_refinement"]
+            rows[name]["feed_resolution"] = [f for f in report["fine_features"] if f["kind"] == "feed"]
     return rows
 
 

@@ -105,6 +105,8 @@ export interface ConvergenceMetrics {
   zin_im: number | null;
   cells?: number | null;
   wall_time_s?: number | null;
+  solver_converged?: boolean | null;
+  fine_features_resolved?: boolean | null;
 }
 export interface ConvergenceStep {
   from: number;
@@ -117,6 +119,7 @@ export interface ConvergenceStep {
   /** false when either run has no resonance in the band: the step says nothing and never converges
    * (absent in a study written before this field: comparable) */
   comparable?: boolean;
+  quality?: { energy: boolean; local_mesh: boolean };
   converged: boolean;
 }
 export interface ConvergenceStudy {
@@ -208,6 +211,7 @@ export function verdictText(verdict: string): string {
   let m: RegExpMatchArray | null;
   if ((m = verdict.match(/^converged at (.+) cells\/λ$/))) return t("conv.verdict.converged", { density: m[1] });
   if (verdict === "not converged: refine further or check the model") return t("conv.verdict.notConverged");
+  if (verdict === "not converged: energy decay or local mesh resolution is unverified") return t("conv.verdict.notVerified");
   if (verdict === "not comparable: no resonance in the band (the minimum is at the band edge)") return t("conv.verdict.notComparable");
   if ((m = verdict.match(/^stopped: the run at (.+) cells\/λ failed$/))) return t("conv.verdict.runFailed", { density: m[1] });
   if (verdict === "stopped before it converged") return t("conv.verdict.cancelled");
@@ -222,6 +226,7 @@ export function verdictDetail(study: ConvergenceStudy): string {
   const c = study.convergence;
   const step = c.reason === "exhausted" ? c.steps[c.steps.length - 1] : undefined;
   if (!step) return verdictText(c.verdict);
+  if (step.quality && (!step.quality.energy || !step.quality.local_mesh)) return t("conv.verdict.notVerified");
   // a step with a band-edge "resonance" says nothing about the mesh: do not blame the resonance for moving
   if (step.comparable === false) return t("conv.verdict.notComparableLast", { from: fmt.num(step.from, 3), to: fmt.num(step.to, 3) });
   const at = { from: fmt.num(step.from, 3), to: fmt.num(step.to, 3) };

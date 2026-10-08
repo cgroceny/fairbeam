@@ -80,8 +80,8 @@ class ExampleMeshPreservationTest(unittest.TestCase):
     def test_already_resolved_examples_keep_their_automatic_mesh(self):
         before = json.loads((FIXTURE.parent / "automesh_fine_features_before.json").read_text())["examples"]
         after = example_measurements()
-        unchanged = ("branchline-coupler", "lowpass-stepped", "microstrip-line", "minkowski-patch",
-                     "patch-antenna", "patch-array-2x1", "patch-array-4x1", "pyramidal-horn",
+        unchanged = ("microstrip-line", "minkowski-patch",
+                     "patch-array-2x1", "pyramidal-horn",
                      "wilkinson-divider", "yagi-867")
         for name, measured in after.items():
             with self.subTest(baseline=name):
@@ -94,6 +94,13 @@ class ExampleMeshPreservationTest(unittest.TestCase):
             with self.subTest(example=name):
                 self.assertEqual(after[name]["cells"], before[name]["cells"])
                 self.assertAlmostEqual(after[name]["min_cell"], before[name]["min_cell"], places=5)
+        # Axial substrate cells previously hid a coarse transverse feed mesh.
+        for name in ("branchline-coupler", "lowpass-stepped", "patch-antenna", "patch-array-4x1"):
+            with self.subTest(transverse_feed=name):
+                self.assertGreater(after[name]["total_cells"], before[name]["total_cells"])
+                for feed in after[name]["feed_resolution"]:
+                    self.assertTrue(feed["resolved"], feed)
+                    self.assertTrue(all(c >= 3 * (1 - 1e-6) for c in feed["transverse_cells_across"].values()))
 
 
 if __name__ == "__main__":
