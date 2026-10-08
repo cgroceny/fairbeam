@@ -353,16 +353,17 @@ class ChebyshevControls(unittest.TestCase):
         with self.assertRaises(ValueError):
             calibration({k: [v[0], v[0]] for k, v in controls.items()}, 8, 3)
 
-    def synthetic(self, root, order=3, peak_scale=1.):
+    def synthetic(self, root, order=3, peak_scale=1., peak_index=None):
         for n, order, kind, c, expanded in cases((order,)):
             path = case_path(root, n, order, kind, c, expanded)
             path.mkdir(parents=True)
             sim = f.build(n, order, kind, c, expanded)
             refs, s, dx = f.port_spec(kind), f.reference(order, kind), f.H/n*1e-3
             if kind == 'transformer' and peak_scale != 1.:
-                rho = s[f.CENTRE, 0, 0]*peak_scale
-                trans = s[f.CENTRE, 1, 0]/abs(s[f.CENTRE, 1, 0])*np.sqrt(1-abs(rho)**2)
-                s[f.CENTRE] = [[rho, trans], [trans, -np.conj(rho)*trans/np.conj(trans)]]
+                k = f.CENTRE if peak_index is None else peak_index
+                rho = s[k, 0, 0]*peak_scale
+                trans = s[k, 1, 0]/abs(s[k, 1, 0])*np.sqrt(1-abs(rho)**2)
+                s[k] = [[rho, trans], [trans, -np.conj(rho)*trans/np.conj(trans)]]
             g = 2j*np.pi*f.FREQUENCIES/f.C0*f.Z_BASE/refs[:, None]
             ar = np.zeros((2, len(f.FREQUENCIES)), complex)
             ar[c], ar[1-c] = 1., .07+.02j
@@ -410,6 +411,23 @@ class ChebyshevControls(unittest.TestCase):
                 for key, value in row['metrics'].items():
                     if key != 'ripple_target_abs':
                         self.assertLessEqual(value, f.LIMITS[key])
+
+    def test_exact_upper_edge_sample_cannot_be_rounded_out_of_reference_band(self):
+        for order in f.ORDERS:
+            np.testing.assert_array_equal(f.analytic_band(order), f.ripple_frequencies(order)[[0, -1]])
+        right = int(np.flatnonzero(f.FREQUENCIES == f.ripple_frequencies(2)[-1])[0])
+        lo, hi = f.analytic_band(2)
+        self.assertGreaterEqual(f.FREQUENCIES[right], lo)
+        self.assertLessEqual(f.FREQUENCIES[right], hi)
+        with tempfile.TemporaryDirectory() as root:
+            self.synthetic(root, order=2, peak_scale=1.00008, peak_index=right)
+            result = compare(root, (2,))
+            # Numerical agreement passes; the strict sampled limit remains false.
+            self.assertTrue(result['qualified_scope'])
+            for row in result['rows']:
+                if row['kind'] == 'transformer':
+                    self.assertGreater(row['sampled_ripple_peak'], f.GAMMA_MAX)
+                    self.assertFalse(row['sampled_reflection_limit_met'])
 
     def test_source_energy_metadata_references_hash_and_deadline_rejected(self):
         with tempfile.TemporaryDirectory() as root:

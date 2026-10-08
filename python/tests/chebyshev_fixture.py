@@ -27,7 +27,7 @@ ORDERS, MESHES = (1, 2, 3, 4), (8, 12, 16)
 KINDS = ('line50', 'line100', 'transformer')
 H = .75
 W = np.sqrt(MUE0/EPS0)*H/Z_BASE
-PROTOCOL, END_DB, THREADS = 'tem-chebyshev-v1', -90., 1
+PROTOCOL, END_DB, THREADS = 'tem-chebyshev-v2', -90., 1
 CAP_NS, CASE_SECONDS = 4., 1800.
 LIMITS = dict(s_target_abs=.02, gamma_target_abs=.01, z_target_rel=.02,
     band_edge_target_rel=.005, s_mesh_abs=.003, gamma_mesh_abs=.002,
@@ -208,6 +208,10 @@ def input_impedance(s, kind):
 
 
 def analytic_band(order, *, small_reflection=False):
+    if not small_reflection:
+        # Reuse the stored extrema exactly: an independently rounded upper
+        # edge could otherwise exclude its own sample from a strict test.
+        return ripple_frequencies(order)[[0, -1]]
     theta = np.arccos(1/ripple_scale(order,small_reflection=small_reflection))
     return F0*np.array([2*theta/np.pi,2-2*theta/np.pi])
 
