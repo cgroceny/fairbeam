@@ -21,8 +21,8 @@ F0, Z0, LOAD_R = 500e6, 100., 200.
 LOAD_C = 1/(2*np.pi*F0*100.)
 FREQUENCIES = np.linspace(400e6, 600e6, 201)
 MESHES, KINDS = (1, 2, 3), ('bare', 'series-l', 'series-c')
-PROTOCOL = 'ideal-lmatch-v1'
-END_DB, MAX_STEPS, CASE_SECONDS, THREADS = -90., 2000000, 1800., 1
+PROTOCOL = 'ideal-lmatch-v2'
+END_DB, BASE_STEPS, CASE_SECONDS, THREADS = -90., 2000000, 1800., 1
 LIMITS = dict(z_target_rel=.02, gamma_target_abs=.01, z_mesh_rel=.005,
               gamma_mesh_abs=.005, z_boundary_rel=.002, gamma_boundary_abs=.002,
               power_rel=.01)
@@ -51,6 +51,11 @@ def source_ids():
     paths = dict(fixture=Path(__file__), runner=Path(__file__).with_name('test_lmatch.py'),
                  simulation=Path(simulation.__file__), excitation=Path(excitation.__file__))
     return {k: hashlib.sha256(p.read_bytes()).hexdigest() for k, p in paths.items()}
+
+
+def max_steps(refinement):
+    # A fixed count would reduce the physical time budget as the mesh is refined.
+    return BASE_STEPS*refinement
 
 
 def geometry(kind, expanded=False):
@@ -83,7 +88,7 @@ def build(refinement, kind, expanded=False):
             or not isinstance(expanded, bool)):
         raise ValueError('declared integer refinement, circuit and enclosure required')
     sim = Simulation(FREQUENCIES[0], FREQUENCIES[-1], boundaries=['PEC']*6,
-                     excitation='dgauss', end_criteria_db=END_DB, max_timesteps=MAX_STEPS)
+                     excitation='dgauss', end_criteria_db=END_DB, max_timesteps=max_steps(refinement))
     lo, hi = geometry(kind, expanded)['enclosure_mm']
     for k, axis in enumerate('xyz'):
         count = int(round((hi[k]-lo[k])/(.02/refinement)))
@@ -113,7 +118,7 @@ def build(refinement, kind, expanded=False):
 def identity(refinement, kind, expanded):
     return dict(protocol=PROTOCOL, geometry=geometry(kind, expanded), kind=kind,
                 refinement=refinement, expanded=expanded, limits=LIMITS,
-                frequency_hz=FREQUENCIES.tolist(), source_ids=source_ids())
+                max_timesteps=max_steps(refinement), frequency_hz=FREQUENCIES.tolist(), source_ids=source_ids())
 
 
 def acquire(out, refinement, kind, expanded=False):

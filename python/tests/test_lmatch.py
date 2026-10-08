@@ -19,6 +19,10 @@ from fairbeam.network import network_s
 from tests import lmatch_fixture as f
 
 
+class UnqualifiedStop(ValueError):
+    """Readable acquisition whose energy/source stop does not meet the protocol."""
+
+
 def read_case(path, refinement, kind, expanded=False):
     path = Path(path)
     meta = json.loads((path/'report.json').read_text(encoding='utf-8'))
@@ -31,18 +35,21 @@ def read_case(path, refinement, kind, expanded=False):
     energy = [run.get(k) for k in ('final_energy_db', 'final_energy_bound_db')]
     energy = [x for x in energy if isinstance(x, (int, float)) and not isinstance(x, bool) and np.isfinite(x)]
     steps = run.get('timesteps')
-    if (meta.get('cells') != expected_cells or run.get('converged') is not True
-            or run.get('exact_endcriteria') is not True or run.get('hit_timestep_limit') is not False
+    if (meta.get('cells') != expected_cells or run.get('exact_endcriteria') is not True
             or run.get('engine') != 'cpu' or run.get('threads') != f.THREADS
-            or not energy or max(energy) > f.END_DB+1e-9
-            or isinstance(steps, bool) or not isinstance(steps, int) or not 0 < steps < f.MAX_STEPS
+            or not energy or run.get('converged') not in (True, False)
+            or run.get('hit_timestep_limit') not in (True, False)
+            or isinstance(steps, bool) or not isinstance(steps, int) or not 0 < steps <= f.max_steps(refinement)
             or any(isinstance(x, bool) or not isinstance(x, (int, float)) or not np.isfinite(x) or x <= 0 for x in positive)
             or max(positive[2:]) > f.CASE_SECONDS):
-        raise ValueError('confirmed stop, finite metadata and bounded owned process required')
+        raise ValueError('finite metadata, declared engine and bounded owned process required')
+    if (run['converged'] is not True or run['hit_timestep_limit'] is not False
+            or steps >= f.max_steps(refinement) or max(energy) > f.END_DB+1e-9):
+        raise UnqualifiedStop('declared energy stop not confirmed')
     pulse = f.excitation.dgauss_duration_s(f.FREQUENCIES[-1])
     if (not np.isclose(meta['pulse_end_s'], pulse, rtol=1e-12, atol=0)
             or steps*meta['dt_s'] < pulse):
-        raise ValueError('source pulse did not finish')
+        raise UnqualifiedStop('source pulse did not finish')
     with np.load(path/'data.npz') as src:
         data = dict(src)
     if (not np.array_equal(data['f'], f.FREQUENCIES)
@@ -85,13 +92,16 @@ def case_path(root, n, kind, expanded):
 
 
 def compare(root):
-    records, missing = {}, []
+    records, missing, rejected = {}, [], []
     for key in cases():
         path = case_path(root, *key)
         if not (path/'report.json').is_file():
             missing.append(str(path.relative_to(root)))
         else:
-            records[key] = read_case(path, *key)
+            try:
+                records[key] = read_case(path, *key)
+            except UnqualifiedStop as error:
+                rejected.append(dict(refinement=key[0], kind=key[1], expanded=key[2], reason=str(error)))
     rows, boundaries = [], []
     for kind in f.KINDS:
         previous = None
@@ -112,12 +122,21 @@ def compare(root):
                           gamma_boundary_abs=float(np.max(abs(records[a][2]-records[b][2]))))
             boundaries.append(dict(kind=kind, changes=change, control=records[b][0],
                 passes=records[b][0]['matches_and_qa'] and all(change[k] <= f.LIMITS[k] for k in change)))
-    qualified = (not missing and len(rows) == 9 and len(boundaries) == 3
+    qualified_kinds = []
+    for kind in f.KINDS:
+        own_rows = [r for r in rows if r['kind'] == kind]
+        own_boundary = [b for b in boundaries if b['kind'] == kind]
+        if (len(own_rows) == 3 and len(own_boundary) == 1 and own_boundary[0]['passes']
+                and all(r['matches_and_qa'] for r in own_rows)
+                and all(r['mesh_passes'] for r in own_rows[1:])):
+            qualified_kinds.append(kind)
+    qualified = (not missing and not rejected and len(rows) == 9 and len(boundaries) == 3
         and all(r['matches_and_qa'] for r in rows)
         and all(r['mesh_passes'] for r in rows if r['refinement'] != f.MESHES[0])
         and all(b['passes'] for b in boundaries))
     return dict(protocol=f.PROTOCOL, limits=f.LIMITS, rows=rows, boundaries=boundaries,
-        missing_cases=missing, qualified_scope=bool(qualified),
+        missing_cases=missing, rejected_cases=rejected, qualified_kinds=qualified_kinds,
+        qualified_scope=bool(qualified),
         scope='ideal single-branch lumped-element L matching, Z and complex S11; no packaged components or PCB')
 
 
@@ -147,6 +166,7 @@ class LMatchTests(unittest.TestCase):
                 sim = f.build(n, kind)
                 self.assertEqual(int(np.prod([len(sim.mesh.GetLines(a))-1 for a in 'xyz'])), 576*n**3)
                 self.assertEqual(sim.ports[0]['start'], f.BOXES['source'][0])
+                self.assertEqual(sim.max_timesteps, f.BASE_STEPS*n)
                 for el in sim.lumped_elements:
                     self.assertEqual(el['topology'], 'parallel')
                     self.assertEqual(len(set(el)&{'R', 'L', 'C'}), 1)
@@ -193,7 +213,12 @@ class LMatchTests(unittest.TestCase):
                     m['case_elapsed_s'] = f.CASE_SECONDS+1
                 path.write_text(json.dumps(m), encoding='utf-8')
                 with self.subTest(field=field), self.assertRaises(ValueError):
-                    compare(folder)
+                    read_case(path.parent, *key)
+                if field in ('source', 'energy'):
+                    result = compare(folder)
+                    self.assertFalse(result['qualified_scope'])
+                    self.assertNotIn('series-l', result['qualified_kinds'])
+                    self.assertEqual(len(result['rejected_cases']), 1)
             path.write_text(json.dumps(original), encoding='utf-8')
 
     def test_boundary_control_requires_its_own_power_qa(self):
@@ -302,8 +327,12 @@ def main():
                 path = case_path(args.out, *key)
                 if not path.exists():
                     f.serial(path, *key)
-                row, _, _ = read_case(path, *key)  # existing cases need the same strict identity/QA read
-                print(json.dumps(row), flush=True)
+                try:
+                    row, _, _ = read_case(path, *key)  # existing cases need the same strict identity/QA read
+                    print(json.dumps(row), flush=True)
+                except UnqualifiedStop as error:
+                    print(json.dumps(dict(refinement=key[0], kind=key[1], expanded=key[2],
+                        rejected=True, reason=str(error))), flush=True)
     else:
         unittest.main(argv=[sys.argv[0]])
 
