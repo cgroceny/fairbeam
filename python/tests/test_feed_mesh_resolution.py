@@ -29,11 +29,29 @@ class FeedResolutionTest(unittest.TestCase):
         report = measure_features(feeds, [[0, 1], [-1, 0], [0, 1, 2, 3]])[0]
         self.assertTrue(report["resolved"])
 
-    def test_nonzero_port_width_is_not_treated_as_a_line(self):
+    def test_finite_port_must_resolve_its_whole_footprint(self):
         report = measure_features(self.feed(start=[-10, 0, 0], stop=[10, 0, 3]),
                                   [[-10, 0, 10], [-1, 0, 1], [0, 1, 2, 3]])[0]
-        self.assertEqual(report["transverse_cells_across"], {"y": 3})
-        self.assertTrue(report["resolved"])
+        self.assertEqual(report["transverse_cells_across"], {"x": .3, "y": 3})
+        self.assertFalse(report["resolved"])
+
+    def test_finite_source_span_and_gap_both_set_transverse_scale(self):
+        feeds = self.feed(start=[-1, 0, 0], stop=[1, 0, 3])
+        report = measure_features(feeds, [[-1, 0, 1], [-1, 0, 1], [0, 1, 2, 3]])[0]
+        self.assertEqual(report["transverse_cells_across"], {"x": 2, "y": 3})
+        self.assertFalse(report["resolved"])
+
+    def test_finite_source_refinement_resolves_both_transverse_axes(self):
+        from tests.blade_feed_study import SOURCE, design
+        from fairbeam.design import build
+        import json
+        sim = build(design(json.loads(SOURCE.read_text()), "auto", 4, 0), {})
+        feed = next(f for f in sim.mesh_report["fine_features"] if f["kind"] == "feed")
+        self.assertTrue(feed["resolved"], feed)
+        self.assertEqual(set(feed["transverse_cells_across"]), {"x", "y"})
+        x = np.asarray(sim.mesh.GetLines("x"))
+        widths = np.diff(x)[(x[:-1] < 2) & (x[1:] > -2)]
+        self.assertLessEqual(widths.max(), 2/3 + 1e-6)
 
     def test_axis_permutation(self):
         for axis in range(3):

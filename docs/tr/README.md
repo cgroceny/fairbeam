@@ -16,134 +16,66 @@ denetimlerinden geçtiğini doğrular.
 
 ## İHA bıçak anteni, 867 MHz (`blade_867.design.json`)
 
-863–870 MHz SRD / LoRa bandında bir İHA (örneğin Teknofest İHA yarışması) için telemetri bıçak
-anteni. Düşey kutupludur, azimutta her yöne ışıma yapar ve hava aracının gövde kaplamasına yerleştirilir.
+867 MHz bandının çevresini incelemek için 300 × 300 mm toprak düzlemi üzerinde eğimli bir PEC
+bıçak kullanan eğitim örneği. Bu galeri örneğinin ölçülmüş anteni veya belirlenmiş konnektörü yoktur.
+Adı, incelenmek istenen bandı belirtir; rezonans veya fiziksel empedans uyumu garantisi değildir.
+**Durum: mesh duyarlı.** S11 yakınsama çalışması otomatik meshi doğrulamadı; galeri örneği,
+doğrulanmış anten olarak değil, geometri ve sayısal inceleme amacıyla korunur.
 
-**Model.** Geriye eğimli metal bıçak (xz düzleminde PEC levha), gövde kaplamasını temsil eden
-300 × 300 mm PEC toprak düzlemi üzerinde durur. x uçuş eksenidir (+x arkaya doğru); z yukarıya,
-kaplamanın dışına yönelir. 50 Ω ayrık port, kaplamadan geçen koaksiyel konnektör pimi gibi,
-toprak düzleminden bıçağın besleme diline kadar `g` aralığını köprüler. Besleme dilinin üzerinde
-`ht` yüksekliğindeki geçiş bıçağı `wb` taban genişliğine açar; `wt` genişliğindeki üst kenar
-`sweep` kadar arkaya kaydırılır. Açık sınırlar MUR'dur. Toprak düzleminin altı dahil her yönde
-0,7 GHz'de çeyrek dalga boyu (107 mm) hava vardır. Otomatik mesh, 1,05 GHz'de dalga boyu başına
-20 hücre kullanır; İnce ayrıntıları sıklaştırın ayarı açıkken 269.040 hücre vardır
-(bkz. [MESHING.md](../../docs/MESHING.md)); bıçak ve toprak levhalarının yanında, onlara dik yönde
-hücre boyutu yarıya iner.
+**Besleme modeli.** z = 0 ile z = 2 mm arasındaki mevcut 50 Ω ideal çizgi varsayılan olarak korunur.
+`feed_fraction`, isteğe bağlı düzlemsel kaynak genişliğinin mevcut 4 mm dilime oranını seçer:
+1 tüm dilimi, 0.5 yarısını kapsar; 0 önceki ideal çizgiyi seçer. Bunlar farklı uyarım modelleridir.
+Genişlik değişince S11 değişir; bu parametre ölçülmüş donanım için bir düzeltme katsayısı değildir.
+Toprak ve bıçak dış hatları değişmedi. Koaksiyel pin, toprak açıklığı, konnektör dielektriği,
+altlık veya radom modellenmez.
 
-Model, PCB yerine yalın bir metal bıçak kullanır. Çoğu İHA bıçak anteninde cam elyafı veya
-poliüretan radom içinde metal bir plaka ya da ince bir kart üzerinde bakır ışıma elemanı bulunur.
-Buradaki metal levha, bu elemanın dielektriksiz halidir; FR-4 kaybı ve alttaşa bağımlılık yoktur.
-Ayrıca 1,6 mm kart kalınlığı boyunca mesh gerekmez. Radom ve kart frekansı birkaç yüzde düşürür; aşağıdaki geniş bant bunu kapsar.
-PCB bıçak modellemek için levhanın yanına normali y yönünde, 1,6 mm kalınlığında `linpoly`
-biçiminde bir FR-4 Katısı (εr 4,3, tan δ 0,02) ekleyin. Ardından `h` değerini yeniden ayarlayın;
-sonuçta yaklaşık %5–10 daha kısa olması beklenir.
-
-| Parametre | Değer | Anlamı |
+| Parametre | Varsayılan | Anlamı |
 | --- | --- | --- |
-| `f0` | 0,867 GHz | tasarım frekansı (uzak alan ve yüzey akımı) |
-| `gnd` | 300 mm | kare toprak düzlemi (gövde kaplaması) |
-| `h` | 80 mm | besleme aralığının üzerindeki bıçak yüksekliği (ayarlanmış; uç z = 82 mm'de, 0,237 λ) |
-| `wb` | 60 mm | geçişin üstündeki taban genişliği |
-| `wt` | 30 mm | üst genişlik |
-| `sweep` | 25 mm | üst kenar merkezinin arkaya kayması; ön kenarın eğimi 30,5° (`sweep_deg`) |
-| `g` | 2 mm | besleme aralığı (port uzunluğu) |
-| `wf` | 4 mm | besleme dili genişliği |
-| `ht` | 12 mm | besleme dilinden `wb` genişliğine geçiş yüksekliği |
+| `f0` | 0,867 GHz | uzak alan ve yüzey akımı frekansı |
+| `gnd` | 300 mm | kare toprak düzlemi |
+| `h` | 80 mm | boşluğun üzerindeki yükseklik; uç z = 82 mm'de |
+| `wb` / `wt` | 60 / 30 mm | alt / üst bıçak genişliği |
+| `sweep` | 25 mm | üst kenar merkezinin arkaya kayması |
+| `g` | 2 mm | kaynak boşluğu |
+| `wf` | 4 mm | bıçağın besleme dilimi genişliği |
+| `feed_fraction` | 0 | kaynak genişliğinin `wf` değerine oranı; 0 ideal çizgiyi korur |
+| `ht` | 12 mm | dilimin üzerindeki genişleme yüksekliği |
 
-Bant 0,7–1,05 GHz, durdurma ölçütü −50 dB; uzak alan ve yüzey akımı `f0` frekansında,
-ışıma verimliliği ise bant boyunca 21 frekansta hesaplanır.
-
-**Önceki ayarlama (İnce ayrıntıları sıklaştırın kapalı).** `fairbeam optimize --vary h=70:95 --goal "s11_max=-30@0.867" --max-evals 5` ve
-sıklaştırılmamış mesh ile yapılan tarama, en iyi uyumu h = 80 mm'de verdi. 867 MHz'de |S11|; h = 72 mm'de
-−16,1 dB, 76'da −20,1 dB, 78'de −22,3 dB, 80'de −23,1 dB, 82'de −22,1 dB, 84'te −20,8 dB ve
-88 mm'de −17,5 dB olduğundan değer kritik değildir. (Mesh, bıçak levhasının yanına ince hücreler
-yerleştirmeden önce aynı tasarım 0,904 GHz yerine 0,843 GHz'de rezonansa giriyordu; tarama yine
-h = 80 mm sonucunu verdi.)
-
-**Sonuçlar** (h = 80 mm, İnce ayrıntıları sıklaştırın açık, Apple M5 Pro üzerinde dört iş parçacıklı
-CPU motoru, 269.040 mesh hücresi, 11.904 zaman adımı, 8,03 s çözücü süresi, 8,60 s toplam çalışma süresi):
-
-Paketlenmiş sonucu depodan standart paket yazıcısıyla yeniden üretin:
+**Sayısal ayarlar.** Korunan başlangıç modeli 0,7–1,05 GHz, altı sınırda MUR, −50 dB enerji
+sönümü ve her pakette kaydedilen otomatik adım sınırını kullanır. Otomatik mesh, dalga boyu başına 20 hücre
+ve ince özellik iyileştirmesi kullanır. Yenilenen paket 801 port örneği, y = 0 elektrik alan kesiti,
+yüzey akımları ve 21 verimlilik örneği içerir. Enerji sönümü ile mesh yakınsaması ayrı kontrollerdir.
 
 ```bash
-fairbeam run examples/designs/blade_867.design.json --engine cpu --threads 4 \
-  --no-exact --points 801 --field-plane E y 0 0.867 --out public/projects
+fairbeam run examples/designs/blade_867.design.json --engine cpu --threads 12 \
+  --points 801 --field-plane E y 0 0.867 --out public/projects
 ```
 
-Paketlenmiş çalıştırmada önceki 60.000 zaman adımı sınırı korundu; çalıştırma −50 dB ölçütünün
-altında, −55,07 dB seviyesinde durdu. Güncel otomatik zaman adımı sınırı daha yüksek olabilir. Aynı sınır için geçici bir
-tasarım kopyasında `simulation.max_timesteps` değerini `60000` yapın ve komutta bu kopyayı kullanın.
-Paket, yüzey akımlarını, y = 0 düzlemindeki E alanını ve 21 verimlilik örneğini içerir.
+**Kaynak duyarlılığı.** Sabit geometri, dış mesh ve kaynak genişliğiyle iki ardışık yerel
+hücre yarılama, düzlemsel kaynağın S11 minimum derinliğini 0,179 ve 0,098 dB değiştirdi;
+en büyük karmaşık farklar 0,00431 ve 0,00257 oldu. İki adım da önceden belirlenen sınırları geçti.
+İdeal çizgi kontrolünde değişimler 0,787 ve 0,666 dB, karmaşık farklar 0,03006 ve 0,02888 oldu;
+bu kontrol geçmedi. Yalnızca rezonans frekansının kararlı görünmesi bu duyarlılığı gizliyordu.
+Bu bulgu, yerel ayrıklaştırma duyarlılığının azaldığını gösterir; fiziksel doğruluk kanıtı değildir.
+Ayrı otomatik mesh testleri, girdi özetleri ve sınırlar için
+[tekrarlanabilir kaynak ve mesh çalışmasına](../../docs/STUDIES.md#blade-declare-the-source-before-judging-the-mesh) bakın.
+Bu kontroller PML_8 ve −60 dB kullanır; korunan galeri başlangıç modelinden ayrıdır. Sonlu kaynak
+seçeneği, varsayılanın sayısal olarak doğrulanmış alternatifi değildir. Kaynağın tüm genişliğini
+denetleyen yeni kontrol, tek enine hücrenin yeterli sayılmasını önler; fakat bu asgari hücre
+kontrolü S11 yakınsamasını garanti etmez.
 
-| Büyüklük | Değer |
-| --- | --- |
-| 867 MHz'de \|S11\| | −14,4 dB (VSWR 1,47); 863 / 870 MHz'de −14,3 / −14,5 dB |
-| 867 MHz'de giriş empedansı | 49,5 + j19,3 Ω |
-| En düşük \|S11\| | 0,90825 GHz'de −14,94 dB |
-| −10 dB bandı | 0,75731 GHz'den simülasyon bandının sonu olan 1,05 GHz'in üzerine kadar (bağıl bant genişliği en az %32,2); üst kenar belirlenmemiştir |
-| Dmax / kazanç / gerçekleşen kazanç | 4,10 / 4,09 / 3,93 dBi |
-| Işıma / toplam verimlilik | %99,7 / %96,1 (PEC: metal kaybı modellenmiyor) |
-| Ana lob | kaplamanın 45° üzerinde (θ = 45°), tüm yönlerde |
-| Azimut, ufuk (θ = 90°) | ortalama −1,4 dBi, dalgalanma 1,5 dB (φ ≈ 70°'de −0,7 dBi, önde φ = 180°'de −2,2 dBi) |
-| Azimut, ana lobda (θ = 45°) | dalgalanma 1,8 dB (2,3–4,1 dBi) |
-| Zenit (θ = 0°) / kaplamanın altı | −10,7 dBi / en çok −1,2 dBi |
+**Yorumlama.** Empedans uyumu, ışıma ve verimlilik; kaynak varsayımına, sonlu toprak düzlemine
+ve ayrıklaştırmaya bağlıdır. S11 yakınsaması, uzak alan veya verimlilik yakınsamasını kanıtlamaz.
+PEC modelinde iletken veya dielektrik kayıp yoktur; ışıma verimliliğinin birden sapması sayısaldır,
+ölçülmüş malzeme kaybı değildir. %100'ün üzerindeki görünür verimliliği kırpmayın veya fiziksel
+sonuç saymayın. Örneği donanım tasarımında kullanmadan önce gerçek beslemeyi, malzemeyi ve
+muhafazayı ekleyin; optimizasyondan önce yakınsama kontrollerini tekrarlayın.
 
-**Önceki mesh yakınsaması (İnce ayrıntıları sıklaştırın kapalı).** Bu çalıştırmalar sıklaştırılmış
-paketin yakınsadığını göstermez. Ayar kapalıyken en düşük |S11|, dalga boyu
-başına 20 hücrede 0,904 GHz'de, 30 ve 40 hücrede ise 0,907 ve 0,908 GHz'dedir. Bıçağın yanındaki
-hücreler inceltilmeden önce 20, 30 ve 40 hücrede sırasıyla 0,843; 0,890 ve 0,906 GHz görülüyor,
-ancak 50 hücreden itibaren 0,908 GHz'e ulaşılıyordu. 0,7–2,0 GHz çalıştırması 867 MHz'i yaklaşık
-46 hücre/dalga boyuyla örneklediğinden mesh'i de denetler. Dmax 0,02 dB değişti, 867 MHz'de |S11|
-−18 dB'ye ve Zin 49,2 + j12,6 Ω'a geldi (2 GHz'de dalga boyu başına 30 hücre: −16 dB,
-48,3 + j15,3 Ω). Besleme reaktansı en az yakınsayan büyüklüktür; yoğunlukla artmayı sürdürür,
-muhtemelen 2 mm aralığın ve 4 mm besleme dilinin nasıl çözümlendiğine bağlıdır. Bununla birlikte
-her çalıştırmada 867 MHz'deki uyum −16 dB (VSWR 1,4) veya daha iyidir.
-
-**Kuramla karşılaştırma.** Sonsuz toprak düzlemindeki ince bir λ/4 monopol, h = λ/4 için yaklaşık
-36 + j21 Ω empedansa sahiptir. Biraz daha kısa boyda yaklaşık 36 Ω ile rezonansa girer ve ufukta
-5,15 dBi verir. Bıçak üç bakımdan farklıdır:
-
-- **Empedans ve bant genişliği.** Bıçak 60 mm (0,17 λ) genişliğindedir. Kalın bir monopol veya
-  düzlemsel UWB monopol gibi daha yüksek ışıma direnci (burada yaklaşık 50 Ω; uyumlama devresi
-  olmadan 50 Ω beslemeye uygundur) ve neredeyse sabit reaktans sunar. Sıklaştırılmış tarama, en az %32,2
-  −10 dB bant genişliği gösterir; üst kenar taramanın dışındadır. Tel monopolde yaklaşık %10'dur.
-- **Yönlülük ve eğim.** 300 mm toprak düzlemi yalnızca 0,87 λ genişliğindedir. Kenarlarda kırınıma
-  uğrayan akımlar ana lobu kaplamanın yaklaşık 45° üzerine eğer, tepe yönlülüğünü yaklaşık 1 dB
-  azaltır (5,15 yerine 4,1 dBi) ve ufukta tepeye göre yaklaşık 5,5 dB daha düşük değer oluşturur.
-  Kaplamanın altına da ışıma yaparlar. Sonsuz toprak düzleminde tepe ufukta olurdu.
-- **Dalgalanma.** Eğimli bıçak ve kare toprak düzlemi dairesel olmadığından azimut örüntüsü
-  1,5 dB dalgalanır. Önde (−x) en zayıf, bıçağın geniş yüzeyine dik yönlerin yakınında en güçlüdür.
-
-**Sınırlamalar.**
-
-- **Toprak düzlemi.** Düzlem, düz bir 300 mm karedir. Gerçek gövde eğri ve daha dardır
-  (100–200 mm gövde); kanat, kuyruk ve karbon parçalar içerir. Boyutu çoğunlukla yükseliş açısını
-  ve ufuk kazancını değiştirir (daha büyük kaplama eğimi düşürür); uyumu az etkiler. `gnd` değerini
-  hava aracınıza göre ayarlayın veya gövdeyi modelleyin.
-- **Radom ve malzemeler.** Radom, boya ve montaj tabanı modellenmemiştir. İnce cam elyafı kabuk
-  frekansı birkaç yüzde düşürür. Sıklaştırılmış −10 dB bandı 0,757 GHz'de başlar
-  ve 1,05 GHz'in üzerine uzanır; 867 MHz'in altında yaklaşık 110 MHz pay kalır, üst kenar bilinmez. Metal kayıpsızdır; alüminyum veya pirinç,
-  verimde en çok yüzde birkaç ondalık puan kaybettirir.
-- **Besleme.** Besleme, SMA veya N konnektör değil, 2 mm ayrık porttur. Konnektörün empedansı
-  ve uzunluğu S11'in fazını kaydırır; |S11|'i ise çok az değiştirir.
-
-**Diğer bantlar.** 867 MHz boyutlarını `k = 0.867 / f_new` ile ölçekleyerek başlayın. `h`, `wb`,
-`wt`, `sweep`, `wf` ve `ht` değerlerini ölçekleyin; `g` değerini 1–2 mm'de tutun. `f0` ve simülasyon
-bandını ayarlayın (Simülasyon ayarları altında `f_min`, `f_max`; yaklaşık 0,8 × ve 1,2 × f0).
-Ardından birkaç çalıştırmayla veya `fairbeam optimize --vary h=... --goal "s11_max=-25@<f0>"`
-komutuyla `h` değerini yeniden ayarlayın. Tablo başlangıç değerlerini verir; yalnızca 867 MHz'in
-simülasyonu yapılmıştır.
-
-| Bant | f0 | k | h | wb | wt | sweep | ht | wf | g | simülasyon bandı |
-| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| 433 MHz ISM | 0,433 | 2,0 | 160 | 120 | 60 | 50 | 24 | 8 | 2 | 0,35–0,52 GHz |
-| 915 MHz ISM | 0,915 | 0,95 | 76 | 57 | 28 | 24 | 11 | 4 | 2 | 0,73–1,1 GHz |
-| 2,4 GHz ISM | 2,44 | 0,355 | 28 | 21 | 11 | 9 | 4 | 1,5 | 1 | 2,0–2,9 GHz |
-
-Geniş bant sayesinde 867 MHz bıçak zaten 902–928 MHz aralığını kapsar (1,8 GHz'e kadar
-|S11| < −10 dB). 915 MHz satırı bu bandı 915 MHz'e merkezler. 433 MHz'de 300 mm kaplama yalnızca
-0,43 λ'dır; uyum ve örüntü hava aracına güçlü biçimde bağlıdır. Bu durumda gerçek boyutu (`gnd`)
-modelleyin.
+Başka bir bant için uzunlukları `0.867 / f_new` ile ölçeklemek yalnızca başlangıç geometrisi verir.
+Kaynak boşluğu, toprak düzlemi, frekans bandı ve monitörleri tutarlı biçimde güncelleyip meshi yeniden
+kontrol edin. Önceki örneğin ayar taraması ve çizgi kaynaklı ışıma değerleri isteğe bağlı sonlu kaynağı
+tanımlamaz. Belgenin sonraki karşılaştırma tabloları tarihsel çizgi kaynak sonuçları olarak
+korunmuş ve bu şekilde etiketlenmiştir.
 
 ## Yarık yüklü geniş bant düzlemsel dipol, 867 MHz (`wideband_dipole_867.design.json`)
 
@@ -227,6 +159,8 @@ Bunun karşılığında bant daralır: yarıksız dipol %27 bantta uyum sağlar,
 Ayrıca yönlülüğü 0,2 dB daha yüksek (2,43 / örüntüden 2,19 dBi), azimut dalgalanması iki katıdır (0,27 dB).
 
 **Kuram ve `blade_867` ile karşılaştırma.**
+
+**Tarihsel Blade sütunu:** Aşağıdaki Blade değerleri ve ilgili karşılaştırmalar güncel galeri paketini değil, önceki ideal çizgi/MUR kaynağını kullanır.
 
 | | İdeal λ/2 dipol (ince tel) | Bu dipol | `blade_867` |
 | --- | --- | --- | --- |
@@ -362,6 +296,8 @@ bu nedenle daha geniş paya sahiptir.
 
 **Diğer tasarımlarla karşılaştırma.**
 
+**Tarihsel Blade sütunu:** Aşağıdaki Blade değerleri ve ilgili karşılaştırmalar güncel galeri paketini değil, önceki ideal çizgi/MUR kaynağını kullanır.
+
 | | İdeal λ/2 dipol | Bu meander dipol | Bıçak monopol (`blade_867`) |
 | --- | --- | --- | --- |
 | Yükseklik | 0,48 λ (ince telde yaklaşık 165 mm, FR-4 baskıda 140–150 mm) | 101 mm (0,29 λ) | kaplamanın 82 mm üzerinde |
@@ -496,6 +432,8 @@ ve örüntüden tümleştirilen Dmax (2,10 dBi) arasında 0,6 dB fark vardı; uy
 | Zenit / nadir | −39 dBi, dipolün sıfır noktaları |
 
 **Kuram ve diğer iki tasarımla karşılaştırma.**
+
+**Tarihsel Blade sütunu:** Aşağıdaki Blade değerleri ve ilgili karşılaştırmalar güncel galeri paketini değil, önceki ideal çizgi/MUR kaynağını kullanır.
 
 | | İdeal λ/2 dipol (ince tel) | Bu kılıflı dipol | `wideband_dipole_867` | `blade_867` |
 | --- | --- | --- | --- | --- |

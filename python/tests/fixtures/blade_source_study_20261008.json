@@ -1160,5 +1160,265 @@
     }
   ],
   "automatic_refinement_amendment": "20/30/40 failed the unchanged complex-S11 limit. A prospective 40/50/60 sequence used the same model and acceptance criteria; the repeated 40-density response is retained as a repeatability control. 50/60 also failed complex tolerance. A prospective 40/60/80 feature-density test held air density at 20 to separate feature resolution from the outer air grid, retaining the same physical geometry, source and acceptance criteria. 40/60 narrowly failed; 60/80 passed. A declared 100-density continuation reused the exact completed 60/80 inputs and retained all failed steps.",
-  "density_40_repeat_max_complex_delta": 0.0
+  "density_40_repeat_max_complex_delta": 0.0,
+  "source_repository_blob_sha256": "cb12474ac4ba7ed42ba59bf80f06660d13f23db0f40869be67d2883d252b328e",
+  "source_json_sha256": "19d1ec11a9b0fd273e3cdbb6521b72d8e7c4322b2b9d2641724673d9ba33337a",
+  "source_newline_note": "The original run source used CRLF; the repository stores LF. JSON contents are identical. source_sha256 records the actual original run bytes.",
+  "pre_fix_reproduction_commit": "be2e5d1",
+  "finite_footprint_fix": {
+    "densities": [
+      20,
+      30,
+      40
+    ],
+    "air_density": 20,
+    "comparison": {
+      "completed": 3,
+      "steps": [
+        {
+          "frequency_pct": 0.02686595327480168,
+          "depth_db": 0.09122332102133512,
+          "at_867_db": 0.10271966139817934,
+          "complex_max": 0.005671057909559876,
+          "passed": true
+        },
+        {
+          "frequency_pct": 0.0077085017373246245,
+          "depth_db": 0.6892156930051634,
+          "at_867_db": 0.5684661325032963,
+          "complex_max": 0.02866035780784181,
+          "passed": false
+        }
+      ],
+      "two_successive_passes": false
+    },
+    "cases": [
+      {
+        "cells_per_wavelength": 20,
+        "cells": 541500,
+        "metrics": {
+          "frequency_hz": 916025341.5773649,
+          "depth_db": -17.23196458308648,
+          "at_867_db": -16.392086268848857,
+          "window_interior": true,
+          "passive": true,
+          "max_reflected_power": 0.21129875646538307
+        },
+        "energy_converged": true,
+        "solver_s": 70.16,
+        "design_sha256": "7729e17f71517d39d607395a5106a39db66e28404470ce5a20107cda14ab6225",
+        "xml_sha256": "c3dfcffc096dcc57ba2e777c97431158cd086b9787044e886c3b5879061f6a23",
+        "response_sha256": "23543c0edef8ec9d99b5549dba93cc057d3b5b5bbf5311919db91947801f9752",
+        "csv_sha256": "71fe3b06ca5956c59f9ec9e78a12f7691db954bd8410ceea6daead6930fb4528",
+        "state": {
+          "status": "results_validated",
+          "history": [
+            {
+              "status": "created",
+              "utc": "2026-10-08T21:18:01.259644+00:00"
+            },
+            {
+              "status": "model_built",
+              "utc": "2026-10-08T21:18:01.322161+00:00"
+            },
+            {
+              "status": "solver_started",
+              "utc": "2026-10-08T21:18:01.322299+00:00"
+            },
+            {
+              "status": "solver_returned",
+              "utc": "2026-10-08T21:19:12.594545+00:00"
+            },
+            {
+              "status": "results_exported",
+              "utc": "2026-10-08T21:19:12.660917+00:00"
+            },
+            {
+              "status": "results_validated",
+              "utc": "2026-10-08T21:19:12.671407+00:00"
+            }
+          ]
+        }
+      },
+      {
+        "cells_per_wavelength": 30,
+        "cells": 749840,
+        "metrics": {
+          "frequency_hz": 915779242.6371114,
+          "depth_db": -17.140741262065145,
+          "at_867_db": -16.289366607450678,
+          "window_interior": true,
+          "passive": true,
+          "max_reflected_power": 0.21558146826610228
+        },
+        "energy_converged": true,
+        "solver_s": 80.54,
+        "design_sha256": "a799443c26a2438be48d9bb429fb356125b889cf6ed5a21118ee8959f5ba1502",
+        "xml_sha256": "e39581e1651f40328184d5caeb696f61515e1b7bd38e14253bc413a00c2ee002",
+        "response_sha256": "da6bd77eaa3cd018af47455c698803e13af70f4a9797ff01648bb0bab63c5b70",
+        "csv_sha256": "bf74d7a22d8610b09ef073a672e21c17f7ddcff9ba03402b8f5506229d6a3d6b",
+        "state": {
+          "status": "results_validated",
+          "history": [
+            {
+              "status": "created",
+              "utc": "2026-10-08T21:19:13.173656+00:00"
+            },
+            {
+              "status": "model_built",
+              "utc": "2026-10-08T21:19:13.232619+00:00"
+            },
+            {
+              "status": "solver_started",
+              "utc": "2026-10-08T21:19:13.232771+00:00"
+            },
+            {
+              "status": "solver_returned",
+              "utc": "2026-10-08T21:20:35.120284+00:00"
+            },
+            {
+              "status": "results_exported",
+              "utc": "2026-10-08T21:20:35.187750+00:00"
+            },
+            {
+              "status": "results_validated",
+              "utc": "2026-10-08T21:20:35.198036+00:00"
+            }
+          ]
+        }
+      },
+      {
+        "cells_per_wavelength": 40,
+        "cells": 892980,
+        "metrics": {
+          "frequency_hz": 915849835.4959401,
+          "depth_db": -17.82995695507031,
+          "at_867_db": -16.857832739953974,
+          "window_interior": true,
+          "passive": true,
+          "max_reflected_power": 0.22000735279838415
+        },
+        "energy_converged": true,
+        "solver_s": 93.6,
+        "design_sha256": "610c04e65cf18c4e75a219a7c3279e3517a6ca650c429b0956e1b88f2f5c3804",
+        "xml_sha256": "fde2af99b49f4e6bbf4cbd113ad40878ef28fd10fdddc50f8c5dfa989cb66053",
+        "response_sha256": "0238b33d807bffbfa5cb6755cbd6537fbb71373c8c2cbc4946ebf8dbc95aecf3",
+        "csv_sha256": "f62cde15d5b3b65afd2eb0d4bb5be758799d7fe1d77550eafdd0837c6c2fc4b2",
+        "state": {
+          "status": "results_validated",
+          "history": [
+            {
+              "status": "created",
+              "utc": "2026-10-08T21:20:35.705743+00:00"
+            },
+            {
+              "status": "model_built",
+              "utc": "2026-10-08T21:20:35.767753+00:00"
+            },
+            {
+              "status": "solver_started",
+              "utc": "2026-10-08T21:20:35.767876+00:00"
+            },
+            {
+              "status": "solver_returned",
+              "utc": "2026-10-08T21:22:10.892231+00:00"
+            },
+            {
+              "status": "results_exported",
+              "utc": "2026-10-08T21:22:10.952200+00:00"
+            },
+            {
+              "status": "results_validated",
+              "utc": "2026-10-08T21:22:10.963554+00:00"
+            }
+          ]
+        }
+      }
+    ],
+    "implementation_sha256": {
+      "design.py": "48c87bb74cdb0928288d9898e3aede6f5a0a92d95427c2e42a3139077498571c",
+      "automesh.py": "845b12d1b3961ae1c4802100d1fd274ae23dfd51dbb89bc1a9b720f30916a6f0",
+      "mesh_refinement.py": "48aa345cf06059998abaf27645d184097413b6b4460dd538d1e7162b61d4b01f"
+    },
+    "reason": "Previously a 4 mm-wide source had one 4 mm transverse cell yet resolved=true. The feed now checks and refines its entire transverse footprint against the gap/width scale."
+  },
+  "new_gallery_native_control": {
+    "summary": {
+      "status": "results_validated",
+      "equal_input_pass": true,
+      "complex_max_abs": 0.0,
+      "complex_rmse": 0.0,
+      "ports": 1,
+      "matrix_assembly_max_abs": 6.206335383118183e-17,
+      "bundle_rounding_max_abs": 6.862659300118799e-06,
+      "energy_all": true,
+      "passivity_max_singular_power": 0.1945090346405573,
+      "passive": true,
+      "mesh_convergence": "not tested by equal-input control"
+    },
+    "source_sha256": "03ea948fbd874ea1475fcadd4669e9910651688d60b4d8067a27a4de51d83cad",
+    "settings": {
+      "params": {
+        "f0": 0.867,
+        "gnd": 300.0,
+        "h": 80.0,
+        "wb": 60.0,
+        "wt": 30.0,
+        "sweep": 25.0,
+        "g": 2.0,
+        "wf": 4.0,
+        "feed_fraction": 0.0,
+        "ht": 12.0
+      },
+      "ports": [
+        {
+          "number": 1,
+          "type": "lumped",
+          "R": 50.0,
+          "direction": "z",
+          "start": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "stop": [
+            0.0,
+            0.0,
+            2.0
+          ],
+          "excite": true
+        }
+      ],
+      "source": {
+        "type": "gaussian-derivative",
+        "f_min": 700000000.0,
+        "f_max": 1050000000.0,
+        "expression": "-2.33164398*((t-2.958182e-09)/5.916364e-10)*exp(-((t-2.958182e-09)/5.916364e-10)^2)",
+        "dc_free": true
+      },
+      "boundaries": [
+        "MUR",
+        "MUR",
+        "MUR",
+        "MUR",
+        "MUR",
+        "MUR"
+      ],
+      "source_sha256": "03ea948fbd874ea1475fcadd4669e9910651688d60b4d8067a27a4de51d83cad",
+      "threads": 12,
+      "end_criteria_db": -60,
+      "max_timesteps": 300000,
+      "nf2ff": false
+    },
+    "native_exe_sha256": "f6a3aa9025cdbc9268b9ef0bd923d4e56ee2a5a92085aa75ebd687a812525709",
+    "native_dll_sha256": "848f1f0bbb09706d8d25bac6c1c623d3c04f56eceac63c5114a3b58ed258bb77",
+    "generator_sha256": "fd3e5132bc5f87eed59dbbb79b87bbc84dad849dccab60ff4b546c587fcea3cc",
+    "xml_adapter_sha256": "e7ce4665a1a3c2b6d66b59b70f86c5a87283cd2cd7649225a06a451fd30c1b19",
+    "physical_xml_sha256": "bd26825fcdfc37f4349d3f4abd31f156e272af0e6335f21199e3fd03a83630f9",
+    "raw_probes_equal": {
+      "port_ut_1": true,
+      "port_it_1": true
+    },
+    "limits": "Equal-input CPU execution control. Same upstream DLL; not independent physical validation."
+  }
 }

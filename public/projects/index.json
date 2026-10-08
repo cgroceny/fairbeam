@@ -2,12 +2,12 @@
   "projects": [
     {
       "file": "blade-867.json",
-      "name": "UAV blade antenna (867 MHz)",
+      "name": "Blade antenna (867 MHz, mesh-sensitive)",
       "model": "blade-867",
-      "created": "2026-10-07T12:42:38+0300",
+      "created": "2026-10-09T00:28:58+0300",
       "simulated": true,
       "bands": [
-        0.908
+        0.909
       ],
       "cells": 269040,
       "band_ranges": [
@@ -17,7 +17,11 @@
           "edge_lo": false,
           "edge_hi": true
         }
-      ]
+      ],
+      "engine": "CPU",
+      "speed_mcells_s": 83.03,
+      "host_cpu": "AMD Ryzen 9 7900X 12-Core Processor",
+      "quality": "converged"
     },
     {
       "file": "branchline-coupler.json",

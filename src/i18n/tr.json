@@ -4534,5 +4534,6 @@
   "results.figure.export": "Geçerli şekli dışa aktarın",
   "results.figure.button": "Şekil",
   "results.figure.hint": "Geçerli grafiği başlıklı, açık temalı bir şekil olarak kaydedin (PNG veya SVG).",
-  "results.figure.failed": "Şekil dışa aktarılamadı: {error}"
+  "results.figure.failed": "Şekil dışa aktarılamadı: {error}",
+  "export.finitePortWarning": "Port {port}: bu dışa aktarım sonlu genişlikli kaynağı ekseni boyunca bir çizgiye indirger. Kaynak genişliği korunmaz; simülasyondan önce besleme modelini gözden geçirin."
 }

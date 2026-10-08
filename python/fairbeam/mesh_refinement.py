@@ -45,7 +45,7 @@ def measure_features(features, lines):
     For a slanted pair, a Cartesian cell spans |nx| dx + |ny| dy across its
     normal. Using the worst intersecting cell on each axis avoids mistaking a
     handful of lines near one tip for resolution along the entire strip. For a
-    feed, also check the cells touching each zero-width transverse coordinate:
+    feed, also check its whole transverse footprint and flat coordinates:
     refining only along the gap does not resolve the source's fringing field.
     ``cells_across`` is the worst of those width/cell-size ratios; the separate
     axial and transverse values make the limiting direction inspectable.
@@ -69,15 +69,19 @@ def measure_features(features, lines):
         if f.get("kind") == "feed":
             transverse = {}
             for a in range(3):
-                if abs(f["hi"][a] - f["lo"][a]) >= 1e-9:
+                if abs(f["normal"][a]) > 1e-9:
                     continue
                 x = np.asarray(lines[a], float)
-                c = f["lo"][a]
+                lo, hi = f["lo"][a], f["hi"][a]
                 # Include both adjacent cells when c is a line. At a domain
                 # boundary only the interior cell exists and must be resolved.
-                widths = np.diff(x)[(x[:-1] <= c + 1e-9) & (x[1:] >= c - 1e-9)]
-                transverse["xyz"[a]] = (float(f["width"] / widths.max())
-                                          if len(widths) and x[0] <= c <= x[-1] else 0.0)
+                finite = hi - lo >= 1e-9
+                mask = ((x[:-1] < hi - 1e-9) & (x[1:] > lo + 1e-9)) if finite else (
+                    (x[:-1] <= lo + 1e-9) & (x[1:] >= lo - 1e-9))
+                widths = np.diff(x)[mask]
+                scale = min(f["width"], hi-lo) if finite else f["width"]
+                transverse["xyz"[a]] = (float(scale / widths.max())
+                                          if len(widths) and x[0] <= lo <= hi <= x[-1] else 0.0)
             details = {"axial_cells_across": across, "transverse_cells_across": transverse}
             across = min([across, *transverse.values()])
         measured.append({**f, **details, "cells_across": across, "required_cells": required_cells(f),
@@ -101,6 +105,12 @@ def refinement_caps(features, min_cell=None):
             if abs(f["hi"][a] - f["lo"][a]) < 1e-9:
                 c = f["lo"][a]
                 caps[a].append((c - 2 * h, c + 2 * h, h))
+            elif f.get("kind") == "feed" and abs(f["normal"][a]) < 1e-9:
+                # A planar/volume source still needs transverse resolution.
+                # Otherwise a wide source can occupy one cell yet be marked resolved.
+                lo, hi = f["lo"][a], f["hi"][a]
+                side_h = max(min(f["width"], hi-lo) / (target * 1.1), min_cell or 0.0)
+                caps[a].append((lo - 2 * side_h, hi + 2 * side_h, side_h))
     return caps
 
 

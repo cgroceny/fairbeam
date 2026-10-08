@@ -866,6 +866,10 @@ function symbolize(ctx: Ctx, d: ParametricDesign, b: Bundle) {
 
 export interface CstParameter { key: string; name: string; value: number; expression?: string }
 
+/** Shared diagnostic identity; the dialog translates it while the macro keeps English comments. */
+export const finitePortWarning = (number: number): string =>
+  `port ${number}: finite-width source exported as an axial line; transverse size is not preserved. Recheck the feed model.`;
+
 export function cstMacro(b: Bundle, opt: CstOptions = DEFAULT_CST_OPTIONS, extras: CstExtras = {}): { text: string; warnings: string[]; files: CstFile[]; parameters: CstParameter[]; notes: string[] } {
   if (opt.includePorts && b.ports.some((p) => p.group))
     throw new Error("Grouped ports cannot be exported as independent discrete ports. Export geometry without ports instead.");
@@ -1198,7 +1202,7 @@ export function cstMacro(b: Bundle, opt: CstOptions = DEFAULT_CST_OPTIONS, extra
   if (!solidCount) m.warnings.push("no exportable geometry");
 
   if (opt.includePorts && b.ports.length) {
-    m.comment("ports (openEMS lumped port -> CST discrete S-parameter port, P1 = start, P2 = stop)");
+    m.comment("ports (openEMS lumped port -> CST discrete S-parameter port; P1/P2 lie on the port axis)");
     const portNos = new Set<number>();
     for (const p of b.ports) {
       if (p.type === "waveguide") {
@@ -1242,6 +1246,8 @@ export function cstMacro(b: Bundle, opt: CstOptions = DEFAULT_CST_OPTIONS, extra
       // the end points over the parameters: along the port the design's start / stop, across it their middle
       const dport = S ? pd?.ports?.find((x) => x.number === p.number && x.type !== "waveguide") : undefined;
       const k = "xyz".indexOf(p.direction);
+      if (p.start.some((v, i) => i !== k && Math.abs(p.stop[i] - v) > EPS))
+        m.warnings.push(finitePortWarning(p.number));
       const pe = (arr: unknown[] | undefined, v: Vec3, w: string): E[] => [0, 1, 2].map((i) => (S ? S.field(arr?.[i], v[i], `port ${p.number} ${w}[${i}]`) : null));
       const sE = dport ? pe(dport.start, p.start, "start") : [null, null, null];
       const tE = dport ? pe(dport.stop, p.stop, "stop") : [null, null, null];

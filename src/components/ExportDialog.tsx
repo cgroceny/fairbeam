@@ -3,7 +3,7 @@ import { createStore, unwrap } from "solid-js/store";
 import { strToU8, zipSync } from "fflate";
 import { Check, Copy, Download, TriangleAlert, X } from "lucide-solid";
 import { bundle, setExportOpen } from "../state";
-import { cstInsertPairs, cstMacro, DEFAULT_CST_OPTIONS, type CstOptions } from "../export/cst";
+import { cstInsertPairs, cstMacro, DEFAULT_CST_OPTIONS, finitePortWarning, type CstOptions } from "../export/cst";
 import { useModal } from "../lib/dialog";
 import { downloadFailedMessage, downloadMessage, revealDownloadedFile, saveDownload } from "../lib/download";
 import { t } from "../i18n";
@@ -56,6 +56,10 @@ export default function ExportDialog() {
     return b && isCst() && !groupedPortsBlocked() ? cstMacro(b, { ...opt }, { macroBase: cstFileStem(b.model.id), ...(design ? { inserts: cstInsertPairs(design), parametric: design } : {}) }) : null;
   });
   const previewText = () => result()?.text ?? "";
+  const warningText = (warning: string) => {
+    const port = source()?.ports.find((p) => warning === finitePortWarning(p.number));
+    return port ? t("export.finitePortWarning", { port: port.number }) : warning;
+  };
   /** polyhedra travel as .stl files next to the macro, so the download is a .zip with the macro and the files */
   const stlCount = () => result()?.files.length ?? 0;
   const formatHint = () => t(format() === "cst" ? "export.description" : `export.${format()}.hint`);
@@ -208,7 +212,7 @@ export default function ExportDialog() {
             <Show when={result()?.warnings.length}>
               <div class="export-warnings">
                 <h3 class="section-label">{t("export.skipped")}</h3>
-                <ul><For each={result()!.warnings}>{(w) => <li>{w}</li>}</For></ul>
+                <ul><For each={result()!.warnings}>{(w) => <li>{warningText(w)}</li>}</For></ul>
               </div>
             </Show>
             </Show>

@@ -117,8 +117,9 @@ records of the `Simulation`, and the boundary conditions. Per axis:
    - **Fine gaps, notches and slanted strips.** Automatic meshes first check narrow features against
      the mesh produced by the rules above. Parallel sheet edges with finite overlap identify strip
      widths, notches and gaps; lumped feed gaps are checked along their excitation direction and
-     in the cells on both sides of every zero-width transverse coordinate. A fine axial mesh alone
-     does not resolve a line feed's surrounding field. A
+     across their whole transverse footprint, including cells on both sides of every flat
+     coordinate. Finite-width sources use the smaller of gap length and transverse width as
+     the local scale. A fine axial mesh alone does not resolve the surrounding field. A
      detected gap, notch or feed gap with fewer than three cells across receives a local size
      limit. Slanted strips use a 1.1-cell projected target (at least one projected cell in the
      resolution check) for connectivity, typically yielding about 1–1.5 cells. For a slanted strip, both axes in its plane are refined using the edge-normal projections, so its
@@ -345,7 +346,8 @@ A stable pair is accepted only after both runs meet the energy-decay criterion, 
 excited port in a multiport run, and neither automatic mesh reports an unresolved fine feature.
 Missing energy status is not a pass. The report distinguishes this from a change in resonance.
 For feed features, `cells_across` is the smallest gap-width/cell-size ratio across the axial and
-flat transverse directions; `axial_cells_across` and `transverse_cells_across` record them separately.
+all transverse directions; for a finite transverse span, the smaller of that span and the gap
+sets the scale. `axial_cells_across` and `transverse_cells_across` record them separately.
 These are geometric minimums, not an accuracy certificate: check at least two further refinements
 of the port neighborhood, and test boundary clearance independently when S11 depth matters.
 Increasing cells per wavelength alone may leave the feed and substrate cells unchanged.

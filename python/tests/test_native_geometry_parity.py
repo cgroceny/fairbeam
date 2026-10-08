@@ -22,13 +22,13 @@ from fairbeam.simulation import _capture_output, _parse_log
 
 
 class NativeGeometryParityTest(unittest.TestCase):
-    def models(self):
+    def models(self, feed_fraction=0):
         root = Path(__file__).resolve().parents[2]
         design = json.loads((root / "examples/designs/blade_867.design.json").read_text())
         design["far_field"] = {"enabled": False}
         design.pop("monitors", None)
         design["simulation"].update(end_criteria_db=-60, max_timesteps=350000)
-        sim = build(design, {})
+        sim = build(design, {"feed_fraction": feed_fraction})
         fdtd = openEMS(NrTS=350000, EndCriteria=1e-6)
         tau = 1 / (math.sqrt(2) * math.pi * (1.05e9 / 2.76))
         expression = (f"-{math.sqrt(2*math.e):.8f}*((t-{5*tau:.6e})/{tau:.6e})"
@@ -43,13 +43,18 @@ class NativeGeometryParityTest(unittest.TestCase):
         # A y-normal CSXCAD polygon takes z,x coordinate pairs.
         points = np.array([[2, -2], [2, 2], [14, 30], [82, 40], [82, 10], [14, -30]])
         csx.AddMetal("blade").AddPolygon(points.T, "y", 0, priority=10)
-        port = fdtd.AddLumpedPort(1, 50, [0, 0, 0], [0, 0, 2], "z", 1.0, priority=5)
+        port = fdtd.AddLumpedPort(1, 50, [0-2.0*feed_fraction, 0, 0], [2.0*feed_fraction, 0, 2], "z", 1.0, priority=5)
         for a in "xyz":
             mesh.SetLines(a, sim.mesh.GetLines(a))
         return sim, fdtd, port
 
     def test_independent_native_geometry_produces_identical_solver_input(self):
-        sim, fdtd, _ = self.models()
+        for fraction in (0, .5, 1):
+            with self.subTest(feed_fraction=fraction):
+                self.check_xml(fraction)
+
+    def check_xml(self, fraction):
+        sim, fdtd, _ = self.models(fraction)
         with tempfile.TemporaryDirectory() as tmp:
             a, b = Path(tmp) / "design.xml", Path(tmp) / "native.xml"
             sim.fdtd.Write2XML(str(a))

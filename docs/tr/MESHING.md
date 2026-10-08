@@ -192,7 +192,8 @@ Kararlı bir sonuç çifti ancak iki koşu da enerji sönümü ölçütünü sa�
 çalışmada uyarılan bütün portlar dahil) ve otomatik mesh'lerin hiçbirinde yetersiz ince ayrıntı
 bildirilmediğinde kabul edilir. Enerji durumu eksikse denetim geçmez. Rapor bunu rezonans
 değişiminden ayrı belirtir. Beslemelerde `cells_across`, aralık genişliğinin eksen yönündeki ve
-sıfır genişlikli enine yönlerdeki hücre boyutlarına oranlarının en küçüğüdür;
+tüm enine yönlerdeki hücre boyutlarına oranlarının en küçüğüdür; sonlu enine genişlikte
+ölçeği, bu genişlik ile besleme aralığının küçüğü belirler.
 `axial_cells_across` ve `transverse_cells_across` bu değerleri ayrı kaydeder.
 Enine denetim, besleme çizgisinin iki yanındaki hücreleri de kapsar. Bunlar geometrik alt
 sınırlardır; doğruluk belgesi değildir. Besleme çevresinde en az iki ek sıklaştırma yapın ve

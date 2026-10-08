@@ -39,7 +39,8 @@ class ExampleDesigns(unittest.TestCase):
         # the tuning range of the blade: the blade stays on the port, so the optimizer never skips it
         path = next(p for p in DESIGNS if p.name == "blade_867.design.json")
         d = json.loads(path.read_text(encoding="utf-8"))
-        for values in ({"h": 40.0}, {"h": 120.0}, {"wb": 20.0, "wt": 10.0}, {"sweep": 0.0}, {"g": 1.0, "wf": 2.0}):
+        for values in ({"h": 40.0}, {"h": 120.0}, {"wb": 20.0, "wt": 10.0}, {"sweep": 0.0}, {"g": 1.0, "wf": 2.0},
+                       {"feed_fraction": 0}, {"feed_fraction": .5}, {"feed_fraction": 1}):
             with self.subTest(values):
                 self.assertEqual(problems(d, values), [])
 
@@ -54,7 +55,9 @@ class ExampleDesigns(unittest.TestCase):
         for key in ("x", "y", "z", "cells", "total_cells"):
             self.assertEqual(b["mesh"][key], preview["mesh"][key], key)
         self.assertEqual(b["solver"]["end_criteria_db"], d["simulation"]["end_criteria_db"])
-        self.assertEqual(b["solver"]["max_timesteps"], 60000)
+        self.assertEqual(b["solver"]["max_timesteps"], preview["solver"]["max_timesteps"])
+        self.assertEqual(b["solver"]["boundaries"], preview["solver"]["boundaries"])
+        self.assertEqual(b["ports"], preview["ports"])
         self.assertTrue(b["run"]["converged"])
         self.assertEqual(len(b["results"]["frequency"]), 801)
         self.assertEqual(len(b["results"]["efficiency"][0]["f"]), 21)
