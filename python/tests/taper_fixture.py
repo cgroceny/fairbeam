@@ -29,7 +29,8 @@ DELAY = 1/F0
 GAMMA_0 = .5*np.log(Z_RIGHT/Z_LEFT)
 A = float(np.arccosh(abs(GAMMA_0)/GAMMA_MAX))
 PROFILES = ('exponential', 'triangular', 'klopfenstein')
-MESHES, SLICE_LEVELS, DEFAULT_SLICES = (8, 12, 16), (32, 64, 128), 128
+# Spatial meshes retain 128 slices; profile refinement is separate at n12.
+MESHES, SLICE_LEVELS, DEFAULT_SLICES = (8, 12, 16), (64, 128, 256), 128
 KINDS = ('line100', 'line50', 'taper')
 landmarks = [A, *[k*np.pi for k in range(1, 5)],
     *[np.sqrt(A*A+(k*np.pi)**2) for k in range(1, 5)],
@@ -40,7 +41,7 @@ FREQUENCIES = THETA/(2*np.pi*DELAY)
 SAMPLE_INDICES = tuple(int(np.argmin(abs(THETA-v))) for v in (.5, np.pi, 2*np.pi, 3*np.pi, 4*np.pi))
 H = .75
 W = np.sqrt(MUE0/EPS0)*H/Z_LEFT
-PROTOCOL, END_DB, THREADS = 'tem-taper-v1', -90., 1
+PROTOCOL, END_DB, THREADS = 'tem-taper-v2', -110., 1
 CAP_NS, CASE_SECONDS = 4., 1800.
 LIMITS = dict(s_target_abs=.02, gamma_target_abs=.01, z_target_rel=.02,
     continuum_s_target_abs=.002, continuum_gamma_target_abs=.001,

@@ -22,7 +22,7 @@ class UnqualifiedStop(ValueError):
 def configurations():
     return [(n, False, f.DEFAULT_SLICES) for n in f.MESHES]+[
         (f.MESHES[1], True, f.DEFAULT_SLICES)]+[
-        (f.MESHES[1], False, slices) for slices in f.SLICE_LEVELS[:-1]]
+        (f.MESHES[1], False, slices) for slices in f.SLICE_LEVELS if slices != f.DEFAULT_SLICES]
 
 
 def cases(profiles=f.PROFILES):
@@ -57,7 +57,7 @@ def read_case(path, n, profile, kind, column, expanded=False, slices=f.DEFAULT_S
     if (run.get('converged') is not True or run.get('hit_timestep_limit') is not False
             or steps >= sim.max_timesteps or max(energy) > f.END_DB+1e-9
             or not np.isclose(values[1], pulse, rtol=1e-12, atol=0) or steps*dt < pulse):
-        raise UnqualifiedStop('complete source and confirmed -90 dB stop required')
+        raise UnqualifiedStop(f'complete source and confirmed {f.END_DB:g} dB stop required')
     if meta.get('input_sha256') != hashlib.sha256((path/'input.xml').read_bytes()).hexdigest():
         raise ValueError('stored native input changed')
     with np.load(path/'data.npz') as src:
@@ -274,8 +274,23 @@ class TaperControls(unittest.TestCase):
             self.assertLess(errors[1], errors[0]/3)
             self.assertLess(errors[2], errors[1]/3)
 
+    def test_every_profile_level_meets_frozen_continuum_and_refinement_gates(self):
+        for profile in f.PROFILES:
+            continuum = f.continuum_reference(profile)
+            zc, rc = f.input_impedance(continuum, 'taper')
+            samples = []
+            for count in f.SLICE_LEVELS:
+                s = f.reference(profile, 'taper', count)
+                z, r = f.input_impedance(s, 'taper')
+                self.assertLess(np.max(abs(s-continuum)), f.LIMITS['continuum_s_target_abs'])
+                self.assertLess(np.max(abs(r-rc)), f.LIMITS['continuum_gamma_target_abs'])
+                self.assertLess(np.max(abs(z-zc)/np.maximum(abs(zc), f.Z_LEFT)), f.LIMITS['continuum_z_target_rel'])
+                samples.append((None, s, z, r, None))
+            for a, b in zip(samples[:-1], samples[1:]):
+                self.assertTrue(all(v < f.LIMITS[k] for k, v in differences(a, b, 'profile', 'taper').items()))
+
     def test_piecewise_reference_against_independent_nodal_network(self):
-        count = 32
+        count = 64
         freq = f.FREQUENCIES[list(f.SAMPLE_INDICES)]
         for profile in f.PROFILES:
             z = f.sections(profile,count)
@@ -403,7 +418,7 @@ class TaperControls(unittest.TestCase):
     def test_missing_profile_control_blocks_qualification(self):
         with tempfile.TemporaryDirectory() as root:
             self.synthetic(root)
-            (case_path(root, 12, 'klopfenstein', 'line50', 0, False, 32)/'report.json').unlink()
+            (case_path(root, 12, 'klopfenstein', 'line50', 0, False, 64)/'report.json').unlink()
             self.assertFalse(compare(root, ('klopfenstein',))['qualified_scope'])
 
 
