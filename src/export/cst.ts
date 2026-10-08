@@ -93,7 +93,7 @@ interface Ctx {
   scale: number;
   /** CST length unit name (m, cm, mm, um, nm) */
   unit: string;
-  /** extent of every exported solid, in bundle units (used for the background spacing) */
+  /** extent of exported geometry and ports, in bundle units (used for background spacing) */
   bbox: [Vec3, Vec3] | null;
   /** companion STL files (polyhedra), written next to the macro; named `<stlBase>_<solid>.stl` */
   files: CstFile[];
@@ -1081,13 +1081,32 @@ export function cstMacro(b: Bundle, opt: CstOptions = DEFAULT_CST_OPTIONS, extra
     m.history("Fairbeam: frequency range", [`Solver.FrequencyRange ${q(loE ?? ghz(Math.max(0, fmin)))}, ${q(hiE ?? ghz(fmax))}`]);
   } else m.warnings.push("invalid excitation frequency range, CST frequency range not set");
 
+  // CST includes exported port endpoints in its structure box. Count only ports that the
+  // emission below accepts, and use the actual line / waveguide plane rather than probe boxes.
+  if (opt.includePorts) {
+    const used = new Set<number>();
+    for (const p of b.ports) {
+      if (used.has(p.number)) continue;
+      if (p.type === "waveguide") {
+        const k = "xyz".indexOf(p.direction), u = (k + 1) % 3, v = (k + 2) % 3;
+        if (k < 0 || !finite(...p.start, ...p.stop) || Math.abs(p.stop[u] - p.start[u]) <= EPS || Math.abs(p.stop[v] - p.start[v]) <= EPS) continue;
+        const lo = p.start.map((x, i) => i === k ? x : Math.min(x, p.stop[i]));
+        const hi = p.start.map((x, i) => i === k ? x : Math.max(x, p.stop[i]));
+        grow(ctx, lo, hi);
+      } else {
+        if (!finite(...p.start, ...p.stop, p.R) || !(Math.hypot(...p.stop.map((v, i) => v - p.start[i])) > EPS)) continue;
+        const [a, z] = axisLine(p.start, p.stop, p.direction);
+        grow(ctx, a, a); grow(ctx, z, z);
+      }
+      used.add(p.number);
+    }
+  }
   m.comment("background and boundaries");
   const bc = b.solver.boundaries;
   const kinds = FACES.map((f) => boundaryCst(bc[f], f, m));
   // Open faces get their space from "expanded open". A closed (electric/magnetic) face sits on the
-  // bounding box of the solids, so it is pushed out to where openEMS put that wall (e.g. the PEC
-  // ground plane of a monopole fed from z=0 while the radiator starts higher up). Discrete ports
-  // do not enlarge the CST bounding box.
+  // structure bounding box, including ports, so it is pushed out to where openEMS put that wall
+  // (e.g. the PEC ground plane of a monopole fed from z=0 while the radiator starts higher up).
   const space = FACES.map((_, k) => {
     if (kinds[k] === "expanded open" || !ctx.bbox || !b.domain) return 0;
     const ax = k >> 1;
