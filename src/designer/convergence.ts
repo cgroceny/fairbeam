@@ -135,7 +135,9 @@ export interface ConvergenceStudy {
     converged: boolean;
     converged_at: number | null;
     done: boolean;
-    reason: "converged" | "exhausted" | "failed" | "cancelled" | "running";
+    reason: "converged" | "exhausted" | "failed" | "cancelled" | "running" | "unverified";
+    /** Original saved verdict when a legacy report lacks current quality evidence. */
+    recorded_verdict?: string;
     verdict: string;
     next: number | null;
   };

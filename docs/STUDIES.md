@@ -108,6 +108,9 @@ The study file has `kind: "mesh-convergence"`; `axes` lists the densities that r
 - `converged_at` is the coarser density of the first converged step; the finer run confirms it.
 - `reason` is `converged`, `exhausted` (no density left: "not converged: refine further or check
   the model"), `failed`, `cancelled` or `running` (then `next` is the density queued next).
+- Reopening a previously successful Design report without verified energy and local-mesh checks returns
+  `reason: "unverified"`, clears the recommended density and retains the old claim in
+  `recorded_verdict`. The saved file is preserved; rerun the study to establish current evidence.
 - `ok.dmax` is `null` when a run has no far field; Dmax then does not count.
 - The resonance is refined between frequency samples (a parabola through the S11 minimum and its
   neighbors in dB), so the grid spacing does not dominate a 0.5 % tolerance.
@@ -178,7 +181,8 @@ The Windows CPU control on October 8, 2026 reached −60 dB energy decay at all 
 | 16 | 2.45645 | −32.564 | 0.321 | 0.01084 |
 
 The last frequency change was 0.0265%, but the full-band complex change still exceeded the
-predeclared 0.01 limit. Two successive passing refinements were **not** obtained. The finite
+predeclared 0.01 limit. Frequency and minimum depth met their individual limits on the last two
+steps; two successive passes of **all three criteria** were not obtained. The finite
 source is an explicit modeling option, not a validated replacement for the line feed or a
 correction for other antennas. Compact inputs, criteria and measurements are retained in
 `python/tests/fixtures/patch_finite_feed_20261008.json`; the command above recreates the raw data.
@@ -192,7 +196,8 @@ python -m tests.native_gallery_study --native /path/to/openEMS --out /path/to/ne
 This optional, long-running control covers the Python examples, saved example Designs and the
 iteration-zero Sierpinski variant. Use `--models dipole,blade_867` for a subset. It runs every port
 sequentially in both routes, on four CPU threads, with identical full-precision CSXCAD geometry,
-mesh and −60 dB energy criterion. It retains raw waves, full S matrices, solver input, model
+mesh and −60 dB energy criterion, with a 300,000-step cap overriding the model's limit.
+It retains raw waves, full S matrices, solver input, model
 source, hashes and logs. Native input uses 17-digit primitive coordinates to avoid displacing
 flat sources relative to their mesh when serializing CSXCAD XML.
 

@@ -1,5 +1,6 @@
 """Stable numerical summaries cannot validate an unfinished or unresolved run."""
 import copy
+import tempfile
 import unittest
 from unittest.mock import patch
 from pathlib import Path
@@ -49,6 +50,44 @@ class ConvergenceQualityTest(unittest.TestCase):
         a, b = self.pair(lambda b: b["mesh"].update(auto={"fine_features": [{"kind": "feed", "resolved": True}]}))
         self.assertTrue(cv.compare(cv.metrics(a), cv.metrics(b), cv.DEFAULT_TOL)["converged"])
         self.assertTrue(convergence_report([summarize(a), summarize(b)])["converged"])
+
+    def saved_report(self, root, quality):
+        server = cv.ServerStudies(None, root)
+        study = cv.new_study(name="saved", model={}, planned=[20, 30], tol=cv.DEFAULT_TOL)
+        for density in (20, 30):
+            cv.add_member(study, {"density": density, "status": "done", "file": None,
+                                  "metrics": cv.metrics(fake_bundle(2.4e9))})
+        self.assertTrue(study["convergence"]["converged"])
+        step = study["convergence"]["steps"][-1]
+        if quality is None:
+            step.pop("quality")
+        else:
+            step["quality"] = quality
+        cv.write_study(study, server.path("saved"))
+        return server
+
+    def test_saved_unverified_verdict_cannot_recommend_a_density(self):
+        for quality in (None, {"energy": False, "local_mesh": True},
+                        {"energy": True, "local_mesh": False}):
+            with self.subTest(quality=quality), tempfile.TemporaryDirectory() as root:
+                server = self.saved_report(Path(root), quality)
+                before = server.path("saved").read_bytes()
+                report = server.get("saved")["convergence"]
+                self.assertFalse(report["converged"])
+                self.assertIsNone(report["converged_at"])
+                self.assertFalse(report["steps"][-1]["converged"])
+                self.assertEqual(report["reason"], "unverified")
+                self.assertEqual(report["verdict"], cv.NOT_VERIFIED)
+                self.assertIn("converged at", report["recorded_verdict"])
+                self.assertEqual(server.path("saved").read_bytes(), before)
+
+    def test_saved_verified_report_keeps_its_verdict(self):
+        with tempfile.TemporaryDirectory() as root:
+            server = self.saved_report(Path(root), {"energy": True, "local_mesh": True})
+            report = server.get("saved")["convergence"]
+            self.assertTrue(report["converged"])
+            self.assertEqual(report["converged_at"], 20)
+            self.assertNotIn("recorded_verdict", report)
 
     def test_parameter_study_rejects_changing_depth_at_fixed_frequency(self):
         a = summarize(fake_bundle(2.4e9))

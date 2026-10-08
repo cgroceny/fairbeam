@@ -548,6 +548,20 @@ class ServerStudies:
             return None
         study.pop("job_kw", None)
         conv = study["convergence"]
+        if conv.get("converged"):
+            accepted = [step for step in conv.get("steps", []) if step.get("converged")]
+            def verified(step):
+                quality = step.get("quality") or {}
+                return all(quality.get(key) is True for key in ("energy", "local_mesh"))
+            if not accepted or not all(verified(step) for step in accepted):
+                # Old reports predate the quality checks. Preserve the on-disk
+                # result, but do not recommend its density from a cached verdict.
+                conv.update(recorded_verdict=conv.get("verdict"), converged=False,
+                            converged_at=None, done=True, reason="unverified",
+                            verdict=NOT_VERIFIED, next=None)
+                for step in accepted:
+                    if not verified(step):
+                        step["converged"] = False
         if not conv["done"]:
             with self.manager.lock:
                 active = [j for j in self.manager.jobs.values()

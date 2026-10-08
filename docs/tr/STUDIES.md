@@ -84,6 +84,9 @@ Tasarımcının Mesh yakınsaması… penceresi aynı çalışmayı çalıştır
 
 - `converged_at`, ilk yakınsayan adımın daha kaba yoğunluğudur; daha ince çalıştırma bunu doğrular.
 - `reason`: `converged`, `exhausted` (yoğunluk kalmadı: “yakınsamadı: daha da inceltin veya modeli kontrol edin”), `failed`, `cancelled` veya `running` (bu durumda `next`, sıradaki yoğunluktur).
+- Daha önce başarılı sayılmış, enerji ve yerel mesh denetimleri doğrulanmamış Design raporu açıldığında
+  `reason: "unverified"` döner; önerilen yoğunluk kaldırılır, eski hüküm `recorded_verdict`
+  alanında tutulur. Kayıt dosyası korunur; güncel kanıt için çalışmayı yeniden çalıştırın.
 - Çalıştırmada uzak alan yoksa `ok.dmax`, `null` olur; Dmax hesaba katılmaz.
 - Rezonans frekans örnekleri arasında iyileştirilir (S11 minimumu ve dB cinsinden komşularından geçen parabol); böylece ızgara aralığı %0,5 toleransa baskın olmaz.
 
@@ -151,7 +154,8 @@ düzenlenebilir sonlu ayak izi için örneği pozitif genişlik değeriyle dön�
 | 16 | 2.45645 | −32.564 | 0.321 | 0.01084 |
 
 Son frekans değişimi %0,0265 olsa da tüm banttaki karmaşık değişim, önceden belirlenen 0,01
-sınırını aştı. Ardışık iki başarılı inceltme **elde edilmedi**. Sonlu kaynak açık bir modelleme
+sınırını aştı. Frekans ve minimum derinliği son iki adımda kendi eşiklerini sağladı;
+**üç ölçütün tamamını** geçen ardışık iki adım elde edilmedi. Sonlu kaynak açık bir modelleme
 seçeneğidir; çizgi beslemenin doğrulanmış yerine geçmez ve başka antenler için bir düzeltme
 sayılmaz. Özet girdiler, ölçütler ve ölçümler `python/tests/fixtures/patch_finite_feed_20261008.json`
 dosyasında korunur; yukarıdaki komut ham verileri yeniden üretir.
@@ -165,7 +169,8 @@ python -m tests.native_gallery_study --native /path/to/openEMS --out /path/to/ne
 Bu isteğe bağlı uzun kontrol Python örneklerini, kayıtlı örnek Design'ları ve sıfır yinelemeli
 Sierpinski varyantını kapsar. Alt küme için `--models dipole,blade_867` kullanın. Her portu iki
 yolda da sırayla, dört CPU iş parçacığıyla, aynı tam hassasiyetli CSXCAD geometrisi, mesh ve
-−60 dB enerji ölçütüyle çalıştırır. Ham dalgaları, tam S matrislerini, çözücü girdisini, model
+−60 dB enerji ölçütüyle çalıştırır; modelin adım sınırı yerine 300.000 adımlık üst sınır kullanır.
+Ham dalgaları, tam S matrislerini, çözücü girdisini, model
 kaynağını, özetleri ve günlükleri korur. Düzlemsel kaynakların CSXCAD XML yazımı sırasında
 mesh'ten kaymaması için ilkel koordinatları 17 anlamlı basamakla aktarılır.
 
