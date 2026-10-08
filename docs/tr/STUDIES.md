@@ -141,10 +141,25 @@ derinliğinin kararlı olduğunu göstermez. İdeal çizgi beslemeli örnek Desi
 `feed_width` sabit tutulur; çizgiden alana geçiş yeni mesh çizgileri gerektirir. Design'da
 düzenlenebilir sonlu ayak izi için örneği pozitif genişlik değeriyle dönüştürün.
 
+8 Ekim 2026 Windows CPU kontrolünde dört düzeyin tümü −60 dB enerji sönümüne ulaştı:
+
+| Besleme / altlık hücresi | S11 minimumu (GHz) | Derinlik (dB) | Derinlik değişimi (dB) | En büyük karmaşık S11 değişimi |
+| --- | --- | --- | --- | --- |
+| 2 | 2.44700 | −35.630 | — | — |
+| 4 | 2.45395 | −33.521 | 2.109 | 0.11322 |
+| 8 | 2.45580 | −32.885 | 0.636 | 0.03220 |
+| 16 | 2.45645 | −32.564 | 0.321 | 0.01084 |
+
+Son frekans değişimi %0,0265 olsa da tüm banttaki karmaşık değişim, önceden belirlenen 0,01
+sınırını aştı. Ardışık iki başarılı inceltme **elde edilmedi**. Sonlu kaynak açık bir modelleme
+seçeneğidir; çizgi beslemenin doğrulanmış yerine geçmez ve başka antenler için bir düzeltme
+sayılmaz. Özet girdiler, ölçütler ve ölçümler `python/tests/fixtures/patch_finite_feed_20261008.json`
+dosyasında korunur; yukarıdaki komut ham verileri yeniden üretir.
+
 ### Ayrı kurulmuş openEMS CLI ile karşılaştırma
 
 ```bash
-python -m tests.native_gallery_study --native /path/to/openEMS --out /path/to/new-control
+python -m tests.native_gallery_study --native /path/to/openEMS --out /path/to/new-control --timeout 15000
 ```
 
 Bu isteğe bağlı uzun kontrol Python örneklerini, kayıtlı örnek Design'ları ve sıfır yinelemeli
@@ -153,6 +168,11 @@ yolda da sırayla, dört CPU iş parçacığıyla, aynı tam hassasiyetli CSXCAD
 −60 dB enerji ölçütüyle çalıştırır. Ham dalgaları, tam S matrislerini, çözücü girdisini, model
 kaynağını, özetleri ve günlükleri korur. Düzlemsel kaynakların CSXCAD XML yazımı sırasında
 mesh'ten kaymaması için ilkel koordinatları 17 anlamlı basamakla aktarılır.
+
+Tüm galeri saatler sürebilir. Komut, büyük örnekler için native çözüm başına zaman aşımını
+900'den 15.000 saniyeye çıkarır; bir çift için bunun iki katı artı 50 saniye ayrılır.
+`--threads N`, fiziksel girdiyi değiştirmeden iki yoldaki CPU iş parçacığı sayısını ayarlar.
+Her denemede yeni çıktı klasörü kullanın; yarıda kesilen koşuların çıktıları korunur.
 
 Kontroller aynı girdinin eşdeğerliğini, enerji sönümünü, matris pasifliğini, S matrisi hesabını
 ve sonuç saklama yuvarlamasını ayrı değerlendirir. Uzak alanı kapsamaz; mesh yakınsaması veya

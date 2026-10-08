@@ -1,0 +1,181 @@
+{
+  "schema": "fairbeam.feed-refinement/1",
+  "date": "2026-10-08",
+  "model": "python/models/patch_antenna.py",
+  "scope": "Fixed 1 x 1 mm square lumped source; not the default line source or a coaxial connector.",
+  "held_fixed": "Geometry, source footprint, outer box, MUR boundaries, materials, source expression and port resistance.",
+  "changed": "feed_cells and sub_cells together: 2, 4, 8, 16.",
+  "frequency_hz": {
+    "full_band": [
+      1000000000,
+      3000000000,
+      801
+    ],
+    "dense_window": [
+      2400000000,
+      2520000000,
+      2401
+    ]
+  },
+  "acceptance": {
+    "frequency_pct_lt": 0.5,
+    "depth_db_lt": 1,
+    "complex_max_abs_lt": 0.01,
+    "energy_db": -60,
+    "successive_passing_steps": 2
+  },
+  "two_successive_refinements_pass": false,
+  "rows": [
+    {
+      "params": {
+        "patch_w": 32.0,
+        "patch_l": 40.0,
+        "sub_size": 60.0,
+        "sub_h": 1.524,
+        "eps_r": 3.38,
+        "tan_d": 0.001,
+        "feed_x": -6.0,
+        "feed_width": 1.0,
+        "feed_cells": 2,
+        "mesh_div": 30,
+        "sub_cells": 2,
+        "mesh": "manual",
+        "auto_cpw": 20,
+        "max_timesteps": 350000,
+        "f_min": 1.0,
+        "f_max": 3.0
+      },
+      "model_sha256": "eccce41f5a172fbad49cc9017122e2d2844d26de9a7fb1dd921dcfaba0b512a9",
+      "cells": 282948,
+      "timestep_s": 1.12343e-12,
+      "timesteps": 12876,
+      "threads": 4,
+      "energy_converged": true,
+      "passive": true,
+      "min_frequency_hz": 2447000000.0,
+      "min_s11_db": -35.63018272469871,
+      "reflected_power_at_minimum_pct": 0.02735153645259039,
+      "minimum_in_dense_window": true,
+      "change": null,
+      "response_sha256": "e651bc6fbe4293584101c04d00ece28b990c16071ca7f2551a3ed136388955a3",
+      "xml_sha256": "d6832b07d9215b72c9047b44223f98af4e3c716d35eb015f792e7cb63683da37"
+    },
+    {
+      "params": {
+        "patch_w": 32.0,
+        "patch_l": 40.0,
+        "sub_size": 60.0,
+        "sub_h": 1.524,
+        "eps_r": 3.38,
+        "tan_d": 0.001,
+        "feed_x": -6.0,
+        "feed_width": 1.0,
+        "feed_cells": 4,
+        "mesh_div": 30,
+        "sub_cells": 4,
+        "mesh": "manual",
+        "auto_cpw": 20,
+        "max_timesteps": 350000,
+        "f_min": 1.0,
+        "f_max": 3.0
+      },
+      "model_sha256": "eccce41f5a172fbad49cc9017122e2d2844d26de9a7fb1dd921dcfaba0b512a9",
+      "cells": 346788,
+      "timestep_s": 4.09209e-13,
+      "timesteps": 36223,
+      "threads": 4,
+      "energy_converged": true,
+      "passive": true,
+      "min_frequency_hz": 2453950000.0,
+      "min_s11_db": -33.52075403749639,
+      "reflected_power_at_minimum_pct": 0.04445540757114131,
+      "minimum_in_dense_window": true,
+      "change": {
+        "frequency_pct": 0.28402125051083527,
+        "depth_db": 2.1094286872023247,
+        "complex_max_abs": 0.11322014268437539,
+        "within_tolerances": false
+      },
+      "response_sha256": "760d891e2776165e40300ab7264ac48fe793a506a3a5820750e0d005613dcc88",
+      "xml_sha256": "fa8e4413578ec1745b394ba2f7908bd7731f9c5dfb94bddf76d0cc4290c51f39"
+    },
+    {
+      "params": {
+        "patch_w": 32.0,
+        "patch_l": 40.0,
+        "sub_size": 60.0,
+        "sub_h": 1.524,
+        "eps_r": 3.38,
+        "tan_d": 0.001,
+        "feed_x": -6.0,
+        "feed_width": 1.0,
+        "feed_cells": 8,
+        "mesh_div": 30,
+        "sub_cells": 8,
+        "mesh": "manual",
+        "auto_cpw": 20,
+        "max_timesteps": 350000,
+        "f_min": 1.0,
+        "f_max": 3.0
+      },
+      "model_sha256": "eccce41f5a172fbad49cc9017122e2d2844d26de9a7fb1dd921dcfaba0b512a9",
+      "cells": 458640,
+      "timestep_s": 1.56822e-13,
+      "timesteps": 89208,
+      "threads": 4,
+      "energy_converged": true,
+      "passive": true,
+      "min_frequency_hz": 2455800000.0,
+      "min_s11_db": -32.8851154690411,
+      "reflected_power_at_minimum_pct": 0.05146221241981141,
+      "minimum_in_dense_window": true,
+      "change": {
+        "frequency_pct": 0.07538865910063919,
+        "depth_db": 0.6356385684552919,
+        "complex_max_abs": 0.03219990268721229,
+        "within_tolerances": false
+      },
+      "response_sha256": "941c642cf82173544278e8d1080ba0109449ea7292ebb04c878503c434454766",
+      "xml_sha256": "23ac3447bea828253c65d5fd9e87f40d5d3e622e3cb9f3acb47a7d8f5606d033"
+    },
+    {
+      "params": {
+        "patch_w": 32.0,
+        "patch_l": 40.0,
+        "sub_size": 60.0,
+        "sub_h": 1.524,
+        "eps_r": 3.38,
+        "tan_d": 0.001,
+        "feed_x": -6.0,
+        "feed_width": 1.0,
+        "feed_cells": 16,
+        "mesh_div": 30,
+        "sub_cells": 16,
+        "mesh": "manual",
+        "auto_cpw": 20,
+        "max_timesteps": 350000,
+        "f_min": 1.0,
+        "f_max": 3.0
+      },
+      "model_sha256": "eccce41f5a172fbad49cc9017122e2d2844d26de9a7fb1dd921dcfaba0b512a9",
+      "cells": 665896,
+      "timestep_s": 5.49347e-14,
+      "timesteps": 254772,
+      "threads": 4,
+      "energy_converged": true,
+      "passive": true,
+      "min_frequency_hz": 2456450000.0,
+      "min_s11_db": -32.564344495271285,
+      "reflected_power_at_minimum_pct": 0.055407116665928,
+      "minimum_in_dense_window": true,
+      "change": {
+        "frequency_pct": 0.026467953416409173,
+        "depth_db": 0.320770973769811,
+        "complex_max_abs": 0.010836466994595938,
+        "within_tolerances": false
+      },
+      "response_sha256": "a3ba74371a25072a5c81435493303189efbd7e00a8ebe00cf1bf5c97079c49db",
+      "xml_sha256": "12cc969d31c565927dc4df24a640c61e51891e476144ed4965b6ba99cbcf68a8"
+    }
+  ]
+}

@@ -168,10 +168,25 @@ depth. Converting an ideal line-feed example to a Design freezes `feed_width`: c
 to an area requires new mesh anchors. Convert with a positive width override if the Design must
 retain an editable finite footprint.
 
+The Windows CPU control on October 8, 2026 reached −60 dB energy decay at all four levels:
+
+| Feed / substrate cells | S11 minimum (GHz) | Depth (dB) | Depth change (dB) | Maximum complex S11 change |
+| --- | --- | --- | --- | --- |
+| 2 | 2.44700 | −35.630 | — | — |
+| 4 | 2.45395 | −33.521 | 2.109 | 0.11322 |
+| 8 | 2.45580 | −32.885 | 0.636 | 0.03220 |
+| 16 | 2.45645 | −32.564 | 0.321 | 0.01084 |
+
+The last frequency change was 0.0265%, but the full-band complex change still exceeded the
+predeclared 0.01 limit. Two successive passing refinements were **not** obtained. The finite
+source is an explicit modeling option, not a validated replacement for the line feed or a
+correction for other antennas. Compact inputs, criteria and measurements are retained in
+`python/tests/fixtures/patch_finite_feed_20261008.json`; the command above recreates the raw data.
+
 ### Compare with an independently installed openEMS CLI
 
 ```bash
-python -m tests.native_gallery_study --native /path/to/openEMS --out /path/to/new-control
+python -m tests.native_gallery_study --native /path/to/openEMS --out /path/to/new-control --timeout 15000
 ```
 
 This optional, long-running control covers the Python examples, saved example Designs and the
@@ -180,6 +195,11 @@ sequentially in both routes, on four CPU threads, with identical full-precision 
 mesh and −60 dB energy criterion. It retains raw waves, full S matrices, solver input, model
 source, hashes and logs. Native input uses 17-digit primitive coordinates to avoid displacing
 flat sources relative to their mesh when serializing CSXCAD XML.
+
+The full gallery can take hours. The command raises the per-native-solve timeout from 900 to
+15,000 seconds for the larger examples; a pair gets twice that budget plus 50 seconds.
+`--threads N` changes the CPU thread count in both routes without changing the physical input.
+Use a new output directory for each attempt; interrupted outputs are retained.
 
 The checks distinguish equal-input agreement, energy completion, matrix passivity, S-matrix
 assembly and result-storage rounding. They omit far fields and do not establish mesh convergence
