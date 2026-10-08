@@ -27,13 +27,14 @@ FREQUENCIES = np.linspace(1e9, 3e9, 101)
 H = .2
 W = np.sqrt(MUE0/EPS0)*H/Z0
 MESHES, KINDS = (4, 6, 8), ('through', 'stub')
-PROTOCOL, END_DB, THREADS = 'tem-series-stub-v3', -90., 1
+PROTOCOL, END_DB, THREADS = 'tem-series-stub-v4', -90., 1
 BASE_STEPS, CASE_SECONDS = 400000, 1800.
 LIMITS = dict(s_target_abs=.03, gamma_target_abs=.03, z_target_rel=.05,
     s_mesh_abs=.01, gamma_mesh_abs=.01, s_boundary_abs=.005,
     gamma_boundary_abs=.005, power_abs=.02, reciprocity_abs=.005,
     plane_spread_abs=.005, calibration_beta_rel=.01,
-    calibration_z_rel=.01, calibration_spread_rel=.005, current_strip_spread_rel=.005)
+    calibration_z_rel=.01, calibration_spread_rel=.005,
+    calibration_transfer_abs=.005, current_strip_spread_rel=.005)
 
 
 def synthesis():
@@ -117,7 +118,10 @@ def mesh_lines(n, expanded=False):
         for centre in centres:
             anchors.extend((centre-dx, centre, centre+dx))
     x = _axis(anchors, dx, maximum)
-    z = np.r_[np.linspace(0., H, n+1), H+graded(STUB_LENGTH, dx, maximum)[1:]]
+    # A top PMC zeros tangential H on the last interior dual plane. Center
+    # that plane on the declared open end, rather than the outer E grid line.
+    z = np.r_[np.linspace(0., H, n+1), H+graded(STUB_LENGTH-dx/2, dx, maximum)[1:],
+              H+STUB_LENGTH+dx/2]
     # Four transverse cells permit two independently sized interior contours.
     return x, np.linspace(0., W, 5), z
 
@@ -163,24 +167,6 @@ def build(n, kind, column=0, expanded=False):
     for prop in sim.csx.GetAllProperties():
         prop.SetColor((128, 128, 128), alpha=prop.GetFillColor()[3])
     return sim
-
-
-def line_parameters(v, current, dx):
-    """Reflected-line derivative inversion, with spatial stagger removed."""
-    v, current = np.asarray(v), np.asarray(current)
-    if v.shape[-2:] != (3, len(FREQUENCIES)) or current.shape != v.shape[:-2]+(2, len(FREQUENCIES)):
-        raise ValueError('voltage triplets and dual currents required')
-    if not np.isfinite(v).all() or not np.isfinite(current).all() or not np.isfinite(dx) or dx <= 0:
-        raise ValueError('finite spectra and positive spacing required')
-    u, ih = v[..., 1, :], current.mean(axis=-2)
-    dv, di = (v[..., 2, :]-v[..., 0, :])/(2*dx), (current[..., 1, :]-current[..., 0, :])/dx
-    if any(np.any(abs(a) < 1e-10*np.max(abs(a), axis=-1, keepdims=True)) for a in (u, ih, dv, di)):
-        raise ValueError('standing-wave node in line inversion')
-    gamma = 2/dx*np.arcsinh(dx*np.sqrt(dv*di/(u*ih))/2)
-    gamma = np.where(gamma.imag < 0, -gamma, gamma)
-    zc = np.sqrt(u*dv/(ih*di))
-    zc = np.where(zc.real < 0, -zc, zc)
-    return gamma, zc
 
 
 def source_ids():

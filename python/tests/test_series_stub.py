@@ -62,13 +62,39 @@ def read_case(path, n, kind, column, expanded=False):
 
 
 def calibration(columns, n):
-    values = [f.line_parameters(d['v'], d['i'], f.H/n*1e-3) for d in columns]
-    gammas, zs = np.asarray([v[0] for v in values]), np.asarray([v[1] for v in values])
-    g, z = gammas.mean(axis=(0, 1, 2)), zs.mean(axis=(0, 1, 2))
+    """Recover a 5-mm line transfer matrix from two independent field states.
+
+    Averaging the dual currents multiplies I by cosh(gamma*dx/2). This is a
+    similarity transform of the line matrix: its trace, and therefore gamma,
+    is unchanged. Correct Zc by that same known spatial factor afterward.
+    """
+    gammas, zs, transfer_errors = [], [], []
+    for p in (0, 1):
+        state = []
+        for q in (0, 1):
+            state.append(np.asarray([[d['v'][p, q, 1]/np.sqrt(f.Z0),
+                d['i'][p, q].mean(axis=0)*np.sqrt(f.Z0)] for d in columns]).transpose(2, 1, 0))
+        if any(not np.isfinite(a).all() or np.max(np.linalg.cond(a)) > 10. for a in state):
+            raise ValueError('ill-conditioned independent through-line states')
+        transfer = np.linalg.solve(state[1].transpose(0, 2, 1), state[0].transpose(0, 2, 1)).transpose(0, 2, 1)
+        length = (f.PLANES[p][1]-f.PLANES[p][0])*1e-3
+        g = np.arccosh((transfer[:, 0, 0]+transfer[:, 1, 1])/2)/length
+        g = np.where(g.imag < 0, -g, g)
+        z = f.Z0*np.sqrt(transfer[:, 0, 1]/transfer[:, 1, 0])*np.cosh(g*f.H/n*1e-3/2)
+        z = np.where(z.real < 0, -z, z)
+        if not np.isfinite(g).all() or not np.isfinite(z).all():
+            raise ValueError('singular through-line inversion')
+        gammas.append(g)
+        zs.append(z)
+        transfer_errors.extend((np.max(abs(np.linalg.det(transfer)-1)),
+                                np.max(abs(transfer[:, 0, 0]-transfer[:, 1, 1]))))
+    gammas, zs = np.asarray(gammas), np.asarray(zs)
+    g, z = gammas.mean(axis=0), zs.mean(axis=0)
     target = 2*np.pi*f.FREQUENCIES/299792458.
     metrics = dict(calibration_beta_rel=float(np.max(abs(gammas.imag-target)/target)),
         calibration_z_rel=float(np.max(abs(zs-f.Z0)/f.Z0)),
-        calibration_spread_rel=float(max(np.max(abs(gammas-g)/abs(g)), np.max(abs(zs-z)/abs(z)))))
+        calibration_spread_rel=float(max(np.max(abs(gammas-g)/abs(g)), np.max(abs(zs-z)/abs(z)))),
+        calibration_transfer_abs=float(max(transfer_errors)))
     return g, z, metrics
 
 
@@ -191,13 +217,25 @@ class SeriesStubControls(unittest.TestCase):
         with self.assertRaises(ValueError):
             f.reference('stub', [np.nan])
 
-    def test_reflected_line_inversion_keeps_signed_loss(self):
-        g, z, dx = -.03+2j*np.pi*f.FREQUENCIES/299792458., 50.1+.01j, .00005
-        v = np.asarray([np.exp(-g*x)+.2j*np.exp(g*x) for x in (-dx, 0., dx)])
-        i = np.asarray([(np.exp(-g*x)-.2j*np.exp(g*x))/z for x in (-dx/2, dx/2)])
-        measured, zc = f.line_parameters(v, i, dx)
-        np.testing.assert_allclose(measured, g, atol=1e-10, rtol=0)
-        np.testing.assert_allclose(zc, z, atol=4e-11, rtol=0)
+    def test_two_plane_inversion_keeps_signed_loss_and_reflections(self):
+        g, z, dx, columns = -.03+2j*np.pi*f.FREQUENCIES/299792458., 50.1+.01j, f.H/4*1e-3, []
+        for forward, backward in ((1., .3-.2j), (.2+.1j, 1.2)):
+            v, i = np.empty((2, 2, 3, 101), complex), np.empty((2, 2, 2, 101), complex)
+            for p in (0, 1):
+                for q, centre in enumerate(f.PLANES[p]):
+                    for j, shift in enumerate((-dx, 0., dx)):
+                        x = centre*1e-3+shift
+                        v[p, q, j] = forward*np.exp(-g*x)+backward*np.exp(g*x)
+                    for j, shift in enumerate((-dx/2, dx/2)):
+                        x = centre*1e-3+shift
+                        i[p, q, j] = (forward*np.exp(-g*x)-backward*np.exp(g*x))/z
+            columns.append(dict(v=v, i=i))
+        measured, zc, metrics = calibration(columns, 4)
+        np.testing.assert_allclose(measured, g, atol=1e-12, rtol=0)
+        np.testing.assert_allclose(zc, z, atol=1e-12, rtol=0)
+        self.assertLess(metrics['calibration_transfer_abs'], 2e-15)
+        with self.assertRaises(ValueError):
+            calibration([columns[0], columns[0]], 4)
 
     def test_mesh_geometry_and_dual_contours(self):
         previous = 0
@@ -209,7 +247,8 @@ class SeriesStubControls(unittest.TestCase):
             self.assertGreater(cells, previous)
             previous = cells
             self.assertEqual(len(axes[1]), 5)
-            self.assertEqual(axes[2][-1], f.H+f.STUB_LENGTH)
+            self.assertAlmostEqual(np.mean(axes[2][-2:]), f.H+f.STUB_LENGTH)
+            self.assertAlmostEqual(axes[2][-1]-axes[2][-2], f.H/n)
             for p in (0, 1):
                 for q, centre in enumerate(f.PLANES[p]):
                     ix = int(np.flatnonzero(axes[0] == centre)[0])
