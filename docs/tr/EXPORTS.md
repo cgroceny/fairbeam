@@ -15,6 +15,13 @@ Geometri dışa aktarımı ikili STL, GLB, Blender render paketi ve CST uyumlu V
 
 ### VBA makrosu dışa aktarımında parametreler
 
+Makro, desteklenen geometriyi ve kurulum komutlarını aktarır; openEMS ayrıklaştırmasını yeniden
+oluşturmaz. Yorumlardaki mesh çizgisi sayıları üst veridir, çözücüye uygulanmış bir ızgara değildir.
+İçe aktarımdan sonra çözüm kutusunu, soğurucu sınır uzaklıklarını, port temasını ve referans
+empedansını kontrol edin. Çalıştırmanın tamamlanması veya enerji durdurma ölçütünün sağlanması
+tek başına mesh yakınsaması göstermez. Geometriyi, sınır konumlarını ve port tanımını sabit tutup
+hem genel ağı hem besleme çevresindeki ağı ardışık olarak incelterek S-parametrelerini denetleyin.
+
 Bir tasarımda Dışa aktar penceresi açıldığında VBA makrosu **parametriktir**: her tasarım parametresi değeri ve açıklamasıyla bir makro parametresi olur. Bunları kullanan ifadeler VBA ifadesi olarak yazılır; parametre değiştiğinde model de değişir:
 
 - Kutu sınırları, silindir yarıçapı/aralığı/merkezi, küre merkezi ve yarıçapı, çokgen noktaları, yüksekliği ve uzatma uzunluğu, ayrık port uçları ve empedansı, dielektriğin bağıl dielektrik sabiti ve frekans bandı;
