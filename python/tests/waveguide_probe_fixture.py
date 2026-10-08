@@ -25,7 +25,8 @@ A, B = 22.86, 10.16  # mm; our air-filled PEC guide
 FREQUENCIES = np.linspace(9.8e9, 10.2e9, 41)
 PLANES = np.array([20., 25., 30., 35.])  # outward distances, mm
 MESHES, PADDING, CONTROL_PADDING = (40, 60, 80), 16, 24
-PROTOCOL, CASE_SECONDS = 'uniform-current-te10-v2', 1800.
+PROTOCOL, CASE_SECONDS = 'uniform-current-te10-v3', 1800.
+END_DB, PULSE_END_S = -90., 9/(np.pi*2e8)
 LIMITS = dict(target_rel=.02, mesh_rel=.005, boundary_rel=.002,
               beta_rel=.005, plane_rel=.002, symmetry_rel=.002,
               current_uniform_rel=.001, power_rel=.01)
@@ -60,7 +61,7 @@ def build(cpw, padding=PADDING):
             or isinstance(padding, bool) or padding not in (PADDING, CONTROL_PADDING)):
         raise ValueError('cpw=20..120 by twenty and declared padding required')
     sim = Simulation(FREQUENCIES[0], FREQUENCIES[-1], excitation='gauss',
-        boundaries=['PEC']*4+['PML_8']*2, end_criteria_db=-70, max_timesteps=300000)
+        boundaries=['PEC']*4+['PML_8']*2, end_criteria_db=END_DB, max_timesteps=300000)
     step = C0/FREQUENCIES[-1]/sim.unit/cpw
     for axis, size in (('x', A), ('y', B)):
         count = 2*int(np.ceil(size/step/2))
@@ -131,14 +132,15 @@ def acquire(out, cpw, padding=PADDING):
                           str(out/'raw'), FREQUENCIES).ui_f_val).reshape(2, 4, -1)
     current = np.asarray(UI_data([f'i{j}' for j in range(3)],
                                 str(out/'raw'), FREQUENCIES).ui_f_val)
-    dt = float(np.diff(np.loadtxt(out/'raw/et', max_rows=2)[:, 0])[0])
+    excitation = np.loadtxt(out/'raw/et')
+    dt = float(np.diff(excitation[:2, 0])[0])
     area = np.diff(sim.mesh.GetLines('x'))[0]*np.diff(sim.mesh.GetLines('z'))[0]*sim.unit**2
     np.savez_compressed(out/'data.npz', f=FREQUENCIES, v=v, current=current,
                         voltage=port.uf_tot, contour=port.if_tot)
     meta = dict(protocol=PROTOCOL, geometry=geometry(), cpw=cpw, padding=padding,
         frequency_hz=FREQUENCIES.tolist(), limits=LIMITS, source_ids=source_ids(),
         cells=int(np.prod([len(sim.mesh.GetLines(a))-1 for a in 'xyz'])),
-        area_m2=float(area), dt_s=dt, run=sim.run_stats)
+        area_m2=float(area), dt_s=dt, excitation_timesteps=len(excitation), run=sim.run_stats)
     (out/'report.json').write_text(json.dumps(meta, indent=2)+'\n', encoding='utf-8')
     return meta
 

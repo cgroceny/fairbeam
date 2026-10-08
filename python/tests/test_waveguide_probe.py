@@ -33,11 +33,16 @@ def read_case(path, cpw, padding):
     positive = [meta.get('dt_s'), meta.get('area_m2'), meta.get('case_elapsed_s'), run.get('wall_time_s')]
     if (run.get('converged') is not True or run.get('exact_endcriteria') is not True
             or run.get('hit_timestep_limit') is not False or run.get('threads') != 4
-            or run.get('engine') != 'cpu' or not energy or max(energy) > -70+1e-9
+            or run.get('engine') != 'cpu' or not energy or max(energy) > f.END_DB+1e-9
             or not isinstance(run.get('timesteps'), int) or not 0 < run['timesteps'] < 300000
             or any(isinstance(x, bool) or not isinstance(x, (int, float)) or not np.isfinite(x) or x <= 0 for x in positive)
             or max(positive[2:]) > f.CASE_SECONDS):
         raise ValueError('missing confirmed stop, finite measurements or suspend-inclusive deadline')
+    pulse_steps = meta.get('excitation_timesteps')
+    if (isinstance(pulse_steps, bool) or not isinstance(pulse_steps, int)
+            or abs(pulse_steps-int(np.ceil(f.PULSE_END_S/meta['dt_s']))) > 1
+            or run['timesteps'] < pulse_steps):
+        raise ValueError('simulation stopped before the native Gaussian excitation completed')
     if meta.get('cells') != expected_cells or not np.isclose(meta['area_m2'], expected_area, rtol=1e-12, atol=0):
         raise ValueError('dual source area or mesh size differs from the declared geometry')
     with np.load(path/'data.npz') as src:
@@ -176,8 +181,9 @@ class ProbeTests(unittest.TestCase):
                 frequency_hz=f.FREQUENCIES.tolist(), limits=f.LIMITS, source_ids=f.source_ids(),
                 cells=int(np.prod([len(sim.mesh.GetLines(a))-1 for a in 'xyz'])),
                 area_m2=float(area), dt_s=dt, case_elapsed_s=2.,
+                excitation_timesteps=int(np.ceil(f.PULSE_END_S/dt)),
                 run=dict(converged=True, exact_endcriteria=True, hit_timestep_limit=False,
-                    threads=4, engine='cpu', timesteps=1000, final_energy_bound_db=-70., wall_time_s=1.))
+                    threads=4, engine='cpu', timesteps=30000, final_energy_bound_db=f.END_DB, wall_time_s=1.))
             (path/'report.json').write_text(json.dumps(meta), encoding='utf-8')
             np.savez(path/'data.npz', f=f.FREQUENCIES, v=v,
                 current=np.broadcast_to(contour, (3, len(source))), voltage=voltage, contour=contour)
@@ -197,12 +203,13 @@ class ProbeTests(unittest.TestCase):
             report = path/'report.json'
             original = json.loads(report.read_text(encoding='utf-8'))
             for key, value in (('source_ids', {}), ('case_elapsed_s', f.CASE_SECONDS+1),
-                               ('area_m2', original['area_m2']*2), ('cells', 1)):
+                               ('area_m2', original['area_m2']*2), ('cells', 1),
+                               ('excitation_timesteps', 1)):
                 report.write_text(json.dumps({**original, key:value}), encoding='utf-8')
                 with self.assertRaises(ValueError):
                     compare(folder)
             for key, value in (('converged', False), ('wall_time_s', float('nan')),
-                               ('final_energy_bound_db', -60.), ('threads', 8)):
+                               ('final_energy_bound_db', -60.), ('threads', 8), ('timesteps', 1000)):
                 report.write_text(json.dumps({**original, 'run':{**original['run'], key:value}}), encoding='utf-8')
                 with self.assertRaises(ValueError):
                     compare(folder)
