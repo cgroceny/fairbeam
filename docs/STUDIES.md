@@ -125,9 +125,15 @@ Between successive refinements it reports:
 - the change of the **first resonance**: the center (S11 minimum) of the first band below −10 dB,
   or the global S11 minimum if nothing is matched
 - the change of **Dmax** at the far-field frequency closest to that resonance
+- the change of **S11 depth** at that resonance, including studies started with `--param`
 
-A step counts as converged when |Δf| < `--tol-f` (default 0.5 %) and |ΔDmax| < `--tol-d` (default
-0.1 dB). The study is converged when its **last** step is. Output:
+A step counts as converged when |Δf| < `--tol-f` (default 0.5 %), |ΔS11| < `--tol-s11`
+(default 1 dB) and available |ΔDmax| < `--tol-d` (default 0.1 dB). Both runs must meet the
+energy-decay criterion and have no reported unresolved fine features. Missing S11 depth does not
+pass. The study is converged when its **last** step is. These checks do not replace two further
+local refinements when the port cells stay fixed as the global mesh parameter changes.
+
+Historical output below predates the S11-depth guard; the current table also shows `dS11 dB`:
 
 ```
   mesh_div      cells   f_res GHz      df %  Dmax dBi    dD dB  ok
@@ -140,6 +146,45 @@ converged (last step |df| < 0.5 %, |dD| < 0.1 dB): YES
 
 Refine the parameter that controls the mesh on the metal (`mesh_div`, `cell`, ...), not only the
 global cell size. See [VALIDATION.md](VALIDATION.md#5-recommended-settings).
+
+### Separate feed refinement from the global mesh
+
+The patch example retains its original ideal line feed by default (`feed_width=0`). For a
+**different, explicitly finite source model**, set `feed_width` in mm and refine `feed_cells`
+across that fixed square footprint. This is a distributed lumped source, not a coaxial connector.
+Also refine `sub_cells` through the substrate and raise `max_timesteps` when a smaller cell
+reduces the stable timestep. Keep the physical footprint, material, boundaries and source fixed.
+
+From `python/`, the following optional experiment runs four sequential CPU solves, with a
+1 × 1 mm footprint and 2, 4, 8, 16 cells across the footprint and substrate:
+
+```bash
+python -m tests.patch_feed_study --out /path/to/new-patch-study
+```
+
+It saves raw complex S11, dense samples around the patch minimum, mesh lines, solver logs and
+two successive refinement checks. Passing a frequency-only test does not establish stable match
+depth. Converting an ideal line-feed example to a Design freezes `feed_width`: changing a line
+to an area requires new mesh anchors. Convert with a positive width override if the Design must
+retain an editable finite footprint.
+
+### Compare with an independently installed openEMS CLI
+
+```bash
+python -m tests.native_gallery_study --native /path/to/openEMS --out /path/to/new-control
+```
+
+This optional, long-running control covers the Python examples, saved example Designs and the
+iteration-zero Sierpinski variant. Use `--models dipole,blade_867` for a subset. It runs every port
+sequentially in both routes, on four CPU threads, with identical full-precision CSXCAD geometry,
+mesh and −60 dB energy criterion. It retains raw waves, full S matrices, solver input, model
+source, hashes and logs. Native input uses 17-digit primitive coordinates to avoid displacing
+flat sources relative to their mesh when serializing CSXCAD XML.
+
+The checks distinguish equal-input agreement, energy completion, matrix passivity, S-matrix
+assembly and result-storage rounding. They omit far fields and do not establish mesh convergence
+or physical accuracy. An independently extracted executable can still contain the same upstream
+solver binary as the app; compare its library hash and record that fact.
 
 ## Study file: `fairbeam.study/1`
 

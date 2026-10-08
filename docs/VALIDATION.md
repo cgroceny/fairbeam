@@ -176,6 +176,13 @@ that cell size; 4 cells across the substrate; frequency step 2.5 MHz = 0.1 %):
 At mesh_div 30, 8 instead of 4 substrate cells gave the same resonance (2.4525 GHz) and Dmax
 (6.786 dBi). Only the S11 depth changed, to −41.2 dB.
 
+These are global-mesh observations, not a converged feed-impedance certificate. In a separate
+fixed-domain local-feed refinement with −60 dB energy completion and 50 kHz frequency sampling,
+the final step moved the S11 minimum by only 0.055% but its depth by 3.59 dB. The default ideal
+line source therefore needs a separate port-resolution check; frequency stability alone is
+insufficient. The optional finite-footprint model and reproducible controls are described in
+[STUDIES.md](STUDIES.md#separate-feed-refinement-from-the-global-mesh).
+
 - The resonance converges to **2.455 GHz, 2.3 % below the transmission-line estimate**. That is
   within the model's stated accuracy, and in the usual direction: the simple model ignores the
   probe inductance, the finite 60 mm ground, and dispersion. The old default (mesh_div 20) read

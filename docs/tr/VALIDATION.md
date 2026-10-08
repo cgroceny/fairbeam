@@ -132,6 +132,13 @@ Varsayımlar: sonsuz toprak düzlemi ve alttaş, yarı statik ε_eff, h ≪ λ; 
 
 mesh_div 30'da alttaş boyunca 4 yerine 8 hücre kullanılması aynı rezonansı (2,4525 GHz) ve Dmax'ı (6,786 dBi) vermiştir. Yalnızca S11 derinliği −41,2 dB'ye değişmiştir.
 
+Bunlar global mesh gözlemleridir; besleme empedansının yakınsadığını kanıtlamaz. Sabit dış
+bölgede, −60 dB enerji sönümü ve 50 kHz frekans örneklemesiyle yapılan ayrı bir yerel besleme
+inceltmesinde son adım S11 minimum frekansını yalnızca %0,055, derinliğini ise 3,59 dB değiştirdi.
+Varsayılan ideal çizgi kaynak için port çözünürlüğü ayrıca denetlenmelidir; frekans kararlılığı
+tek başına yeterli değildir. İsteğe bağlı sonlu ayak izi modeli ve tekrarlanabilir kontroller
+[STUDIES.md](STUDIES.md#separate-feed-refinement-from-the-global-mesh) içinde açıklanır.
+
 - Rezonans **2,455 GHz'e, iletim hattı tahmininin %2,3 altına** yakınsar. Bu, modelin belirtilen doğruluğu içindedir ve olağan yöndedir: basit model, sonda endüktansını, sonlu 60 mm toprak düzlemini ve dispersiyonu ihmal eder. Eski varsayılan (mesh_div 20) %0,9 düşük okuyordu. Modelin varsayılanı artık mesh_div 30'dur (mesh_div 40'tan %0,1 fark, 11 s).
 - mesh_div 30'da kenar hücresi 1,7 mm, yani yaklaşık alttaş yüksekliğidir. Mikroşeritte ışıyan kenarlardaki hücreyi ≲ h tutun.
 - **Dmax 6,79–6,81 dBi**, ince ve düşük ε değerli alttaş üzerindeki yama için olağan 6–8 dBi aralığındadır.

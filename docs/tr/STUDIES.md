@@ -98,8 +98,15 @@ Bu, `sweep` komutunun tam bir eksenli ve değerlerini **kabadan inceye** sırala
 
 - **ilk rezonansın** değişimi: −10 dB altındaki ilk bandın merkezi (S11 minimumu), uyumlu bant yoksa global S11 minimumu
 - bu rezonansa en yakın uzak alan frekansındaki **Dmax** değişimi
+- `--param` ile başlatılan çalışmalar dahil, bu rezonanstaki **S11 derinliği** değişimi
 
-|Δf| < `--tol-f` (varsayılan %0,5) ve |ΔDmax| < `--tol-d` (varsayılan 0,1 dB) olduğunda adım yakınsamış sayılır. Çalışma, **son** adımı yakınsamışsa yakınsamıştır. Çıktı:
+|Δf| < `--tol-f` (varsayılan %0,5), |ΔS11| < `--tol-s11` (varsayılan 1 dB) ve varsa
+|ΔDmax| < `--tol-d` (varsayılan 0,1 dB) olduğunda adım yakınsamış sayılır. İki koşu da enerji
+sönümü ölçütünü sağlamalı; hiçbirinde yetersiz ince ayrıntı bildirilmemelidir. S11 derinliği
+eksikse denetim geçmez. Çalışma, **son** adımı yakınsamışsa yakınsamıştır. Global mesh parametresi
+değişirken port hücreleri sabit kalıyorsa, bu denetimler iki ek yerel inceltmenin yerini tutmaz.
+
+Aşağıdaki tarihsel çıktı S11 derinliği denetiminden öncedir; güncel tablo ayrıca `dS11 dB` gösterir:
 
 ```
   mesh_div      cells   f_res GHz      df %  Dmax dBi    dD dB  ok
@@ -111,6 +118,46 @@ converged (last step |df| < 0.5 %, |dD| < 0.1 dB): YES
 ```
 
 Yalnızca global hücre boyutunu değil, metal üzerindeki mesh'i kontrol eden parametreyi (`mesh_div`, `cell`, ...) inceltin. Bkz. [VALIDATION.md](VALIDATION.md#5-recommended-settings).
+
+### Besleme inceltmesini global mesh'ten ayırın
+
+Patch örneği varsayılan olarak özgün ideal çizgi beslemesini korur (`feed_width=0`).
+**Farklı, açıkça sonlu bir kaynak modeli** için `feed_width` değerini mm cinsinden belirleyin;
+fiziksel kare ayak izini sabit tutup `feed_cells` değerini artırın. Bu, dağıtılmış ayrık kaynaktır;
+koaksiyel konektör modeli değildir. Alttaş boyunca `sub_cells` değerini de artırın. Küçülen
+hücreler kararlı zaman adımını düşürdüğünde `max_timesteps` sınırını yükseltin. Fiziksel ayak
+izi, malzeme, sınırlar ve kaynak aynı kalmalıdır.
+
+`python/` klasöründen aşağıdaki isteğe bağlı deney, 1 × 1 mm ayak iziyle besleme ve alttaş
+boyunca 2, 4, 8, 16 hücre kullanarak dört CPU çözümünü sırayla çalıştırır:
+
+```bash
+python -m tests.patch_feed_study --out /path/to/new-patch-study
+```
+
+Ham karmaşık S11, minimum çevresinde sık frekans örnekleri, mesh çizgileri, çözücü günlükleri
+ve ardışık iki inceltmenin denetimini kaydeder. Yalnızca frekans testini geçmek, eşleşme
+derinliğinin kararlı olduğunu göstermez. İdeal çizgi beslemeli örnek Design'a dönüştürülürken
+`feed_width` sabit tutulur; çizgiden alana geçiş yeni mesh çizgileri gerektirir. Design'da
+düzenlenebilir sonlu ayak izi için örneği pozitif genişlik değeriyle dönüştürün.
+
+### Ayrı kurulmuş openEMS CLI ile karşılaştırma
+
+```bash
+python -m tests.native_gallery_study --native /path/to/openEMS --out /path/to/new-control
+```
+
+Bu isteğe bağlı uzun kontrol Python örneklerini, kayıtlı örnek Design'ları ve sıfır yinelemeli
+Sierpinski varyantını kapsar. Alt küme için `--models dipole,blade_867` kullanın. Her portu iki
+yolda da sırayla, dört CPU iş parçacığıyla, aynı tam hassasiyetli CSXCAD geometrisi, mesh ve
+−60 dB enerji ölçütüyle çalıştırır. Ham dalgaları, tam S matrislerini, çözücü girdisini, model
+kaynağını, özetleri ve günlükleri korur. Düzlemsel kaynakların CSXCAD XML yazımı sırasında
+mesh'ten kaymaması için ilkel koordinatları 17 anlamlı basamakla aktarılır.
+
+Kontroller aynı girdinin eşdeğerliğini, enerji sönümünü, matris pasifliğini, S matrisi hesabını
+ve sonuç saklama yuvarlamasını ayrı değerlendirir. Uzak alanı kapsamaz; mesh yakınsaması veya
+fiziksel doğruluk kanıtı değildir. Ayrı arşivden çıkarılmış çalıştırılabilir dosya, uygulamayla
+aynı upstream çözücü ikilisini içerebilir; kütüphane özetini karşılaştırıp bu durumu kaydedin.
 
 ## Çalışma dosyası: `fairbeam.study/1`
 

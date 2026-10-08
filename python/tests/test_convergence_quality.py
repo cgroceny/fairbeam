@@ -1,10 +1,12 @@
 """Stable numerical summaries cannot validate an unfinished or unresolved run."""
 import copy
 import unittest
+from unittest.mock import patch
+from pathlib import Path
 
 from fairbeam import convergence as cv
 from fairbeam.study import convergence_report, summarize
-from test_convergence import fake_bundle
+from tests.test_convergence import fake_bundle
 
 
 class ConvergenceQualityTest(unittest.TestCase):
@@ -47,6 +49,26 @@ class ConvergenceQualityTest(unittest.TestCase):
         a, b = self.pair(lambda b: b["mesh"].update(auto={"fine_features": [{"kind": "feed", "resolved": True}]}))
         self.assertTrue(cv.compare(cv.metrics(a), cv.metrics(b), cv.DEFAULT_TOL)["converged"])
         self.assertTrue(convergence_report([summarize(a), summarize(b)])["converged"])
+
+    def test_parameter_study_rejects_changing_depth_at_fixed_frequency(self):
+        a = summarize(fake_bundle(2.4e9))
+        b = copy.deepcopy(a)
+        b["first_resonance"]["s11_db"] += 3.59
+        result = convergence_report([a, b])
+        self.assertFalse(result["converged"])
+        self.assertAlmostEqual(result["steps"][0]["ds11_db"], 3.59)
+        self.assertTrue(convergence_report([a, b], tol_s11_db=4)["converged"])
+        for value in (0, -1, float('nan'), float('inf')):
+            with self.assertRaises(ValueError):
+                convergence_report([a, b], tol_s11_db=value)
+
+    def test_invalid_depth_tolerance_is_rejected_before_starting_solver(self):
+        from fairbeam.study import run_study
+        with patch("fairbeam.multiport.run_model") as run:
+            with self.assertRaisesRegex(ValueError, "S11 tolerance"):
+                run_study("unused.py", [("mesh", [20, 30])], kind="convergence",
+                          tol_s11_db=0, out=Path("unused"), sim_root=Path("unused"))
+            run.assert_not_called()
 
     def test_invalid_pair_does_not_stop_before_a_later_valid_pair(self):
         bad = fake_bundle(2.4e9)
