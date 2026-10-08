@@ -1117,3 +1117,14 @@ original provenance. Qualification applies only to each listed quantity and geom
 It excludes conductor-loss discrepancies, the unqualified microstrip impedance/loss
 results, the incomplete 3.8 mesh sequence and the separate group-velocity limitation
 noted above. No gallery model or generated bundle is changed.
+
+## Chapter 5 comparison scopes
+
+The [Chapter 5 record](benchmarks/pozar-chapter-05.md) collects the sampled ideal TEM
+scopes that meet the declared target, successive mesh and independent-boundary limits
+for Examples 5.3 and 5.5–5.8. Tapers also meet two profile-refinement limits.
+It links each independent fixture PR and its reproduction commands.
+
+Examples 5.1, 5.2 and 5.4 remain excluded because their stopping or numerical gates
+fail. Strict Chebyshev/Klopfenstein ripple compliance, practical PCB layouts and
+arbitrary Designer measurements are outside the accepted scopes.

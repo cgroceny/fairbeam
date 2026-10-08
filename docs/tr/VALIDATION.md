@@ -734,3 +734,14 @@ bilgilerini korur. Kabul yalnızca listelenen büyüklük ve geometri için geç
 İletken kaybı sapmaları, kabul edilmeyen mikroşerit empedans/kayıp sonuçları, eksik 3.8
 mesh dizisi ve yukarıda belirtilen ayrı grup hızı sınırlaması bu kapsamın dışındadır.
 Hiçbir galeri modeli veya üretilmiş paket değişmez.
+
+## Bölüm 5 karşılaştırma kapsamları
+
+[Bölüm 5 kaydı](benchmarks/pozar-chapter-05.md), Örnek 5.3 ve 5.5–5.8 için ilan edilen
+hedef, ardışık mesh ve bağımsız sınır ölçütlerini sağlayan örneklenmiş ideal TEM
+kapsamlarını toplar. Sürekli geçişler ayrıca iki profil inceltme ölçütünü sağlar.
+Her bağımsız fikstür PR'ına ve çoğaltma komutlarına bağlantı verir.
+
+Örnek 5.1, 5.2 ve 5.4, durdurma veya sayısal ölçütleri sağlamadığından kapsam dışındadır.
+Kesin Chebyshev/Klopfenstein dalgalanma sınırı, gerçek PCB yerleşimleri ve Designer'daki
+genel ölçümler kabul edilen kapsamların dışındadır.
