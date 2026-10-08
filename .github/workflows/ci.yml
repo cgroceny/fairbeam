@@ -1,4 +1,4 @@
-# Checks, started by hand (see `on:` below):
+# Checks on pull requests and main pushes; also available from the Actions tab:
 #   web      type check, the legal and old-name guards, build, CST self-test and the export / drawing /
 #            bundle checks (Linux)
 #   windows  the official openEMS MSVC build + its Python wheels, the Python test suite and one
@@ -6,15 +6,18 @@
 #            groups, DLL lookup) against a real openEMS
 name: ci
 
-# Run it from the Actions tab or with `gh workflow run ci`.
 on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
   workflow_dispatch:
 
 permissions:
   contents: read
 
 concurrency:
-  group: ci-${{ github.ref }}
+  group: ci-${{ github.event_name }}-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
@@ -33,6 +36,7 @@ jobs:
       - run: npm run -s check:legal
       - run: npm run -s check:no-antenlab
       - run: npm run -s check:installer-info
+      - run: npm run -s check:designer
       - run: npm run -s build
       - run: npm run -s check:cst
       - run: npm run -s check:exports
@@ -44,7 +48,7 @@ jobs:
 
   windows:
     runs-on: windows-latest
-    timeout-minutes: 30
+    timeout-minutes: 45
     env:
       OPENEMS_TAG: v0.37.0-rc3
       # no PYTHONUTF8: run with the default ANSI code page (cp1252) that users have, so a missing
@@ -54,6 +58,11 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.13"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
 
       - name: Install openEMS (official MSVC build and its Python wheels)
         shell: pwsh
@@ -94,6 +103,23 @@ jobs:
         working-directory: python
         if: always()
         run: python -m unittest discover -s tests -v
+
+      - name: Browser scenarios (English and Turkish, no additional solver run)
+        shell: pwsh
+        run: |
+          $env:FAIRBEAM_PYTHON = (Get-Command python).Source
+          $env:PYTHONUTF8 = '1'
+          $env:TEMP = $env:RUNNER_TEMP
+          $env:TMP = $env:RUNNER_TEMP
+          node scripts/check-scenarios.mjs --skip-run
+
+      - name: Keep browser failure screenshots
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-browser-failures
+          path: ${{ runner.temp }}/fairbeam-scenario-failures
+          if-no-files-found: ignore
 
       - name: Keep the smoke bundle
         if: always()
