@@ -41,7 +41,7 @@ FREQUENCIES = THETA/(2*np.pi*DELAY)
 SAMPLE_INDICES = tuple(int(np.argmin(abs(THETA-v))) for v in (.5, np.pi, 2*np.pi, 3*np.pi, 4*np.pi))
 H = .75
 W = np.sqrt(MUE0/EPS0)*H/Z_LEFT
-PROTOCOL, END_DB, THREADS = 'tem-taper-v2', -110., 1
+PROTOCOL, END_DB, THREADS = 'tem-taper-v3', -110., 1
 CAP_NS, CASE_SECONDS = 4., 1800.
 LIMITS = dict(s_target_abs=.02, gamma_target_abs=.01, z_target_rel=.02,
     continuum_s_target_abs=.002, continuum_gamma_target_abs=.001,

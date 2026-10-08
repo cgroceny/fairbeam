@@ -82,7 +82,11 @@ def _line_calibration(columns, n, profile, ref, slices):
             raise ValueError('ill-conditioned independent uniform-line states')
         transfer = np.linalg.solve(states[1].transpose(0, 2, 1), states[0].transpose(0, 2, 1)).transpose(0, 2, 1)
         length = (f.planes(profile, slices)[p][1]-f.planes(profile, slices)[p][0])*1e-3
-        g = np.arccosh((transfer[:, 0, 0]+transfer[:, 1, 1])/2)/length
+        # Half the eigenvalue ratio removes a common probe-plane gain. The
+        # equivalent determinant-normalized trace avoids eigenvalue ordering.
+        # Keep the RAW determinant/symmetry residuals as acceptance gates below.
+        determinant = np.linalg.det(transfer)
+        g = np.arccosh((transfer[:, 0, 0]+transfer[:, 1, 1])/(2*np.sqrt(determinant)))/length
         g = np.where(g.imag < 0, -g, g)
         z = ref*np.sqrt(transfer[:, 0, 1]/transfer[:, 1, 0])*np.cosh(g*dx/2)
         z = np.where(z.real < 0, -z, z)
@@ -90,7 +94,7 @@ def _line_calibration(columns, n, profile, ref, slices):
             raise ValueError('singular uniform-line inversion')
         gammas.append(g)
         zs.append(z)
-        residuals.extend((np.max(abs(np.linalg.det(transfer)-1)),
+        residuals.extend((np.max(abs(determinant-1)),
                           np.max(abs(transfer[:, 0, 0]-transfer[:, 1, 1]))))
     gammas, zs = np.asarray(gammas), np.asarray(zs)
     g, z = gammas.mean(axis=0), zs.mean(axis=0)
@@ -370,6 +374,30 @@ class TaperControls(unittest.TestCase):
             np.testing.assert_allclose(zc[kind], ref*(1.001+.0001j), atol=2e-12, rtol=0)
         with self.assertRaises(ValueError):
             calibration({k: [v[0], v[0]] for k, v in controls.items()}, 8, 'klopfenstein')
+
+
+    def test_short_line_modal_gamma_rejects_excess_common_plane_gain(self):
+        n, profile, ref = 16, 'exponential', f.Z_LEFT
+        gamma = -.03+2j*np.pi*f.FREQUENCIES/f.C0
+        for gain in (1.+3e-6+1e-6j, 1.003):
+            columns = []
+            for column in (0, 1):
+                v = np.empty((2, 2, 3, len(f.FREQUENCIES)), complex)
+                i = np.empty((2, 2, 2, len(f.FREQUENCIES)), complex)
+                for p in (0, 1):
+                    length = np.diff(f.planes(profile)[p])[0]*1e-3
+                    ch, sh = np.cosh(gamma*length), np.sinh(gamma*length)
+                    matrix = np.asarray([[ch, sh], [sh, ch]])*gain
+                    v[p, 0] = np.sqrt(ref)*matrix[0, column]
+                    i[p, 0] = matrix[1, column]/np.sqrt(ref)
+                    v[p, 1] = np.sqrt(ref)*(column == 0)
+                    i[p, 1] = (column == 1)/np.sqrt(ref)
+                columns.append(dict(v=v, i=i))
+            actual, _, metrics = _line_calibration(columns, n, profile, ref, f.DEFAULT_SLICES)
+            np.testing.assert_allclose(actual, gamma, atol=8e-12, rtol=0)
+            self.assertAlmostEqual(metrics['calibration_transfer_abs'], abs(gain*gain-1), places=12)
+            self.assertEqual(metrics['calibration_transfer_abs'] <= f.LIMITS['calibration_transfer_abs'],
+                             abs(gain*gain-1) <= f.LIMITS['calibration_transfer_abs'])
 
 
     def synthetic(self, root, profile='klopfenstein'):
