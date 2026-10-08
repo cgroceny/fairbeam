@@ -3,6 +3,9 @@
   "private": true,
   "version": "0.7.2",
   "type": "module",
+  "engines": {
+    "node": ">=22.12.0"
+  },
   "description": "Antenna simulation workbench: openEMS models, a three.js viewer and CST macro export.",
   "scripts": {
     "dev": "vite --host 127.0.0.1",
@@ -141,7 +144,7 @@
     "fflate": "^0.8.3",
     "jspdf": "^4.2.1",
     "lucide-solid": "^1.48.0",
-    "solid-js": "^1.9.15",
+    "solid-js": "^1.9.17",
     "three": "^0.186.1"
   },
   "devDependencies": {
@@ -150,7 +153,7 @@
     "@types/three": "^0.186.0",
     "highlight.js": "11.12.0",
     "marked": "18.1.0",
-    "puppeteer-core": "^24.43.1",
+    "puppeteer-core": "^25.12.0",
     "rollup-plugin-visualizer": "^5.14.0",
     "typescript": "^7.0.2",
     "vite": "^6.4.3",
