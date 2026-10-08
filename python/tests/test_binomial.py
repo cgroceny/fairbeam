@@ -7,6 +7,7 @@ import subprocess
 import tempfile
 import unittest
 from unittest.mock import patch
+import xml.etree.ElementTree as ET
 
 import numpy as np
 
@@ -295,6 +296,21 @@ class BinomialControls(unittest.TestCase):
                     primitive = sims[2].csx.GetPropertiesByName(f'dielectric{j}')[0].GetPrimitive(0)
                     np.testing.assert_allclose(primitive.GetStart(), [lo, 0., 0.], atol=0)
                     np.testing.assert_allclose(primitive.GetStop(), [hi, f.W, f.H], atol=0)
+                if n == f.MESHES[0]:
+                    with tempfile.TemporaryDirectory() as root:
+                        path = Path(root)/'input.xml'
+                        sims[2].fdtd.Write2XML(str(path))
+                        materials = ET.parse(path).getroot().findall('.//Properties/Material')
+                    self.assertEqual(len(materials), order+2)
+                    epsilon = np.r_[1., (f.Z_LEFT/f.sections(order))**2, (f.Z_LEFT/f.Z_RIGHT)**2]
+                    for material, expected in zip(materials, epsilon):
+                        self.assertEqual(material.attrib['Isotropy'], '1')
+                        props = material.find('Property').attrib
+                        # CSXCAD stores an isotropic scalar in the first slot;
+                        # its printed XML precision is six decimal places.
+                        np.testing.assert_allclose(float(props['Epsilon'].split(',')[0]), expected, rtol=5e-7)
+                        self.assertEqual(float(props['Mue'].split(',')[0]), 1.)
+                        np.testing.assert_array_equal([float(v) for v in props['Kappa'].split(',')], [0., 0., 0.])
 
     def test_two_distinct_speeds_signed_loss_and_independent_states(self):
         controls = {}
