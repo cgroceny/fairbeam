@@ -211,6 +211,16 @@ assembly and result-storage rounding. They omit far fields and do not establish 
 or physical accuracy. An independently extracted executable can still contain the same upstream
 solver binary as the app; compare its library hash and record that fact.
 
+The October 8, 2026 Windows CPU control completed all 21 gallery cases/variants in 64 sequential
+solver runs, using four or 12 threads, matched within each pair. All raw complex S matrices
+agreed exactly; the largest independent assembly difference was 5.58e-16 and the largest bundle
+rounding difference was 7.05e-6. All cases met the energy and matrix-passivity limits. The 136
+voltage/current probe pairs also matched at their saved precision. The app and official archive
+contained the same openEMS DLL: this establishes agreement between two execution paths, not
+agreement with an independent solver or physical measurements. CPU inputs, binary/source hashes,
+criteria and per-case results are in `python/tests/fixtures/native_gallery_control_20261008.json`.
+GPU execution and far fields were not tested by this control.
+
 ## Study file: `fairbeam.study/1`
 
 ```json

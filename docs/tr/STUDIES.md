@@ -184,6 +184,17 @@ ve sonuç saklama yuvarlamasını ayrı değerlendirir. Uzak alanı kapsamaz; me
 fiziksel doğruluk kanıtı değildir. Ayrı arşivden çıkarılmış çalıştırılabilir dosya, uygulamayla
 aynı upstream çözücü ikilisini içerebilir; kütüphane özetini karşılaştırıp bu durumu kaydedin.
 
+8 Ekim 2026 Windows CPU kontrolünde 21 galeri örneği/varyantı, sırayla 64 çözücü koşusunda
+tamamlandı. Çiftlerin iki tarafında aynı olmak üzere dört veya 12 iş parçacığı kullanıldı.
+Ham karmaşık S matrisleri birebir aynıydı; bağımsız matris hesabındaki en büyük fark 5.58e-16,
+paket yuvarlamasındaki en büyük fark 7.05e-6 oldu. Tüm örnekler enerji ve matris pasifliği
+sınırlarını sağladı. 136 gerilim/akım probu çifti de kayıt hassasiyetinde aynıydı. Uygulama ve
+resmi arşiv aynı openEMS DLL'ini içeriyordu: bu sonuç iki çalıştırma yolunun uyumunu gösterir;
+bağımsız bir çözücü veya fiziksel ölçümlerle uyum kanıtı değildir. CPU girdileri, ikili/kaynak
+özetleri, ölçütler ve örnek bazındaki sonuçlar
+`python/tests/fixtures/native_gallery_control_20261008.json` dosyasındadır.
+Bu kontrolde GPU çalıştırması ve uzak alanlar test edilmedi.
+
 ## Çalışma dosyası: `fairbeam.study/1`
 
 ```json
