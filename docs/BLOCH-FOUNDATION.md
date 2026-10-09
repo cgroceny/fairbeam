@@ -136,7 +136,7 @@ a_minus = (E_pol - g_pol/Y_pol)/2
 Both complex E and H are required. An E-only plane cannot separate forward
 and backward waves. The function does not interpolate native Yee samples or
 correct staggered time samples. These steps must be verified in the producer.
-The centered order interval per axis is `[-N//2,(N-1)//2]`; requested aliases
+The centered order interval per axis is `[-(N//2),(N-1)//2]`; requested aliases
 are rejected. This includes only the negative Nyquist representative for even
 N. Actual high-order content outside those intervals still aliases into the
 data and requires sampling convergence. Grids are limited to 1,048,576 samples.
@@ -233,6 +233,12 @@ convergence, absorbing-boundary quality, multimode S parameters, or agreement
 with measured devices.
 
 ## Work required before native nonzero phase
+
+The [standalone native kernel](../scripts/experimental-periodic/native-bloch/README.md)
+now exercises three-dimensional paired E/H stepping, phase-correct corners, paired
+source increments and auxiliary flux algebra against independent controls. It builds
+without openEMS and does not enable the application's nonzero-phase capability.
+Its paired time-domain Fourier bridge is distinct from the real-trace bridge above.
 
 The paired-quadrature Yee reference demonstrates seam rotation and the
 adjoint derivative pairing in one dimension. Integrating that idea requires

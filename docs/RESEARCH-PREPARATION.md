@@ -45,3 +45,7 @@ python -m unittest discover -s python/tests -p test_research_plan.py -v
 ```
 
 The current [application integration](RESEARCH-SOLVERS.md) remains bounded to zero-phase periodic CPU experiments and the fixed Elmer cavity. Enabling native Bloch runs still requires paired field/excitation/PML state, phase-correct seam operands, real native regression controls and a new capability contract. A mathematical unit test is not evidence that this native work has already been completed.
+
+The next isolated controls are the [compiled 3D Bloch kernel](../scripts/experimental-periodic/native-bloch/README.md)
+and [native dielectric cavity qualification](FEM-QUALIFICATION.md). These exercise the
+paired update algebra and FEM material mapping without changing the production Run path.

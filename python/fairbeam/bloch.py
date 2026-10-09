@@ -336,7 +336,7 @@ def project_tangential_fields(lattice: Lattice2D, kt_rad_m, frequency_hz, orders
     Existing openEMS spectra use exp(+i omega t): conjugate both E and H via
     a verified producer-specific adapter, checking scaling and timestamps.
 
-    Only the centered FFT order interval [-N//2,(N-1)//2] is admitted per
+    Only the centered FFT order interval [-(N//2),(N-1)//2] is admitted per
     axis. This prevents requesting aliases; actual unresolved high-order
     fields still alias and require sampling convergence. Cutoff is refused.
     """

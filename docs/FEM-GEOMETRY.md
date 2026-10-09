@@ -77,6 +77,10 @@ units; it does not qualify dielectric-interface scattering or arbitrary antenna 
 Solver/source hashes and measured results are in the
 [qualification record](benchmarks/fem-mesh-foundation-windows-20261009.json).
 
+The separate [dielectric cavity qualification](FEM-QUALIFICATION.md) tests a fully
+filled lossless dielectric through this exporter and the native solver, including
+explicit mesh-body to SIF-material mapping at both mesh sizes.
+
 ## Native format and scope
 
 The text files follow the serial mesh layout in Appendix A of the [official ElmerSolver
