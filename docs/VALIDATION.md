@@ -1124,3 +1124,16 @@ original provenance. Qualification applies only to each listed quantity and geom
 It excludes conductor-loss discrepancies, the unqualified microstrip impedance/loss
 results, the incomplete 3.8 mesh sequence and the separate group-velocity limitation
 noted above. No gallery model or generated bundle is changed.
+
+## 20. Chapter 4 comparison scopes
+
+The [Chapter 4 record](benchmarks/pozar-chapter-04.md) collects the matching,
+mesh-qualified ideal-current modal amplitude and input resistance for 4.8. It passes
+two consecutive mesh-change gates, an independent boundary control and its own
+target/QA limits after source completion and exact -90 dB energy stops. The 4.2
+interface remains excluded because its new boundary control failed its energy stop.
+
+Filament reactance, practical launches and general mode conversion are excluded.
+The probe's target errors are nonmonotone; boundary/triplet sensitivity limits the
+accuracy claim to the declared tolerances. Six calculation-only examples require
+no new FDTD. No gallery model or generated bundle is changed.
