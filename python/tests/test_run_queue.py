@@ -67,9 +67,9 @@ class QueueState(unittest.TestCase):
         v0 = self.m.version
         job = self.submit("ok")
         self.assertGreater(self.m.version, v0, "a submitted run changes the queue")
-        self.assertTrue(wait_for(lambda: job.terminal))
-        # added, started, ended: a window polling the health sees a run that came and went between polls
-        self.assertGreaterEqual(self.m.version, v0 + 3)
+        # added, started, ended: a window polling the health sees a run that came and went between polls.
+        # The end bump can land just after the job turns terminal, so wait for both.
+        self.assertTrue(wait_for(lambda: job.terminal and self.m.version >= v0 + 3))
         before = self.m.version
         self.m.delete(job.id)
         self.assertGreater(self.m.version, before, "removing a run from the history changes the list")

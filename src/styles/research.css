@@ -20,3 +20,8 @@
   .research-dialog .dialog-foot { flex-wrap: wrap; }
   .research-dialog .dialog-actions { margin-left: auto; }
 }
+
+/* managed Elmer package: message, action and license note stacked */
+.research-runtime { flex-direction: column; align-items: flex-start; gap: var(--al-space-2, 8px); }
+.research-runtime progress { width: 100%; }
+

@@ -3,7 +3,7 @@
 import { createMemo, createSignal, For, onCleanup, onMount, Show } from "solid-js";
 import { unwrap } from "solid-js/store";
 import { CircleAlert, CircleCheck, FlaskConical, Play, RefreshCw, Square, X } from "lucide-solid";
-import { api, isTerminal, type Job, type ResearchResult } from "../runner/api";
+import { api, isTerminal, type ElmerRuntime, type Job, type ResearchResult } from "../runner/api";
 import { researchPath, rememberResearchPath, researchSelectedId, setResearchOpen, setResearchSelectedId } from "../runner/researchState";
 import { StatusBadge } from "../runner/status";
 import { draft, file } from "./store";
@@ -87,7 +87,32 @@ export default function ResearchDialog() {
   const controller = new AbortController();
   let alive = true, refreshing = false, probeVersion = 0, detailVersion = 0;
   const invalid = () => backend() === "periodic" && (![px(), py(), front(), back(), fmin(), fmax()].every(Number.isFinite) || px() <= 0 || py() <= 0 || px() > 1000 || py() > 1000 || front() > back() || (!useDesign() && front() === back()) || fmin() < 0.001 || fmax() > 1000 || fmin() >= fmax() || fmax() / fmin() > 100);
-  const changeBackend = (value: Backend) => { probeVersion++; setBackend(value); setPath(researchPath(value)); setCapability(null); setError(""); };
+  // the optional managed Elmer package (Windows): status, one-click install with progress
+  const [runtime, setRuntime] = createSignal<ElmerRuntime | null>(null);
+  let runtimeTimer: ReturnType<typeof setInterval> | undefined;
+  const stopRuntimePoll = () => { if (runtimeTimer) clearInterval(runtimeTimer); runtimeTimer = undefined; };
+  const loadRuntime = async () => {
+    try {
+      const status = await api.elmerRuntime(controller.signal);
+      if (!alive) return;
+      const finished = runtime()?.state === "downloading" || runtime()?.state === "unpacking";
+      setRuntime(status);
+      if (status.state !== "downloading" && status.state !== "unpacking") {
+        stopRuntimePoll();
+        if (finished && status.installed && backend() === "elmer") { setPath(""); void probe(); }
+      }
+    } catch { if (alive) setRuntime(null); }
+  };
+  const installRuntime = async () => {
+    setError("");
+    try {
+      setRuntime(await api.elmerInstall(controller.signal));
+      stopRuntimePoll();
+      runtimeTimer = setInterval(() => void loadRuntime(), 600);
+    } catch (e) { if (alive) setError((e as Error).message); }
+  };
+  onCleanup(stopRuntimePoll);
+  const changeBackend = (value: Backend) => { probeVersion++; setBackend(value); setPath(researchPath(value)); setCapability(null); setError(""); if (value === "elmer") void loadRuntime(); };
   const choose = async (id: string) => {
     const ticket = ++detailVersion;
     setResearchSelectedId(id);
@@ -166,6 +191,18 @@ export default function ResearchDialog() {
           <label class="dz-field"><span class="dz-label">{t("research.backend")}</span><select ref={first} class="rp-select dz-input" value={backend()} disabled={!!operation()} onChange={e => changeBackend(e.currentTarget.value as Backend)}><option value="periodic">{name("periodic")}</option><option value="elmer">{name("elmer")}</option></select></label>
           <p class="note">{t(backend() === "periodic" ? "research.periodic.scope" : "research.elmer.scope")}</p>
           <label class="dz-field"><span class="dz-label">{t(backend() === "periodic" ? "research.path.executable" : "research.path.install")}</span><input class="rp-input dz-input mono" autocomplete="off" spellcheck={false} value={path()} disabled={!!operation()} onInput={e => { probeVersion++; setPath(e.currentTarget.value); setCapability(null); }} /><span class="note">{t("research.path.hint")}</span></label>
+          <Show when={backend() === "elmer" && runtime()?.supported && runtime()}>{rt => <div class="status-block research-runtime" role="status">
+            <Show when={rt().installed} fallback={<Show when={rt().state === "downloading" || rt().state === "unpacking"} fallback={<>
+              <span>{t("research.elmer.runtime.missing", { version: rt().version, size: fmt.fixed(rt().size / 1048576, 0) })}<Show when={rt().state === "failed" && rt().error}><br />{rt().error}</Show></span>
+              <button type="button" class="btn btn-ghost" disabled={!!operation()} onClick={() => void installRuntime()}>{t("research.elmer.runtime.install")}</button>
+            </>}>
+              <span>{t(rt().state === "unpacking" ? "research.elmer.runtime.unpacking" : "research.elmer.runtime.downloading", { percent: fmt.int(Math.floor(100 * rt().received / Math.max(1, rt().total))) })}</span>
+              <progress max={rt().total} value={rt().received} aria-label={t("research.elmer.runtime.progress")} />
+            </Show>}>
+              <CircleCheck size={14} /><span>{t("research.elmer.runtime.installed", { version: rt().version })}</span>
+            </Show>
+            <span class="note">{t("research.elmer.runtime.license")}</span>
+          </div>}</Show>
           <button type="button" class="btn btn-ghost" disabled={!!operation()} onClick={probe}><RefreshCw size={14} />{t(operation() === "probe" ? "research.probing" : "research.probe")}</button>
           <Show when={capability()}>{c => <div class="status-block" classList={{ "status-good": c().available, "status-warn": !c().available }} role="status"><Show when={c().available} fallback={<CircleAlert size={14} />}><CircleCheck size={14} /></Show><span>{t(c().available ? "research.available" : "research.unavailable")}<Show when={c().reason}><br />{c().reason}</Show></span></div>}</Show>
           <Show when={backend() === "periodic"} fallback={<label class="dz-field"><span class="dz-label">{t("research.elmer.mesh")}</span><select class="rp-select dz-input mono" value={mesh()} onChange={e => setMesh(Number(e.currentTarget.value))}><option value="0.025">0.025 m</option><option value="0.0125">0.0125 m</option></select></label>}>

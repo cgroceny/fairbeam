@@ -1698,6 +1698,17 @@ class App:
         except OSError as exc:
             return {"backend": body.get("backend"), "available": False, "reason": str(exc)}
 
+    def elmer_runtime_status(self) -> dict:
+        from . import elmer_runtime
+        return elmer_runtime.status()
+
+    def elmer_runtime_install(self) -> dict:
+        from . import elmer_runtime
+        try:
+            return elmer_runtime.start_install()
+        except OSError as exc:
+            raise ApiError(409, str(exc)) from exc
+
     def research_submit(self, body: dict) -> dict:
         try:
             return self.manager.submit_research(body).to_dict()
@@ -1911,6 +1922,8 @@ class Handler(BaseHTTPRequestHandler):
             ("GET", r"/api/models", lambda: self._json(200, app.models())),
             ("POST", r"/api/preview", lambda: self._json(200, app.do_preview(self._body()))),
             ("POST", r"/api/research/probe", lambda: self._json(200, app.research_probe(self._body()))),
+            ("GET", r"/api/research/elmer/runtime", lambda: self._json(200, app.elmer_runtime_status())),
+            ("POST", r"/api/research/elmer/install", lambda: self._json(202, app.elmer_runtime_install())),
             ("POST", r"/api/research/runs", lambda: self._json(201, app.research_submit(self._body()))),
             ("GET", r"/api/research/runs", lambda: self._json(200, app.research_runs())),
             ("GET", r"/api/research/runs/([\w.-]+)", lambda i: self._json(200, app.research_detail(i))),

@@ -5,6 +5,7 @@ import json
 import math
 import os
 from pathlib import Path
+import shutil
 import sys
 
 MAX_SNAPSHOT_BYTES = 1024 * 1024
@@ -48,6 +49,18 @@ def requested_path(value):
     return value.strip() or None
 
 
+def elmer_root(path):
+    """The Elmer package to use: the given folder, FAIRBEAM_ELMER_ROOT, Elmer on PATH, and last the
+    package Fairbeam installs on request (elmer_runtime). fairbeam_elmer itself stays standalone."""
+    if path or os.environ.get("FAIRBEAM_ELMER_ROOT"):
+        return path
+    suffix = ".exe" if os.name == "nt" else ""
+    if shutil.which("ElmerSolver" + suffix) and shutil.which("ElmerGrid" + suffix):
+        return path
+    from . import elmer_runtime
+    return str(elmer_runtime.home()) if elmer_runtime.installed() else path
+
+
 def probe(body):
     if not isinstance(body, dict) or set(body) - {"backend", "path"}:
         raise ValueError("probe expects only backend and path")
@@ -55,7 +68,7 @@ def probe(body):
     path = requested_path(body.get("path"))
     if backend == "elmer":
         import fairbeam_elmer
-        result = fairbeam_elmer.capabilities(path)
+        result = fairbeam_elmer.capabilities(elmer_root(path))
     else:
         from . import periodic_cell
         result = periodic_cell.probe(path)
@@ -82,7 +95,7 @@ def prepare(body):
         if isinstance(mesh, bool) or not isinstance(mesh, (int, float)):
             raise ValueError("mesh_size must be a number")
         fairbeam_elmer.validate_case(mesh)
-        home, solver, grid = fairbeam_elmer.discover(path)
+        home, solver, grid = fairbeam_elmer.discover(elmer_root(path))
         settings = {"mesh_size": mesh}
         path = str(home)
         module_dir = home / "share/elmersolver/lib"

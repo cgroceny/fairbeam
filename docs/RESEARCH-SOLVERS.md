@@ -12,6 +12,8 @@ This is an opt-in research integration, not a production Floquet port or general
 4. Submit a bounded experiment. It waits behind any existing simulation; cancellation uses the same process-tree cleanup as the ordinary queue.
 5. Select the run in the research history to inspect its result. Closing the panel does not cancel an active run. Reopening history retrieves the saved result.
 
+**Elmer on Windows without a manual install.** With the Elmer backend selected and no Elmer found, the panel offers **Install Elmer**. Fairbeam then downloads the official portable Windows package (`ElmerFEM-nogui-nompi-Windows-AMD64-rel26.1.zip`, 124 MB, from the Elmer download mirror) and checks it against the size and SHA-256 pinned in `python/fairbeam/elmer_runtime.py`. It unpacks the package into the app's data folder (`%LOCALAPPDATA%\org.fairbeam.desktop\elmer\26.1`) and uses it whenever the path field is left blank. Nothing is installed system-wide. A folder you enter, `FAIRBEAM_ELMER_ROOT` or Elmer on `PATH` still take precedence. On macOS and Linux, install Elmer yourself.
+
 You can instead set `FAIRBEAM_PERIODIC_EXECUTABLE` or `FAIRBEAM_ELMER_ROOT` in the run server's environment. Local path preferences are remembered in this browser profile. An availability check verifies the periodic capability handshake, or locates the Elmer executables; it does not certify arbitrary physical models or all Elmer runtime dependencies.
 
 ## Periodic unit cell
