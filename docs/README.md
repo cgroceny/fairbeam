@@ -28,6 +28,7 @@ translated. To check a locally served site in Chrome, run `npm run check:docs-la
 | [The designer](DESIGNER.md) | The visual workspace: start screen and starters, the one-row ribbon (Home, Modeling, Transform, Simulation, Optimize, Post-processing), navigation tree and components, modeling, checks, simulation settings, mesh view and mesh convergence, running and results (efficiency, gain patterns, field planes), design files, VBA macro import, known limitations, feedback |
 | [Example designs](../examples/designs/README.md) | Six 867 MHz antennas as designer files (blade, wideband, meander and sleeve dipoles, collinear, Yagi), with parameters, results and how to scale them |
 | [CLI reference](CLI.md) | Every `fairbeam` command and the options of `run` |
+| [External Elmer experiment](ELMER-EXPERIMENT.md) | Opt-in native PEC cavity research benchmark |
 | [Writing models](MODELS.md) | Model files (`MODEL`, `PARAMS`, `build`), an example, templates and the in-app editor |
 | [Automatic meshing](MESHING.md) | `sim.auto_mesh()`: options, rules, report, validation against hand meshes |
 | [Run server and Run panel](RUN-SERVER.md) | `fairbeam serve`, the Run panel, sweeps, comparison overlays, the optimizer in the UI |
