@@ -980,8 +980,8 @@ class MeshDensityImport(unittest.TestCase):
                             self.assertNotIn("air_cells_per_wavelength", mesh)
 
     def test_mesh_report_messages_have_ui_translations(self):
-        en = json.loads((REPO / "src/i18n/en.json").read_text())
-        tr = json.loads((REPO / "src/i18n/tr.json").read_text())
+        en = json.loads((REPO / "src/i18n/en.json").read_text(encoding="utf-8"))
+        tr = json.loads((REPO / "src/i18n/tr.json").read_text(encoding="utf-8"))
         for mesh_type, key in (("Hex", "home.importCst.meshHex"), ("Tet", "home.importCst.meshIgnored")):
             _, notes = self.imp(self.settings(mesh_type))
             self.assertTrue(any(n["message"] == en[key] for n in notes))
