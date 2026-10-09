@@ -171,13 +171,18 @@ def build(n, kind, end="open", air_h=6, cap_s=CAP_S, pulse="narrow"):
                                       boundaries=boundaries,end_criteria_db=END_DB)
     if pulse=="narrow":
         expression = narrow_expression()
-        sim.fdtd.SetCustomExcite(expression,PULSE_F,sim.f_max)
+        # rc3 CalcCustomExcitation replaces m_f_max by f0 for Nyquist sampling.
+        # The carrier is in the expression; both engine arguments declare the
+        # sampling ceiling, not the carrier (FDTD/excitation.cpp:222-250).
+        sim.fdtd.SetCustomExcite(expression,sim.f_max,sim.f_max)
         sim.excitation = dict(type="research-modulated-derivative",expression=expression,dc_free=True,
                               f_min=sim.f_min,f_max=sim.f_max,duration_s=20e-9,
                               carrier_hz=PULSE_F,tau_s=PULSE_TAU,center_s=PULSE_CENTER)
     for axis,lines in zip("xyz",(x,y,z)):
         sim.mesh.AddLine(axis,lines)
-    dt = .9*sim.cfl_timestep()
+    # The vacuum grid estimate is not the native Rennings stability bound.
+    # Stay below both in the measured symmetry/edge mesh, and audit warnings.
+    dt = .5*sim.cfl_timestep()
     if pulse=="broad":
         dt = min(dt,.30e-12)  # retain the original broad diagnostic clock
     steps = int(math.ceil(cap_s/dt))

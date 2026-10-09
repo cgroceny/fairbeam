@@ -52,6 +52,8 @@ def wait_owned(process,seconds=1800):
 
 
 def audit_header(text,meta):
+    if re.search(r"forced timestep:.*larger than calculated timestep",text):
+        raise ValueError("native timestep exceeds the engine stability bound")
     version=re.search(r"openEMS 64bit -- version (\S+)",text)
     grid=re.search(r"FDTD simulation size: (\d+)x(\d+)x(\d+) --> (\d+) FDTD cells",text)
     interval=re.search(r"Exact-endcriteria: evaluating the end criteria every (\d+) timestep",text)
@@ -130,7 +132,7 @@ class MicrostripResonatorTests(unittest.TestCase):
             self.assertEqual(z[1],0.)
             self.assertIn(fixture.H,z)
             self.assertEqual(meta["native_cells"],len(x)*len(y)*len(z))
-            self.assertLessEqual(meta["declared_dt_s"],.9*sim.cfl_timestep())
+            self.assertLessEqual(meta["declared_dt_s"],.5*sim.cfl_timestep())
             if end!="open":
                 self.assertAlmostEqual((x[-2]+x[-1])/2,meta["physical_half_length_mm"])
             self.assertEqual(sim.boundaries[3],"PEC" if end=="boxed" else "PML_8")
@@ -175,6 +177,11 @@ class MicrostripResonatorTests(unittest.TestCase):
         self.assertEqual(meta["reference"],before["reference"])
         self.assertEqual(broad.f_max,8e9)
         self.assertEqual(narrow.f_max,6e9)
+        with tempfile.TemporaryDirectory() as directory:
+            path=Path(directory)/"input.xml"
+            narrow.fdtd.Write2XML(str(path))
+            node=ET.parse(path).getroot().find("FDTD/Excitation")
+            self.assertEqual(float(node.get("f0")),narrow.f_max)
         self.assertLess(meta["reference"]["guide_frequency_hz"],fixture.F0)
         with self.assertRaisesRegex(ValueError,"post-source"):
             fixture.build(4,"pec",cap_s=30e-9)
@@ -244,6 +251,8 @@ class MicrostripResonatorTests(unittest.TestCase):
         for old,new in (("0.37.0-rc3","0.38"),("60x30","60x31"),("every 208","every 207"),("threads: 4","threads: 8")):
             with self.assertRaises(ValueError):
                 audit_header(text.replace(old,new),meta)
+        with self.assertRaisesRegex(ValueError,"stability"):
+            audit_header(text+"\nWarning, forced timestep: 6e-13s is larger than calculated timestep: 5e-13s!",meta)
 
     def test_cap_open_end_and_wrong_probe_clock_cannot_qualify(self):
         # An otherwise perfect synthetic result must not hide a cap, a wrong
