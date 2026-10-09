@@ -47,6 +47,7 @@ translated. To check a locally served site in Chrome, run `npm run check:docs-la
 | --- | --- |
 | [How results are computed](RESULTS.md) | Excitation, end criterion, S11/Zin, bands, far field, efficiency, gain; accuracy notes |
 | [Validation](VALIDATION.md) | Comparison with closed-form theory; mesh convergence; recommended settings |
+| [Experimental periodic CPU study](../scripts/experimental-periodic/README.md) | Opt-in native source patch and reproducible zero-phase unit-cell research gates; not production Floquet support |
 | [Lumped resistor in openEMS](openems-lumped-resistor.md) | How the lumped resistor behaves, and why the Wilkinson residual is not a resistor error |
 | [Bundle schema](BUNDLE.md) | `fairbeam.project/1`, field by field |
 | [Architecture](ARCHITECTURE.md) | Data flow, run server, project layout, roadmap |
