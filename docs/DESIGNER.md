@@ -1376,9 +1376,12 @@ python. The checks that a browser cannot do are in [DESKTOP-CHECKLIST.md](DESKTO
 
 ## Known limitations
 
-- **Horn efficiency above 100 %.** The pyramidal horn (a waveguide-port model) reports a radiation
-  efficiency slightly above 100 %, and the excess grows with a finer mesh. The cause is under
-  investigation; results with an efficiency above 100 % carry a QA warning.
+- **Lossless horn power balance.** The shipped pyramidal horn is marked lossless. Its reported
+  radiation efficiency is 100 % by construction when the measured power balance passes the
+  solver's tolerance; this is not an independent accuracy check. Inspect `rad_efficiency_raw`
+  (radiated power / accepted port power), the QA notes and mesh convergence before using gain.
+  A finer mesh can change the port probes and NF2FF power balance. Results outside the tolerance
+  retain the measured efficiency and a QA warning.
 - **Unsigned Windows installer.** The macOS app is signed and notarized and opens with
   a double-click, but the Windows installer is not code-signed: SmartScreen warns on the first run
   (More info › Run anyway; [DESKTOP.md](DESKTOP.md)).
