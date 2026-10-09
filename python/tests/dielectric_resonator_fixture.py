@@ -21,7 +21,8 @@ from tests.coax_resonator_fixture import energy_decay, runtime_identity, save, s
 RADIUS_MM, LENGTH_MM, ER, TAN_D = 4.13, 8.255, 95., .001
 MESHES, COHORT = (8, 12, 16, 20, 24), (12, 16, 20)
 KINDS, THREADS, END_DB = ('lossless', 'dielectric'), 1, -70.
-WINDOWS = ((30e-9, 70e-9), (80e-9, 120e-9), (130e-9, 170e-9))
+WINDOWS = ((10e-9, 30e-9), (30e-9, 50e-9), (50e-9, 70e-9))
+F_BAND = (2.8e9, 3.8e9)
 GATES = dict(f_mesh=.002, q_mesh=.03, f_control=.001, q_control=.02,
              f_probe=1e-5, f_window=1e-5, q_probe=.005, q_window=.01,
              residual=.002, energy_span_db=30., energy_log_rms=.4,
@@ -117,10 +118,10 @@ def build(n, kind, angular=4, clearance=30., pml=8, cap_s=190e-9):
             or not isinstance(angular, int) or clearance not in (30., 40.)
             or isinstance(pml, bool) or pml not in (8, 12) or not isinstance(pml, int)):
         raise ValueError('supported mesh, loss case and independent controls required')
-    if not np.isfinite(cap_s) or not 190e-9 <= cap_s <= 5e-6:
-        raise ValueError('cap must cover all windows (190 ns), at most 5000 ns')
+    if not np.isfinite(cap_s) or not 90e-9 <= cap_s <= 5e-6:
+        raise ValueError('cap must cover all windows with a tail (90 ns), at most 5000 ns')
     bc = ['PEC', f'PML_{pml}', 'PEC', 'PEC', f'PML_{pml}', f'PML_{pml}']
-    sim = ResonatorSimulation(2.8e9, 3.8e9, boundaries=bc, end_criteria_db=END_DB)
+    sim = ResonatorSimulation(*F_BAND, boundaries=bc, end_criteria_db=END_DB)
     csx = ContinuousStructure(CoordSystem=1)
     sim.fdtd.SetCSX(csx)
     sim.csx, sim.mesh = csx, csx.GetGrid()
@@ -160,7 +161,8 @@ def build(n, kind, angular=4, clearance=30., pml=8, cap_s=190e-9):
         reported_grid_lines=[len(radius), angular, len(z)], declared_dt_s=float(dt),
         max_timesteps=steps, threads=THREADS, reference=reference(),
         f_max_hz=sim.f_max, source_duration_s=dgauss_duration_s(sim.f_max),
-        windows_s=WINDOWS, probe_stride_steps=int(1/(2*sim.f_max*dt))//4,
+        windows_s=WINDOWS, pole_max_order=4, pole_band_hz=F_BAND,
+        probe_stride_steps=int(1/(2*sim.f_max*dt))//4,
         probes_mm=probes, physical_dimensions_mm=[RADIUS_MM, LENGTH_MM], eps_r=ER,
         sigma_dielectric_s_m=float(2*np.pi*F_REF*EPS0*ER*TAN_D) if kind == 'dielectric' else 0.,
         pml_start_mm=[float(radius[-pml-1]), float(z[pml]), float(z[-pml-1])],
@@ -168,7 +170,12 @@ def build(n, kind, angular=4, clearance=30., pml=8, cap_s=190e-9):
 
 
 def pole(t, signal):
-    """Free signed AR2 field pole; no analytic-frequency or damping constraint."""
+    """Free signed AR4 poles; require one identifiable pole in the source band.
+
+    A second damped pair can separate an out-of-band mode from the pole of
+    interest. A rank-deficient single-pair trace uses AR2. Two in-band pairs
+    are ambiguous and rejected, never selected by proximity to the formula.
+    """
     t, y = np.asarray(t, float), np.asarray(signal, float)
     if t.ndim != 1 or y.shape != t.shape or len(t) < 100 or not np.isfinite(t).all() or not np.isfinite(y).all():
         raise ValueError('finite matching field trace with 100 samples required')
@@ -179,16 +186,30 @@ def pole(t, signal):
     if not scale > 0:
         raise ValueError('zero signal')
     y = y/scale
-    x = np.column_stack((y[1:-1], y[:-2], np.ones(len(y)-2)))
-    coeff = np.linalg.lstsq(x, y[2:], rcond=None)[0]
-    roots = np.roots([1., -coeff[0], -coeff[1]])
-    value = roots[np.argmax(roots.imag)]
-    if value.imag <= 0 or not abs(value) > 0:
-        raise ValueError('not an oscillatory pole')
+    order = 4
+    def fit(degree):
+        x = np.column_stack([y[degree-j-1:len(y)-j-1] for j in range(degree)]
+                            + [np.ones(len(y)-degree)])
+        coeff, _, rank, _ = np.linalg.lstsq(x, y[degree:], rcond=None)
+        return x, coeff, rank
+    x, coeff, rank = fit(order)
+    if rank < order+1:
+        order = 2
+        x, coeff, _ = fit(order)
+    roots = np.roots(np.r_[1., -coeff[:-1]])
+    oscillatory = [value for value in roots if value.imag > 0 and abs(value) > 0]
+    candidates = [value for value in oscillatory
+                  if F_BAND[0] < np.angle(value)/dt/(2*np.pi) < F_BAND[1]]
+    if len(candidates) != 1:
+        raise ValueError('one unambiguous oscillatory pole in the source band required')
+    value = candidates[0]
     alpha, omega = -np.log(abs(value))/dt, np.angle(value)/dt
     return dict(f_hz=float(omega/(2*np.pi)), alpha_s=float(alpha),
         q=float(omega/(2*alpha)) if alpha > 0 else None,
-        relative_residual=float(np.linalg.norm(x@coeff-y[2:])/np.linalg.norm(y[2:])))
+        relative_residual=float(np.linalg.norm(x@coeff-y[order:])/np.linalg.norm(y[order:])),
+        fitted_order=order,
+        other_poles=[dict(f_hz=float(np.angle(v)/dt/(2*np.pi)), alpha_s=float(-np.log(abs(v))/dt))
+                     for v in oscillatory if v != value])
 
 
 def acquire(out, n, kind, angular, clearance, pml, cap_s):

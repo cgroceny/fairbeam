@@ -140,7 +140,7 @@ class References(unittest.TestCase):
         for values in ((True, 'dielectric', 4, 30., 8, 190e-9), (10, 'dielectric', 4, 30., 8, 190e-9),
                        (12, 'conductor', 4, 30., 8, 190e-9), (12, 'dielectric', 3, 30., 8, 190e-9),
                        (12, 'dielectric', 4, 10., 8, 190e-9), (12, 'dielectric', 4, 30., 4, 190e-9),
-                       (12, 'dielectric', 4, 30., 8, 180e-9), (12, 'dielectric', 4, 30., 8, np.nan)):
+                       (12, 'dielectric', 4, 30., 8, 80e-9), (12, 'dielectric', 4, 30., 8, np.nan)):
             with self.assertRaises(ValueError):
                 fixture.build(*values)
 
@@ -156,10 +156,26 @@ class Analysis(unittest.TestCase):
         growth = fixture.pole(t, np.exp(1e6*t)*np.cos(2*np.pi*f*t))
         self.assertLess(growth['alpha_s'], 0)
         self.assertIsNone(growth['q'])
-        self.assertGreater(fixture.pole(t, y+.2*np.cos(2*np.pi*3.65e9*t))['relative_residual'], fixture.GATES['residual'])
+        with self.assertRaisesRegex(ValueError, 'unambiguous'):
+            fixture.pole(t, y+.2*np.cos(2*np.pi*3.65e9*t))
         for clock, signal in ((t[::-1], y), (t, y*np.nan), (t, np.zeros_like(t)), (t[:20], y[:20])):
             with self.assertRaises(ValueError):
                 fixture.pole(clock, signal)
+
+    def test_out_of_band_mode_separated_without_a_frequency_target(self):
+        t = np.arange(0, 40e-9, 30e-12)
+        frequency, q = 3.321e9, 127.
+        primary = np.exp(-np.pi*frequency/q*t)*np.cos(2*np.pi*frequency*t+.7)
+        secondary = .08*np.exp(-5e7*t)*np.sin(2*np.pi*5.71e9*t)
+        value = fixture.pole(t, primary+secondary+.003)
+        self.assertEqual(value['fitted_order'], 4)
+        self.assertAlmostEqual(value['f_hz']/frequency, 1, places=10)
+        self.assertAlmostEqual(value['q']/q, 1, places=8)
+        self.assertLess(value['relative_residual'], 1e-10)
+        self.assertEqual(len(value['other_poles']), 1)
+        self.assertAlmostEqual(value['other_poles'][0]['f_hz']/5.71e9, 1, places=10)
+        with self.assertRaisesRegex(ValueError, 'unambiguous'):
+            fixture.pole(t, np.cos(2*np.pi*5.71e9*t))
 
     def test_native_log_delegation_and_failure_restores_handle(self):
         sim, _ = fixture.build(8, 'lossless')
@@ -234,7 +250,7 @@ class Analysis(unittest.TestCase):
                 if wrong_clock:
                     t *= 2
                 if short:
-                    t = t[t < 150e-9]
+                    t = t[t < 65e-9]
                 (out/'input.xml').write_text('<own-synthetic-input/>', encoding='utf-8')
                 np.savez_compressed(out/'data.npz', t=t, u=np.array([np.cos(2*np.pi*3.35e9*t)]*2),
                     energy_t=np.linspace(35e-9, 180e-9, 60), energy=np.geomspace(1, 1e-5, 60))
