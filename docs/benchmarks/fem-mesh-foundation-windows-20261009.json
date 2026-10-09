@@ -1,0 +1,64 @@
+{
+  "status": "passed",
+  "cases": [
+    {
+      "max_cell_mm": 25,
+      "nodes": 135,
+      "elements": 64,
+      "mode1": {
+        "family": "TE101 (z axis)",
+        "analytic_frequency_hz": 1675890788.0743763,
+        "relative_frequency_error": 0.02200425568708586,
+        "field_shape_correlation": {
+          "elfield": 0.9999999999999999,
+          "elfield Im": 0.0
+        },
+        "complex_field_shape_correlation": 0.9999999999999999
+      },
+      "frequency_hz": [
+        1712767517.478797,
+        2174670253.4998097
+      ],
+      "result_sha256": "ad5726c550b5593bd5f61245b2fd984713f8307b348ab10900a38eff897d0da3",
+      "mesh_source_sha256": "10a6cf864e08c5a12dda1ac8bc9fcc4bc1e198e805527ce4e157d0d0a8450872",
+      "solver_sha256": "8dd293b48be151b8f7af524e0eaa742811f76f59657f272807a2ee263a9d1e11",
+      "solver_version": "26.2-unknown (Rev: Release, Compiled: 2026-08-05)",
+      "elmergrid_reference_max_frequency_difference_hz": 0.0,
+      "elmergrid_reference_max_relative_frequency_difference": 0.0
+    },
+    {
+      "max_cell_mm": 12.5,
+      "nodes": 765,
+      "elements": 512,
+      "mode1": {
+        "family": "TE101 (z axis)",
+        "analytic_frequency_hz": 1675890788.0743763,
+        "relative_frequency_error": 0.005473127894749741,
+        "field_shape_correlation": {
+          "elfield": 0.9999999999999998,
+          "elfield Im": 0.0
+        },
+        "complex_field_shape_correlation": 0.9999999999999998
+      },
+      "frequency_hz": [
+        1685063152.6951404,
+        2133498934.9919174
+      ],
+      "result_sha256": "6767f6817d3a656d953580d6a3d331537fa212d80a2cfd10693e4ed46103348c",
+      "mesh_source_sha256": "10a6cf864e08c5a12dda1ac8bc9fcc4bc1e198e805527ce4e157d0d0a8450872",
+      "solver_sha256": "8dd293b48be151b8f7af524e0eaa742811f76f59657f272807a2ee263a9d1e11",
+      "solver_version": "26.2-unknown (Rev: Release, Compiled: 2026-08-05)",
+      "elmergrid_reference_max_frequency_difference_hz": 0.0,
+      "elmergrid_reference_max_relative_frequency_difference": 0.0
+    }
+  ],
+  "schema": "fairbeam.fem-mesh-qualification/1",
+  "date": "2026-10-09",
+  "physics": "Vacuum PEC rectangular cavity, 0.10 x 0.05 x 0.20 m",
+  "evidence_domain": "synthetic",
+  "execution": "Actual native Windows ElmerSolver; no ElmerGrid in candidate path",
+  "limitations": [
+    "Only this fixed cavity has native field/frequency validation.",
+    "No port, radiation, material-interface scattering, PEC inclusion scattering or general antenna claim."
+  ]
+}

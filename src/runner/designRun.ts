@@ -1,3 +1,4 @@
+import { openResearch } from "./researchState";
 // The designer's own run ("Start simulation" without leaving the model): started from the
 // Run dialog, followed in the designer's bottom dock, and its result bundle kept here. A design's
 // runs stay in Design mode (#51): the navigation tree lists them and selecting one shows it in place
@@ -49,6 +50,7 @@ export const designJob = (): Job | null => (live.job && live.job.id === designJo
 /** Show a server run in the designer's dock (its Run tab follows it), whoever started it: a run
  * picked in the dock's Queue tab, or a run of the open design another client started (#7, #8). */
 export function followInDesigner(job: Job, reveal = true) {
+  if (job.kind === "research") { openResearch(job.id); return; }
   if (live.job?.id !== job.id) attach(job);
   setDesignJobId(job.id);
   setDesignResultError(null);

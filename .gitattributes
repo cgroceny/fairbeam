@@ -23,4 +23,5 @@
 # Unified patch context requires leading spaces before upstream tabs and empty lines.
 # Validate whitespace on the applied native source with git diff --check instead.
 scripts/native-cpu/*.patch -whitespace
+scripts/experimental-periodic/*.patch -whitespace
 scripts/native-cpu/openems-cpu-upml-rows.patch -text -whitespace

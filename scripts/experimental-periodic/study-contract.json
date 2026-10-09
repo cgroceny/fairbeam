@@ -1,0 +1,40 @@
+{
+  "hypothesis": "A scalar openEMS zero-phase periodic x/y prototype reproduces analytic slabs and is invariant under integer-cell transverse translation.",
+  "scope": "synthetic; normal incidence; uniform Cartesian mesh; CPU basic; isotropic nondispersive dielectric and PEC boxes; z PML16",
+  "excluded": [
+    "Bloch phase",
+    "oblique incidence",
+    "Floquet modal ports",
+    "dispersion",
+    "GPU",
+    "production integration",
+    "general metamaterial validation"
+  ],
+  "controls": [
+    "empty cell",
+    "analytic eps_r=4 slab",
+    "unmodified same-commit basic engine with PEC/PMC",
+    "asymmetric dielectric translated across periodic seam",
+    "analytic PEC sheet reflection"
+  ],
+  "refinements_cpw": [
+    20,
+    30,
+    40
+  ],
+  "criteria": {
+    "max_complex_s_error_analytic": 0.02,
+    "max_complex_s_change_each_of_two_refinements": 0.01,
+    "translation_max_complex_s_change": 0.0001,
+    "empty_reflection": 0.001,
+    "passivity_power_excess": 0.01,
+    "energy_ratio_end": 1e-06
+  },
+  "resource_limits": {
+    "concurrent_solves": 1,
+    "build_jobs": 2,
+    "timeout_per_solve_s": 120
+  },
+  "provenance": "All geometry/material inputs assumed synthetic; references analytically derived. No measurement or production readiness claim.",
+  "note": "Original numerical thresholds retained. PML16 and a uniform z mesh resolve the empty-reference gate; only box-boundary roundoff is tolerated."
+}

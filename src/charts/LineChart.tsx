@@ -419,7 +419,7 @@ export default function LineChart(props: LineChartProps) {
         <div class="chart-legend line-chart-legend chart-legend-full" aria-hidden="true" style={{ left: `${M.l}px` }} ref={legendRef}>
           <For each={props.series}>
             {(s) => (
-              <span class="legend-item">
+              <span class="legend-item" title={s.label}>
                 <span class="legend-key" style={seriesKeyStyle(s)} />
                 {s.label}
               </span>
@@ -427,7 +427,7 @@ export default function LineChart(props: LineChartProps) {
           </For>
           <For each={props.points ?? []}>
             {(p) => (
-              <span class="legend-item">
+              <span class="legend-item" title={p.label}>
                 <span class={`legend-key legend-point legend-point-${p.shape ?? "circle"}`} style={{ background: `var(${p.color})` }} />
                 {p.label}
               </span>

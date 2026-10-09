@@ -1,0 +1,378 @@
+{
+  "schema": "fairbeam.research-qualification/1",
+  "date": "2026-10-09",
+  "platform": "Windows-11-10.0.26200-SP0",
+  "evidence": "Actual native simulations of synthetic geometries; not measurements or UI mock data.",
+  "scope": "Experimental normal-incidence zero-phase periodic CPU and fixed Elmer PEC cavity only.",
+  "thresholds": {
+    "analytic_complex_error_max": 0.02,
+    "slab_refinement_change_max": 0.01,
+    "empty_reflection_max": 0.001,
+    "copolar_power_max": 1.01,
+    "elmer_relative_frequency_error_max": 0.03,
+    "elmer_field_correlation_min": 0.98
+  },
+  "periodic_cases": [
+    {
+      "case": "periodic-slab-20",
+      "status": "results_validated",
+      "input_settings": {},
+      "layout": {
+        "nx": 9,
+        "ny": 9,
+        "nz": 100,
+        "sample_steps": 14,
+        "gap_steps": 21,
+        "dx_mm": 0.6666666666666666,
+        "dy_mm": 0.6666666666666666,
+        "dz_mm": 0.7142857142857143,
+        "cells": 8100,
+        "dt_s": 1.0499123034838105e-12,
+        "pml_cells": 16,
+        "max_timesteps": 80000,
+        "timeout_per_case_s": 180,
+        "end_criteria_db": -70,
+        "uniform_mesh": true
+      },
+      "qa": {
+        "energy_converged": true,
+        "empty_reference_max_reflection": 0.000566995564844377,
+        "empty_reference_pass": true,
+        "co_polar_power_max": 1.0005874563457404,
+        "co_polar_power_upper_bound_pass": true,
+        "mesh_convergence_checked": false,
+        "analytic_max_complex_error": 0.009116855237765804,
+        "analytic_pass": true
+      },
+      "started_utc": "2026-10-09T06:37:45.335031+00:00",
+      "generator_sha256": "2ef102a58e1ead6eb97bbabb7d64ddb69435bde26392abf4ee0124b2de18e7ac",
+      "xml_writer_sha256": "f0db0788b13f2138ed22a1a80675f1aa17261ef610874d22716b0ffdbd0bf6ee",
+      "native_executable_sha256": "11de71e56e5a85937820d7805f0003c0bdf7e804f7b2d55f109df5c3707be55b",
+      "native_library_sha256": "93cd88b3cb968f167a653f19589e1b3672c140fecc615d5ce1ff16ab632a89e1",
+      "result_sha256": "0a72884122d8bf8f3148c34df7d666317149eda2a422e7fd3840cf9ce9556b4c"
+    },
+    {
+      "case": "periodic-slab-30",
+      "status": "results_validated",
+      "input_settings": {
+        "cpw": 30
+      },
+      "layout": {
+        "nx": 13,
+        "ny": 13,
+        "nz": 129,
+        "sample_steps": 21,
+        "gap_steps": 32,
+        "dx_mm": 0.46153846153846156,
+        "dy_mm": 0.46153846153846156,
+        "dz_mm": 0.47619047619047616,
+        "cells": 21801,
+        "dt_s": 7.183684085297236e-13,
+        "pml_cells": 16,
+        "max_timesteps": 80000,
+        "timeout_per_case_s": 180,
+        "end_criteria_db": -70,
+        "uniform_mesh": true
+      },
+      "qa": {
+        "energy_converged": true,
+        "empty_reference_max_reflection": 0.00029439455502565723,
+        "empty_reference_pass": true,
+        "co_polar_power_max": 1.0007386685363082,
+        "co_polar_power_upper_bound_pass": true,
+        "mesh_convergence_checked": false,
+        "analytic_max_complex_error": 0.003635879865226292,
+        "analytic_pass": true
+      },
+      "started_utc": "2026-10-09T06:40:21.204674+00:00",
+      "generator_sha256": "c55b34437619ca56821ed75fc476301b281144b459d92216dd34a34516471b96",
+      "xml_writer_sha256": "f0db0788b13f2138ed22a1a80675f1aa17261ef610874d22716b0ffdbd0bf6ee",
+      "native_executable_sha256": "11de71e56e5a85937820d7805f0003c0bdf7e804f7b2d55f109df5c3707be55b",
+      "native_library_sha256": "93cd88b3cb968f167a653f19589e1b3672c140fecc615d5ce1ff16ab632a89e1",
+      "result_sha256": "7a743887e68fdc3463b5e5aa4b901f55ddb335301c3f93274460972d3fd5336c"
+    },
+    {
+      "case": "periodic-slab-40",
+      "status": "results_validated",
+      "input_settings": {
+        "cpw": 40
+      },
+      "layout": {
+        "nx": 17,
+        "ny": 17,
+        "nz": 153,
+        "sample_steps": 27,
+        "gap_steps": 41,
+        "dx_mm": 0.35294117647058826,
+        "dy_mm": 0.35294117647058826,
+        "dz_mm": 0.37037037037037035,
+        "cells": 44217,
+        "dt_s": 5.522899969874501e-13,
+        "pml_cells": 16,
+        "max_timesteps": 80000,
+        "timeout_per_case_s": 180,
+        "end_criteria_db": -70,
+        "uniform_mesh": true
+      },
+      "qa": {
+        "energy_converged": true,
+        "empty_reference_max_reflection": 0.00018016168893885136,
+        "empty_reference_pass": true,
+        "co_polar_power_max": 1.0003443227655702,
+        "co_polar_power_upper_bound_pass": true,
+        "mesh_convergence_checked": false,
+        "analytic_max_complex_error": 0.002283909041001758,
+        "analytic_pass": true
+      },
+      "started_utc": "2026-10-09T06:40:25.148351+00:00",
+      "generator_sha256": "c55b34437619ca56821ed75fc476301b281144b459d92216dd34a34516471b96",
+      "xml_writer_sha256": "f0db0788b13f2138ed22a1a80675f1aa17261ef610874d22716b0ffdbd0bf6ee",
+      "native_executable_sha256": "11de71e56e5a85937820d7805f0003c0bdf7e804f7b2d55f109df5c3707be55b",
+      "native_library_sha256": "93cd88b3cb968f167a653f19589e1b3672c140fecc615d5ce1ff16ab632a89e1",
+      "result_sha256": "bd6605c31ac77706c96a07021ec95d0d118841bcba97a69fd5c550272e8c3343"
+    },
+    {
+      "case": "periodic-custom-20",
+      "status": "results_validated",
+      "input_settings": {
+        "period_x_mm": 8,
+        "period_y_mm": 8,
+        "front_mm": 0,
+        "back_mm": 2,
+        "cpw": 20,
+        "boxes": [
+          {
+            "material": "dielectric",
+            "eps_r": 6,
+            "start": [
+              -2,
+              -2,
+              0
+            ],
+            "stop": [
+              0,
+              1,
+              2
+            ]
+          },
+          {
+            "material": "dielectric",
+            "eps_r": 6,
+            "start": [
+              0,
+              -2,
+              0
+            ],
+            "stop": [
+              1,
+              0,
+              2
+            ]
+          }
+        ]
+      },
+      "layout": {
+        "nx": 14,
+        "ny": 14,
+        "nz": 108,
+        "sample_steps": 4,
+        "gap_steps": 30,
+        "dx_mm": 0.5714285714285714,
+        "dy_mm": 0.5714285714285714,
+        "dz_mm": 0.5,
+        "cells": 21168,
+        "dt_s": 8.386326530665544e-13,
+        "pml_cells": 16,
+        "max_timesteps": 80000,
+        "timeout_per_case_s": 180,
+        "end_criteria_db": -70,
+        "uniform_mesh": true
+      },
+      "qa": {
+        "energy_converged": true,
+        "empty_reference_max_reflection": 0.00024407644783882958,
+        "empty_reference_pass": true,
+        "co_polar_power_max": 1.0000008099765094,
+        "co_polar_power_upper_bound_pass": true,
+        "mesh_convergence_checked": false
+      },
+      "started_utc": "2026-10-09T06:37:56.854441+00:00",
+      "generator_sha256": "2ef102a58e1ead6eb97bbabb7d64ddb69435bde26392abf4ee0124b2de18e7ac",
+      "xml_writer_sha256": "f0db0788b13f2138ed22a1a80675f1aa17261ef610874d22716b0ffdbd0bf6ee",
+      "native_executable_sha256": "11de71e56e5a85937820d7805f0003c0bdf7e804f7b2d55f109df5c3707be55b",
+      "native_library_sha256": "93cd88b3cb968f167a653f19589e1b3672c140fecc615d5ce1ff16ab632a89e1",
+      "result_sha256": "5543717b65412c72bd787f938536e11c7fd1fa60cc866805f9238d833dbb1266"
+    },
+    {
+      "case": "periodic-pec-20",
+      "status": "results_exported",
+      "input_settings": {
+        "fixture": "pec_sheet"
+      },
+      "layout": {
+        "nx": 6,
+        "ny": 6,
+        "nz": 73,
+        "sample_steps": 7,
+        "gap_steps": 11,
+        "dx_mm": 1.0,
+        "dy_mm": 1.0,
+        "dz_mm": 1.4285714285714286,
+        "cells": 2628,
+        "dt_s": 1.691101249850596e-12,
+        "pml_cells": 16,
+        "max_timesteps": 80000,
+        "timeout_per_case_s": 180,
+        "end_criteria_db": -70,
+        "uniform_mesh": true
+      },
+      "qa": {
+        "energy_converged": true,
+        "empty_reference_max_reflection": 0.0024939263782065165,
+        "empty_reference_pass": false,
+        "co_polar_power_max": 1.0002322495509508,
+        "co_polar_power_upper_bound_pass": true,
+        "mesh_convergence_checked": false,
+        "analytic_max_complex_error": 0.021718268160359763,
+        "analytic_pass": false
+      },
+      "started_utc": "2026-10-09T06:40:33.464601+00:00",
+      "generator_sha256": "c55b34437619ca56821ed75fc476301b281144b459d92216dd34a34516471b96",
+      "xml_writer_sha256": "f0db0788b13f2138ed22a1a80675f1aa17261ef610874d22716b0ffdbd0bf6ee",
+      "native_executable_sha256": "11de71e56e5a85937820d7805f0003c0bdf7e804f7b2d55f109df5c3707be55b",
+      "native_library_sha256": "93cd88b3cb968f167a653f19589e1b3672c140fecc615d5ce1ff16ab632a89e1",
+      "result_sha256": "1844bd575e6fcbc982869801b8292dace3cd2b34da8ab0e20bb5b775ae289007"
+    },
+    {
+      "case": "periodic-pec-20-refined-air",
+      "status": "results_validated",
+      "input_settings": {
+        "fixture": "pec_sheet"
+      },
+      "layout": {
+        "nx": 9,
+        "ny": 9,
+        "nz": 100,
+        "sample_steps": 14,
+        "gap_steps": 21,
+        "dx_mm": 0.6666666666666666,
+        "dy_mm": 0.6666666666666666,
+        "dz_mm": 0.7142857142857143,
+        "cells": 8100,
+        "dt_s": 1.0499123034838105e-12,
+        "pml_cells": 16,
+        "max_timesteps": 80000,
+        "timeout_per_case_s": 180,
+        "end_criteria_db": -70,
+        "uniform_mesh": true,
+        "mesh_epsilon": 4
+      },
+      "qa": {
+        "energy_converged": true,
+        "empty_reference_max_reflection": 0.000566995564844377,
+        "empty_reference_pass": true,
+        "co_polar_power_max": 1.0001680670203559,
+        "co_polar_power_upper_bound_pass": true,
+        "mesh_convergence_checked": false,
+        "analytic_max_complex_error": 0.004742476368791464,
+        "analytic_pass": true
+      },
+      "started_utc": "2026-10-09T06:41:05.498939+00:00",
+      "generator_sha256": "26513ed8fb3594a76d9cd400371338e91d8fac8ebc0abe34f684cd767a55b5d3",
+      "xml_writer_sha256": "f0db0788b13f2138ed22a1a80675f1aa17261ef610874d22716b0ffdbd0bf6ee",
+      "native_executable_sha256": "11de71e56e5a85937820d7805f0003c0bdf7e804f7b2d55f109df5c3707be55b",
+      "native_library_sha256": "93cd88b3cb968f167a653f19589e1b3672c140fecc615d5ce1ff16ab632a89e1",
+      "result_sha256": "95da41fefc96fa929093b16988dbb884c722fb6e7ea839e2fd963dd0aa8da44f"
+    }
+  ],
+  "slab_refinement": [
+    {
+      "from_cpw": 20,
+      "to_cpw": 30,
+      "max_complex_change": 0.0057001831866380975
+    },
+    {
+      "from_cpw": 30,
+      "to_cpw": 40,
+      "max_complex_change": 0.0019175326592359978
+    }
+  ],
+  "real_http_checks": [
+    "real native capability",
+    "invalid admission",
+    "Elmer cavity",
+    "periodic slab",
+    "shared serial queue",
+    "queued cancellation",
+    "active cancellation",
+    "input and output SHA-256",
+    "no antenna bundle"
+  ],
+  "real_http_jobs": [
+    {
+      "id": "20261009-094637-390756",
+      "backend": "elmer",
+      "status": "cancelled",
+      "duration_s": null,
+      "input_sha256": "b694a9c4c2cf3d7be1920e70c42402c879ed899f9ec41a43813874bd4d809c73",
+      "result_sha256": null
+    },
+    {
+      "id": "20261009-094637-aa606a",
+      "backend": "elmer",
+      "status": "done",
+      "duration_s": 0.55,
+      "input_sha256": "cbade2198471ced339d58bdae352a763612684448fb3bda5ce09cac429377975",
+      "result_sha256": "eab74e050df36f1c423b591cef6a77f0c446010f773599e03eabe4771d4b0db8",
+      "qa": {
+        "analytic_frequency_hz": 1675890788.0743763,
+        "complex_field_shape_correlation": 1.0,
+        "family": "TE101 (z axis)",
+        "field_shape_correlation": {
+          "elfield": 1.0,
+          "elfield Im": 0.0
+        },
+        "relative_frequency_error": 0.02200425568708586
+      }
+    },
+    {
+      "id": "20261009-094637-f9f4b1",
+      "backend": "periodic",
+      "status": "done",
+      "duration_s": 2.22,
+      "input_sha256": "28a9ff0bc8afa96478502ac00f209fd2559656d966c4564042b34a7459712d77",
+      "result_sha256": "d9b059f6f670d629bc0aee0e6033d62cf7144bd826dd169bdde8ee34a55d7560",
+      "qa": {
+        "analytic_max_complex_error": 0.009116855237765804,
+        "analytic_pass": true,
+        "co_polar_power_max": 1.0005874563457404,
+        "co_polar_power_upper_bound_pass": true,
+        "empty_reference_max_reflection": 0.000566995564844377,
+        "empty_reference_pass": true,
+        "energy_converged": true,
+        "mesh_convergence_checked": false
+      }
+    },
+    {
+      "id": "20261009-094712-6348af",
+      "backend": "periodic",
+      "status": "cancelled",
+      "duration_s": 5.96,
+      "input_sha256": "1500dbbc70800a4b175391c3851ab7fe6691d2b1711a0293ca3580c4ef3050f4",
+      "result_sha256": null
+    }
+  ],
+  "design_snapshot_parity": {
+    "frequency_axis_identical": true,
+    "samples": 301,
+    "max_complex_s11_difference": 0.0,
+    "max_complex_s21_difference": 0.0,
+    "tolerance": 1e-10,
+    "passed": true
+  },
+  "notes": [
+    "Initial vacuum-only PEC mesh failed. Failure preserved; mesh epsilon floor raised to4 without relaxing QA.",
+    "Generator hashes differ across experiments because provenance and vacuum mesh floor were finalized during qualification.",
+    "Arbitrary design accuracy, general mesh convergence, nonzero phase, cross-polarization and macOS execution remain unqualified."
+  ]
+}

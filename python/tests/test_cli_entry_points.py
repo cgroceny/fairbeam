@@ -1,5 +1,4 @@
-"""The package is ``fairbeam``: one console script, and ``python -m fairbeam`` runs the same ``main``.
-There is no ``fairbeam`` command or module any more."""
+"""Normal Fairbeam CLI and isolated experimental console entry points."""
 
 import contextlib
 import importlib
@@ -25,11 +24,18 @@ def scripts() -> dict:
 
 
 class EntryPoints(unittest.TestCase):
-    def test_the_only_script_is_fairbeam(self):
+    def test_normal_and_experimental_scripts_are_separate(self):
         table = scripts()
-        self.assertEqual(table, {"fairbeam": "fairbeam.cli:main"})
+        self.assertEqual(table, {"fairbeam": "fairbeam.cli:main",
+                                 "fairbeam-elmer": "fairbeam_elmer:main",
+                                 "fairbeam-research-plan": "fairbeam.research_plan:main"})
         module, _, attr = table["fairbeam"].partition(":")
         self.assertIs(getattr(importlib.import_module(module), attr), cli.main)
+        experiment = importlib.import_module("fairbeam_elmer")
+        self.assertIsNot(experiment.main, cli.main)
+        preparation = importlib.import_module("fairbeam.research_plan")
+        self.assertIsNot(preparation.main, cli.main)
+        self.assertIsNot(preparation.main, experiment.main)
 
     def test_the_package_name_is_fairbeam(self):
         text = PYPROJECT.read_text(encoding="utf-8")

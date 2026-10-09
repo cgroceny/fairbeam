@@ -1,0 +1,67 @@
+{
+  "schema": 1,
+  "kind": "standalone-native-bloch-algebra",
+  "status": "passed",
+  "started_utc": "2026-10-09T08:38:30.526995+00:00",
+  "finished_utc": "2026-10-09T08:38:33.815136+00:00",
+  "evidence_domain": "synthetic",
+  "native_openems_support": false,
+  "physical_validation": false,
+  "jobs": 2,
+  "configuration": "Release",
+  "source_sha256": {
+    "scripts/experimental-periodic/native-bloch/bloch_kernel.h": "e0bbebcb90c062ba746b1d85f4c0121cb3fdb9f5c5faa16dea0bb8d5bf52c578",
+    "scripts/experimental-periodic/native-bloch/CMakeLists.txt": "60ddeb22eb2d948bb0670184fd4878156d7beaf8bf6f3c756bd56537c90af18a",
+    "scripts/experimental-periodic/native-bloch/run_native_tests.py": "ef51715e36dfc67c2ea0fbf8568a3d85f196d5afbe31f452c5eee77e9152582f",
+    "scripts/experimental-periodic/native-bloch/test_bloch_kernel.cpp": "728bc046bf4925aa0a13ab43c4fec59a50b7ea56df93278f416a8b35167d1d90"
+  },
+  "cmake_version": "cmake version 4.1.1",
+  "git_head": "dee5752a63c90c7707e79cc125b69be6a3b3abdb",
+  "executable_sha256": "1853205fb26a5f14ab16c3f7c201e948083b65df282596f1bb6b1da4cb8e3059",
+  "compiler_metadata_sha256": "93b25df8ecc45b54477f8e84d3c38be3f8f62783cee625b4b1ba1222e6661c7a",
+  "result": {
+    "schema": 1,
+    "status": "passed",
+    "groups": 9,
+    "checks": 186034,
+    "max_scaled_error": 2.698306466840093e-15,
+    "native_openems_support": false,
+    "physical_validation": false
+  },
+  "source_state": "uncommitted source identified by SHA-256 and built from retained snapshot",
+  "compiler": {
+    "id": "MSVC",
+    "version": "19.42.34436.0",
+    "architecture": "x64",
+    "options": [
+      "/W4",
+      "/WX",
+      "/fp:precise"
+    ],
+    "configuration_options": [
+      "/MD",
+      "/O2",
+      "/Ob2",
+      "/DNDEBUG"
+    ]
+  },
+  "ctest": {
+    "tests": 1,
+    "passed": 1,
+    "control_groups": 9
+  },
+  "python_runner_contract_tests": {
+    "tests": 8,
+    "passed": 8
+  },
+  "raw_evidence_files": [
+    "report.json",
+    "source/",
+    "compiler.cmake.txt",
+    "configure.stdout.txt",
+    "build.stdout.txt",
+    "ctest.stdout.txt",
+    "native-tests.stdout.txt"
+  ],
+  "error_metric": "abs(actual - expected) / max(1, abs(expected)); scaled error, not relative error near zero."
+}

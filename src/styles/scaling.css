@@ -77,8 +77,8 @@
   .workspace > .center { grid-column: 2; grid-row: 1; }
   .workspace > .panel-right { grid-column: 3; grid-row: 1; }
   .panel-resize { position: absolute; top: 0; bottom: 0; width: var(--al-space-2); z-index: 8; cursor: ew-resize; touch-action: none; }
-  .panel-resize-left { left: calc(var(--scaling-left, var(--al-left-w)) - 4px); }
-  .panel-resize-right { right: calc(var(--scaling-right, var(--al-right-w)) - 4px); }
+  .panel-resize-left { left: calc(var(--dw-left-col, var(--scaling-left, var(--al-left-w))) - 4px); }
+  .panel-resize-right { right: calc(var(--dw-right-col, var(--scaling-right, var(--al-right-w))) - 4px); }
   .panel-resize:hover, .panel-resize:focus-visible { background: var(--al-selection); outline: 1px solid var(--al-focus); }
   .left-closed > .panel-resize-left, .right-closed > .panel-resize-right,
   .workspace.left-closed > .panel-left, .workspace.right-closed > .panel-right { display: none; }
