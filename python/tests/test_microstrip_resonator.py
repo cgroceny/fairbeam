@@ -2,7 +2,7 @@
 
 From python/ with the bundled openEMS environment, write outside the repo:
 python -m tests.test_microstrip_resonator --preflight --out C:\\Temp\\microstrip-plan
-python -m tests.test_microstrip_resonator --fdtd --mesh 4 --case pec --end open --rate-mcps 45 --out C:\\Temp\\microstrip-open
+python -m tests.test_microstrip_resonator --fdtd --mesh 4 --case pec --end open --rate-mcps 17 --out C:\\Temp\\microstrip-open
 python -m tests.test_microstrip_resonator --analyse --out C:\\Temp\\microstrip-open
 
 Each owned solver worker has a suspend-inclusive 30-minute deadline. A cap or
@@ -57,13 +57,13 @@ def audit_header(text,meta):
     interval=re.search(r"Exact-endcriteria: evaluating the end criteria every (\d+) timestep",text)
     if not version or not grid or not interval or version[1]!="v0.37.0-rc3":
         raise ValueError("audited rc3 engine/grid/clock header required")
-    if "fixed number of threads: 1" not in text:
-        raise ValueError("one native thread required")
+    if f"fixed number of threads: {fixture.THREADS}" not in text:
+        raise ValueError("four native threads required")
     if list(map(int,grid.groups()[:3]))!=meta["native_lines"] or int(grid[4])!=meta["native_cells"]:
         raise ValueError("native grid differs from declared input")
     if int(interval[1])!=int(1/(2*8e9*meta["native"]["dt_s"])):
         raise ValueError("native proxy schedule differs from recorded clock")
-    return dict(version=version[1],threads=1,nyquist_interval=int(interval[1]))
+    return dict(version=version[1],threads=fixture.THREADS,nyquist_interval=int(interval[1]))
 
 
 def acquire_serial(out,n,kind,end,air,cap,rate):
@@ -82,7 +82,7 @@ def acquire_serial(out,n,kind,end,air,cap,rate):
     with log_path.open("w",encoding="utf-8") as log:
         process=popen_group(command,cwd=Path(__file__).resolve().parents[1],
                             stdout=log,stderr=subprocess.STDOUT,
-                            env={**os.environ,"OMP_NUM_THREADS":"1","OPENBLAS_NUM_THREADS":"1"})
+                            env={**os.environ,"OMP_NUM_THREADS":str(fixture.THREADS),"OPENBLAS_NUM_THREADS":"1"})
         start,wall=time.monotonic(),time.time()
         code=None
         try:
@@ -216,11 +216,11 @@ class MicrostripResonatorTests(unittest.TestCase):
 
     def test_native_grid_clock_and_version_header(self):
         meta=dict(native_lines=[60,30,25],native_cells=45000,native=dict(dt_s=.3e-12))
-        text=("openEMS 64bit -- version v0.37.0-rc3\nfixed number of threads: 1\n"
+        text=("openEMS 64bit -- version v0.37.0-rc3\nfixed number of threads: 4\n"
               "FDTD simulation size: 60x30x25 --> 45000 FDTD cells\n"
               "Exact-endcriteria: evaluating the end criteria every 208 timestep(s)")
         self.assertEqual(audit_header(text,meta)["nyquist_interval"],208)
-        for old,new in (("0.37.0-rc3","0.38"),("60x30","60x31"),("every 208","every 207"),("threads: 1","threads: 4")):
+        for old,new in (("0.37.0-rc3","0.38"),("60x30","60x31"),("every 208","every 207"),("threads: 4","threads: 8")):
             with self.assertRaises(ValueError):
                 audit_header(text.replace(old,new),meta)
 
@@ -232,7 +232,7 @@ class MicrostripResonatorTests(unittest.TestCase):
                 out=Path(directory)
                 _,meta=fixture.build(4,"dielectric",end,cap_s=30e-9)
                 dt=meta["declared_dt_s"]
-                t=np.arange(meta["max_timesteps"]+1)*dt
+                t=np.arange(meta["max_timesteps"]//meta["probe_stride_steps"]+1)*dt*meta["probe_stride_steps"]
                 if wrong_clock:
                     t*=2
                 (out/"input.xml").write_text("<own-synthetic-input/>",encoding="utf-8")
@@ -242,7 +242,7 @@ class MicrostripResonatorTests(unittest.TestCase):
                 meta.update(source_sha256=fixture.identity(),runtime=fixture.runtime_identity(),gates=fixture.GATES,
                             input_sha256=fixture.sha(out/"input.xml"),data_sha256=fixture.sha(out/"data.npz"),
                             native=dict(dt_s=dt,cells=meta["native_cells"],timesteps=meta["max_timesteps"]-(2 if stopped else 0),numerical_time_s=30e-9),
-                            run=dict(grid=meta["native_lines"],converged=stopped,threads=1),native_header=dict(version="v0.37.0-rc3"))
+                            run=dict(grid=meta["native_lines"],converged=stopped,threads=fixture.THREADS),native_header=dict(version="v0.37.0-rc3"))
                 fixture.save(out/"report.json",meta)
                 with patch.object(fixture,"field_pole",return_value=dict(f_hz=fixture.F0,q=q,alpha_s=1.,decaying=True,relative_residual=0.)), \
                      patch.object(fixture,"energy_trend",return_value=dict(q=q,span_db=50.,log_rms=0.)):
@@ -274,7 +274,7 @@ def main():
     p.add_argument("--end",choices=fixture.ENDS,default="open")
     p.add_argument("--air",type=int,choices=(6,8),default=6)
     p.add_argument("--cap-ns",type=float,default=fixture.CAP_S*1e9)
-    p.add_argument("--rate-mcps",type=float,default=45.)
+    p.add_argument("--rate-mcps",type=float,default=17.)
     p.add_argument("--worker-case",action="store_true",help=argparse.SUPPRESS)
     a=p.parse_args()
     cap=a.cap_ns/1e9

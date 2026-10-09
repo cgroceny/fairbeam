@@ -26,7 +26,7 @@ H, ER, Z0, F0 = 1.59, 2.08, 50., 5e9
 TAN_D, SIGMA, SHEET_T = .0004, 5.8e7, .035
 KINDS = ("pec", "dielectric", "copper_sheet", "both_sheet")
 ENDS, MESHES = ("open", "pmc"), (4, 6, 8)
-CAP_S, END_DB = 240e-9, -70.
+CAP_S, MAX_CAP_S, END_DB, THREADS = 60e-9, 1.6e-6, -70., 4
 WINDOWS = ((3e-9, 11e-9), (11e-9, 19e-9), (19e-9, 27e-9))
 GATES = dict(f_target=.01, q_target=.05, f_mesh=.002, q_mesh=.03,
              f_control=.001, q_control=.03, f_probe=.0001, q_probe=.01,
@@ -110,8 +110,8 @@ def build(n, kind, end="open", air_h=6, cap_s=CAP_S):
         raise ValueError("mesh must be 4, 6 or 8")
     if kind not in KINDS or end not in ENDS or air_h not in (6,8):
         raise ValueError("unsupported loss/end/air control")
-    if not np.isfinite(cap_s) or not 30e-9 <= cap_s <= CAP_S:
-        raise ValueError("cap must be 30..240 ns")
+    if not np.isfinite(cap_s) or not 30e-9 <= cap_s <= MAX_CAP_S:
+        raise ValueError("cap must be 30..1600 ns; the worker budget is checked separately")
     ref = reference(kind)
     half, width, delta, air = ref["length_mm"]/2, ref["width_mm"], H/n, air_h*H
     if end == "pmc":
@@ -137,6 +137,7 @@ def build(n, kind, end="open", air_h=6, cap_s=CAP_S):
     sim.max_timesteps = steps
     sim.fdtd.SetNumberOfTimeSteps(steps)
     sim.fdtd.SetTimeStep(dt)
+    sim.fdtd.SetOverSampling(4)
     dielectric = kind in ("dielectric","both_sheet")
     sim.dielectric("substrate",ER,tan_d=TAN_D if dielectric else 0,tan_d_freq=F0).AddBox(
         [x[0],y[0],0],[x[-1],y[-1],H],priority=1)
@@ -162,6 +163,7 @@ def build(n, kind, end="open", air_h=6, cap_s=CAP_S):
         raise ValueError("research cell budget exceeded")
     meta = dict(n=n,kind=kind,end=end,air_h=air_h,cap_s=cap_s,
                 declared_dt_s=dt,max_timesteps=steps,native_lines=lines,native_cells=int(np.prod(lines)),
+                threads=THREADS,probe_oversampling=4,probe_stride_steps=int(1/(2*sim.f_max*dt))//4,
                 physical_half_length_mm=half,physical_symmetry_y_mm=0.,probes_mm=probes,
                 source_duration_s=dgauss_duration_s(sim.f_max),reference=ref,scope=SCOPE,
                 sheet_sigma_s_m=SIGMA/4 if lossy else None,sheet_thickness_mm=SHEET_T if lossy else None,
@@ -220,7 +222,7 @@ def acquire(out,n,kind,end,air_h,cap_s):
     meta.update(source_sha256=source,runtime=runtime,input_sha256=sha(out/"input.xml"),gates=GATES,
                 started_utc=datetime.now(timezone.utc).isoformat())
     save(out/"declared.json",meta)
-    sim.run(str(out/"raw"),threads=1,echo=True,exact=True,dump_statistics=True)
+    sim.run(str(out/"raw"),threads=THREADS,echo=True,exact=True,dump_statistics=True)
     stats=np.loadtxt(out/"raw/openEMS_stats.txt",comments="%")
     proxy=np.loadtxt(out/"raw/openEMS_run_stats.txt",comments="%",ndmin=2)
     traces=[np.loadtxt(out/f"raw/u{i}",comments="%",ndmin=2) for i in range(2)]
@@ -253,13 +255,13 @@ def read(out):
     clock_ok=abs(native["dt_s"]/meta["declared_dt_s"]-1)<1e-8
     grid_ok=native["cells"]==meta["native_cells"] and run.get("grid")==meta["native_lines"]
     stopped=bool(run.get("converged") and native["timesteps"]<meta["max_timesteps"]
-                 and native["numerical_time_s"]>meta["source_duration_s"] and run.get("threads")==1)
+                 and native["numerical_time_s"]>meta["source_duration_s"] and run.get("threads")==THREADS)
     poles,errors,energy_fit=[],[],None
     with np.load(out/"data.npz") as data:
         t=data["t"]
         probe_clock_ok=bool(t.ndim==1 and len(t)>1 and np.isfinite(t).all()
                             and np.all(np.diff(t)>0)
-                            and abs((t[-1]-t[0])/(len(t)-1)/native["dt_s"]-1)<1e-6
+                            and abs((t[-1]-t[0])/(len(t)-1)/(native["dt_s"]*meta["probe_stride_steps"])-1)<1e-6
                             and t[-1]<=native["numerical_time_s"]+2*native["dt_s"])
         for i,u in enumerate(data["u"]):
             for j,(lo,hi) in enumerate(WINDOWS):
