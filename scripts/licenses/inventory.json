@@ -5209,7 +5209,7 @@
         {
           "ecosystem": "npm",
           "name": "solid-js",
-          "version": "1.9.15",
+          "version": "1.9.17",
           "license": "MIT",
           "source": "https://github.com/solidjs/solid",
           "texts": [
@@ -7558,8 +7558,8 @@
     }
   ],
   "inputs": {
-    "package-lock.json": "28e9e417008e35d0985a434ffaa4697030684cbe5c086925b0070d9ce724adf4",
-    "package.json": "d4d93bceb9027138f08f66cf5d4259dc81b5b0f7356c9163887f4ff1f70d7fbb",
+    "package-lock.json": "f3d00271745ccabe9d4905cbf4dabfe68e4bf2081d73f32edc22224cffb6d803",
+    "package.json": "9f5df8482b6d5f1f7e938bf2dff4a1353e10ffeb0282ad0af39137d3b9d6edcf",
     "runtime/install.py": "8f6711bb88b550aafb682b874d97e65794e39ca9ce731afd04c0a137c241f696",
     "runtime/pins.json": "c6230e4adca699c6c9aae970b0f748b60cca3783cf6ddc344ded08db4ec9cd84",
     "runtime/requirements.txt": "8a06a606ca2adec73b5c4448003c94eacbb71afc95ab1297ee1bd584648a1e52",
@@ -7573,7 +7573,7 @@
     "scripts/licenses/render.mjs": "4dba0be35aede3efcad2ee37f3c4b0eae6bd9681bb5811c1fd648f360b689579",
     "scripts/licenses/solver-components.json": "3a0b894e5f477c87e364b1205755f2c01bcacb073cff88d25579fadea364a5fe",
     "scripts/third-party-licenses.mjs": "e6e1b9b95d0d0a3ebfb3013a44898c4ac5d9b6071ed9af19f26a6181f4c9fc24",
-    "scripts/third-party-licenses.py": "e154fbb04e5d5a9c3325b2db5ed84c4391fa02cb92e2a618bcd7728586162214",
+    "scripts/third-party-licenses.py": "8e102db34076888e9d0f50ae58e12c4df2ca7c256856cbaaf5d956a980fe2ef3",
     "src-tauri/Cargo.lock": "3190269af8f181773c8426d7fe7e6d8bd3b6c614d85853d6d769773c71b7f1e2",
     "src-tauri/Cargo.toml": "34d872fb6f83259380890763d9ec4b1e73fb849bbf7e09170e8fef7837dc44b1",
     "vite.config.ts": "ca5cb3909da097442d8bbf9850f099264f48e63ccc79c96c9ce7cbe2c4351050",
