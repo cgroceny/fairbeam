@@ -1,6 +1,6 @@
 # Experimental external Elmer cavity benchmark
 
-Fairbeam includes a separate, opt-in `fairbeam-elmer` research command. It discovers an existing native Elmer package and runs one fixed, lossless, perfectly conducting rectangular cavity. It does not add a designer backend or import `fairbeam`, openEMS or CSXCAD. Normal Fairbeam projects, runtime setup and simulation engine selection are unchanged. No solver binaries are included or automatically installed.
+Fairbeam includes a separate, opt-in `fairbeam-elmer` research command. It discovers an existing native Elmer package and runs one fixed, lossless, perfectly conducting rectangular cavity. This standalone command does not import `fairbeam`, openEMS or CSXCAD. The same bounded benchmark is available through the [experimental research panel](RESEARCH-SOLVERS.md), without translating arbitrary designer geometry. Normal Fairbeam projects, runtime setup and simulation engine selection are unchanged. No solver binaries are included or automatically installed.
 
 ## Run
 

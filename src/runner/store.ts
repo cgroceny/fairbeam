@@ -1,3 +1,4 @@
+import { openResearch } from "./researchState";
 // State and actions of the in-app Run workflow: server detection, model/parameter form, live
 // geometry preview, job submission, the live event stream of one job, and run history.
 import { batch, createEffect, createMemo, createRoot, createSignal, on } from "solid-js";
@@ -706,6 +707,7 @@ export function detach() {
 }
 
 export function attach(job: Job) {
+  if (job.kind === "research") { openResearch(job.id); return; }
   detach();
   lastSeq = 0;
   attachedFinished = isTerminal(job.status);

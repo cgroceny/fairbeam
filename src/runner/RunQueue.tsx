@@ -9,7 +9,7 @@ import { cancelJob, clearQueue, jobs, live, serverActivity, stopping } from "./s
 import { ago, paramSummary, StatusBadge } from "./status";
 import { t } from "../i18n";
 
-export const jobName = (j: Job) => j.label ?? j.model_id ?? j.model;
+export const jobName = (j: Job) => j.kind === "research" ? `${t("research.title")} · ${t(`research.backend.${j.research?.backend ?? "periodic"}`)}` : j.label ?? j.model_id ?? j.model;
 
 /** A run's engine and threads as its row says it: "GPU" for a GPU run (its solver does not use a
  * thread count, the job's 1 is a placeholder), else "CPU · 2 threads" ("CPU · Auto" before the run
@@ -99,8 +99,8 @@ export function RunQueue(props: { followed: string | null; onFollow: (job: Job) 
                 <span class="rp-hrow-main rq-main">
                   <StatusBadge status={j.status} compact />
                   <span class="rp-hrow-text">
-                    <span class="rp-hrow-name"><span class="mono">{jobName(j)}</span> <span class="muted">{paramSummary(j)}</span></span>
-                    <span class="rp-hrow-sub mono">{j.model}{" · "}{ago(j.created)}{" · "}{engineThreadsText(j.engine, j.info?.threads ?? j.threads, true)}</span>
+                    <span class="rp-hrow-name"><span class="mono">{jobName(j)}</span> <Show when={j.kind !== "research"}><span class="muted">{paramSummary(j)}</span></Show></span>
+                    <span class="rp-hrow-sub mono">{ago(j.created)}<Show when={j.kind !== "research"}>{" · "}{engineThreadsText(j.engine, j.info?.threads ?? j.threads, true)}</Show></span>
                   </span>
                 </span>
                 <Show when={props.followed !== j.id || live.job?.id !== j.id}>

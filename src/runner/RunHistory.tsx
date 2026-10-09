@@ -9,7 +9,7 @@ import { cancelSweep, historyItems, sweepLongCsv, summaryRows, type SummaryRow, 
 import { saveDownload } from "../lib/download";
 import { useModal } from "../lib/dialog";
 import SweepSummaryMulti, { isMultiPortGroup } from "./SweepSummaryMulti";
-import { ClearQueueButton, engineThreadsText, QueueButton } from "./RunQueue";
+import { ClearQueueButton, engineThreadsText, jobName, QueueButton } from "./RunQueue";
 import { t } from "../i18n";
 
 type StatusFilter = "all" | "active" | "done" | "failed" | "stopped";
@@ -25,7 +25,7 @@ const runName = (sweep: unknown, index: number) =>
   (sweep as { sequence_name?: string })?.sequence_name ?? t("progress.runN", { n: (sweep as { sequence_index?: number })?.sequence_index ?? index + 1 });
 
 function action(j: Job): { label: string; run: () => void } {
-  const name = j.label ?? j.model_id ?? j.model;
+  const name = jobName(j);
   if (j.status === "done" && j.bundle) return { label: t("runHistory.openResultsOf", { name }), run: () => openResult(j.bundle!) };
   return { label: t(isTerminal(j.status) ? "runHistory.showRun" : "runHistory.followRun", { status: t(`progress.status.${j.status}`), name }), run: () => attach(j) };
 }
@@ -93,14 +93,14 @@ function JobRow(props: { job: Job; inSweep?: boolean }) {
           <StatusBadge status={j().status} compact />
           <span class="rp-hrow-text">
             <span class="rp-hrow-name">
-              <Show when={props.inSweep} fallback={<><span class="mono">{j().label ?? j().model_id ?? j().model}</span> <span class="muted">{paramSummary(j())}</span></>}>
+              <Show when={props.inSweep} fallback={<><span class="mono">{jobName(j())}</span> <Show when={j().kind !== "research"}><span class="muted">{paramSummary(j())}</span></Show></>}>
                 <span class="mono">{runName(j().sweep, j().sweep!.index)} · {Object.entries(j().sweep!.values).map(([k, v]) => `${k}=${v}`).join(", ")}</span>
               </Show>
             </span>
             <span class="rp-hrow-sub mono">
               {ago(j().created)}
               <Show when={j().duration_s !== null && isTerminal(j().status)}> · {seconds(j().duration_s)}</Show>
-              {" · "}{engineThreadsText(j().engine, j().info?.threads ?? j().threads, true)}
+              <Show when={j().kind !== "research"}>{" · "}{engineThreadsText(j().engine, j().info?.threads ?? j().threads, true)}</Show>
             </span>
           </span>
         </button>

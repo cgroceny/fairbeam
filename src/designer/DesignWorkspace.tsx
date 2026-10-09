@@ -24,6 +24,7 @@ import { EFFICIENCY_POINTS_DEFAULT } from "./checks";
 import FeedCreationDialog from "./FeedCreationDialog";
 import BackupNotice from "./BackupNotice";
 import RunDialog from "./RunDialog";
+import { openResearch } from "../runner/researchState";
 import OptimizeDialog, { openDesignerOptimize } from "./OptimizeDialog";
 const SweepDialog = lazy(() => import("./SweepDialog"));
 const openDesignerSweep = () => import("./SweepDialog").then((m) => m.openDesignerSweep());
@@ -678,6 +679,7 @@ export function Ribbon() {
             onClick={() => openSimSettings("fieldplanes")} />
         </RGroup>
         <RGroup label={t("ribbon.sim.solver")} icon={Settings2}>
+          <RButton icon={Waves} label={t("research.title")} title={t("research.description")} action="research-solvers" onClick={() => openResearch()} />
           <RButton icon={Timer} label={t("ribbon.sim.solverLimits")}
             issue={issueFor("simulation.end_criteria_db", "simulation.max_timesteps")}
             title={issueTitle(t("ribbon.sim.solverLimitsTitle", { db: fmt(draft.simulation.end_criteria_db ?? -60), steps: draft.simulation.max_timesteps ? i18nFmt.int(draft.simulation.max_timesteps) : t("sim.solver.maxStepsAuto") }), issueFor("simulation.end_criteria_db", "simulation.max_timesteps"))}

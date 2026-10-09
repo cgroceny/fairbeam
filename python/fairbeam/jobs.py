@@ -119,7 +119,7 @@ class Job:
     PUBLIC = ("id", "model", "model_id", "model_path", "params", "overrides", "threads", "name", "status",
               "phase", "created", "started", "finished", "exit_code", "bundle", "error", "end_criteria_db",
               "requested_end_criteria_db", "engine", "label", "sweep", "kind", "optimize", "last_progress",
-              "stats", "info", "pid", "proc_start", "command", "sim_dir", "points", "mesh_density", "input_snapshot")
+              "stats", "info", "pid", "proc_start", "command", "sim_dir", "points", "mesh_density", "input_snapshot", "research", "result")
     MEMORY_EVENTS = 500  # events a finished job keeps in memory (the file keeps all of them)
     TRIMMED_TYPES = ("log", "progress")  # the bulky kinds; every other event is always kept
 
@@ -130,6 +130,8 @@ class Job:
         self.model_id: str | None = kw.get("model_id")
         self.model_path: str = kw.get("model_path", "")
         self.input_snapshot: dict | None = kw.get("input_snapshot")
+        self.research: dict | None = kw.get("research")
+        self.result: dict | None = kw.get("result")
         self.params: dict = kw.get("params") or {}
         self.overrides: dict = kw.get("overrides") or {}
         self.threads: int = int(kw.get("threads") or 1)
@@ -383,7 +385,7 @@ class JobManager:
                 job.publish({"type": "status", "status": "interrupted", "error": job.error})
                 job.save()
                 job.trim_events()
-            if job.status == "done" and "bands" not in job.stats:
+            if job.kind != "research" and job.status == "done" and "bands" not in job.stats:
                 self._backfill_stats(job)
             self.jobs[job.id] = job
 
@@ -504,6 +506,12 @@ class JobManager:
 
     def input_path(self, job: Job) -> str:
         """Resolve admitted declarative input; legacy/Python jobs retain their original path."""
+        if job.kind == "research":
+            if job.dir.resolve().parent != self.root.resolve():
+                raise ValueError("research job directory escapes jobs root")
+            from .research import load_snapshot
+            target, _ = load_snapshot(job)
+            return str(target)
         if job.input_snapshot is None:
             return job.model_path
         meta = job.input_snapshot
@@ -526,6 +534,9 @@ class JobManager:
         return str(snapshot)
 
     def default_command(self, job: Job) -> list[str]:
+        if job.kind == "research":
+            return [self.python, "-m", "fairbeam.research", "--snapshot", self.input_path(job),
+                    "--sha256", job.research["snapshot_sha256"], "--outdir", str(job.dir / "research")]
         if job.kind == "optimize":
             return self.optimize_command(job)
         cmd = [self.python, "-m", "fairbeam", "run", self.input_path(job), "--threads", str(job.threads),
@@ -583,7 +594,19 @@ class JobManager:
                overrides: dict | None = None, threads: int = 1, name: str | None = None,
                end_criteria_db: float | None = None, engine: str | None = None, label: str | None = None,
                sweep: dict | None = None, kind: str = "run", optimize: dict | None = None,
-               points: int | None = None, mesh_density: float | None = None, design_input: str | None = None) -> Job:
+               points: int | None = None, mesh_density: float | None = None, design_input: str | None = None,
+               research_input: dict | None = None) -> Job:
+        research_bytes = None
+        if kind == "research":
+            from .research import encode
+            if not isinstance(research_input, dict) or research_input.get("schema") != "fairbeam-research-input-1":
+                raise ValueError("research jobs require admitted immutable input")
+            if design_input is not None:
+                raise ValueError("research snapshots cannot use ordinary design input")
+            research_bytes = encode(research_input)
+            research_input = json.loads(research_bytes)
+        elif research_input is not None:
+            raise ValueError("research input requires a research job")
         snapshot_bytes = None
         if design_input is not None:
             if not str(model_path).endswith(".design.json"):
@@ -614,6 +637,14 @@ class JobManager:
             snapshot.write_bytes(snapshot_bytes)
             job.input_snapshot = {"sha256": hashlib.sha256(snapshot_bytes).hexdigest(),
                                   "model_id": model_id, "source_name": Path(model_path).name, "format": "design-json-v1"}
+        if research_bytes is not None:
+            snapshot = job.dir / "input/research.json"
+            snapshot.parent.mkdir()
+            snapshot.write_bytes(research_bytes)
+            job.research = {"backend": research_input["backend"], "path": research_input["path"],
+                            "settings": research_input["settings"],
+                            "snapshot_sha256": hashlib.sha256(research_bytes).hexdigest()}
+            job.sim_dir = None  # research output belongs to its own job folder
         job.save()  # no queued events or record are published if serialization fails
         job.publish({"type": "status", "status": "queued"})
         job.publish({"type": "phase", "phase": "queued"})
@@ -622,6 +653,12 @@ class JobManager:
         self.queue.put(job.id)
         self._changed()
         return job
+
+    def submit_research(self, body: dict) -> Job:
+        from .research import prepare
+        spec = prepare(body)
+        return self.submit(model=f"research:{spec['backend']}", model_path="", threads=1,
+                           kind="research", research_input=spec)
 
     def cancel(self, job_id: str) -> Job | None:
         job = self.jobs.get(job_id)
@@ -792,7 +829,9 @@ class JobManager:
             log.write("$ " + " ".join(cmd) + "\n")
             try:
                 job.proc = popen_group(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
-                                       stdin=subprocess.DEVNULL, env=child_env(), cwd=str(PACKAGE_ROOT.parent))
+                                       stdin=subprocess.DEVNULL, env=child_env(), cwd=str(PACKAGE_ROOT.parent),
+                                       **({"creationflags": subprocess.CREATE_NO_WINDOW}
+                                          if WINDOWS and job.kind == "research" else {}))
             except OSError as e:
                 log.close()
                 self._finish(job, "failed", error=f"could not start: {e}")
@@ -841,6 +880,24 @@ class JobManager:
         log.close()
         job.exit_code = code
 
+        if job.kind == "research" and not job.cancel_requested:
+            from .research import load_result
+            result_error = None
+            try:
+                job.result, checksum = load_result(job)
+                if job.result.get("input_sha256") != job.research["snapshot_sha256"]:
+                    raise ValueError("research result does not match admitted input")
+                job.research["result_sha256"] = checksum
+            except (OSError, ValueError, TypeError) as exc:
+                job.result = None
+                result_error = str(exc)
+            if code == 0 and not result_error and job.result["status"] == "results_validated":
+                self._finish(job, "done", error=None)
+            else:
+                self._finish(job, "failed", error=result_error or (stderr_tail[-1] if stderr_tail else None)
+                             or "research validation failed", stderr_tail=stderr_tail[-20:])
+            return
+
         if job.cancel_requested:
             status = "interrupted" if self._stopping else "cancelled"
             self._finish(job, status, error=job.error if self._stopping else None)
@@ -854,6 +911,17 @@ class JobManager:
 
     def _handle(self, job: Job, parser: ProgressParser, line: str, stream: str):
         job.publish({"type": "log", "stream": stream, "line": line})
+        if job.kind == "research":
+            if line.startswith("fairbeam-research: "):
+                try:
+                    event = json.loads(line[len("fairbeam-research: "):])
+                    if event.get("type") == "phase" and event.get("phase") in ("building", "simulating", "results_exported", "validating"):
+                        job.phase = event["phase"]
+                        job.publish(event)
+                        job.save()
+                except (ValueError, AttributeError):
+                    pass
+            return  # research output cannot publish ordinary antenna bundles or optimizer events
         for ev in parser.feed(line, stream):
             kind = ev["type"]
             if kind == "phase":
