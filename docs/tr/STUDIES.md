@@ -222,8 +222,9 @@ düştüğü halde yalnızca sıfır genişlikli enine eksen denetlendiğinden y
 Düzeltilen kontrol ve inceltme, kaynağın kapladığı alanın tamamını kapsar. Geometrik regresyon
 testleri geçti; sonraki 20→30→40 testinin ilk adımı geçti (0,00567), ikinci adımı geçmedi
 (karmaşık S11 farkı 0,02866; minimum derinliği değişimi 0,689 dB). Bu, **tam S11 yakınsama
-çözümü değildir**. Galeri bu yüzden ideal çizgi varsayılanını korur, `feed_fraction` seçeneğini
-deneysel olarak sunar ve empedans uyumu sonuçlarını mesh duyarlı olarak işaretler.
+çözümü değildir**. Blade bu yüzden dağıtılan örneklerden kaldırıldı. Yalnızca regresyon testleri
+ve araştırma için tutulan `python/tests/fixtures/blade_retired.design.json`, ideal çizgi
+varsayılanını ve deneysel `feed_fraction` seçeneğini korur.
 
 Ölçülen özetler, girdi/çıktı özet değerleri ve sınırlar
 `python/tests/fixtures/blade_source_study_20261008.json` dosyasındadır. Windows 11 üzerinde
@@ -240,7 +241,7 @@ python -m tests.native_gallery_study --native /path/to/openEMS --out /path/to/ne
 ```
 
 Bu isteğe bağlı uzun kontrol Python örneklerini, kayıtlı örnek Design'ları ve sıfır yinelemeli
-Sierpinski varyantını kapsar. Alt küme için `--models dipole,blade_867` kullanın. Her portu iki
+Sierpinski varyantını kapsar. Alt küme için `--models dipole,wideband_dipole_867` kullanın. Her portu iki
 yolda da sırayla, dört CPU iş parçacığıyla, aynı tam hassasiyetli CSXCAD geometrisi, mesh ve
 −60 dB enerji ölçütüyle çalıştırır; modelin adım sınırı yerine 300.000 adımlık üst sınır kullanır.
 Ham dalgaları, tam S matrislerini, çözücü girdisini, model
@@ -268,6 +269,8 @@ bağımsız bir çözücü veya fiziksel ölçümlerle uyum kanıtı değildir. 
 `python/tests/fixtures/native_gallery_control_20261008.json` dosyasındadır.
 Tam galeri kaydı, önceki çizgi kaynaklı Blade modelini kullanır; kaynak özetleri kanıtın parçasıdır.
 Bu kayıt, sonradan düzenlenmiş bir kaynağın tekrar çalıştırılması gibi sunulmamalıdır.
+Tarihsel 21 örneklik toplam, artık dağıtılmayan Blade'i de içerir. Güncel varsayılan galeri
+koşuları Blade'i dışarıda tutar; `--models blade_867` araştırma kaynağını açıkça seçer.
 Bu kontrolde GPU çalıştırması ve uzak alanlar test edilmedi.
 
 Yenilenen Blade kaynağı, 9 Ekim'de iki yolda da 12 CPU iş parçacığıyla, aynı −60 dB/300.000

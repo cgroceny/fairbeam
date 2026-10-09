@@ -189,7 +189,9 @@ correction for other antennas. Compact inputs, criteria and measurements are ret
 
 ### Blade: declare the source before judging the mesh
 
-The Blade is a synthetic gallery geometry with no measured antenna or specified connector.
+The Blade is a retired synthetic gallery geometry with no measured antenna or specified connector.
+It is no longer shipped in the gallery or desktop examples. Its source is retained only at
+`python/tests/fixtures/blade_retired.design.json` for regression tests and explicit research replay.
 An ideal line port and a finite-width planar gap source are different models. Their different
 S11 curves do not by themselves establish physical accuracy. Keep the width fixed while
 refining its mesh; do not tune geometry to hide source sensitivity.
@@ -249,8 +251,8 @@ The investigation found a separate mesh-reporting defect: a 4 mm-wide source occ
 was checked. The corrected check and refinement cover the whole source footprint. It passed
 the geometric regression checks; the subsequent 20→30→40 test passed its first step (0.00567)
 but failed its second (0.02866 complex S11, 0.689 dB minimum-depth change). This is **not**
-a full S11-convergence solution. The gallery therefore retains its ideal-line default, exposes
-`feed_fraction` as an experimental option and labels its matching results as mesh-sensitive.
+a full S11-convergence solution. Blade was therefore removed from the shipped examples.
+The retained research fixture keeps its ideal-line default and experimental `feed_fraction` option.
 
 Measured summaries, input/output hashes and limits are in
 `python/tests/fixtures/blade_source_study_20261008.json`. Runs used openEMS 0.37.0rc3,
@@ -266,7 +268,7 @@ python -m tests.native_gallery_study --native /path/to/openEMS --out /path/to/ne
 ```
 
 This optional, long-running control covers the Python examples, saved example Designs and the
-iteration-zero Sierpinski variant. Use `--models dipole,blade_867` for a subset. It runs every port
+iteration-zero Sierpinski variant. Use `--models dipole,wideband_dipole_867` for a subset. It runs every port
 sequentially in both routes, on four CPU threads, with identical full-precision CSXCAD geometry,
 mesh and −60 dB energy criterion, with a 300,000-step cap overriding the model's limit.
 It retains raw waves, full S matrices, solver input, model
@@ -294,6 +296,8 @@ criteria and per-case results are in `python/tests/fixtures/native_gallery_contr
 GPU execution and far fields were not tested by this control.
 The full-gallery fixture records the earlier Blade line-source model; its source hashes are
 part of the evidence. It must not be presented as a replay of a later edited source.
+The historical 21-case total includes the now-retired Blade. Current default gallery runs exclude
+it; `--models blade_867` explicitly selects the retained research fixture when needed.
 
 The refreshed Blade source was checked again on October 9 with 12 CPU threads in both routes,
 the same −60 dB/300,000-step control and no far-field calculation. Raw complex S11 and saved

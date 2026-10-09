@@ -8,79 +8,16 @@ kopya oluşturulur. Depodan çalışıyorsanız düzenlemek için dosyayı yeni 
 altına kopyalayın (`*_867` adları örneklere ayrılmıştır). Diğer modeller gibi komut satırından da çalıştırabilirsiniz:
 
 ```bash
-fairbeam run examples/designs/blade_867.design.json --engine gpu --out /tmp/blade
+fairbeam run examples/designs/wideband_dipole_867.design.json --engine gpu --out /tmp/wideband
 ```
 
 `python/tests/test_example_designs.py`, buradaki her tasarımın oluşturulabildiğini ve tasarım
 denetimlerinden geçtiğini doğrular.
 
-## İHA bıçak anteni, 867 MHz (`blade_867.design.json`)
-
-867 MHz bandının çevresini incelemek için 300 × 300 mm toprak düzlemi üzerinde eğimli bir PEC
-bıçak kullanan eğitim örneği. Bu galeri örneğinin ölçülmüş anteni veya belirlenmiş konnektörü yoktur.
-Adı, incelenmek istenen bandı belirtir; rezonans veya fiziksel empedans uyumu garantisi değildir.
-**Durum: mesh duyarlı.** S11 yakınsama çalışması otomatik meshi doğrulamadı; galeri örneği,
-doğrulanmış anten olarak değil, geometri ve sayısal inceleme amacıyla korunur.
-
-**Besleme modeli.** z = 0 ile z = 2 mm arasındaki mevcut 50 Ω ideal çizgi varsayılan olarak korunur.
-`feed_fraction`, isteğe bağlı düzlemsel kaynak genişliğinin mevcut 4 mm dilime oranını seçer:
-1 tüm dilimi, 0.5 yarısını kapsar; 0 önceki ideal çizgiyi seçer. Bunlar farklı uyarım modelleridir.
-Genişlik değişince S11 değişir; bu parametre ölçülmüş donanım için bir düzeltme katsayısı değildir.
-Toprak ve bıçak dış hatları değişmedi. Koaksiyel pin, toprak açıklığı, konnektör dielektriği,
-altlık veya radom modellenmez.
-
-| Parametre | Varsayılan | Anlamı |
-| --- | --- | --- |
-| `f0` | 0,867 GHz | uzak alan ve yüzey akımı frekansı |
-| `gnd` | 300 mm | kare toprak düzlemi |
-| `h` | 80 mm | boşluğun üzerindeki yükseklik; uç z = 82 mm'de |
-| `wb` / `wt` | 60 / 30 mm | alt / üst bıçak genişliği |
-| `sweep` | 25 mm | üst kenar merkezinin arkaya kayması |
-| `g` | 2 mm | kaynak boşluğu |
-| `wf` | 4 mm | bıçağın besleme dilimi genişliği |
-| `feed_fraction` | 0 | kaynak genişliğinin `wf` değerine oranı; 0 ideal çizgiyi korur |
-| `ht` | 12 mm | dilimin üzerindeki genişleme yüksekliği |
-
-**Sayısal ayarlar.** Korunan başlangıç modeli 0,7–1,05 GHz, altı sınırda MUR, −50 dB enerji
-sönümü ve her pakette kaydedilen otomatik adım sınırını kullanır. Otomatik mesh, dalga boyu başına 20 hücre
-ve ince özellik iyileştirmesi kullanır. Yenilenen paket 801 port örneği, y = 0 elektrik alan kesiti,
-yüzey akımları ve 21 verimlilik örneği içerir. Enerji sönümü ile mesh yakınsaması ayrı kontrollerdir.
-
-```bash
-fairbeam run examples/designs/blade_867.design.json --engine cpu --threads 12 \
-  --points 801 --field-plane E y 0 0.867 --out public/projects
-```
-
-**Kaynak duyarlılığı.** Sabit geometri, dış mesh ve kaynak genişliğiyle iki ardışık yerel
-hücre yarılama, düzlemsel kaynağın S11 minimum derinliğini 0,179 ve 0,098 dB değiştirdi;
-en büyük karmaşık farklar 0,00431 ve 0,00257 oldu. İki adım da önceden belirlenen sınırları geçti.
-İdeal çizgi kontrolünde değişimler 0,787 ve 0,666 dB, karmaşık farklar 0,03006 ve 0,02888 oldu;
-bu kontrol geçmedi. Yalnızca rezonans frekansının kararlı görünmesi bu duyarlılığı gizliyordu.
-Bu bulgu, yerel ayrıklaştırma duyarlılığının azaldığını gösterir; fiziksel doğruluk kanıtı değildir.
-Ayrı otomatik mesh testleri, girdi özetleri ve sınırlar için
-[tekrarlanabilir kaynak ve mesh çalışmasına](../../docs/STUDIES.md#blade-declare-the-source-before-judging-the-mesh) bakın.
-Bu kontroller PML_8 ve −60 dB kullanır; korunan galeri başlangıç modelinden ayrıdır. Sonlu kaynak
-seçeneği, varsayılanın sayısal olarak doğrulanmış alternatifi değildir. Kaynağın tüm genişliğini
-denetleyen yeni kontrol, tek enine hücrenin yeterli sayılmasını önler; fakat bu asgari hücre
-kontrolü S11 yakınsamasını garanti etmez.
-
-**Yorumlama.** Empedans uyumu, ışıma ve verimlilik; kaynak varsayımına, sonlu toprak düzlemine
-ve ayrıklaştırmaya bağlıdır. S11 yakınsaması, uzak alan veya verimlilik yakınsamasını kanıtlamaz.
-PEC modelinde iletken veya dielektrik kayıp yoktur; ışıma verimliliğinin birden sapması sayısaldır,
-ölçülmüş malzeme kaybı değildir. %100'ün üzerindeki görünür verimliliği kırpmayın veya fiziksel
-sonuç saymayın. Örneği donanım tasarımında kullanmadan önce gerçek beslemeyi, malzemeyi ve
-muhafazayı ekleyin; optimizasyondan önce yakınsama kontrollerini tekrarlayın.
-
-Başka bir bant için uzunlukları `0.867 / f_new` ile ölçeklemek yalnızca başlangıç geometrisi verir.
-Kaynak boşluğu, toprak düzlemi, frekans bandı ve monitörleri tutarlı biçimde güncelleyip meshi yeniden
-kontrol edin. Önceki örneğin ayar taraması ve çizgi kaynaklı ışıma değerleri isteğe bağlı sonlu kaynağı
-tanımlamaz. Belgenin sonraki karşılaştırma tabloları tarihsel çizgi kaynak sonuçları olarak
-korunmuş ve bu şekilde etiketlenmiştir.
-
 ## Yarık yüklü geniş bant düzlemsel dipol, 867 MHz (`wideband_dipole_867.design.json`)
 
 **Kompozit (metal olmayan) gövdeli** bir İHA için telemetri anteni; böyle bir gövdede
-`blade_867` gibi bir monopole toprak düzlemi sağlayacak metal kaplama yoktur. 863–870 MHz
+bir monopole toprak düzlemi sağlayacak metal kaplama yoktur. 863–870 MHz
 SRD / LoRa bandında, bıçak radoma sığan dengeli baskı dipoldür. Düşey kutupludur ve azimutta
 her yöne ışıma yapar. Bant genişliği için kollar geniş, yüksekliği azaltmak için yarıklıdır.
 
@@ -158,24 +95,21 @@ Yarıklar uçtan uca yüksekliği, aynı 40 mm genişlikte 136'dan 110 mm'ye ind
 Bunun karşılığında bant daralır: yarıksız dipol %27 bantta uyum sağlar, 867 MHz'de −27 dB verir.
 Ayrıca yönlülüğü 0,2 dB daha yüksek (2,43 / örüntüden 2,19 dBi), azimut dalgalanması iki katıdır (0,27 dB).
 
-**Kuram ve `blade_867` ile karşılaştırma.**
+**Kuram ile karşılaştırma.**
 
-**Tarihsel Blade sütunu:** Aşağıdaki Blade değerleri ve ilgili karşılaştırmalar güncel galeri paketini değil, önceki ideal çizgi/MUR kaynağını kullanır.
-
-| | İdeal λ/2 dipol (ince tel) | Bu dipol | `blade_867` |
-| --- | --- | --- | --- |
-| Toprak düzlemi gerekli mi? | hayır | hayır | evet (metal kaplama) |
-| Yükseklik × genişlik | yaklaşık 166 mm (0,48 λ) × tel | 110 × 40 mm (kart 116 × 46 mm) | 300 mm kaplama üzerinde, kaplamanın üstünde 82 mm × 60 mm |
-| Zin | 0,5 λ'da 73 + j42 Ω, rezonansta (0,48 λ) yaklaşık 70 Ω | 867 MHz'de 39,6 + j0,4 Ω | 49,5 + j19,3 Ω |
-| −10 dB bandı (50 Ω) | tel kalınlığına bağlı olarak yaklaşık %5–10 | %19 | en az %32,2 |
-| Dmax | 2,15 dBi | 2,02 dBi | 4,10 dBi, kaplamanın 45° üzerinde |
-| Ufuk kazancı, dalgalanma | 2,15 dBi, 0 dB | 1,90 dBi, 0,13 dB | −1,4 dBi, 1,5 dB |
+| | İdeal λ/2 dipol (ince tel) | Bu dipol |
+| --- | --- | --- |
+| Toprak düzlemi gerekli mi? | hayır | hayır |
+| Yükseklik × genişlik | yaklaşık 166 mm (0,48 λ) × tel | 110 × 40 mm (kart 116 × 46 mm) |
+| Zin | 0,5 λ'da 73 + j42 Ω, rezonansta (0,48 λ) yaklaşık 70 Ω | 867 MHz'de 39,6 + j0,4 Ω |
+| −10 dB bandı (50 Ω) | tel kalınlığına bağlı olarak yaklaşık %5–10 | %19 |
+| Dmax | 2,15 dBi | 2,02 dBi |
+| Ufuk kazancı, dalgalanma | 2,15 dBi, 0 dB | 1,90 dBi, 0,13 dB |
 
 Uçtan uca 0,32 λ olan dipol, rezonanslı λ/2 dipolden kısadır. Yönlülüğü kısa dipolünki
 (1,76 dBi) ile λ/2 dipolünki arasındadır. Bu kadar kısa ince dipolde direnç yaklaşık 25 Ω
 olacakken, geniş kollar direnci 40 Ω civarında tutar ve ince dipolün iki–üç katı bant genişliği
-sağlar. Ufukta, küçük toprak düzlemindeki bıçaktan yaklaşık 3,5 dB daha fazla kazanç verir.
-Bıçağın lobu toprak düzlemi kenarları nedeniyle yukarı eğilir.
+sağlar.
 
 **Sınırlamalar.**
 
@@ -197,7 +131,7 @@ Bıçağın lobu toprak düzlemi kenarları nedeniyle yukarı eğilir.
 
 ## Metal olmayan hava araçları için baskı meander dipol, 867 MHz (`meander_dipole_867.design.json`)
 
-Yukarıdaki bıçak bir monopoldür; toprak düzlemi gövdenin metal kaplamasıdır. Kompozit veya köpük
+Gövdeye takılan monopol uygun bir toprak düzlemine ihtiyaç duyar. Kompozit veya köpük
 gövdede (cam elyafı, köpük, 3B baskı plastik) böyle bir kaplama yoktur. Bu gövdedeki monopolün
 karşı elemanı koaksiyel kablonun ekranı olur; uyum ve örüntü kablonun güzergâhına bağlı hale gelir.
 Dipol iki yarısını da kendisi taşır. Bu tasarım, yaklaşık 110 × 35 mm bıçak radoma sığan,
@@ -296,22 +230,19 @@ bu nedenle daha geniş paya sahiptir.
 
 **Diğer tasarımlarla karşılaştırma.**
 
-**Tarihsel Blade sütunu:** Aşağıdaki Blade değerleri ve ilgili karşılaştırmalar güncel galeri paketini değil, önceki ideal çizgi/MUR kaynağını kullanır.
-
-| | İdeal λ/2 dipol | Bu meander dipol | Bıçak monopol (`blade_867`) |
-| --- | --- | --- | --- |
-| Yükseklik | 0,48 λ (ince telde yaklaşık 165 mm, FR-4 baskıda 140–150 mm) | 101 mm (0,29 λ) | kaplamanın 82 mm üzerinde |
-| Gereksinim | balun | balun | metal kaplama (toprak düzlemi) |
-| Rezonansta direnç | 73 Ω | 40 Ω | 50 Ω |
-| −10 dB bant genişliği (50 Ω) | iletken kalınlığına bağlı yaklaşık %5–10 | %8,2 | en az %32,2 |
-| Dmax | 2,15 dBi | 1,97 dBi | 4,10 dBi (kaplamanın 45° üzerinde) |
-| Işıma verimliliği | %100 | %95,5 (FR-4) | %99,7 (PEC) |
-| Ufuk | 2,15 dBi, her yöne | 1,95 dBi, 0,04 dB dalgalanma | −1,4 dBi, 1,5 dB dalgalanma |
+| | İdeal λ/2 dipol | Bu meander dipol |
+| --- | --- | --- |
+| Yükseklik | 0,48 λ (ince telde yaklaşık 165 mm, FR-4 baskıda 140–150 mm) | 101 mm (0,29 λ) |
+| Gereksinim | balun | balun |
+| Rezonansta direnç | 73 Ω | 40 Ω |
+| −10 dB bant genişliği (50 Ω) | iletken kalınlığına bağlı yaklaşık %5–10 | %8,2 |
+| Dmax | 2,15 dBi | 1,97 dBi |
+| Işıma verimliliği | %100 | %95,5 (FR-4) |
+| Ufuk | 2,15 dBi, her yöne | 1,95 dBi, 0,04 dB dalgalanma |
 
 Meander dipol, tam λ/2 dipole göre üçte bir daha kısa olmak için 0,2 dB yönlülükten vazgeçer.
 Toprak düzlemi gerektirmez; örüntüsü, uçuşun büyük bölümünde yer istasyonunun bulunduğu ufukta
-tepe yapar. Bıçak daha yüksek tepe kazancı ve çok daha geniş bant sunar; ancak yaklaşık λ veya
-daha büyük metal kaplama ister ve sonlu kaplama tepeyi 45° yukarı eğer.
+tepe yapar.
 
 **Üretim notları ve sınırlamalar.**
 
@@ -433,24 +364,22 @@ ve örüntüden tümleştirilen Dmax (2,10 dBi) arasında 0,6 dB fark vardı; uy
 
 **Kuram ve diğer iki tasarımla karşılaştırma.**
 
-**Tarihsel Blade sütunu:** Aşağıdaki Blade değerleri ve ilgili karşılaştırmalar güncel galeri paketini değil, önceki ideal çizgi/MUR kaynağını kullanır.
-
-| | İdeal λ/2 dipol (ince tel) | Bu kılıflı dipol | `wideband_dipole_867` | `blade_867` |
-| --- | --- | --- | --- | --- |
-| Toprak düzlemi gerekli mi? | hayır | hayır | hayır | evet (metal kaplama) |
-| Besleme | dengeli (balun gerekir) | koaksiyel, kovan içinden | dengeli (balun gerekir) | kaplamadan geçen koaksiyel |
-| Yükseklik × genişlik | yaklaşık 166 mm (0,48 λ) × tel | 139,6 × 16 mm (kart 147,6 × 20 mm) | 110 × 40 mm (kart 116 × 46 mm) | 300 mm kaplama üzerinde, kaplamanın 82 mm üstünde × 60 mm |
-| Zin | 0,5 λ'da 73 + j42 Ω, rezonansta yaklaşık 70 Ω | 867 MHz'de 55,8 − j10,7 Ω, rezonansta 65 Ω | 41,8 + j6,4 Ω | 49,5 + j19,3 Ω |
-| −10 dB bandı (50 Ω) | yaklaşık %5–10 | %15,4 | %17,8 | en az %32,2 |
-| Dmax | 2,15 dBi | 2,10 dBi | 2,0–2,2 dBi | 4,10 dBi, kaplamanın 45° üzerinde |
-| Ufuk kazancı, dalgalanma | 2,15 dBi, 0 dB | 2,08 dBi, 0,04 dB | 2,14 dBi, 0,12 dB | −1,4 dBi, 1,5 dB |
+| | İdeal λ/2 dipol (ince tel) | Bu kılıflı dipol | `wideband_dipole_867` |
+| --- | --- | --- | --- |
+| Toprak düzlemi gerekli mi? | hayır | hayır | hayır |
+| Besleme | dengeli (balun gerekir) | koaksiyel, kovan içinden | dengeli (balun gerekir) |
+| Yükseklik × genişlik | yaklaşık 166 mm (0,48 λ) × tel | 139,6 × 16 mm (kart 147,6 × 20 mm) | 110 × 40 mm (kart 116 × 46 mm) |
+| Zin | 0,5 λ'da 73 + j42 Ω, rezonansta yaklaşık 70 Ω | 867 MHz'de 55,8 − j10,7 Ω, rezonansta 65 Ω | 41,8 + j6,4 Ω |
+| −10 dB bandı (50 Ω) | yaklaşık %5–10 | %15,4 | %17,8 |
+| Dmax | 2,15 dBi | 2,10 dBi | 2,0–2,2 dBi |
+| Ufuk kazancı, dalgalanma | 2,15 dBi, 0 dB | 2,08 dBi, 0,04 dB | 2,14 dBi, 0,12 dB |
 
 Kılıflı dipol λ/2 dipol gibi davranır: aynı örüntü (78° demet genişliği, 0,05 dB daha az yönlülük)
 ve ince dipolün 70 Ω değerine yakın 65 Ω rezonans direnci. Bakırın altındaki FR-4 anteni kısaltır;
 0,48 λ yerine 0,42 λ'da rezonansa girer (X = 0). 10–16 mm geniş şeritler telin yaklaşık iki katı
 bant genişliği sağlar, ancak uyum −19 dB'de kalır: direnç bant boyunca yükselir (0,85 GHz'de
 51 Ω, 0,90 GHz'de 67 Ω). Üç tasarımın en darıdır (20 mm kart) ve balunsuz koaksiyel beslenen
-tek tasarımdır. Ufukta, küçük toprak düzlemindeki bıçaktan 3,5 dB fazla kazanç verir.
+tek tasarımdır.
 Yarıklı geniş bant dipolden 30 mm daha uzundur.
 
 **Sınırlamalar.**

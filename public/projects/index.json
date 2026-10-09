@@ -1,29 +1,6 @@
 {
   "projects": [
     {
-      "file": "blade-867.json",
-      "name": "Blade antenna (867 MHz, mesh-sensitive)",
-      "model": "blade-867",
-      "created": "2026-10-09T00:28:58+0300",
-      "simulated": true,
-      "bands": [
-        0.909
-      ],
-      "cells": 269040,
-      "band_ranges": [
-        {
-          "lo": 0.7573,
-          "hi": 1.05,
-          "edge_lo": false,
-          "edge_hi": true
-        }
-      ],
-      "engine": "CPU",
-      "speed_mcells_s": 83.03,
-      "host_cpu": "AMD Ryzen 9 7900X 12-Core Processor",
-      "quality": "converged"
-    },
-    {
       "file": "branchline-coupler.json",
       "name": "Branch-line coupler (2.4 GHz)",
       "model": "branchline-coupler",

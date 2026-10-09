@@ -8,79 +8,16 @@ makes an editable copy under Start › Your designs. In a checkout, copy one und
 command line like any model:
 
 ```bash
-fairbeam run examples/designs/blade_867.design.json --engine gpu --out /tmp/blade
+fairbeam run examples/designs/wideband_dipole_867.design.json --engine gpu --out /tmp/wideband
 ```
 
 `python/tests/test_example_designs.py` checks that every design here builds and passes the design
 checks.
 
-## UAV blade antenna, 867 MHz (`blade_867.design.json`)
-
-An educational swept PEC blade on a 300 × 300 mm ground plane, for exploring the region
-around the 867 MHz band. This gallery example has no measured antenna or specified connector.
-Its name describes the intended exploration band, not a guaranteed resonance or physical match.
-**Status: mesh-sensitive.** The S11 convergence study did not qualify the automatic mesh;
-the gallery is retained for geometry and numerical exploration, not as a validated antenna.
-
-**Feed model.** The existing 50 Ω ideal line from z = 0 to z = 2 mm remains the default.
-`feed_fraction` optionally selects a planar source width relative to the existing 4 mm tab:
-1 covers the tab, 0.5 covers half, and 0 selects the previous ideal line. These are different
-excitation models. Changing the width changes S11; it is not a correction factor for measured
-hardware. The ground and blade outlines are unchanged. No coaxial pin, ground opening,
-connector dielectric, substrate or radome is modeled.
-
-| Parameter | Default | Meaning |
-| --- | --- | --- |
-| `f0` | 0.867 GHz | far-field and surface-current frequency |
-| `gnd` | 300 mm | square ground plane |
-| `h` | 80 mm | height above the gap; tip at z = 82 mm |
-| `wb` / `wt` | 60 / 30 mm | lower / upper blade width |
-| `sweep` | 25 mm | aft displacement of the top edge center |
-| `g` | 2 mm | source gap |
-| `wf` | 4 mm | width of the blade's feed tab |
-| `feed_fraction` | 0 | source width divided by `wf`; 0 retains the ideal line |
-| `ht` | 12 mm | taper height above the tab |
-
-**Numerics.** The preserved baseline uses 0.7–1.05 GHz, MUR on all six boundaries, −50 dB energy
-decay and the automatic timestep cap recorded in each bundle. The automatic mesh uses 20 cells per wavelength
-and fine feature refinement. The refreshed bundle includes 801 port samples, a y = 0 electric-field plane,
-surface currents and 21 efficiency samples. Energy completion is separate from mesh convergence.
-
-```bash
-fairbeam run examples/designs/blade_867.design.json --engine cpu --threads 12 \
-  --points 801 --field-plane E y 0 0.867 --out public/projects
-```
-
-**Source sensitivity.** With frozen geometry, outer grid and source width, two successive
-local cell halvings changed the planar-source S11 minimum depth by 0.179 and 0.098 dB;
-the maximum complex differences were 0.00431 and 0.00257. Both steps passed the predefined
-limits. The ideal-line control changed by 0.787 and 0.666 dB, with complex differences of
-0.03006 and 0.02888, and failed. Stable resonance frequency alone concealed that sensitivity.
-This is evidence of reduced local discretization sensitivity, not physical accuracy.
-See [the reproducible source and mesh study](../../docs/STUDIES.md#blade-declare-the-source-before-judging-the-mesh)
-for the separate automatic-mesh tests, input hashes and limitations. These controls use PML_8
-and −60 dB; they are distinct from the preserved gallery baseline. The finite-source option is
-not a numerically qualified replacement for the default. The footprint check now prevents a
-single transverse cell from being reported as adequately resolved, but that minimum cell-count
-check does not guarantee S11 convergence.
-
-**Interpretation.** Matching, radiation and efficiency depend on the source assumption, the
-finite ground plane and discretization. S11 convergence does not establish far-field or efficiency
-convergence. This PEC model has no conductor or dielectric losses; any departure of radiation
-efficiency from unity is numerical, not measured material loss. Do not clip an apparent efficiency
-above 100% or treat it as a physical result. Add the actual feed, material and enclosure before
-using the example to design hardware, and repeat convergence checks before optimization.
-
-For a different band, scaling lengths by `0.867 / f_new` gives only a starting geometry.
-Update the source gap, ground plane, frequency band and monitors consistently, then recheck the
-mesh. The previous example's tuning sweep and line-source radiation figures do not describe
-the optional finite source. The comparison tables later in this document are retained as historical
-line-source results and are labeled accordingly.
-
 ## Slotted wideband planar dipole, 867 MHz (`wideband_dipole_867.design.json`)
 
 A telemetry antenna for a UAV with a **composite (non-metal) fuselage**, where there is no metal
-skin to act as the ground plane of a monopole such as `blade_867`. It is a balanced printed dipole
+skin to act as the ground plane of a monopole. It is a balanced printed dipole
 that fits a blade radome, for the 863–870 MHz SRD / LoRa band. It is vertically polarised and
 omnidirectional in azimuth. The arms are wide ("fat") for bandwidth and slotted ("kesikli") for
 height.
@@ -159,24 +96,21 @@ same 40 mm width. They cost bandwidth: the unslotted dipole matches over 27 %, w
 867 MHz. It also has 0.2 dB more directivity (2.43 / 2.19 dBi from the pattern) and twice the
 azimuth ripple (0.27 dB).
 
-**Against theory and `blade_867`.**
+**Against theory.**
 
-**Historical Blade column:** the Blade values and related comparisons below use the earlier ideal-line/MUR source, not the current gallery bundle.
-
-| | Ideal λ/2 dipole (thin wire) | This dipole | `blade_867` |
-| --- | --- | --- | --- |
-| Needs a ground plane | no | no | yes (the metal skin) |
-| Height × width | about 166 mm (0.48 λ) × a wire | 110 × 40 mm (board 116 × 46 mm) | 82 mm above the skin × 60 mm, on a 300 mm skin |
-| Zin | 73 + j42 Ω at 0.5 λ, about 70 Ω at resonance (0.48 λ) | 39.6 + j0.4 Ω at 867 MHz | 49.5 + j19.3 Ω |
-| −10 dB band (50 Ω) | roughly 5–10 %, depending on the wire thickness | 19 % | at least 32.2 % |
-| Dmax | 2.15 dBi | 2.02 dBi | 4.10 dBi, 45° above the skin |
-| Horizon gain, ripple | 2.15 dBi, 0 dB | 1.90 dBi, 0.13 dB | −1.4 dBi, 1.5 dB |
+| | Ideal λ/2 dipole (thin wire) | This dipole |
+| --- | --- | --- |
+| Needs a ground plane | no | no |
+| Height × width | about 166 mm (0.48 λ) × a wire | 110 × 40 mm (board 116 × 46 mm) |
+| Zin | 73 + j42 Ω at 0.5 λ, about 70 Ω at resonance (0.48 λ) | 39.6 + j0.4 Ω at 867 MHz |
+| −10 dB band (50 Ω) | roughly 5–10 %, depending on the wire thickness | 19 % |
+| Dmax | 2.15 dBi | 2.02 dBi |
+| Horizon gain, ripple | 2.15 dBi, 0 dB | 1.90 dBi, 0.13 dB |
 
 At 0.32 λ tip to tip, the dipole is shorter than a resonant λ/2 dipole. Its directivity lies between
 that of a short dipole (1.76 dBi) and that of a λ/2 dipole. The wide arms keep its resistance near
 40 Ω, where a thin dipole this short would have about 25 Ω, and give it two to three times the
-bandwidth of a thin dipole. On the horizon it has about 3.5 dB more gain than the blade on its small ground
-plane. The blade's lobe is tilted up by the edges of the ground plane.
+bandwidth of a thin dipole.
 
 **Caveats.**
 
@@ -199,7 +133,7 @@ plane. The blade's lobe is tilted up by the edges of the ground plane.
 
 ## Printed meander dipole for non-metal airframes, 867 MHz (`meander_dipole_867.design.json`)
 
-The blade above is a monopole: its ground plane is the metal skin of the fuselage. A composite or
+An airframe-mounted monopole needs a suitable ground plane. A composite or
 foam fuselage (glass fiber, foam, 3D-printed plastic) has no such skin, so a monopole on it has
 nothing to work against: the coax shield becomes the other half of the antenna and the match and the
 pattern depend on how the cable runs. A dipole carries both halves itself. This design is a vertical
@@ -297,22 +231,19 @@ the frequency, has the larger side.
 
 **Compared with the others.**
 
-**Historical Blade column:** the Blade values and related comparisons below use the earlier ideal-line/MUR source, not the current gallery bundle.
-
-| | Ideal λ/2 dipole | This meander dipole | Blade monopole (`blade_867`) |
-| --- | --- | --- | --- |
-| Height | 0.48 λ (about 165 mm as a thin wire, 140–150 mm printed on FR-4) | 101 mm (0.29 λ) | 82 mm above the skin |
-| Needs | a balun | a balun | a metal skin (ground plane) |
-| Resistance at resonance | 73 Ω | 40 Ω | 50 Ω |
-| −10 dB bandwidth (50 Ω) | about 5–10 %, with the conductor thickness | 8.2 % | at least 32.2 % |
-| Dmax | 2.15 dBi | 1.97 dBi | 4.10 dBi (45° above the skin) |
-| Radiation efficiency | 100 % | 95.5 % (FR-4) | 99.7 % (PEC) |
-| Horizon | 2.15 dBi, omni | 1.95 dBi, 0.04 dB ripple | −1.4 dBi, 1.5 dB ripple |
+| | Ideal λ/2 dipole | This meander dipole |
+| --- | --- | --- |
+| Height | 0.48 λ (about 165 mm as a thin wire, 140–150 mm printed on FR-4) | 101 mm (0.29 λ) |
+| Needs | a balun | a balun |
+| Resistance at resonance | 73 Ω | 40 Ω |
+| −10 dB bandwidth (50 Ω) | about 5–10 %, with the conductor thickness | 8.2 % |
+| Dmax | 2.15 dBi | 1.97 dBi |
+| Radiation efficiency | 100 % | 95.5 % (FR-4) |
+| Horizon | 2.15 dBi, omni | 1.95 dBi, 0.04 dB ripple |
 
 The meander dipole gives up 0.2 dB of directivity against a full λ/2 dipole for a third less height.
 It needs no ground plane, and its pattern peaks on the horizon, where the ground station is for
-most of a flight. The blade has more peak gain and a much wider band, but only on a metal skin of
-about λ or more, and its peak is tilted 45° up by the finite skin.
+most of a flight.
 
 **Build notes and caveats.**
 
@@ -430,27 +361,24 @@ moves the match by about 11 MHz (1.3 %).
 | Polarisation | vertical (E_θ). Horizontal (E_φ) power is 46 dB below the total, and at least 63 dB below E_θ on the horizon |
 | Zenith / nadir | −39 dBi, the dipole's nulls |
 
-**Against theory and the other two designs.**
+**Against theory and the wideband dipole.**
 
-**Historical Blade column:** the Blade values and related comparisons below use the earlier ideal-line/MUR source, not the current gallery bundle.
-
-| | Ideal λ/2 dipole (thin wire) | This sleeve dipole | `wideband_dipole_867` | `blade_867` |
-| --- | --- | --- | --- | --- |
-| Needs a ground plane | no | no | no | yes (the metal skin) |
-| Feed | balanced (needs a balun) | coax, through the sleeve | balanced (needs a balun) | coax through the skin |
-| Height × width | about 166 mm (0.48 λ) × a wire | 139.6 × 16 mm (board 147.6 × 20 mm) | 110 × 40 mm (board 116 × 46 mm) | 82 mm above the skin × 60 mm, on a 300 mm skin |
-| Zin | 73 + j42 Ω at 0.5 λ, about 70 Ω at resonance | 55.8 − j10.7 Ω at 867 MHz, 65 Ω at resonance | 41.8 + j6.4 Ω | 49.5 + j19.3 Ω |
-| −10 dB band (50 Ω) | roughly 5–10 % | 15.4 % | 17.8 % | at least 32.2 % |
-| Dmax | 2.15 dBi | 2.10 dBi | 2.0–2.2 dBi | 4.10 dBi, 45° above the skin |
-| Horizon gain, ripple | 2.15 dBi, 0 dB | 2.08 dBi, 0.04 dB | 2.14 dBi, 0.12 dB | −1.4 dBi, 1.5 dB |
+| | Ideal λ/2 dipole (thin wire) | This sleeve dipole | `wideband_dipole_867` |
+| --- | --- | --- | --- |
+| Needs a ground plane | no | no | no |
+| Feed | balanced (needs a balun) | coax, through the sleeve | balanced (needs a balun) |
+| Height × width | about 166 mm (0.48 λ) × a wire | 139.6 × 16 mm (board 147.6 × 20 mm) | 110 × 40 mm (board 116 × 46 mm) |
+| Zin | 73 + j42 Ω at 0.5 λ, about 70 Ω at resonance | 55.8 − j10.7 Ω at 867 MHz, 65 Ω at resonance | 41.8 + j6.4 Ω |
+| −10 dB band (50 Ω) | roughly 5–10 % | 15.4 % | 17.8 % |
+| Dmax | 2.15 dBi | 2.10 dBi | 2.0–2.2 dBi |
+| Horizon gain, ripple | 2.15 dBi, 0 dB | 2.08 dBi, 0.04 dB | 2.14 dBi, 0.12 dB |
 
 The sleeve dipole behaves like a λ/2 dipole: the same pattern (78° beamwidth, 0.05 dB less
 directivity) and a resonant resistance of 65 Ω, close to a thin dipole's 70 Ω. The FR-4 under the
 copper shortens it: it resonates (X = 0) at 0.42 λ instead of 0.48 λ. The 10–16 mm wide strips give it about
 twice a wire's bandwidth, but the match stays at −19 dB: its resistance rises through the band (51 Ω
 at 0.85 GHz, 67 Ω at 0.90 GHz). It is the narrowest of the three in width (a 20 mm board) and the
-only one fed by coax without a balun. On the horizon it has 3.5 dB more gain than the blade on its
-small ground plane. It is 30 mm taller than the slotted wideband dipole.
+only one fed by coax without a balun. It is 30 mm taller than the slotted wideband dipole.
 
 **Caveats.**
 

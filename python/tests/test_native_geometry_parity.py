@@ -24,7 +24,7 @@ from fairbeam.simulation import _capture_output, _parse_log
 class NativeGeometryParityTest(unittest.TestCase):
     def models(self, feed_fraction=0):
         root = Path(__file__).resolve().parents[2]
-        design = json.loads((root / "examples/designs/blade_867.design.json").read_text())
+        design = json.loads((root / "python/tests/fixtures/blade_retired.design.json").read_text())
         design["far_field"] = {"enabled": False}
         design.pop("monitors", None)
         design["simulation"].update(end_criteria_db=-60, max_timesteps=350000)

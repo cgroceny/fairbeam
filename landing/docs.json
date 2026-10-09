@@ -22,7 +22,7 @@
       "pages": [
         {"source": "docs/DESIGNER.md", "slug": "designer", "title": "The designer", "description": "The visual workspace: modeling, checks, simulation settings, the mesh, running and reading results, design files, and importing VBA macros and PCB artwork.", "titleTr": "Tasarımcı"},
         {"source": "docs/APPEARANCE.md", "slug": "appearance", "title": "Appearance", "description": "Interface presets, accent colors, chart palettes and custom colors under General settings › Appearance.", "titleTr": "Görünüm"},
-        {"source": "examples/designs/README.md", "slug": "example-designs", "title": "Example designs", "description": "Six 867 MHz antennas as designer files, with their parameters, results and how to scale them.", "titleTr": "Örnek tasarımlar"}
+        {"source": "examples/designs/README.md", "slug": "example-designs", "title": "Example designs", "description": "Five 867 MHz antennas as designer files, with their parameters, results and how to scale them.", "titleTr": "Örnek tasarımlar"}
       ]
     },
     {

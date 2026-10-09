@@ -101,7 +101,8 @@ def example_measurements():
     baseline = json.loads((FIXTURE.parent / "automesh_fine_features_before.json").read_text())
     rows = {}
     for name, old in baseline["examples"].items():
-        sim = build_measured(root / old["source"], old["overrides"])
+        source = "python/tests/fixtures/blade_retired.design.json" if name == "blade-867" else old["source"]
+        sim = build_measured(root / source, old["overrides"])
         if old["mode"] == "automatic from geometry at defaults":
             sim.auto_mesh(keep_existing=False)
         report = sim.mesh_report

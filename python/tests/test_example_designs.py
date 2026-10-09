@@ -37,39 +37,22 @@ class ExampleDesigns(unittest.TestCase):
 
     def test_blade_is_fed_not_floating(self):
         # the tuning range of the blade: the blade stays on the port, so the optimizer never skips it
-        path = next(p for p in DESIGNS if p.name == "blade_867.design.json")
+        path = Path(__file__).parent / "fixtures/blade_retired.design.json"
         d = json.loads(path.read_text(encoding="utf-8"))
         for values in ({"h": 40.0}, {"h": 120.0}, {"wb": 20.0, "wt": 10.0}, {"sweep": 0.0}, {"g": 1.0, "wf": 2.0},
                        {"feed_fraction": 0}, {"feed_fraction": .5}, {"feed_fraction": 1}):
             with self.subTest(values):
                 self.assertEqual(problems(d, values), [])
 
-    def test_blade_bundle_matches_refined_design(self):
-        # Catch stale results when the shipped design's mesh changes, without running FDTD.
+    def test_retired_blade_is_not_shipped(self):
         root = Path(__file__).resolve().parents[2]
-        d = json.loads((root / "examples/designs/blade_867.design.json").read_text())
-        b = json.loads((root / "public/projects/blade-867.json").read_text())
-        preview = build_preview(None, {}, design=d)["bundle"]
-        self.assertTrue(d["mesh"]["refine_features"])
-        self.assertTrue(b["mesh"]["auto"]["settings"]["refine_features"])
-        for key in ("x", "y", "z", "cells", "total_cells"):
-            self.assertEqual(b["mesh"][key], preview["mesh"][key], key)
-        self.assertEqual(b["solver"]["end_criteria_db"], d["simulation"]["end_criteria_db"])
-        self.assertEqual(b["solver"]["max_timesteps"], preview["solver"]["max_timesteps"])
-        self.assertEqual(b["solver"]["boundaries"], preview["solver"]["boundaries"])
-        self.assertEqual(b["ports"], preview["ports"])
-        self.assertTrue(b["run"]["converged"])
-        self.assertEqual(len(b["results"]["frequency"]), 801)
-        self.assertEqual(len(b["results"]["efficiency"][0]["f"]), 21)
-        self.assertTrue(b["fields"]["planes"])
-        self.assertEqual(len(b["field_planes"]), 1)
-        self.assertEqual(b["field_planes"][0]["f"], 867e6)
-        index = json.loads((root / "public/projects/index.json").read_text())["projects"]
-        entry = next(e for e in index if e["file"] == "blade-867.json")
-        from fairbeam.cli import _read_index_entry
-        generated = _read_index_entry(root / "public/projects/blade-867.json")
-        for key, value in entry.items():
-            self.assertEqual(value, generated[key], key)
+        self.assertNotIn("blade_867.design.json", [p.name for p in DESIGNS])
+        self.assertFalse((root / "public/projects/blade-867.json").exists())
+        index = json.loads((root / "public/projects/index.json").read_text(encoding="utf-8"))["projects"]
+        self.assertFalse(any(e["file"] == "blade-867.json" for e in index))
+        from tests.native_gallery_study import catalog
+        self.assertFalse(any(c["id"] == "blade_867" for c in catalog()))
+        self.assertTrue(any(c["id"] == "blade_867" for c in catalog(include_retired=True)))
 
     # --- wideband_dipole_867 (slotted planar dipole, no ground plane) ---
 

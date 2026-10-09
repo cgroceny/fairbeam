@@ -57,7 +57,7 @@ The cost and the accuracy caveat: refinement adds cells and timesteps: up to abo
 shifts the input impedance of wire antennas: the coarse helix check below moved the input
 resistance by +27.7 %. Geometric resolution is not electromagnetic convergence, so compare a run
 with and without the setting, or run the [convergence study](#convergence-study), before you
-trust the impedance. The bundled UAV blade antenna example (`blade_867`) ships with the setting on.
+trust the impedance. The retired Blade research fixture uses the setting; it is no longer shipped as an example.
 
 The adaptive *Auto* mode uses `mesh: {"mode":"design", "overrides": {...}}`. It selects about
 30 cells/λ and exact sheet edges for thin patterned sheet metal, otherwise 24 cells/λ and thirds;

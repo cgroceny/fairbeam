@@ -38,10 +38,12 @@ def digest(path):
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
-def catalog():
+def catalog(include_retired=False):
     paths = sorted((ROOT / "python/models").glob("*.py")) + sorted((ROOT / "examples/designs").glob("*.design.json"))
     rows = [{"id": p.name.split(".")[0], "source": str(p.relative_to(ROOT)), "overrides": {}} for p in paths]
     rows.append({"id": "sierpinski_monopole_0", "source": "python/models/sierpinski_monopole.py", "overrides": {"iterations": 0}})
+    if include_retired:
+        rows.append({"id": "blade_867", "source": "python/tests/fixtures/blade_retired.design.json", "overrides": {}})
     return rows
 
 
@@ -168,7 +170,8 @@ def main():
         parser.error("native executable must exist and timeout must be finite and positive")
     if not 1 <= args.threads <= (os.cpu_count() or 1):
         parser.error("threads must be between 1 and the host's logical CPU count")
-    cases = catalog()
+    # Retain explicit research replay without including retired models in a gallery run.
+    cases = catalog(include_retired=args.case == "blade_867" or "blade_867" in (args.models or "").split(","))
     if args.port:
         run_pair(next(c for c in cases if c["id"] == args.case), args.port, out, native, args.timeout, args.threads)
         return 0

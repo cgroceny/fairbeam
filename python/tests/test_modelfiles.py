@@ -330,7 +330,7 @@ class Api(unittest.TestCase):
     def test_reserved_ids_over_the_api(self):
         before = sorted(p.name for p in self.models.iterdir())
         for path, body in (("/api/designs", {"id": "patch_antenna", "name": "Patch antenna", "template": "patch"}),
-                           ("/api/designs", {"id": "blade_867", "name": "Blade", "template": "patch"}),
+                           ("/api/designs", {"id": "wideband_dipole_867", "name": "Dipole", "template": "patch"}),
                            ("/api/models", {"id": "inset_patch", "name": "x", "template": "blank"}),
                            ("/api/examples/copy", {"from": "dipole", "id": "sierpinski_monopole", "name": "Copy"})):
             with self.subTest(path=path, id=body["id"]):

@@ -3,9 +3,6 @@
  "generator": "scripts/build-benchmarks.mjs",
  "sources": ["docs/benchmarks/windows-7900x.json","docs/benchmarks/windows-7900x-rtx3060-cuda.json","public/projects/*.json","docs/BENCHMARKS.md","docs/GPU.md"],
  "models": {
-  "blade-867": [
-   {"machine":"AMD Ryzen 9 7900X","host_cpu":"AMD Ryzen 9 7900X 12-Core Processor","engine":"cpu","threads":12,"timesteps":[9940],"solver_s":33.74,"mcells_s":83,"params":{},"grid":[77,61,60],"date":"2026-10-09","source":"public/projects/blade-867.json"}
-  ],
   "branchline-coupler": [
    {"machine":"Apple M5 Pro","host_cpu":"Apple M5 Pro","engine":"gpu","backend":"Metal","threads":null,"timesteps":[8883,8883,8883,8883],"solver_s":2.437,"mcells_s":1157.1,"params":{},"grid":[52,54,29],"date":"2026-09-25","source":"public/projects/branchline-coupler.json"},
    {"machine":"AMD Ryzen 9 7900X","host_cpu":"AMD Ryzen 9 7900X 12-Core Processor","engine":"cpu","threads":4,"timesteps":[8883,8883,8883,8883],"solver_s":48.95,"mcells_s":64.2,"params":{},"grid":[52,54,29],"source":"docs/benchmarks/windows-7900x.json"},
