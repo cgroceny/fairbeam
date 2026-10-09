@@ -163,14 +163,14 @@ try {
       // pauses animations (fieldPlaneClock.ts). Scenarios test the default, motion-enabled behaviour.
       await page.emulateMediaFeatures([{ name: 'prefers-reduced-motion', value: 'no-preference' }]);
       await page.setViewport({ width: compact ? 1024 : 1440, height: compact ? 688 : 900 });
-      page.setDefaultTimeout(20000);
+      page.setDefaultTimeout(process.env.CI ? 40000 : 20000); // hosted runners are much slower
       // The first browser navigation can overlap Vite's cold transform of the full TSX module graph.
       // Keep waits bounded at 20s while allowing that initial dev-server navigation to finish.
       page.setDefaultNavigationTimeout(45000);
       await page.evaluateOnNewDocument((l) => { try { const saved=JSON.parse(localStorage.getItem('fairbeam.generalSettings')||'{}'); localStorage.setItem('fairbeam.generalSettings', JSON.stringify({ ...saved, language: l })); } catch { /* blocked */ } }, lang);
       const s = new Session(page, { lang, scenario: scenario.id, url: stack.url });
       try {
-        await scenario.run(s, { stack, root, skipRun, takeSimLock, stamp, compact, ribbonFileAudit });
+        await scenario.run(s, { stack, root, skipRun, takeSimLock, stamp: attempt > 1 ? `${stamp}r${attempt}` : stamp, compact, ribbonFileAudit });
       } catch (e) {
         if (!e.fatalStep) { console.log(`  FAIL ${scenario.id}/${lang} scenario error: ${e.message}`); s.results.push({ scenario: scenario.id, lang, step: 'scenario', ok: false, problems: [e.stack ?? e.message], ms: 0 }); }
       }
