@@ -757,3 +757,14 @@ Filament reaktansı, pratik beslemeler ve genel mod dönüşümü kapsam dışı
 Probun hedef hataları monoton değildir; sınır/prob üçlüsü duyarlılığı doğruluk iddiasını
 belirlenen toleranslarla sınırlar. Yalnız hesap içeren altı örnek yeni FDTD gerektirmez.
 Hiçbir galeri modeli veya üretilmiş paket değişmez.
+
+## 21. Bölüm 5 karşılaştırma kapsamları
+
+[Bölüm 5 kaydı](benchmarks/pozar-chapter-05.md), Örnek 5.3 ve 5.5–5.8 için ilan edilen
+hedef, ardışık mesh ve bağımsız sınır ölçütlerini sağlayan örneklenmiş ideal TEM
+kapsamlarını toplar. Sürekli geçişler ayrıca iki profil inceltme ölçütünü sağlar.
+Her bağımsız fikstür PR'ına ve çoğaltma komutlarına bağlantı verir.
+
+Örnek 5.1, 5.2 ve 5.4, durdurma veya sayısal ölçütleri sağlamadığından kapsam dışındadır.
+Kesin Chebyshev/Klopfenstein dalgalanma sınırı, gerçek PCB yerleşimleri ve Designer'daki
+genel ölçümler kabul edilen kapsamların dışındadır.
