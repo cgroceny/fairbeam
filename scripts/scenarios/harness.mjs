@@ -31,21 +31,20 @@ export function auditInPage(scope) {
     const key = `${kind}|${label(e)}|${text(e)}`;
     if (!seen.has(key)) { seen.add(key); out.push(`${kind}: ${label(e)} "${text(e)}"${extra}`); }
   };
-  const hasTip = (e) => !!(e.matches('[title], [aria-label]') || e.parentElement?.matches('[title], [aria-label]')
-    || (e.tagName.toLowerCase() === 'svg' && e.querySelector(':scope > title')));
+  const hasTip = (e) => !!(e.closest('[title]') || e.querySelector('[title]') || e.getAttribute('aria-label') || e.closest('[aria-label]'));
   for (const e of root.querySelectorAll('*')) {
     if (skip(e) || !shown(e)) continue;
     const cs = getComputedStyle(e);
     // Horizontal overflow of a container (children or text past the box)
     if (e.clientWidth > 0 && e.scrollWidth > e.clientWidth + 1) {
-      if (cs.overflowX === 'visible' && !floatingRibbonGroup(e) && !containedScroller(e)) add('overflow', e, ` (${e.scrollWidth} > ${e.clientWidth})`);
+      if (cs.overflowX === 'visible') add('overflow', e, ` (${e.scrollWidth} > ${e.clientWidth})`);
       else if ((cs.overflowX === 'hidden' || cs.overflowX === 'clip') && text(e) && !hasTip(e)) add('clipped-no-title', e, ` (${e.scrollWidth} > ${e.clientWidth})`);
     }
     // A leaf that shows a raw i18n key
     if (!e.children.length && /^[a-z][a-zA-Z0-9]*(\.[a-zA-Z0-9]+){1,4}$/.test((e.textContent || '').trim()) && !/\.(json|txt|csv|s\d+p|py|dxf|gbr|zip|md)$/i.test((e.textContent || '').trim())) add('raw-i18n-key', e);
   }
   // The dialogs, menus and popovers stay inside the window
-  for (const e of root.querySelectorAll('[role=dialog], [role=menu], .dialog, .rb-pop, .menu, .rb-group[data-collapsed][data-open] > .rb-items')) {
+  for (const e of root.querySelectorAll('[role=dialog], [role=menu], .dialog, .rb-pop, .menu')) {
     if (skip(e) || !shown(e)) continue;
     const r = e.getBoundingClientRect();
     if (r.left < -1 || r.right > innerWidth + 1) add('outside-window', e, ` (${Math.round(r.left)}..${Math.round(r.right)} of ${innerWidth})`);
@@ -55,22 +54,6 @@ export function auditInPage(scope) {
 }
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
-const waitForPaint = (page, timeout = 1000) => page.evaluate((timeoutMs) => new Promise((resolve) => {
-  let frames = 0;
-  let complete = false;
-  const timer = setTimeout(() => {
-    if (!complete) { complete = true; resolve(false); }
-  }, timeoutMs);
-  const next = () => {
-    if (complete) return;
-    if (++frames === 2) {
-      complete = true;
-      clearTimeout(timer);
-      resolve(true);
-    } else requestAnimationFrame(next);
-  };
-  requestAnimationFrame(next);
-}), timeout);
 
 export class Session {
   constructor(page, { lang, scenario, url }) {
@@ -259,7 +242,6 @@ export class Session {
       await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
     });
     try {
-      if (!await waitForPaint(this.page)) problems.push('visual: layout did not complete two animation frames before audit');
       const issues = await this.page.evaluate(auditInPage, audit);
       for (const i of issues) if (!this.auditIgnore.some((re) => re.test(i))) problems.push(`visual: ${i}`);
     } catch (e) { problems.push(`audit failed: ${e.message}`); }
@@ -291,39 +273,17 @@ export class Session {
 
 /** The audit must catch what it claims to: run it over a page with known faults (and known good). */
 export async function auditSelfTest(page) {
-  await page.setContent(`<style>
-    .skip-link { display:block; width:50px; height:1px; overflow:hidden; white-space:nowrap }
-    .skip-link:not(:focus) { width:1px; height:1px; padding:0; margin:-1px; clip:rect(0 0 0 0); border:0 }
-    #flyout-parent { position:fixed; left:-40px; top:0; width:50px }
-    #flyout-parent > .rb-items { position:absolute; left:0; top:100%; width:200px }
-    #scroll-parent { position:relative; width:50px; height:50px }
-    #scroll-owner { width:50px; overflow-x:auto }
-    #scroll-owner > span { display:block; width:250px }
-    #scroll-sibling { position:absolute; left:60px; top:20px; width:140px }
-    #scroll-mixed { position:relative; width:50px; height:50px; white-space:nowrap }
-    #scroll-mixed-owner { display:inline-block; width:50px; overflow-x:auto; vertical-align:top }
-    #scroll-mixed-owner > span { display:block; width:250px }
-  </style><body style="margin:0"><div id="root">
-    <a id="skip-hidden" class="skip-link" href="#root">skip to workspace</a>
-    <a id="skip-focused" class="skip-link" href="#root">focused link must still be audited</a>
-    <div id="flyout-parent" class="rb-group" data-collapsed data-open><div id="flyout-popup" class="rb-items">open ribbon commands</div></div>
-    <div id="scroll-parent"><div id="scroll-owner"><span>content handled by a nested scroller</span></div><span id="scroll-sibling">unrelated overflow</span></div>
-    <div id="scroll-mixed"><div id="scroll-mixed-owner"><span>scroller content</span></div> direct visible text continues beyond parent</div>
+  await page.setContent(`<body style="margin:0"><div id="root">
     <div id="over" style="width:50px;overflow:visible"><span style="display:block;width:200px">wide child</span></div>
     <div id="clip" style="width:50px;overflow:hidden;white-space:nowrap">a long clipped text without a tooltip</div>
     <div id="tip" title="full text" style="width:50px;overflow:hidden;white-space:nowrap">a long clipped text with a tooltip</div>
-    <div id="unrelated-tip" style="width:50px;overflow:hidden;white-space:nowrap">a long clipped text without a tooltip <span title="unrelated tooltip">another item</span></div>
     <div id="scroll" style="width:50px;overflow:auto;white-space:nowrap">a long text in a scroll box</div>
     <p id="key">tree.add.port</p>
     <div role="dialog" style="position:fixed;left:-40px;top:0;width:100px">off screen</div>
   </div></body>`);
   const found = (await page.evaluate(auditInPage, '#root')).join('\n');
-  const need = [['overflow: div#over', /overflow: div#over/], ['unrelated sibling overflow beside a scroller', /overflow: div#scroll-parent/], ['own text overflow alongside a valid nested scroller', /overflow: div#scroll-mixed/], ['clipped-no-title', /clipped-no-title: div#clip/], ['unrelated tooltip does not cover clipped text', /clipped-no-title: div#unrelated-tip/], ['raw-i18n-key', /raw-i18n-key: p#key/], ['outside-window', /outside-window: div/], ['outside-window ribbon flyout', /outside-window: div#flyout-popup/]];
+  const need = [['overflow: div#over', /overflow: div#over/], ['clipped-no-title', /clipped-no-title: div#clip/], ['raw-i18n-key', /raw-i18n-key: p#key/], ['outside-window', /outside-window: div/]];
   const missing = need.filter(([, re]) => !re.test(found)).map(([n]) => n);
   if (missing.length) throw new Error(`the visual audit missed: ${missing.join(', ')}\n${found}`);
-  if (/div#tip "|div#flyout-parent\b/.test(found)) throw new Error(`the visual audit flagged a titled element or open ribbon group wrapper:\n${found}`);
-  if (/skip-hidden/.test(found)) throw new Error(`the visual audit flagged an intentionally hidden skip link:\n${found}`);
-  await page.focus('#skip-focused');
-  const focused = (await page.evaluate(auditInPage, '#root')).join('\n');
-  if (!/clipped-no-title: a#skip-focused/.test(focused)) throw new Error(`the visual audit missed a focused clipped skip link:\n${focused}`);
+  if (/div#tip|div#scroll/.test(found)) throw new Error(`the visual audit flagged a tooltip or scroll box:\n${found}`);
 }

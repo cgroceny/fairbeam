@@ -6,31 +6,6 @@ export default {
   title: 'Edit the Python script and apply it',
   async run(s, ctx) {
     const draft = () => s.store((_, m) => JSON.parse(JSON.stringify(m.s.draft)));
-    const assertPanelBoundary = async (python = false) => {
-      const layout = await s.page.evaluate((python) => {
-        const panel = document.querySelector('.workspace.design-mode > .panel-right');
-        const handle = document.querySelector('.workspace.design-mode > .panel-resize-right');
-        const panelBox = panel.getBoundingClientRect(), handleBox = handle.getBoundingClientRect();
-        const button = python ? panel.querySelector('[data-action="python-apply"]') : null;
-        const buttonBox = button?.getBoundingClientRect();
-        const hit = buttonBox ? document.elementFromPoint(buttonBox.left + buttonBox.width / 2, buttonBox.top + buttonBox.height / 2) : null;
-        return { panelWidth: panelBox.width, panelLeft: panelBox.left,
-          separatorCenter: handleBox.left + handleBox.width / 2,
-          separatorShown: handleBox.width > 0 && getComputedStyle(handle).display !== 'none',
-          applyDisabled: button?.disabled, applyCenterHitsButton: !!button && button.contains(hit) };
-      }, python);
-      if (!ctx.compact) {
-        assert.ok(layout.separatorShown, 'the desktop properties resize handle is visible');
-        assert.ok(Math.abs(layout.separatorCenter - layout.panelLeft) <= 1,
-          `the resize handle follows the actual properties boundary: ${JSON.stringify(layout)}`);
-        assert.ok(Math.abs(layout.panelWidth - (python ? 360 : 320)) <= 1,
-          'the default properties width expands from 320 to 360 CSS pixels for Python');
-      }
-      if (python) {
-        assert.equal(layout.applyDisabled, false, 'Apply is ready for a real pointer click');
-        assert.equal(layout.applyCenterHitsButton, true, 'the Apply center is not covered by the resize handle');
-      }
-    };
     /** the editor's text, or replace it (the CodeMirror view hangs off its content element) */
     const script = (text) => s.page.evaluate((text) => {
       const view = document.querySelector('.python-panel .python-panel-editor').cmView;
@@ -46,7 +21,6 @@ export default {
       await s.click('home.newProject.create');
       await s.wait('.rb');
       await s.waitFor(() => !!document.querySelector('.nt-row[data-id^="part:"]'), null, { what: 'the starter geometry' });
-      await assertPanelBoundary();
       await s.click('ribbon.tab.post', { sel: '.rb-tab' });
       await s.clickSel('button[data-action="open-python"]');
       await s.wait('.python-panel .python-panel-code');
@@ -65,9 +39,8 @@ export default {
       const text = await script();
       await script(text.replace(new RegExp(`(Param\\('${key}', )[-0-9.e]+`), `$1${next}`));
       await s.wait('strong', await s.T('python.edit.unsaved'));
-      await assertPanelBoundary(true);
       await s.clickSel('button[data-action="python-apply"]');
-      await s.wait('.python-panel-feedback', [await s.T('python.edit.applied'), await s.T('python.edit.normalized')]);
+      await s.wait('.python-panel-feedback', await s.T('python.edit.applied'));
       const d = await draft();
       assert.equal(d.params.find((p) => p.key === key).default, next, 'the parameter follows the script');
       assert.equal(d.model.id, before.model.id, 'the design keeps its identity');

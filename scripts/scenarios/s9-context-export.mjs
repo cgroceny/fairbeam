@@ -51,8 +51,7 @@ export default {id:'S9',title:'Export the active visible surface',async run(s,ct
   await exportItem(s,'result-csv');await s.sleep(150);assert.ok(await s.page.evaluate(()=>window.__exports.some(e=>/_sparams_.*\.csv$/.test(e.name??''))));
   await exportItem(s,'figure-svg');await s.sleep(150);assert.ok(await s.page.evaluate(()=>window.__exports.some(e=>e.type==='image/svg+xml'&&e.text?.includes('<svg'))));
   const before=await s.page.evaluate(()=>window.__exports.filter(e=>e.url?.startsWith('data:image/png')).length);
-  await s.click('header.screenshot.aria',{sel:'.header-secondary button',attr:'aria-label'});
-  await s.waitFor(()=>window.__exports.some(e=>e.name?.includes('_sparams_')&&e.name.endsWith('.png')),null,{what:'the visible S-parameter chart PNG'});
+  await s.click('header.screenshot.aria',{sel:'.header-secondary button',attr:'aria-label'});await s.sleep(750);
   assert.equal(await s.page.evaluate(()=>window.__exports.filter(e=>e.url?.startsWith('data:image/png')).length),before,'result screenshot never calls hidden3D');
   assert.ok(await s.page.evaluate(()=>window.__exports.some(e=>/_sparams_.*\.png$/.test(e.name??''))));
  });

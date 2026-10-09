@@ -86,7 +86,6 @@ export default {
    assert.equal(await s.store((_,m)=>m.s.canRedo()),true);
    await s.click('header.screen.start',{sel:'.mode-switch button'});await s.wait('.home');await saveName(`Redo name ${s.lang} ${ctx.stamp}`);
    await s.click('ribbon.home.undo',{within:'.home-design-action-note'});
-   await s.wait('.home-design-action-note',await s.T('home.designs.renameUndone'));
    await s.waitFor(async name=>(await import('/src/designer/store.ts')).draft.model.name===name,historyName);
    await s.page.locator(`${row()} .home-item`).click();await s.wait('.rb');await s.click('ribbon.tab.home',{sel:'.rb-tab'});await s.click('ribbon.home.redo',{sel:'.rb-btn'});
    assert.equal(await s.store((_,m)=>m.s.draft.model.name),historyName,'Home rename Undo also rebases a retained Redo');

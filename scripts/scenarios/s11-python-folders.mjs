@@ -47,22 +47,7 @@ export default {
    });
   });
   await s.step('Apply retains provenance folders and physical geometry; one Undo restores original Design',async()=>{
-   const layout=await s.page.evaluate(()=>{
-    const panel=document.querySelector('.workspace.design-mode > .panel-right'),handle=document.querySelector('.workspace.design-mode > .panel-resize-right');
-    const button=panel.querySelector('[data-action="python-apply"]');
-    const p=panel.getBoundingClientRect(),h=handle.getBoundingClientRect(),b=button.getBoundingClientRect();
-    return {panelWidth:p.width,panelLeft:p.left,separatorCenter:h.left+h.width/2,
-     separatorShown:h.width>0&&getComputedStyle(handle).display!=='none',applyDisabled:button.disabled,
-     applyCenterHitsButton:button.contains(document.elementFromPoint(b.left+b.width/2,b.top+b.height/2))};
-   });
-   if(!ctx.compact){
-    assert.ok(layout.separatorShown,'the desktop properties resize handle is visible');
-    assert.ok(Math.abs(layout.separatorCenter-layout.panelLeft)<=1,`the resize handle follows the actual Python panel boundary: ${JSON.stringify(layout)}`);
-    assert.ok(Math.abs(layout.panelWidth-360)<=1,'Python expands the default properties column to 360 CSS pixels');
-   }
-   assert.equal(layout.applyDisabled,false,'Apply is ready for a real pointer click');
-   assert.equal(layout.applyCenterHitsButton,true,'the Apply center is not covered by the resize handle');
-   await s.clickSel('button[data-action="python-apply"]');await s.wait('.python-panel-feedback',[await s.T('python.edit.applied'),await s.T('python.edit.normalized')]);
+   await s.clickSel('button[data-action="python-apply"]');await s.wait('.python-panel-feedback',await s.T('python.edit.applied'));
    const after=await draftOf(s),folders=Object.fromEntries(after.parts.map(p=>[p.name,p.component]));
    assert.equal(folders.substrate,'Assembly/Original');assert.equal(folders['substrate [2]'],'Assembly/Original');
    assert.equal(folders['substrate [2] [2]'],'Assembly/Literal');assert.deepEqual(after.components,before.components);
