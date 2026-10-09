@@ -61,23 +61,23 @@ def audit_header(text,meta):
         raise ValueError("four native threads required")
     if list(map(int,grid.groups()[:3]))!=meta["native_lines"] or int(grid[4])!=meta["native_cells"]:
         raise ValueError("native grid differs from declared input")
-    if int(interval[1])!=int(1/(2*8e9*meta["native"]["dt_s"])):
+    if int(interval[1])!=int(1/(2*meta["f_max_hz"]*meta["native"]["dt_s"])):
         raise ValueError("native proxy schedule differs from recorded clock")
     return dict(version=version[1],threads=fixture.THREADS,nyquist_interval=int(interval[1]))
 
 
-def acquire_serial(out,n,kind,end,air,cap,rate):
+def acquire_serial(out,n,kind,end,air,cap,rate,pulse="narrow"):
     out=Path(out).resolve()
     if out.exists():
         raise ValueError("acquisition already exists")
-    _,meta=fixture.build(n,kind,end,air,cap)
+    _,meta=fixture.build(n,kind,end,air,cap,pulse)
     estimate=forecast(meta,rate)
     if estimate>1800:
         raise ValueError(f"forecast {estimate/60:.1f} minutes exceeds 30; defer")
     out.parent.mkdir(parents=True,exist_ok=True)
     command=[sys.executable,"-m","tests.test_microstrip_resonator","--fdtd","--worker-case",
              "--mesh",str(n),"--case",kind,"--end",end,"--air",str(air),
-             "--cap-ns",str(cap*1e9),"--out",str(out)]
+             "--cap-ns",str(cap*1e9),"--pulse",pulse,"--out",str(out)]
     log_path=out.with_name(out.name+".log")
     with log_path.open("w",encoding="utf-8") as log:
         process=popen_group(command,cwd=Path(__file__).resolve().parents[1],
@@ -131,8 +131,9 @@ class MicrostripResonatorTests(unittest.TestCase):
             self.assertIn(fixture.H,z)
             self.assertEqual(meta["native_cells"],len(x)*len(y)*len(z))
             self.assertLessEqual(meta["declared_dt_s"],.9*sim.cfl_timestep())
-            if end=="pmc":
+            if end!="open":
                 self.assertAlmostEqual((x[-2]+x[-1])/2,meta["physical_half_length_mm"])
+            self.assertEqual(sim.boundaries[3],"PEC" if end=="boxed" else "PML_8")
             with self.assertRaisesRegex(ValueError,"ports"):
                 sim.to_bundle()
 
@@ -157,6 +158,26 @@ class MicrostripResonatorTests(unittest.TestCase):
         expanded=fixture.build(6,"pec",air_h=8)[1]
         self.assertEqual(expanded["reference"],ref["reference"])
         self.assertGreater(expanded["native_cells"],ref["native_cells"])
+
+    def test_narrow_pulse_is_dc_free_and_windows_are_after_source(self):
+        t=np.arange(0,20e-9,1e-12)
+        u=fixture.narrow_signal(t)
+        self.assertLess(abs(np.trapezoid(u,t))/np.trapezoid(abs(u),t),1e-10)
+        fundamental=abs(np.trapezoid(u*np.exp(-2j*np.pi*fixture.PULSE_F*t),t))
+        cavity_mode=abs(np.trapezoid(u*np.exp(-2j*np.pi*8.8e9*t),t))
+        self.assertLess(cavity_mode/fundamental,1e-9)
+        narrow,meta=fixture.build(4,"pec","boxed")
+        broad,before=fixture.build(4,"pec","boxed",pulse="broad")
+        self.assertEqual(meta["excitation"]["expression"],fixture.narrow_expression())
+        self.assertTrue(meta["excitation"]["dc_free"])
+        self.assertGreater(meta["windows_s"][0][0],meta["source_duration_s"])
+        self.assertEqual(meta["native_lines"],before["native_lines"])
+        self.assertEqual(meta["reference"],before["reference"])
+        self.assertEqual(broad.f_max,8e9)
+        self.assertEqual(narrow.f_max,6e9)
+        self.assertLess(meta["reference"]["guide_frequency_hz"],fixture.F0)
+        with self.assertRaisesRegex(ValueError,"post-source"):
+            fixture.build(4,"pec",cap_s=30e-9)
 
     def test_free_pole_frequency_damping_and_offset(self):
         t=np.arange(0,40e-9,2e-12)
@@ -215,7 +236,7 @@ class MicrostripResonatorTests(unittest.TestCase):
                 self.assertEqual(stop.call_count,1 if len(values)==2 else 0)
 
     def test_native_grid_clock_and_version_header(self):
-        meta=dict(native_lines=[60,30,25],native_cells=45000,native=dict(dt_s=.3e-12))
+        meta=dict(native_lines=[60,30,25],native_cells=45000,f_max_hz=8e9,native=dict(dt_s=.3e-12))
         text=("openEMS 64bit -- version v0.37.0-rc3\nfixed number of threads: 4\n"
               "FDTD simulation size: 60x30x25 --> 45000 FDTD cells\n"
               "Exact-endcriteria: evaluating the end criteria every 208 timestep(s)")
@@ -227,10 +248,12 @@ class MicrostripResonatorTests(unittest.TestCase):
     def test_cap_open_end_and_wrong_probe_clock_cannot_qualify(self):
         # An otherwise perfect synthetic result must not hide a cap, a wrong
         # probe clock or the open-end model's different physical assumptions.
-        for end,stopped,wrong_clock in (("pmc",False,False),("open",True,False),("pmc",True,True)):
+        cases=(("boxed",True,False),("boxed",False,False),("open",True,False),
+               ("pmc",True,False),("boxed",True,True))
+        for end,stopped,wrong_clock in cases:
             with tempfile.TemporaryDirectory() as directory:
                 out=Path(directory)
-                _,meta=fixture.build(4,"dielectric",end,cap_s=30e-9)
+                _,meta=fixture.build(4,"dielectric",end)
                 dt=meta["declared_dt_s"]
                 t=np.arange(meta["max_timesteps"]//meta["probe_stride_steps"]+1)*dt*meta["probe_stride_steps"]
                 if wrong_clock:
@@ -238,22 +261,23 @@ class MicrostripResonatorTests(unittest.TestCase):
                 (out/"input.xml").write_text("<own-synthetic-input/>",encoding="utf-8")
                 np.savez_compressed(out/"data.npz",t=t,u=np.array([np.cos(2*np.pi*fixture.F0*t)]*2),
                                     energy_t=np.linspace(4e-9,25e-9,30),energy=np.linspace(1,.01,30))
-                q=meta["reference"]["q_distributed"]
+                f=meta["reference"]["guide_frequency_hz"]
+                q=fixture.reference("dielectric",f)["q_distributed"]
                 meta.update(source_sha256=fixture.identity(),runtime=fixture.runtime_identity(),gates=fixture.GATES,
                             input_sha256=fixture.sha(out/"input.xml"),data_sha256=fixture.sha(out/"data.npz"),
-                            native=dict(dt_s=dt,cells=meta["native_cells"],timesteps=meta["max_timesteps"]-(2 if stopped else 0),numerical_time_s=30e-9),
+                            native=dict(dt_s=dt,cells=meta["native_cells"],timesteps=meta["max_timesteps"]-(2 if stopped else 0),numerical_time_s=fixture.CAP_S),
                             run=dict(grid=meta["native_lines"],converged=stopped,threads=fixture.THREADS),native_header=dict(version="v0.37.0-rc3"))
                 fixture.save(out/"report.json",meta)
-                with patch.object(fixture,"field_pole",return_value=dict(f_hz=fixture.F0,q=q,alpha_s=1.,decaying=True,relative_residual=0.)), \
-                     patch.object(fixture,"energy_trend",return_value=dict(q=q,span_db=50.,log_rms=0.)):
+                with patch.object(fixture,"field_pole",return_value=dict(f_hz=f,q=q,alpha_s=1.,decaying=True,relative_residual=0.)), \
+                     patch.object(fixture,"energy_decay",return_value=dict(q=q,fitted_span_db=50.,log_rms=0.,q_rel_95_uncertainty=.001)):
                     result=fixture.read(out)
-                self.assertFalse(result["matches"])
+                self.assertEqual(result["matches"],end=="boxed" and stopped and not wrong_clock)
                 self.assertFalse(result["qualified"])
                 if wrong_clock:
                     self.assertFalse(result["probe_clock_ok"])
 
     def test_study_requires_distinct_fine_mesh_and_boundary_identity(self):
-        base=dict(n=4,kind="dielectric",end="pmc",air_h=6,f_hz=fixture.F0,q=2900.,matches=True)
+        base=dict(n=4,kind="dielectric",end="pmc",air_h=6,pulse="narrow",f_hz=fixture.F0,q=2900.,matches=True)
         rows=[dict(base,n=n) for n in fixture.MESHES]+[dict(base,n=6,air_h=8)]
         for index in (1,3):
             broken=[dict(row) for row in rows]
@@ -261,6 +285,16 @@ class MicrostripResonatorTests(unittest.TestCase):
             with tempfile.TemporaryDirectory() as directory,patch.object(fixture,"read",side_effect=broken):
                 with self.assertRaisesRegex(ValueError,"identity"):
                     fixture.study(directory,"dielectric","pmc")
+
+    def test_growing_and_different_pulse_cohorts_cannot_qualify(self):
+        base=dict(kind="pec",end="boxed",air_h=6,pulse="narrow",f_hz=fixture.F0,q=None,matches=False)
+        rows=[dict(base,n=n) for n in fixture.MESHES]+[dict(base,n=6,air_h=8)]
+        with tempfile.TemporaryDirectory() as directory,patch.object(fixture,"read",side_effect=rows):
+            self.assertFalse(fixture.study(directory,"pec","boxed")["qualified"])
+        rows[-1]["pulse"]="broad"
+        with tempfile.TemporaryDirectory() as directory,patch.object(fixture,"read",side_effect=rows):
+            with self.assertRaisesRegex(ValueError,"pulse cohort"):
+                fixture.study(directory,"pec","boxed")
 
 
 def main():
@@ -272,9 +306,10 @@ def main():
     p.add_argument("--mesh",type=int,choices=fixture.MESHES,default=4)
     p.add_argument("--case",choices=fixture.KINDS,default="pec")
     p.add_argument("--end",choices=fixture.ENDS,default="open")
+    p.add_argument("--pulse",choices=fixture.PULSES,default="narrow")
     p.add_argument("--air",type=int,choices=(6,8),default=6)
     p.add_argument("--cap-ns",type=float,default=fixture.CAP_S*1e9)
-    p.add_argument("--rate-mcps",type=float,default=17.)
+    p.add_argument("--rate-mcps",type=float,default=15.)
     p.add_argument("--worker-case",action="store_true",help=argparse.SUPPRESS)
     a=p.parse_args()
     cap=a.cap_ns/1e9
@@ -284,7 +319,7 @@ def main():
         for end in fixture.ENDS:
             for n,air in ((4,6),(6,6),(8,6),(6,8)):
                 for kind in fixture.KINDS:
-                    sim,meta=fixture.build(n,kind,end,air,cap)
+                    sim,meta=fixture.build(n,kind,end,air,cap,a.pulse)
                     path=a.out/f"{end}_{kind}_n{n}_air{air}.xml"
                     sim.fdtd.Write2XML(str(path))
                     rows.append(dict(**meta,input_sha256=fixture.sha(path),estimated_seconds=forecast(meta,a.rate_mcps)))
@@ -296,9 +331,9 @@ def main():
     elif a.study:
         print(json.dumps(fixture.study(a.out,a.case,a.end),indent=2))
     elif a.worker_case:
-        print(json.dumps(fixture.acquire(a.out,a.mesh,a.case,a.end,a.air,cap),indent=2))
+        print(json.dumps(fixture.acquire(a.out,a.mesh,a.case,a.end,a.air,cap,a.pulse),indent=2))
     else:
-        print(json.dumps(acquire_serial(a.out,a.mesh,a.case,a.end,a.air,cap,a.rate_mcps),indent=2))
+        print(json.dumps(acquire_serial(a.out,a.mesh,a.case,a.end,a.air,cap,a.rate_mcps,a.pulse),indent=2))
 
 
 if __name__=="__main__":
