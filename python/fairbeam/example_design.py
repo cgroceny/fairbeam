@@ -515,9 +515,18 @@ def _slot_values(core: dict, lines) -> dict:
 def _skeleton(core: dict) -> str:
     """The design without its numbers: what must not change when a parameter moves."""
     d = copy.deepcopy(core)
+    # A line source becoming a sheet/volume needs new mesh anchors. The fitted
+    # manual grid can move existing lines, but cannot split a coincident pair.
+    # Treat that as a topology change instead of carrying an unsafe parameter.
+    def port_dimensions(port):
+        dimensions = [float(a) != float(b) for a, b in zip(port["start"], port["stop"])]
+        members = port.get("group", {}).get("members", [])
+        return dimensions, [port_dimensions(member) for member in members]
+
+    dimensions = [port_dimensions(port) for port in core.get("ports", [])]
     for p in _slot_paths(d):
         _set(d, p, 0)
-    return json.dumps(d, sort_keys=True)
+    return json.dumps([d, dimensions], sort_keys=True)
 
 
 def _slot_axis(core: dict, path):

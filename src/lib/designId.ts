@@ -11,7 +11,7 @@ export const RESERVED_DESIGN_ID_RE = /^(con|prn|aux|nul|com[0-9]|lpt[0-9])$/;
 export const BUNDLED_EXAMPLE_IDS = [
   "branchline_coupler", "dipole", "helix_axial", "inset_patch", "lowpass_stepped", "microstrip_line", "minkowski_patch",
   "patch_antenna", "patch_array_2x1", "patch_array_4x1", "pyramidal_horn", "sierpinski_monopole", "wilkinson_divider",
-  "blade_867", "collinear_867", "meander_dipole_867", "sleeve_dipole_867", "wideband_dipole_867", "yagi_867",
+  "collinear_867", "meander_dipole_867", "sleeve_dipole_867", "wideband_dipole_867", "yagi_867",
 ] as const;
 const bundledIds = new Set<string>(BUNDLED_EXAMPLE_IDS);
 

@@ -1,0 +1,1424 @@
+{
+  "schema": "fairbeam.blade-source-study/1",
+  "evidence_domain": "synthetic",
+  "scope": "Fixed geometry, numerical source and boundary sensitivity; no measured antenna or connector.",
+  "source_fixture": "blade_feed_base.design.json",
+  "source_sha256": "7d847d31184ee7946b721a5338f7f4b025bc95bd21e4fbeeeff08e8c5a34962e",
+  "reproduction_module": "tests.blade_feed_study",
+  "runtime": {
+    "python": "3.13.15 (main, Sep 24 2026, 17:56:47) [MSC v.1944 64 bit (AMD64)]",
+    "openems": "0.37.0rc3",
+    "csxcad": "0.7.0rc3",
+    "dll_sha256": "848f1f0bbb09706d8d25bac6c1c623d3c04f56eceac63c5114a3b58ed258bb77",
+    "acceleration": "CPU multithreaded",
+    "threads": 12,
+    "host": "Windows-11-10.0.26200-SP0"
+  },
+  "hardware": {
+    "cpu": "AMD Ryzen 9 7900X",
+    "cores": 12,
+    "logical_processors": 24,
+    "ram_gib": 32,
+    "os": "Windows 11 Pro 10.0.26200",
+    "acceleration": "CPU"
+  },
+  "criteria": {
+    "successive_refinements_required": 2,
+    "frequency_change_pct": 0.5,
+    "minimum_depth_change_db": 0.5,
+    "s11_867_change_db": 0.5,
+    "complex_abs_max": 0.01,
+    "energy_db": -60,
+    "max_reflected_power": 1.001
+  },
+  "frequency_hz": {
+    "start": 700000000,
+    "stop": 1050000000,
+    "count": 3501
+  },
+  "minimum_tracking_window_hz": [
+    850000000,
+    1000000000
+  ],
+  "boundary": {
+    "completed": 3,
+    "expected": 3,
+    "steps": [
+      {
+        "from": "pad0-feed0",
+        "to": "pad8-feed0",
+        "frequency_change_pct": 0.03173540749328296,
+        "minimum_depth_change_db": 0.01150171572210823,
+        "s11_867_change_db": 0.017049099114814226,
+        "complex_abs_max": 0.0005044194483514302,
+        "checks": {
+          "frequency_change_pct": true,
+          "minimum_depth_change_db": true,
+          "s11_867_change_db": true,
+          "complex_abs_max": true,
+          "energy": true,
+          "window": true
+        },
+        "passed": true
+      },
+      {
+        "from": "pad8-feed0",
+        "to": "pad16-feed0",
+        "frequency_change_pct": 2.2293789703198286e-05,
+        "minimum_depth_change_db": 0.014112435602081419,
+        "s11_867_change_db": 0.011222293123125837,
+        "complex_abs_max": 0.00038907188407012624,
+        "checks": {
+          "frequency_change_pct": true,
+          "minimum_depth_change_db": true,
+          "s11_867_change_db": true,
+          "complex_abs_max": true,
+          "energy": true,
+          "window": true
+        },
+        "passed": true
+      }
+    ],
+    "two_successive_passes": true
+  },
+  "ideal_line": {
+    "completed": 3,
+    "expected": 3,
+    "steps": [
+      {
+        "from": "pad0-feed0",
+        "to": "pad0-feed1",
+        "frequency_change_pct": 0.04076005433804042,
+        "minimum_depth_change_db": 0.78677477096406,
+        "s11_867_change_db": 0.7287829502255363,
+        "complex_abs_max": 0.03005918633757214,
+        "checks": {
+          "frequency_change_pct": true,
+          "minimum_depth_change_db": false,
+          "s11_867_change_db": false,
+          "complex_abs_max": false,
+          "energy": true,
+          "window": true
+        },
+        "passed": false
+      },
+      {
+        "from": "pad0-feed1",
+        "to": "pad0-feed2",
+        "frequency_change_pct": 0.025125551730620366,
+        "minimum_depth_change_db": 0.6661557454852591,
+        "s11_867_change_db": 0.6191254736750267,
+        "complex_abs_max": 0.028877042822951154,
+        "checks": {
+          "frequency_change_pct": true,
+          "minimum_depth_change_db": false,
+          "s11_867_change_db": false,
+          "complex_abs_max": false,
+          "energy": true,
+          "window": true
+        },
+        "passed": false
+      }
+    ],
+    "two_successive_passes": false
+  },
+  "planar_4mm": {
+    "completed": 3,
+    "expected": 3,
+    "steps": [
+      {
+        "from": "pad0-feed0",
+        "to": "pad0-feed1",
+        "frequency_change_pct": 0.010419754800627956,
+        "minimum_depth_change_db": 0.17925408038640356,
+        "s11_867_change_db": 0.16148151215528372,
+        "complex_abs_max": 0.0043088069119659655,
+        "checks": {
+          "frequency_change_pct": true,
+          "minimum_depth_change_db": true,
+          "s11_867_change_db": true,
+          "complex_abs_max": true,
+          "energy": true,
+          "window": true
+        },
+        "passed": true
+      },
+      {
+        "from": "pad0-feed1",
+        "to": "pad0-feed2",
+        "frequency_change_pct": 0.004762322384022077,
+        "minimum_depth_change_db": 0.09840373773100453,
+        "s11_867_change_db": 0.08828102733108523,
+        "complex_abs_max": 0.0025670838657674967,
+        "checks": {
+          "frequency_change_pct": true,
+          "minimum_depth_change_db": true,
+          "s11_867_change_db": true,
+          "complex_abs_max": true,
+          "energy": true,
+          "window": true
+        },
+        "passed": true
+      }
+    ],
+    "two_successive_passes": true
+  },
+  "line_cases": [
+    {
+      "case": "pad0-feed0",
+      "cells": 1544400,
+      "metrics": {
+        "minimum_frequency_hz": 919597153.3953494,
+        "minimum_s11_db": -14.768285553492984,
+        "minimum_in_window_interior": true,
+        "s11_at_867mhz_db": -14.036463199044551,
+        "passivity_max_reflected_power": 0.22357260067574206
+      },
+      "energy_converged": true,
+      "threads": 12,
+      "solver_cells": 1584969,
+      "timesteps": 18204,
+      "dt_s": 9.66344e-13,
+      "solver_s": 211.65,
+      "zin_867_ohm": [
+        49.6799349846993,
+        20.20571300573593
+      ],
+      "design_sha256": "bf46661d8cd17d1313703c079dfce86205c50c02aa3713f24e84f6cb0449eb85",
+      "response_sha256": "64fdc37602eb71add5ef6b2ad993c0fa1c4f129124b6137c6798e449d5b3c261",
+      "csv_sha256": "d018c5c66b4ab78651a1909c80e6edf907e32773012793490e1610feb65a5696",
+      "voltage_probe_sha256": "e989575238b9f167e50d1119e0e6ba0a1106ca9b7d6c5bbd8f3c048b62534f26",
+      "current_probe_sha256": "0b5084b268350baefa3ad6742aa7424d27c4f63500e8c2d905236b86be8f0f73",
+      "started_utc": "2026-10-08T19:08:42.968280+00:00",
+      "source_commit": "1882fb7743c168f603e2253bbe5dc84395a9f81f"
+    },
+    {
+      "case": "pad8-feed0",
+      "cells": 2281104,
+      "metrics": {
+        "minimum_frequency_hz": 919888991.2992761,
+        "minimum_s11_db": -14.756783837770875,
+        "minimum_in_window_interior": true,
+        "s11_at_867mhz_db": -14.019414099929737,
+        "passivity_max_reflected_power": 0.22391589512800245
+      },
+      "energy_converged": true,
+      "threads": 12,
+      "solver_cells": 2333625,
+      "timesteps": 15744,
+      "dt_s": 9.66344e-13,
+      "solver_s": 243.91,
+      "zin_867_ohm": [
+        49.68952783681235,
+        20.24916432213055
+      ],
+      "design_sha256": "50a7d46debdadaf7533516b672e32fe3f0ac7af3e4cb5885982d1f05221e6cce",
+      "response_sha256": "16aa07718703c0d9f20a2483d0d77af9af472bca8091647471c0e8333c7a75e6",
+      "csv_sha256": "88889dc5668d34d43663773166f728459f7bd1a8020abcbd0d0a1aaa07eea537",
+      "voltage_probe_sha256": "74962643da6c4a78ff3a44b5898e5d8c3bf754057b08ff00f7bf90e6a60785c2",
+      "current_probe_sha256": "a8781c87a7867bbdd5da2702b5a1f4b6948a54f050850c3f400f478b5ffdfe2a",
+      "started_utc": "2026-10-08T19:12:17.242901+00:00",
+      "source_commit": "1882fb7743c168f603e2253bbe5dc84395a9f81f"
+    },
+    {
+      "case": "pad16-feed0",
+      "cells": 3220560,
+      "metrics": {
+        "minimum_frequency_hz": 919888786.2211589,
+        "minimum_s11_db": -14.770896273372957,
+        "minimum_in_window_interior": true,
+        "s11_at_867mhz_db": -14.030636393052863,
+        "passivity_max_reflected_power": 0.22416091112981867
+      },
+      "energy_converged": true,
+      "threads": 12,
+      "solver_cells": 3286569,
+      "timesteps": 13776,
+      "dt_s": 9.66344e-13,
+      "solver_s": 277.36,
+      "zin_867_ohm": [
+        49.71489488743008,
+        20.227471568387493
+      ],
+      "design_sha256": "eb31dbcd8b6789257c61e8547a393a3267446d3d0ebe6a1e5888fc9678ea4117",
+      "response_sha256": "27da6bc9a050f3b32fc305b77f87704e889c79c6beb9d6524cdc735a6244d3fc",
+      "csv_sha256": "48351c36b57aae71b545c275aeb87b06b1fde14e6ce3b79ebe64c6b3ed9891e1",
+      "voltage_probe_sha256": "dc3e098083d32f887c26073ebdff0268fe724044664197055a6ecbcfa29f12ae",
+      "current_probe_sha256": "cb7b52e351a75b0856bbaf62970c22146b69240fd5f988c85fe51ec5c094d2b3",
+      "started_utc": "2026-10-08T19:16:24.516855+00:00",
+      "source_commit": "1882fb7743c168f603e2253bbe5dc84395a9f81f"
+    },
+    {
+      "case": "pad0-feed1",
+      "cells": 2027476,
+      "metrics": {
+        "minimum_frequency_hz": 919971981.6947644,
+        "minimum_s11_db": -13.981510782528924,
+        "minimum_in_window_interior": true,
+        "s11_at_867mhz_db": -13.307680248819015,
+        "passivity_max_reflected_power": 0.22583863150754796
+      },
+      "energy_converged": true,
+      "threads": 4,
+      "solver_cells": 2076074,
+      "timesteps": 38376,
+      "dt_s": 4.4668e-13,
+      "solver_s": 927.54,
+      "zin_867_ohm": [
+        49.650003236883414,
+        22.05053087420352
+      ],
+      "design_sha256": "da3868d934d59cbbcb10bd93e74a3b36e80c7382609b7810838918eca8f7210d",
+      "response_sha256": "11e4904998ac3e32e88cda86e0eca8031febaa1367580826916d56f13f0cab1b",
+      "csv_sha256": "9722c486785f9afb11b15afd3dc224a08239d3ff8a6148787fb0fcba71f4b932",
+      "voltage_probe_sha256": "6586a66605e78d91ad655d838d00b6c8c44bbae4d8fac85da024129c22ba0378",
+      "current_probe_sha256": "933501f1a67fbfd916dded708a5a5c5f9d527686af62b3233f00b3e4206bf5f5",
+      "started_utc": "2026-10-08T05:24:12.786956+00:00",
+      "source_commit": "ba48e5a7c691d47924f558f16e3ebfa48258f61c"
+    },
+    {
+      "case": "pad0-feed2",
+      "cells": 3275844,
+      "metrics": {
+        "minimum_frequency_hz": 920203129.7309322,
+        "minimum_s11_db": -13.315355037043664,
+        "minimum_in_window_interior": true,
+        "s11_at_867mhz_db": -12.688554775143988,
+        "passivity_max_reflected_power": 0.22842475513374463
+      },
+      "energy_converged": true,
+      "threads": 12,
+      "solver_cells": 3342672,
+      "timesteps": 101325,
+      "dt_s": 1.64452e-13,
+      "solver_s": 1996.12,
+      "zin_867_ohm": [
+        49.64040706133076,
+        23.766982957770153
+      ],
+      "design_sha256": "3be0e8d6125c1d93c7f99f2fcebcfe3aca8e8d7c18e1792183556cfb2d11082d",
+      "response_sha256": "ba1551f05e5626df1b7b3db25e8cf3b12d52f26029f25e90890c9bad8df36e1d",
+      "csv_sha256": "d67891cd39b2c72040fb962aabec305ce42f4901cc99042306314925d733a317",
+      "voltage_probe_sha256": "1460bd3e7da2363ecf2c61e374053d446fe183856d20cb4d33633f8ae380c0fa",
+      "current_probe_sha256": "6976d3428c480987965d54470ccd7cfe15f5c8854ee310ad417f78c6bc5dbd28",
+      "started_utc": "2026-10-08T19:21:53.107315+00:00",
+      "source_commit": "1882fb7743c168f603e2253bbe5dc84395a9f81f"
+    }
+  ],
+  "planar_cases": [
+    {
+      "case": "pad0-feed0",
+      "cells": 1544400,
+      "metrics": {
+        "minimum_frequency_hz": 916354525.5976996,
+        "minimum_s11_db": -17.31599850072822,
+        "minimum_in_window_interior": true,
+        "s11_at_867mhz_db": -16.427025917919778,
+        "passivity_max_reflected_power": 0.22108793104909022
+      },
+      "energy_converged": true,
+      "threads": 12,
+      "solver_cells": 1584969,
+      "timesteps": 18696,
+      "dt_s": 9.66344e-13,
+      "solver_s": 198.75,
+      "zin_867_ohm": [
+        49.66499597540398,
+        15.20843085162068
+      ],
+      "design_sha256": "e2a58d6f7e21e1f0a41fd22d8faf8315759d129c1a56c7ce88f38426ac728af4",
+      "response_sha256": "23edac9443d90ec55ada40b3b4e35d6b2c3441ec1de42c7b6403a2fb41db61ef",
+      "csv_sha256": "9cafc5d2bbb81f448090397459017c89566650fff3063af6cf73098c4acd33db",
+      "voltage_probe_sha256": "f401fcc349f03865d8248b21144d21aa56083f9b50751b45943df135a7afdf10",
+      "current_probe_sha256": "e3ae288564eb14ae9d62820208d103b8705957aff03d6e33ea8c5525c98b350d",
+      "started_utc": "2026-10-08T19:55:25.598850+00:00",
+      "source_commit": "1882fb7743c168f603e2253bbe5dc84395a9f81f"
+    },
+    {
+      "case": "pad0-feed1",
+      "cells": 2027476,
+      "metrics": {
+        "minimum_frequency_hz": 916450007.4923713,
+        "minimum_s11_db": -17.136744420341817,
+        "minimum_in_window_interior": true,
+        "s11_at_867mhz_db": -16.265544405764494,
+        "passivity_max_reflected_power": 0.22126691568626422
+      },
+      "energy_converged": true,
+      "threads": 12,
+      "solver_cells": 2076074,
+      "timesteps": 38376,
+      "dt_s": 4.4668e-13,
+      "solver_s": 488.88,
+      "zin_867_ohm": [
+        49.68628287743269,
+        15.504569581534831
+      ],
+      "design_sha256": "88497b3b07f40d062fdcda489c4ba498161da2fce5e54554dfd83f1a033a786e",
+      "response_sha256": "94b23abeac2cba005cd143ddd112259e50f3dc9aa937ada31f913450104e4fb4",
+      "csv_sha256": "13f4052f839f1b949483198e5997582fd7ab6534e8a7eaee4ccdaee136f87c03",
+      "voltage_probe_sha256": "7b259553c5aceadbd200e9d7afd809886f7c646835ccbf0986e52282aa32e91e",
+      "current_probe_sha256": "10cf8dc1a5180885c16ab30dca93df7dae406fae8adc150ffe190b9f8485fefe",
+      "started_utc": "2026-10-08T19:58:47.663374+00:00",
+      "source_commit": "1882fb7743c168f603e2253bbe5dc84395a9f81f"
+    },
+    {
+      "case": "pad0-feed2",
+      "cells": 3275844,
+      "metrics": {
+        "minimum_frequency_hz": 916493651.7962165,
+        "minimum_s11_db": -17.038340682610812,
+        "minimum_in_window_interior": true,
+        "s11_at_867mhz_db": -16.17726337843341,
+        "passivity_max_reflected_power": 0.2212587549861219
+      },
+      "energy_converged": true,
+      "threads": 12,
+      "solver_cells": 3342672,
+      "timesteps": 101325,
+      "dt_s": 1.64452e-13,
+      "solver_s": 1894.37,
+      "zin_867_ohm": [
+        49.70314233803756,
+        15.66990430863751
+      ],
+      "design_sha256": "844e10d1b4249d8f8f43cae5de26e19a3b803b10f9a5feb329fd1abddee11bf3",
+      "response_sha256": "5ed8cc59bdec5793909ce5d2239987eefb7f57bae4c051723722e01df41ef4bb",
+      "csv_sha256": "af0d42a77098ec13f72103331878197e6fcee32d1d4c06428d5866c15799e946",
+      "voltage_probe_sha256": "e5b3b99ac1eae4086f5f31eb294354b0b3d7219dd12c074a350dd135a6ecb6f7",
+      "current_probe_sha256": "38f012e50e78194de6de68effd29b321ca1802b8dfb37b18d8d70362fe490285",
+      "started_utc": "2026-10-08T20:07:00.290778+00:00",
+      "source_commit": "1882fb7743c168f603e2253bbe5dc84395a9f81f"
+    }
+  ],
+  "thread_amendment": "The archived line half-grid run used four threads; exact normalized inputs and a zero-difference four/twelve-thread base control allowed reuse. Other cases used twelve. Timings are not a speed benchmark.",
+  "limits": [
+    "Different source widths are different models, not interchangeable physical results.",
+    "A local refinement test does not establish global mesh convergence.",
+    "No far-field, efficiency or GPU validation in this study."
+  ],
+  "automatic_mesh": [
+    {
+      "densities": [
+        20,
+        30,
+        40
+      ],
+      "comparison": {
+        "completed": 3,
+        "steps": [
+          {
+            "frequency_pct": 0.2504583289209439,
+            "depth_db": 0.21187474546777452,
+            "at_867_db": 0.2941232421274833,
+            "complex_max": 0.011699156874392042,
+            "passed": false
+          },
+          {
+            "frequency_pct": 0.07250821877420321,
+            "depth_db": 0.14693108491066909,
+            "at_867_db": 0.07887784928830044,
+            "complex_max": 0.017667090275217665,
+            "passed": false
+          }
+        ],
+        "two_successive_passes": false
+      },
+      "cases": [
+        {
+          "cells_per_wavelength": 20,
+          "cells": 438900,
+          "execution": "executed",
+          "metrics": {
+            "frequency_hz": 913276527.151849,
+            "depth_db": -17.973571300672027,
+            "at_867_db": -17.16521497707732,
+            "window_interior": true,
+            "passive": true,
+            "max_reflected_power": 0.20940574031037318
+          },
+          "energy_converged": true,
+          "solver_s": 69.35,
+          "timesteps": 12450,
+          "dt_s": 1.14723e-12,
+          "threads": 12,
+          "state": {
+            "status": "results_validated",
+            "history": [
+              {
+                "status": "created",
+                "utc": "2026-10-08T20:38:50.996554+00:00"
+              },
+              {
+                "status": "model_built",
+                "utc": "2026-10-08T20:38:51.066290+00:00"
+              },
+              {
+                "status": "solver_started",
+                "utc": "2026-10-08T20:38:51.066417+00:00"
+              },
+              {
+                "status": "solver_returned",
+                "utc": "2026-10-08T20:40:01.477677+00:00"
+              },
+              {
+                "status": "results_exported",
+                "utc": "2026-10-08T20:40:01.563891+00:00"
+              },
+              {
+                "status": "results_validated",
+                "utc": "2026-10-08T20:40:01.577655+00:00"
+              }
+            ]
+          },
+          "design_sha256": "56182956f4bb5e72f2398a4960a7b7874327247e912544dbd12ac95bc9c29e20",
+          "xml_sha256": "dc9bf93adc6e53df739eef4e17bcd39712266218aa78a086639fd919f4814923",
+          "csv_sha256": "516766d9fb086e1f3b9c4597f79705645426d13953a1a6aa3ed6412ad63da258",
+          "response_sha256": "8837a64de4095897b515ecef7a0cbdadf134e6ccd6b19ab0eaf7cd5dc4ae3805",
+          "voltage_probe_sha256": "a11b90dc3362a6f17aed101c44d0e1ec4475cbc759d102a987f07d1cd7c10ca0",
+          "current_probe_sha256": "04653d5916c17ef1c2cf9b14d5b5f8fc860f7dc47edc0e69a99f5255d8450621"
+        },
+        {
+          "cells_per_wavelength": 30,
+          "cells": 909696,
+          "execution": "executed",
+          "metrics": {
+            "frequency_hz": 915563904.2801808,
+            "depth_db": -17.761696555204253,
+            "at_867_db": -16.871091734949836,
+            "window_interior": true,
+            "passive": true,
+            "max_reflected_power": 0.21719140906013054
+          },
+          "energy_converged": true,
+          "solver_s": 116.82,
+          "timesteps": 14385,
+          "dt_s": 1.15775e-12,
+          "threads": 12,
+          "state": {
+            "status": "results_validated",
+            "history": [
+              {
+                "status": "created",
+                "utc": "2026-10-08T20:40:02.205775+00:00"
+              },
+              {
+                "status": "model_built",
+                "utc": "2026-10-08T20:40:02.275787+00:00"
+              },
+              {
+                "status": "solver_started",
+                "utc": "2026-10-08T20:40:02.275947+00:00"
+              },
+              {
+                "status": "solver_returned",
+                "utc": "2026-10-08T20:42:00.770683+00:00"
+              },
+              {
+                "status": "results_exported",
+                "utc": "2026-10-08T20:42:00.838765+00:00"
+              },
+              {
+                "status": "results_validated",
+                "utc": "2026-10-08T20:42:00.849689+00:00"
+              }
+            ]
+          },
+          "design_sha256": "53aa18330770ad44033b09ca5259d173e4eb0a216d7e0f54eabe2a5d656b7a3a",
+          "xml_sha256": "4434d927598b18391bb548bf406da49ff62c616733f758bd38f44cb51d746a97",
+          "csv_sha256": "00be0f84c53a0c1059722a5aaf98a37232fe3cd220ba33ccc6d93a58fa026770",
+          "response_sha256": "136ea0efbb17aad49df3114c1ebb25f3e918a86475311b7519a060e1b90aeddf",
+          "voltage_probe_sha256": "3d08e0684aa1becb3f404a4c1d0c36648d792fbb7247f1156d1e3e4ec0b7a178",
+          "current_probe_sha256": "622fe2b0cdc221bd1b7a44094472bc9fb5c63f2e2d63c26b2600f1da44ef577b"
+        },
+        {
+          "cells_per_wavelength": 40,
+          "cells": 1425600,
+          "execution": "executed",
+          "metrics": {
+            "frequency_hz": 916227763.358914,
+            "depth_db": -17.908627640114922,
+            "at_867_db": -16.949969584238136,
+            "window_interior": true,
+            "passive": true,
+            "max_reflected_power": 0.22111904398129562
+          },
+          "energy_converged": true,
+          "solver_s": 147.87,
+          "timesteps": 15048,
+          "dt_s": 1.20127e-12,
+          "threads": 12,
+          "state": {
+            "status": "results_validated",
+            "history": [
+              {
+                "status": "created",
+                "utc": "2026-10-08T20:42:01.346776+00:00"
+              },
+              {
+                "status": "model_built",
+                "utc": "2026-10-08T20:42:01.416737+00:00"
+              },
+              {
+                "status": "solver_started",
+                "utc": "2026-10-08T20:42:01.416882+00:00"
+              },
+              {
+                "status": "solver_returned",
+                "utc": "2026-10-08T20:44:31.219936+00:00"
+              },
+              {
+                "status": "results_exported",
+                "utc": "2026-10-08T20:44:31.290947+00:00"
+              },
+              {
+                "status": "results_validated",
+                "utc": "2026-10-08T20:44:31.301625+00:00"
+              }
+            ]
+          },
+          "design_sha256": "399792cd15ac74d1e86d76f81e859148f721ff539a73495bd8d027e5f1ef3b8b",
+          "xml_sha256": "410db9477a30ce42a5b62219cad846ce0360310dcf824b0851fa86307a0f7f12",
+          "csv_sha256": "bf94bf646709b82bd2bd9fc6b17a405eff46ff2485e0e8854fa9927e08ef91e6",
+          "response_sha256": "c6048a9876bc7b6169ac7eb0c7e6f2286ea44e3f3f340b700cfc882cb37c8fa8",
+          "voltage_probe_sha256": "c4efecbe00069659797a747ea772c26ba3d4854a3bd4f696466c490470a911dd",
+          "current_probe_sha256": "31c5199917e4335f366ea720c0fa64f53b89e3d3b12bf69e777e58b57adecc32"
+        }
+      ],
+      "air_density": null,
+      "generator_sha256": "f65afbc3c0955abac39188a4f6a69d2d635f8a312e173d0003a684266790602a"
+    },
+    {
+      "densities": [
+        40,
+        50,
+        60
+      ],
+      "comparison": {
+        "completed": 3,
+        "steps": [
+          {
+            "frequency_pct": 0.08400102982639712,
+            "depth_db": 0.37027851141619905,
+            "at_867_db": 0.3716940837184026,
+            "complex_max": 0.00709550693662465,
+            "passed": true
+          },
+          {
+            "frequency_pct": 0.0061692667351898045,
+            "depth_db": 0.28435718607644134,
+            "at_867_db": 0.23235054212393536,
+            "complex_max": 0.014482750708496578,
+            "passed": false
+          }
+        ],
+        "two_successive_passes": false
+      },
+      "cases": [
+        {
+          "cells_per_wavelength": 40,
+          "cells": 1425600,
+          "execution": "executed",
+          "metrics": {
+            "frequency_hz": 916227763.358914,
+            "depth_db": -17.908627640114922,
+            "at_867_db": -16.949969584238136,
+            "window_interior": true,
+            "passive": true,
+            "max_reflected_power": 0.22111904398129562
+          },
+          "energy_converged": true,
+          "solver_s": 156.41,
+          "timesteps": 15048,
+          "dt_s": 1.20127e-12,
+          "threads": 12,
+          "state": {
+            "status": "results_validated",
+            "history": [
+              {
+                "status": "created",
+                "utc": "2026-10-08T20:46:00.023708+00:00"
+              },
+              {
+                "status": "model_built",
+                "utc": "2026-10-08T20:46:00.086059+00:00"
+              },
+              {
+                "status": "solver_started",
+                "utc": "2026-10-08T20:46:00.086181+00:00"
+              },
+              {
+                "status": "solver_returned",
+                "utc": "2026-10-08T20:48:38.622303+00:00"
+              },
+              {
+                "status": "results_exported",
+                "utc": "2026-10-08T20:48:38.684226+00:00"
+              },
+              {
+                "status": "results_validated",
+                "utc": "2026-10-08T20:48:38.694432+00:00"
+              }
+            ]
+          },
+          "design_sha256": "399792cd15ac74d1e86d76f81e859148f721ff539a73495bd8d027e5f1ef3b8b",
+          "xml_sha256": "410db9477a30ce42a5b62219cad846ce0360310dcf824b0851fa86307a0f7f12",
+          "csv_sha256": "bf94bf646709b82bd2bd9fc6b17a405eff46ff2485e0e8854fa9927e08ef91e6",
+          "response_sha256": "c6048a9876bc7b6169ac7eb0c7e6f2286ea44e3f3f340b700cfc882cb37c8fa8",
+          "voltage_probe_sha256": "f823b6d7472e255e3e314fe5fdee57b4784399cae322e11b50cebec30f482fb8",
+          "current_probe_sha256": "b4cb4533822f14c02163e67647907b5ec4fa559e2d73e389856aff62c8a0aae9"
+        },
+        {
+          "cells_per_wavelength": 50,
+          "cells": 2139000,
+          "execution": "executed",
+          "metrics": {
+            "frequency_hz": 916997404.115691,
+            "depth_db": -17.538349128698723,
+            "at_867_db": -16.578275500519734,
+            "window_interior": true,
+            "passive": true,
+            "max_reflected_power": 0.22453882845918147
+          },
+          "energy_converged": true,
+          "solver_s": 216.78,
+          "timesteps": 15873,
+          "dt_s": 1.16866e-12,
+          "threads": 12,
+          "state": {
+            "status": "results_validated",
+            "history": [
+              {
+                "status": "created",
+                "utc": "2026-10-08T20:48:39.198684+00:00"
+              },
+              {
+                "status": "model_built",
+                "utc": "2026-10-08T20:48:39.258585+00:00"
+              },
+              {
+                "status": "solver_started",
+                "utc": "2026-10-08T20:48:39.258707+00:00"
+              },
+              {
+                "status": "solver_returned",
+                "utc": "2026-10-08T20:52:18.623718+00:00"
+              },
+              {
+                "status": "results_exported",
+                "utc": "2026-10-08T20:52:18.687932+00:00"
+              },
+              {
+                "status": "results_validated",
+                "utc": "2026-10-08T20:52:18.699413+00:00"
+              }
+            ]
+          },
+          "design_sha256": "5b3c7d66113663cdcabc6a838160d819c1d2d09028a5c8c4dbc46688e0a49c84",
+          "xml_sha256": "22fd4e5aed03bc757d43889f97babc6de8b9f5673812b86862a28feb9e25cd6d",
+          "csv_sha256": "d33abd7a9b55b19101fa00507d218584b66f247f5c55388194814df80b14c46d",
+          "response_sha256": "61fdfa2826e66c500ae0155b278986ef6d1eb3e8f633deacce72cee860bbdfe7",
+          "voltage_probe_sha256": "03de1b244c8dd778bcf645c774d62c50c523081c6f5a24e6c2dc68d99b0fd626",
+          "current_probe_sha256": "a1210292b18d0d5e992e7215fc21573e1f80483b23ed03bbfdb7137340ac655f"
+        },
+        {
+          "cells_per_wavelength": 60,
+          "cells": 3283280,
+          "execution": "executed",
+          "metrics": {
+            "frequency_hz": 916940832.0998763,
+            "depth_db": -17.822706314775164,
+            "at_867_db": -16.81062604264367,
+            "window_interior": true,
+            "passive": true,
+            "max_reflected_power": 0.22737141395181576
+          },
+          "energy_converged": true,
+          "solver_s": 304.55,
+          "timesteps": 16800,
+          "dt_s": 1.13176e-12,
+          "threads": 12,
+          "state": {
+            "status": "results_validated",
+            "history": [
+              {
+                "status": "created",
+                "utc": "2026-10-08T20:52:19.225832+00:00"
+              },
+              {
+                "status": "model_built",
+                "utc": "2026-10-08T20:52:19.287601+00:00"
+              },
+              {
+                "status": "solver_started",
+                "utc": "2026-10-08T20:52:19.287747+00:00"
+              },
+              {
+                "status": "solver_returned",
+                "utc": "2026-10-08T20:57:27.294182+00:00"
+              },
+              {
+                "status": "results_exported",
+                "utc": "2026-10-08T20:57:27.364469+00:00"
+              },
+              {
+                "status": "results_validated",
+                "utc": "2026-10-08T20:57:27.375044+00:00"
+              }
+            ]
+          },
+          "design_sha256": "4f2030d61b66284e4aa12d3722be8b625931da38f6cec3de5115b7d995e04c45",
+          "xml_sha256": "0bf7115ab23a8d2f7f8f66c33f3f9f82c30560b12fba07414afe81546ee56286",
+          "csv_sha256": "f5404c229da1f1ea87e7e1195e0de1752bca483d042a4536006b0c42a5410ff1",
+          "response_sha256": "3e20ffcc895a97aa158b2d34fb2d696d597fe42c6f90613422dbe0cfaafca0aa",
+          "voltage_probe_sha256": "ac3381f879b8a285b8d7aa572ea47cf710e75954adfacc53019bb9a905fe8b67",
+          "current_probe_sha256": "ef856c6671d6f4e8f7874478556da89419653c34927ad0db00ff757b7c28c5d2"
+        }
+      ],
+      "air_density": null,
+      "generator_sha256": "c7f8f2fa8ac3ca2f162f3c6700f554ecc32c47109ce4fcfd37b74f8e68e1c91f"
+    },
+    {
+      "densities": [
+        40,
+        60,
+        80
+      ],
+      "comparison": {
+        "completed": 3,
+        "steps": [
+          {
+            "frequency_pct": 0.04929122716887946,
+            "depth_db": 0.006768098259964717,
+            "at_867_db": 0.06631719899698041,
+            "complex_max": 0.010137785664441625,
+            "passed": false
+          },
+          {
+            "frequency_pct": 0.00415228470507234,
+            "depth_db": 0.2489368891447974,
+            "at_867_db": 0.20701154193492144,
+            "complex_max": 0.004480784927930395,
+            "passed": true
+          }
+        ],
+        "two_successive_passes": false
+      },
+      "cases": [
+        {
+          "cells_per_wavelength": 40,
+          "cells": 795564,
+          "execution": "executed",
+          "metrics": {
+            "frequency_hz": 914792898.247003,
+            "depth_db": -18.208855356364868,
+            "at_867_db": -17.240136026243682,
+            "window_interior": true,
+            "passive": true,
+            "max_reflected_power": 0.21843755516770177
+          },
+          "energy_converged": true,
+          "solver_s": 76.93,
+          "timesteps": 11542,
+          "dt_s": 1.19466e-12,
+          "threads": 12,
+          "state": {
+            "status": "results_validated",
+            "history": [
+              {
+                "status": "created",
+                "utc": "2026-10-08T20:59:49.317524+00:00"
+              },
+              {
+                "status": "model_built",
+                "utc": "2026-10-08T20:59:49.383354+00:00"
+              },
+              {
+                "status": "solver_started",
+                "utc": "2026-10-08T20:59:49.383494+00:00"
+              },
+              {
+                "status": "solver_returned",
+                "utc": "2026-10-08T21:01:07.709862+00:00"
+              },
+              {
+                "status": "results_exported",
+                "utc": "2026-10-08T21:01:07.769271+00:00"
+              },
+              {
+                "status": "results_validated",
+                "utc": "2026-10-08T21:01:07.779371+00:00"
+              }
+            ]
+          },
+          "design_sha256": "610c04e65cf18c4e75a219a7c3279e3517a6ca650c429b0956e1b88f2f5c3804",
+          "xml_sha256": "b64de9c9fcc0b5688c24784e734a359fa1e96a5773eba3249d0534a0e12cd042",
+          "csv_sha256": "bbd492f2c939ac58e50d755f65611e6542ab9e08d178815cd50a5f9c3e71ff6b",
+          "response_sha256": "090d055686144413b2c0bb7d15309c0730d2483e136885e14bb91ba883ea2aac",
+          "voltage_probe_sha256": "2e1cb141a2feea9a627e6147b03d53fd4f07f2ac0f60215a63817e6e2858f64b",
+          "current_probe_sha256": "b9ac179b989f31325c21aa191111692f10721e99327eaee314e6970d7fd41c64"
+        },
+        {
+          "cells_per_wavelength": 60,
+          "cells": 1197378,
+          "execution": "executed",
+          "metrics": {
+            "frequency_hz": 915243810.8926027,
+            "depth_db": -18.202087258104903,
+            "at_867_db": -17.173818827246702,
+            "window_interior": true,
+            "passive": true,
+            "max_reflected_power": 0.2240135384616404
+          },
+          "energy_converged": true,
+          "solver_s": 102.77,
+          "timesteps": 11340,
+          "dt_s": 1.13203e-12,
+          "threads": 12,
+          "state": {
+            "status": "results_validated",
+            "history": [
+              {
+                "status": "created",
+                "utc": "2026-10-08T21:01:08.290206+00:00"
+              },
+              {
+                "status": "model_built",
+                "utc": "2026-10-08T21:01:08.348317+00:00"
+              },
+              {
+                "status": "solver_started",
+                "utc": "2026-10-08T21:01:08.348458+00:00"
+              },
+              {
+                "status": "solver_returned",
+                "utc": "2026-10-08T21:02:52.918998+00:00"
+              },
+              {
+                "status": "results_exported",
+                "utc": "2026-10-08T21:02:52.985962+00:00"
+              },
+              {
+                "status": "results_validated",
+                "utc": "2026-10-08T21:02:52.996095+00:00"
+              }
+            ]
+          },
+          "design_sha256": "f3d6f22f364b7ce7ca975f650404847f6e4cfb19befe70b9e27d324fd3533d51",
+          "xml_sha256": "84dff99d4a6dc097285453bc9f992acb6fc7f23fc72afef69543ba6792589798",
+          "csv_sha256": "ef1f1690d453b72dfde26c21fdb0a8b28cce569f740e87a410c00281952560f9",
+          "response_sha256": "b019cf6418b8f1451a764d106ca44f101d191ccbd531da8e569a4bb6ba573c6d",
+          "voltage_probe_sha256": "0e4dcada6a0783525045798bda9849ddd4e8dc758716d0fc579ef53579ebdfe3",
+          "current_probe_sha256": "6a004770d150f09748457e3b7c167fa4196504d18ccb417938cac0d44d4c83b6"
+        },
+        {
+          "cells_per_wavelength": 80,
+          "cells": 1993200,
+          "execution": "executed",
+          "metrics": {
+            "frequency_hz": 915205807.3638289,
+            "depth_db": -17.953150368960106,
+            "at_867_db": -16.96680728531178,
+            "window_interior": true,
+            "passive": true,
+            "max_reflected_power": 0.22283601628798588
+          },
+          "energy_converged": true,
+          "solver_s": 281.04,
+          "timesteps": 21138,
+          "dt_s": 5.85091e-13,
+          "threads": 12,
+          "state": {
+            "status": "results_validated",
+            "history": [
+              {
+                "status": "created",
+                "utc": "2026-10-08T21:02:53.507705+00:00"
+              },
+              {
+                "status": "model_built",
+                "utc": "2026-10-08T21:02:53.577580+00:00"
+              },
+              {
+                "status": "solver_started",
+                "utc": "2026-10-08T21:02:53.577721+00:00"
+              },
+              {
+                "status": "solver_returned",
+                "utc": "2026-10-08T21:07:37.199911+00:00"
+              },
+              {
+                "status": "results_exported",
+                "utc": "2026-10-08T21:07:37.264050+00:00"
+              },
+              {
+                "status": "results_validated",
+                "utc": "2026-10-08T21:07:37.275525+00:00"
+              }
+            ]
+          },
+          "design_sha256": "9e5f8fd45baf7d5b58f52325fec34861845665068115543df9f3373a041997bf",
+          "xml_sha256": "2071e7f1152af9d38bc0ff4824cff5071228c1a0f96ce127eafdd0606f42b7c2",
+          "csv_sha256": "a480c92322c5ea5a2974742f8246b44151a1b739b8ceaa3db813dd1ad4e7ad44",
+          "response_sha256": "11cb219d7ca3fb15255414c8f92e01ff6195e0f0a696e71006b95ecb3cd05f1e",
+          "voltage_probe_sha256": "2f660ff97b9f8b45e0fa2d9dcd80bf75062863e807b06eba1fb7a4ea00f6bddb",
+          "current_probe_sha256": "a5a61c5a6ab64f003df72d1b0132a534112cf99269766fd3e9a8dc96af9e4290"
+        }
+      ],
+      "air_density": 20,
+      "generator_sha256": "8169051dd868d76dc92f9750c831af1a3af27d47b8af1e9b8ef6613a67c2dc7b"
+    },
+    {
+      "densities": [
+        60,
+        80,
+        100
+      ],
+      "comparison": {
+        "completed": 3,
+        "steps": [
+          {
+            "frequency_pct": 0.00415228470507234,
+            "depth_db": 0.2489368891447974,
+            "at_867_db": 0.20701154193492144,
+            "complex_max": 0.004480784927930395,
+            "passed": true
+          },
+          {
+            "frequency_pct": 0.08114577138476076,
+            "depth_db": 0.2815163098046405,
+            "at_867_db": 0.1789183591973611,
+            "complex_max": 0.015214101105658268,
+            "passed": false
+          }
+        ],
+        "two_successive_passes": false
+      },
+      "cases": [
+        {
+          "cells_per_wavelength": 60,
+          "cells": 1197378,
+          "execution": "reused exact input from the preceding fixed-air sequence",
+          "metrics": {
+            "frequency_hz": 915243810.8926027,
+            "depth_db": -18.202087258104903,
+            "at_867_db": -17.173818827246702,
+            "window_interior": true,
+            "passive": true,
+            "max_reflected_power": 0.2240135384616404
+          },
+          "energy_converged": true,
+          "solver_s": 102.77,
+          "timesteps": 11340,
+          "dt_s": 1.13203e-12,
+          "threads": 12,
+          "state": {
+            "status": "results_validated",
+            "history": [
+              {
+                "status": "created",
+                "utc": "2026-10-08T21:01:08.290206+00:00"
+              },
+              {
+                "status": "model_built",
+                "utc": "2026-10-08T21:01:08.348317+00:00"
+              },
+              {
+                "status": "solver_started",
+                "utc": "2026-10-08T21:01:08.348458+00:00"
+              },
+              {
+                "status": "solver_returned",
+                "utc": "2026-10-08T21:02:52.918998+00:00"
+              },
+              {
+                "status": "results_exported",
+                "utc": "2026-10-08T21:02:52.985962+00:00"
+              },
+              {
+                "status": "results_validated",
+                "utc": "2026-10-08T21:02:52.996095+00:00"
+              }
+            ]
+          },
+          "design_sha256": "f3d6f22f364b7ce7ca975f650404847f6e4cfb19befe70b9e27d324fd3533d51",
+          "xml_sha256": "84dff99d4a6dc097285453bc9f992acb6fc7f23fc72afef69543ba6792589798",
+          "csv_sha256": "ef1f1690d453b72dfde26c21fdb0a8b28cce569f740e87a410c00281952560f9",
+          "response_sha256": "b019cf6418b8f1451a764d106ca44f101d191ccbd531da8e569a4bb6ba573c6d",
+          "voltage_probe_sha256": "0e4dcada6a0783525045798bda9849ddd4e8dc758716d0fc579ef53579ebdfe3",
+          "current_probe_sha256": "6a004770d150f09748457e3b7c167fa4196504d18ccb417938cac0d44d4c83b6"
+        },
+        {
+          "cells_per_wavelength": 80,
+          "cells": 1993200,
+          "execution": "reused exact input from the preceding fixed-air sequence",
+          "metrics": {
+            "frequency_hz": 915205807.3638289,
+            "depth_db": -17.953150368960106,
+            "at_867_db": -16.96680728531178,
+            "window_interior": true,
+            "passive": true,
+            "max_reflected_power": 0.22283601628798588
+          },
+          "energy_converged": true,
+          "solver_s": 281.04,
+          "timesteps": 21138,
+          "dt_s": 5.85091e-13,
+          "threads": 12,
+          "state": {
+            "status": "results_validated",
+            "history": [
+              {
+                "status": "created",
+                "utc": "2026-10-08T21:02:53.507705+00:00"
+              },
+              {
+                "status": "model_built",
+                "utc": "2026-10-08T21:02:53.577580+00:00"
+              },
+              {
+                "status": "solver_started",
+                "utc": "2026-10-08T21:02:53.577721+00:00"
+              },
+              {
+                "status": "solver_returned",
+                "utc": "2026-10-08T21:07:37.199911+00:00"
+              },
+              {
+                "status": "results_exported",
+                "utc": "2026-10-08T21:07:37.264050+00:00"
+              },
+              {
+                "status": "results_validated",
+                "utc": "2026-10-08T21:07:37.275525+00:00"
+              }
+            ]
+          },
+          "design_sha256": "9e5f8fd45baf7d5b58f52325fec34861845665068115543df9f3373a041997bf",
+          "xml_sha256": "2071e7f1152af9d38bc0ff4824cff5071228c1a0f96ce127eafdd0606f42b7c2",
+          "csv_sha256": "a480c92322c5ea5a2974742f8246b44151a1b739b8ceaa3db813dd1ad4e7ad44",
+          "response_sha256": "11cb219d7ca3fb15255414c8f92e01ff6195e0f0a696e71006b95ecb3cd05f1e",
+          "voltage_probe_sha256": "2f660ff97b9f8b45e0fa2d9dcd80bf75062863e807b06eba1fb7a4ea00f6bddb",
+          "current_probe_sha256": "a5a61c5a6ab64f003df72d1b0132a534112cf99269766fd3e9a8dc96af9e4290"
+        },
+        {
+          "cells_per_wavelength": 100,
+          "cells": 2721600,
+          "execution": "executed",
+          "metrics": {
+            "frequency_hz": 915948458.1759723,
+            "depth_db": -18.234666678764746,
+            "at_867_db": -17.14572564450914,
+            "window_interior": true,
+            "passive": true,
+            "max_reflected_power": 0.2274106816040695
+          },
+          "energy_converged": true,
+          "solver_s": 348.9,
+          "timesteps": 20675,
+          "dt_s": 5.75633e-13,
+          "threads": 12,
+          "state": {
+            "status": "results_validated",
+            "history": [
+              {
+                "status": "created",
+                "utc": "2026-10-08T21:07:42.394143+00:00"
+              },
+              {
+                "status": "model_built",
+                "utc": "2026-10-08T21:07:42.471687+00:00"
+              },
+              {
+                "status": "solver_started",
+                "utc": "2026-10-08T21:07:42.471823+00:00"
+              },
+              {
+                "status": "solver_returned",
+                "utc": "2026-10-08T21:13:34.650781+00:00"
+              },
+              {
+                "status": "results_exported",
+                "utc": "2026-10-08T21:13:34.723169+00:00"
+              },
+              {
+                "status": "results_validated",
+                "utc": "2026-10-08T21:13:34.734445+00:00"
+              }
+            ]
+          },
+          "design_sha256": "6a19deda598bca08f9cb04a3005535f130d7268499d8a47ca0154b9e4ecbea4d",
+          "xml_sha256": "dd9b464696f0b0123bdcca41ff29ca905864e64a22848d8903adecd3d3ac009a",
+          "csv_sha256": "01cbf389f166162aab42e505d22ac88277c8beec1c12ac7e0e1a65c8ef446375",
+          "response_sha256": "d9dd90d6a73a5cd185d614023ff612ab344acdccba94ab268ff9b29fec078ff2",
+          "voltage_probe_sha256": "23871a383ba7e57cfe98637adfe0dd583314a165501476670caf9f26bb1325ab",
+          "current_probe_sha256": "53d492d5374548b8b5bef67a7e9eb2029c2e4c6876f586ed2115b3ff3616b8c3"
+        }
+      ],
+      "air_density": 20,
+      "generator_sha256": "8169051dd868d76dc92f9750c831af1a3af27d47b8af1e9b8ef6613a67c2dc7b"
+    }
+  ],
+  "automatic_refinement_amendment": "20/30/40 failed the unchanged complex-S11 limit. A prospective 40/50/60 sequence used the same model and acceptance criteria; the repeated 40-density response is retained as a repeatability control. 50/60 also failed complex tolerance. A prospective 40/60/80 feature-density test held air density at 20 to separate feature resolution from the outer air grid, retaining the same physical geometry, source and acceptance criteria. 40/60 narrowly failed; 60/80 passed. A declared 100-density continuation reused the exact completed 60/80 inputs and retained all failed steps.",
+  "density_40_repeat_max_complex_delta": 0.0,
+  "source_repository_blob_sha256": "cb12474ac4ba7ed42ba59bf80f06660d13f23db0f40869be67d2883d252b328e",
+  "source_json_sha256": "19d1ec11a9b0fd273e3cdbb6521b72d8e7c4322b2b9d2641724673d9ba33337a",
+  "source_newline_note": "The original run source used CRLF; the repository stores LF. JSON contents are identical. source_sha256 records the actual original run bytes.",
+  "pre_fix_reproduction_commit": "be2e5d1",
+  "finite_footprint_fix": {
+    "densities": [
+      20,
+      30,
+      40
+    ],
+    "air_density": 20,
+    "comparison": {
+      "completed": 3,
+      "steps": [
+        {
+          "frequency_pct": 0.02686595327480168,
+          "depth_db": 0.09122332102133512,
+          "at_867_db": 0.10271966139817934,
+          "complex_max": 0.005671057909559876,
+          "passed": true
+        },
+        {
+          "frequency_pct": 0.0077085017373246245,
+          "depth_db": 0.6892156930051634,
+          "at_867_db": 0.5684661325032963,
+          "complex_max": 0.02866035780784181,
+          "passed": false
+        }
+      ],
+      "two_successive_passes": false
+    },
+    "cases": [
+      {
+        "cells_per_wavelength": 20,
+        "cells": 541500,
+        "metrics": {
+          "frequency_hz": 916025341.5773649,
+          "depth_db": -17.23196458308648,
+          "at_867_db": -16.392086268848857,
+          "window_interior": true,
+          "passive": true,
+          "max_reflected_power": 0.21129875646538307
+        },
+        "energy_converged": true,
+        "solver_s": 70.16,
+        "design_sha256": "7729e17f71517d39d607395a5106a39db66e28404470ce5a20107cda14ab6225",
+        "xml_sha256": "c3dfcffc096dcc57ba2e777c97431158cd086b9787044e886c3b5879061f6a23",
+        "response_sha256": "23543c0edef8ec9d99b5549dba93cc057d3b5b5bbf5311919db91947801f9752",
+        "csv_sha256": "71fe3b06ca5956c59f9ec9e78a12f7691db954bd8410ceea6daead6930fb4528",
+        "state": {
+          "status": "results_validated",
+          "history": [
+            {
+              "status": "created",
+              "utc": "2026-10-08T21:18:01.259644+00:00"
+            },
+            {
+              "status": "model_built",
+              "utc": "2026-10-08T21:18:01.322161+00:00"
+            },
+            {
+              "status": "solver_started",
+              "utc": "2026-10-08T21:18:01.322299+00:00"
+            },
+            {
+              "status": "solver_returned",
+              "utc": "2026-10-08T21:19:12.594545+00:00"
+            },
+            {
+              "status": "results_exported",
+              "utc": "2026-10-08T21:19:12.660917+00:00"
+            },
+            {
+              "status": "results_validated",
+              "utc": "2026-10-08T21:19:12.671407+00:00"
+            }
+          ]
+        }
+      },
+      {
+        "cells_per_wavelength": 30,
+        "cells": 749840,
+        "metrics": {
+          "frequency_hz": 915779242.6371114,
+          "depth_db": -17.140741262065145,
+          "at_867_db": -16.289366607450678,
+          "window_interior": true,
+          "passive": true,
+          "max_reflected_power": 0.21558146826610228
+        },
+        "energy_converged": true,
+        "solver_s": 80.54,
+        "design_sha256": "a799443c26a2438be48d9bb429fb356125b889cf6ed5a21118ee8959f5ba1502",
+        "xml_sha256": "e39581e1651f40328184d5caeb696f61515e1b7bd38e14253bc413a00c2ee002",
+        "response_sha256": "da6bd77eaa3cd018af47455c698803e13af70f4a9797ff01648bb0bab63c5b70",
+        "csv_sha256": "bf74d7a22d8610b09ef073a672e21c17f7ddcff9ba03402b8f5506229d6a3d6b",
+        "state": {
+          "status": "results_validated",
+          "history": [
+            {
+              "status": "created",
+              "utc": "2026-10-08T21:19:13.173656+00:00"
+            },
+            {
+              "status": "model_built",
+              "utc": "2026-10-08T21:19:13.232619+00:00"
+            },
+            {
+              "status": "solver_started",
+              "utc": "2026-10-08T21:19:13.232771+00:00"
+            },
+            {
+              "status": "solver_returned",
+              "utc": "2026-10-08T21:20:35.120284+00:00"
+            },
+            {
+              "status": "results_exported",
+              "utc": "2026-10-08T21:20:35.187750+00:00"
+            },
+            {
+              "status": "results_validated",
+              "utc": "2026-10-08T21:20:35.198036+00:00"
+            }
+          ]
+        }
+      },
+      {
+        "cells_per_wavelength": 40,
+        "cells": 892980,
+        "metrics": {
+          "frequency_hz": 915849835.4959401,
+          "depth_db": -17.82995695507031,
+          "at_867_db": -16.857832739953974,
+          "window_interior": true,
+          "passive": true,
+          "max_reflected_power": 0.22000735279838415
+        },
+        "energy_converged": true,
+        "solver_s": 93.6,
+        "design_sha256": "610c04e65cf18c4e75a219a7c3279e3517a6ca650c429b0956e1b88f2f5c3804",
+        "xml_sha256": "fde2af99b49f4e6bbf4cbd113ad40878ef28fd10fdddc50f8c5dfa989cb66053",
+        "response_sha256": "0238b33d807bffbfa5cb6755cbd6537fbb71373c8c2cbc4946ebf8dbc95aecf3",
+        "csv_sha256": "f62cde15d5b3b65afd2eb0d4bb5be758799d7fe1d77550eafdd0837c6c2fc4b2",
+        "state": {
+          "status": "results_validated",
+          "history": [
+            {
+              "status": "created",
+              "utc": "2026-10-08T21:20:35.705743+00:00"
+            },
+            {
+              "status": "model_built",
+              "utc": "2026-10-08T21:20:35.767753+00:00"
+            },
+            {
+              "status": "solver_started",
+              "utc": "2026-10-08T21:20:35.767876+00:00"
+            },
+            {
+              "status": "solver_returned",
+              "utc": "2026-10-08T21:22:10.892231+00:00"
+            },
+            {
+              "status": "results_exported",
+              "utc": "2026-10-08T21:22:10.952200+00:00"
+            },
+            {
+              "status": "results_validated",
+              "utc": "2026-10-08T21:22:10.963554+00:00"
+            }
+          ]
+        }
+      }
+    ],
+    "implementation_sha256": {
+      "design.py": "48c87bb74cdb0928288d9898e3aede6f5a0a92d95427c2e42a3139077498571c",
+      "automesh.py": "845b12d1b3961ae1c4802100d1fd274ae23dfd51dbb89bc1a9b720f30916a6f0",
+      "mesh_refinement.py": "48aa345cf06059998abaf27645d184097413b6b4460dd538d1e7162b61d4b01f"
+    },
+    "reason": "Previously a 4 mm-wide source had one 4 mm transverse cell yet resolved=true. The feed now checks and refines its entire transverse footprint against the gap/width scale."
+  },
+  "new_gallery_native_control": {
+    "summary": {
+      "status": "results_validated",
+      "equal_input_pass": true,
+      "complex_max_abs": 0.0,
+      "complex_rmse": 0.0,
+      "ports": 1,
+      "matrix_assembly_max_abs": 6.206335383118183e-17,
+      "bundle_rounding_max_abs": 6.862659300118799e-06,
+      "energy_all": true,
+      "passivity_max_singular_power": 0.1945090346405573,
+      "passive": true,
+      "mesh_convergence": "not tested by equal-input control"
+    },
+    "source_sha256": "03ea948fbd874ea1475fcadd4669e9910651688d60b4d8067a27a4de51d83cad",
+    "settings": {
+      "params": {
+        "f0": 0.867,
+        "gnd": 300.0,
+        "h": 80.0,
+        "wb": 60.0,
+        "wt": 30.0,
+        "sweep": 25.0,
+        "g": 2.0,
+        "wf": 4.0,
+        "feed_fraction": 0.0,
+        "ht": 12.0
+      },
+      "ports": [
+        {
+          "number": 1,
+          "type": "lumped",
+          "R": 50.0,
+          "direction": "z",
+          "start": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "stop": [
+            0.0,
+            0.0,
+            2.0
+          ],
+          "excite": true
+        }
+      ],
+      "source": {
+        "type": "gaussian-derivative",
+        "f_min": 700000000.0,
+        "f_max": 1050000000.0,
+        "expression": "-2.33164398*((t-2.958182e-09)/5.916364e-10)*exp(-((t-2.958182e-09)/5.916364e-10)^2)",
+        "dc_free": true
+      },
+      "boundaries": [
+        "MUR",
+        "MUR",
+        "MUR",
+        "MUR",
+        "MUR",
+        "MUR"
+      ],
+      "source_sha256": "03ea948fbd874ea1475fcadd4669e9910651688d60b4d8067a27a4de51d83cad",
+      "threads": 12,
+      "end_criteria_db": -60,
+      "max_timesteps": 300000,
+      "nf2ff": false
+    },
+    "native_exe_sha256": "f6a3aa9025cdbc9268b9ef0bd923d4e56ee2a5a92085aa75ebd687a812525709",
+    "native_dll_sha256": "848f1f0bbb09706d8d25bac6c1c623d3c04f56eceac63c5114a3b58ed258bb77",
+    "generator_sha256": "fd3e5132bc5f87eed59dbbb79b87bbc84dad849dccab60ff4b546c587fcea3cc",
+    "xml_adapter_sha256": "e7ce4665a1a3c2b6d66b59b70f86c5a87283cd2cd7649225a06a451fd30c1b19",
+    "physical_xml_sha256": "bd26825fcdfc37f4349d3f4abd31f156e272af0e6335f21199e3fd03a83630f9",
+    "raw_probes_equal": {
+      "port_ut_1": true,
+      "port_it_1": true
+    },
+    "limits": "Equal-input CPU execution control. Same upstream DLL; not independent physical validation."
+  }
+}

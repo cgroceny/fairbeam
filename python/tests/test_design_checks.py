@@ -238,7 +238,7 @@ class Checks(unittest.TestCase):
         pec(d)
         bundle = build_preview(None, {}, design=d)["bundle"]
         # ... unless it sits on a PEC domain face (an infinite ground)
-        self.assertEqual(lint(d, None, bundle), [])
+        self.assertEqual(keys(lint(d, None, bundle)), ["info|mesh-fine-feature|mesh"])
 
     def test_tube_wall_and_hidden_part(self):
         def edit(d):
@@ -351,11 +351,11 @@ class MeshChecks(unittest.TestCase):
     def test_cell_limits_and_mesh_warnings(self):
         d = blank_design("t", "T")
         b = build_preview(None, {}, design=d)["bundle"]
-        self.assertEqual(lint(d, None, b), [])
+        self.assertEqual(keys(lint(d, None, b)), ["info|mesh-fine-feature|mesh"])
         big = copy.deepcopy(b)
         big["mesh"]["total_cells"] = 25_000_000
         big["mesh"]["auto"] = {**big["mesh"].get("auto", {}), "warnings": ["x: port 1 at 0 and metal edge at 1e-05 are only 1e-05 apart"]}
-        self.assertEqual(keys(lint(d, None, big)), ["warning|mesh-cells|mesh", "warning|mesh-warning|mesh"])
+        self.assertEqual(keys(lint(d, None, big)), ["info|mesh-fine-feature|mesh", "warning|mesh-cells|mesh", "warning|mesh-warning|mesh"])
         big["mesh"]["total_cells"] = 50_000_000
         self.assertEqual(errors(lint(d, None, big))[0]["code"], "mesh-cells")
         old = os.environ.get("FAIRBEAM_MAX_CELLS")
@@ -410,7 +410,7 @@ class MeshChecks(unittest.TestCase):
         b = build_preview(None, {}, design=d)["bundle"]
         # the mesher keeps lines on both faces, 1 µm apart, and says so; the sliver is resolved (and
         # its 1 µm cells make the timestep so small that the pulse cannot fit into the limit)
-        self.assertEqual(keys(lint(d, None, b)), ["error|run-too-long|simulation.max_timesteps", "info|smallest-cell|mesh",
+        self.assertEqual(keys(lint(d, None, b)), ["error|run-too-long|simulation.max_timesteps", "info|mesh-fine-feature|mesh", "info|smallest-cell|mesh",
                                                   "warning|mesh-warning|mesh", "warning|mesh-warning|mesh"])
         self.assertIn("only 0.001 apart", next(x for x in lint(d, None, b) if x["code"] == "mesh-warning")["message"])
         # a mesh with no line inside the sliver's z extent: FDTD would drop it
@@ -710,7 +710,7 @@ class ThinMetal(unittest.TestCase):
 
     def test_checks_with_sheets(self):
         c = lint(pcb_design(), None, self.sheet)
-        self.assertEqual(keys(c), ["info|thin-metal|parts[1].primitives[0]", "info|thin-metal|parts[2].primitives[0]"])
+        self.assertEqual(keys(c), ["info|mesh-fine-feature|mesh", "info|thin-metal|parts[1].primitives[0]", "info|thin-metal|parts[2].primitives[0]"])
         self.assertIn("35 µm metal is modeled as a sheet at z = 1.524 (on its z-min face)", c[1]["message"])
         self.assertEqual(errors(c), [])
 
@@ -922,7 +922,7 @@ class OneClickFixes(unittest.TestCase):
                     self.assertEqual(keys(lint(d)), ["warning|port-floating|ports[0].start", "warning|port-floating|ports[0].stop"])
                     # with the preview bundle too, as the server runs it for the designer
                     bundle = build_preview(None, {}, design=d)["bundle"]
-                    refinement = ["info|mesh-fine-feature|mesh"] if angle != 90 else []
+                    refinement = ["info|mesh-fine-feature|mesh"]
                     self.assertEqual(keys(lint(d, None, bundle)),
                                      refinement + ["warning|port-floating|ports[0].start", "warning|port-floating|ports[0].stop"])
         # the arms mirrored (not kept) leave the port just as well
@@ -1124,7 +1124,7 @@ class ChecksApi(unittest.TestCase):
     def test_preview_validate_and_save(self):
         st, body = self.request("POST", "/api/designs", {"id": "chk", "name": "Checks"})
         self.assertEqual(st, 201, body)
-        self.assertEqual(body["validation"]["checks"], [])
+        self.assertEqual(keys(body["validation"]["checks"]), ["info|mesh-fine-feature|mesh"])
         d, h = body["design"], body["hash"]
 
         # preview: checks with the bundle, including the server-only ones

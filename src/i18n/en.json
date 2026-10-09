@@ -254,7 +254,7 @@
   "checks.explain.linpoly-length": "A zero extrusion length leaves a flat polygon instead of a solid. Enter a nonzero length if you intended a volume, or keep it flat intentionally.",
   "checks.explain.mesh-cells": "A large mesh needs more memory and time and may exceed the server's cell limit. Reduce cells per wavelength, lower the maximum frequency, or simplify fine details while checking accuracy.",
   "checks.explain.mesh-feature": "This feature falls between mesh lines and may disappear from the simulated geometry. Thicken it, model thin metal as a sheet, or refine the mesh until it is resolved.",
-  "checks.explain.mesh-fine-feature": "A narrow gap, notch or strip has fewer cells across its width than the automatic mesh requires. Turn on \"Refine fine features\" in Simulation settings or simplify the feature, then rebuild the preview and inspect its resolution and total cell count before running.",
+  "checks.explain.mesh-fine-feature": "A narrow gap, notch, strip or discrete feed has cells that are too coarse. A line feed is checked both along its gap and beside it. Turn on \"Refine fine features\" in Simulation settings or simplify the feature, then rebuild the preview and inspect its resolution and total cell count before running. Meeting this geometric target does not establish electromagnetic convergence.",
   "checks.explain.mesh-fine-refinement": "The preview compares the automatic mesh before and after local refinement of narrow features. Fine cells extend across each Cartesian mesh plane, so review the total cell count and the remaining resolution warnings before running.",
   "checks.explain.mesh-fine-limit": "Some fine-feature refinement would exceed the configured cell limit. The preview drops the largest estimated refinements first and keeps the ones that fit. Simplify the fine geometry or reduce the simulation domain, then rebuild the preview and resolve its feature warnings before running.",
   "checks.explain.mesh-lines": "Manual mesh lines need at least two finite, strictly increasing coordinates on each axis. Correct the line list or switch to automatic mesh.",
@@ -744,6 +744,7 @@
   "conv.verdict.notComparable": "not comparable: no resonance in the band (the |S11| minimum is at the band edge). Widen the band, or change the design so it resonates inside it.",
   "conv.verdict.notComparableLast": "Not converged: the step between {from} and {to} cells/λ cannot be compared, a run has no resonance in the band (its minimum is at the band edge).",
   "conv.verdict.notConverged": "not converged: refine further or check the model",
+  "conv.verdict.notVerified": "not converged: energy decay or local mesh resolution is unverified",
   "conv.verdict.notConvergedWhy": "Not converged: {why}. Add a finer density, or check the model.",
   "conv.verdict.runFailed": "stopped: the run at {density} cells/λ failed",
   "conv.verdict.running": "running: {n} of up to {max} runs",
@@ -4614,5 +4615,6 @@
   "results.figure.export": "Export current figure",
   "results.figure.button": "Figure",
   "results.figure.hint": "Save the current plot as a light figure with a title (PNG or SVG).",
-  "results.figure.failed": "Could not export the figure: {error}"
+  "results.figure.failed": "Could not export the figure: {error}",
+  "export.finitePortWarning": "Port {port}: this export reduces the finite-width source to a line along its axis. The source width is not preserved; review the feed model before simulating."
 }

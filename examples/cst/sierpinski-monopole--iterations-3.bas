@@ -2068,7 +2068,7 @@ Sub Main ()
     sCommand = sCommand + "Solid.Rename ""fairbeam:gasket_1"", ""gasket""" + vbLf
     AddToHistory "rename block: fairbeam:gasket_1 to: fairbeam:gasket", sCommand
 
-    ' ports (openEMS lumped port -> CST discrete S-parameter port, P1 = start, P2 = stop)
+    ' ports (openEMS lumped port -> CST discrete S-parameter port; P1/P2 lie on the port axis)
     sCommand = ""
     sCommand = sCommand + "With DiscretePort" + vbLf
     sCommand = sCommand + "     .Reset" + vbLf

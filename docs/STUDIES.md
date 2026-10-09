@@ -108,6 +108,9 @@ The study file has `kind: "mesh-convergence"`; `axes` lists the densities that r
 - `converged_at` is the coarser density of the first converged step; the finer run confirms it.
 - `reason` is `converged`, `exhausted` (no density left: "not converged: refine further or check
   the model"), `failed`, `cancelled` or `running` (then `next` is the density queued next).
+- Reopening a previously successful Design report without verified energy and local-mesh checks returns
+  `reason: "unverified"`, clears the recommended density and retains the old claim in
+  `recorded_verdict`. The saved file is preserved; rerun the study to establish current evidence.
 - `ok.dmax` is `null` when a run has no far field; Dmax then does not count.
 - The resonance is refined between frequency samples (a parabola through the S11 minimum and its
   neighbors in dB), so the grid spacing does not dominate a 0.5 % tolerance.
@@ -125,9 +128,15 @@ Between successive refinements it reports:
 - the change of the **first resonance**: the center (S11 minimum) of the first band below −10 dB,
   or the global S11 minimum if nothing is matched
 - the change of **Dmax** at the far-field frequency closest to that resonance
+- the change of **S11 depth** at that resonance, including studies started with `--param`
 
-A step counts as converged when |Δf| < `--tol-f` (default 0.5 %) and |ΔDmax| < `--tol-d` (default
-0.1 dB). The study is converged when its **last** step is. Output:
+A step counts as converged when |Δf| < `--tol-f` (default 0.5 %), |ΔS11| < `--tol-s11`
+(default 1 dB) and available |ΔDmax| < `--tol-d` (default 0.1 dB). Both runs must meet the
+energy-decay criterion and have no reported unresolved fine features. Missing S11 depth does not
+pass. The study is converged when its **last** step is. These checks do not replace two further
+local refinements when the port cells stay fixed as the global mesh parameter changes.
+
+Historical output below predates the S11-depth guard; the current table also shows `dS11 dB`:
 
 ```
   mesh_div      cells   f_res GHz      df %  Dmax dBi    dD dB  ok
@@ -140,6 +149,162 @@ converged (last step |df| < 0.5 %, |dD| < 0.1 dB): YES
 
 Refine the parameter that controls the mesh on the metal (`mesh_div`, `cell`, ...), not only the
 global cell size. See [VALIDATION.md](VALIDATION.md#5-recommended-settings).
+
+### Separate feed refinement from the global mesh
+
+The patch example retains its original ideal line feed by default (`feed_width=0`). For a
+**different, explicitly finite source model**, set `feed_width` in mm and refine `feed_cells`
+across that fixed square footprint. This is a distributed lumped source, not a coaxial connector.
+Also refine `sub_cells` through the substrate and raise `max_timesteps` when a smaller cell
+reduces the stable timestep. Keep the physical footprint, material, boundaries and source fixed.
+
+From `python/`, the following optional experiment runs four sequential CPU solves, with a
+1 × 1 mm footprint and 2, 4, 8, 16 cells across the footprint and substrate:
+
+```bash
+python -m tests.patch_feed_study --out /path/to/new-patch-study
+```
+
+It saves raw complex S11, dense samples around the patch minimum, mesh lines, solver logs and
+two successive refinement checks. Passing a frequency-only test does not establish stable match
+depth. Converting an ideal line-feed example to a Design freezes `feed_width`: changing a line
+to an area requires new mesh anchors. Convert with a positive width override if the Design must
+retain an editable finite footprint.
+
+The Windows CPU control on October 8, 2026 reached −60 dB energy decay at all four levels:
+
+| Feed / substrate cells | S11 minimum (GHz) | Depth (dB) | Depth change (dB) | Maximum complex S11 change |
+| --- | --- | --- | --- | --- |
+| 2 | 2.44700 | −35.630 | — | — |
+| 4 | 2.45395 | −33.521 | 2.109 | 0.11322 |
+| 8 | 2.45580 | −32.885 | 0.636 | 0.03220 |
+| 16 | 2.45645 | −32.564 | 0.321 | 0.01084 |
+
+The last frequency change was 0.0265%, but the full-band complex change still exceeded the
+predeclared 0.01 limit. Frequency and minimum depth met their individual limits on the last two
+steps; two successive passes of **all three criteria** were not obtained. The finite
+source is an explicit modeling option, not a validated replacement for the line feed or a
+correction for other antennas. Compact inputs, criteria and measurements are retained in
+`python/tests/fixtures/patch_finite_feed_20261008.json`; the command above recreates the raw data.
+
+### Blade: declare the source before judging the mesh
+
+The Blade is a retired synthetic gallery geometry with no measured antenna or specified connector.
+It is no longer shipped in the gallery or desktop examples. Its source is retained only at
+`python/tests/fixtures/blade_retired.design.json` for regression tests and explicit research replay.
+An ideal line port and a finite-width planar gap source are different models. Their different
+S11 curves do not by themselves establish physical accuracy. Keep the width fixed while
+refining its mesh; do not tune geometry to hide source sensitivity.
+
+The October 8, 2026 control retained the same PEC blade, ground, band, 50 Ω reference and
+full-precision interior mesh. Extending the PML box by 8 and then 16 edge-width cells per side
+passed both successive checks (maximum complex S11 changes 0.000504 and 0.000389).
+The separate feed study inserted local midpoints twice, within x/y ±4 mm and z −2 to 6 mm.
+Only the second source model spreads the port across the existing 4 mm tab; it has no coaxial pin.
+
+| Source | Refinement level | S11 minimum (GHz) | Minimum (dB) | S11 at 867 MHz (dB) | Maximum successive complex change |
+| --- | --- | --- | --- | --- | --- |
+| Ideal line | 0 | 0.919597 | -14.768 | -14.036 | — |
+| Ideal line | 1 | 0.919972 | -13.982 | -13.308 | 0.030059 |
+| Ideal line | 2 | 0.920203 | -13.315 | -12.689 | 0.028877 |
+| 4 mm planar | 0 | 0.916355 | -17.316 | -16.427 | — |
+| 4 mm planar | 1 | 0.916450 | -17.137 | -16.266 | 0.004309 |
+| 4 mm planar | 2 | 0.916494 | -17.038 | -16.177 | 0.002567 |
+
+The line source did not pass. The fixed-width source **passed** both successive local checks.
+Each step requires a frequency change below 0.5%, minimum-depth and 867 MHz changes below
+0.5 dB, and maximum complex S11 difference below 0.01 over 0.7–1.05 GHz. All cases must also
+reach −60 dB energy decay, pass the reflected-power limit of 1.001 and retain a minimum inside
+the fixed 0.85–1.00 GHz tracking window. Frequency agreement alone is not sufficient.
+
+From `python/`, run one study at a time, using a fresh output directory:
+
+```bash
+python -m tests.blade_feed_study --phase boundary --width 0 --threads 12 --out /path/to/new-blade-boundary
+python -m tests.blade_feed_study --phase feed --width 0 --threads 12 --out /path/to/new-blade-line
+python -m tests.blade_feed_study --phase feed --width 4 --threads 12 --out /path/to/new-blade-planar
+python -m tests.blade_feed_study --phase auto --width 4 --threads 12 --out /path/to/new-blade-auto
+python -m tests.blade_feed_study --phase auto --width 4 --densities 40 50 60 --threads 12 --out /path/to/new-blade-fine
+python -m tests.blade_feed_study --phase auto --width 4 --densities 40 60 80 --air-density 20 --threads 12 --out /path/to/new-blade-fixed-air
+python -m tests.blade_feed_study --phase auto --width 4 --densities 60 80 100 --air-density 20 --threads 12 --out /path/to/new-blade-final
+python -m tests.blade_feed_study --phase auto --width 4 --densities 20 30 40 --air-density 20 --threads 12 --out /path/to/new-blade-footprint
+```
+
+The frozen source is `python/tests/fixtures/blade_feed_base.design.json`. `--phase auto` instead
+builds automatic meshes at 20, 30 and 40 cells per wavelength; this checks that configuration,
+including its derived outer box, rather than only the frozen grid. Each case is capped at eight
+million cells and 5,400 seconds. Results include exact input, raw voltage/current probes,
+complex S11 CSV, mesh, energy and acceptance records. Finishing the command is not a
+convergence certificate: inspect `comparison.json` for two successive passes.
+
+`--densities` selects a prospective three-level sequence. `--air-density 20` keeps the outer
+air density fixed while refining the feature mesh. Without it, both densities change together.
+The 20/30/40 and 40/50/60 sequences did not establish two successive passes: their largest
+complex changes were 0.01767 and 0.01448. With air density fixed at 20, the 40→60 change was
+0.01014 (still above the unchanged 0.01 limit), while 60→80 passed at 0.00448. All failed
+steps are retained in the evidence; stable minimum frequency alone does not override them.
+The next 80→100 change also failed (0.01521). Historical automatic controls are reproducible
+from commit `be2e5d1`, before the footprint fix; use the final command on the current code.
+
+The investigation found a separate mesh-reporting defect: a 4 mm-wide source occupied one
+4 mm transverse cell, yet its feed was marked resolved because only the flat transverse axis
+was checked. The corrected check and refinement cover the whole source footprint. It passed
+the geometric regression checks; the subsequent 20→30→40 test passed its first step (0.00567)
+but failed its second (0.02866 complex S11, 0.689 dB minimum-depth change). This is **not**
+a full S11-convergence solution. Blade was therefore removed from the shipped examples.
+The retained research fixture keeps its ideal-line default and experimental `feed_fraction` option.
+
+Measured summaries, input/output hashes and limits are in
+`python/tests/fixtures/blade_source_study_20261008.json`. Runs used openEMS 0.37.0rc3,
+CSXCAD 0.7.0rc3, a Ryzen 9 7900X and 32 GiB RAM on Windows 11, with 12 CPU threads.
+The reused line-source half-grid case used four threads: normalized inputs matched exactly,
+and a four/twelve-thread baseline response check had zero difference. Times are not a speed
+benchmark. These local tests do not establish physical accuracy, far-field convergence or GPU parity.
+
+### Compare with an independently installed openEMS CLI
+
+```bash
+python -m tests.native_gallery_study --native /path/to/openEMS --out /path/to/new-control --timeout 15000
+```
+
+This optional, long-running control covers the Python examples, saved example Designs and the
+iteration-zero Sierpinski variant. Use `--models dipole,wideband_dipole_867` for a subset. It runs every port
+sequentially in both routes, on four CPU threads, with identical full-precision CSXCAD geometry,
+mesh and −60 dB energy criterion, with a 300,000-step cap overriding the model's limit.
+It retains raw waves, full S matrices, solver input, model
+source, hashes and logs. Native input uses 17-digit primitive coordinates to avoid displacing
+flat sources relative to their mesh when serializing CSXCAD XML.
+
+The full gallery can take hours. The command raises the per-native-solve timeout from 900 to
+15,000 seconds for the larger examples; a pair gets twice that budget plus 50 seconds.
+`--threads N` changes the CPU thread count in both routes without changing the physical input.
+Use a new output directory for each attempt; interrupted outputs are retained.
+
+The checks distinguish equal-input agreement, energy completion, matrix passivity, S-matrix
+assembly and result-storage rounding. They omit far fields and do not establish mesh convergence
+or physical accuracy. An independently extracted executable can still contain the same upstream
+solver binary as the app; compare its library hash and record that fact.
+
+The October 8, 2026 Windows CPU control completed all 21 gallery cases/variants in 64 sequential
+solver runs, using four or 12 threads, matched within each pair. All raw complex S matrices
+agreed exactly; the largest independent assembly difference was 5.58e-16 and the largest bundle
+rounding difference was 7.05e-6. All cases met the energy and matrix-passivity limits. The 136
+voltage/current probe pairs also matched at their saved precision. The app and official archive
+contained the same openEMS DLL: this establishes agreement between two execution paths, not
+agreement with an independent solver or physical measurements. CPU inputs, binary/source hashes,
+criteria and per-case results are in `python/tests/fixtures/native_gallery_control_20261008.json`.
+GPU execution and far fields were not tested by this control.
+The full-gallery fixture records the earlier Blade line-source model; its source hashes are
+part of the evidence. It must not be presented as a replay of a later edited source.
+The historical 21-case total includes the now-retired Blade. Current default gallery runs exclude
+it; `--models blade_867` explicitly selects the retained research fixture when needed.
+
+The refreshed Blade source was checked again on October 9 with 12 CPU threads in both routes,
+the same −60 dB/300,000-step control and no far-field calculation. Raw complex S11 and saved
+voltage/current records agreed exactly; the maximum bundle-rounding difference was 6.87e-6.
+Energy and passivity checks passed. The source hash and measurements are under
+`new_gallery_native_control` in `python/tests/fixtures/blade_source_study_20261008.json`.
+This is execution parity with the same upstream DLL, not evidence of Blade mesh convergence.
 
 ## Study file: `fairbeam.study/1`
 

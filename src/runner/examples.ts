@@ -10,7 +10,7 @@ export const BUNDLED_EXAMPLE_FILES = [
   "sierpinski-monopole--iterations-0.json", "sierpinski-monopole--iterations-3.json",
   "wilkinson-divider.json",
   // 867 MHz UAV designs (examples/designs/)
-  "blade-867.json", "wideband-dipole-867.json", "meander-dipole-867.json", "sleeve-dipole-867.json",
+  "wideband-dipole-867.json", "meander-dipole-867.json", "sleeve-dipole-867.json",
   "collinear-867.json", "yagi-867.json",
 ] as const;
 const bundledExamples = new Set<string>(BUNDLED_EXAMPLE_FILES);

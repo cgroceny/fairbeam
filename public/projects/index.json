@@ -1,25 +1,6 @@
 {
   "projects": [
     {
-      "file": "blade-867.json",
-      "name": "UAV blade antenna (867 MHz)",
-      "model": "blade-867",
-      "created": "2026-10-07T12:42:38+0300",
-      "simulated": true,
-      "bands": [
-        0.908
-      ],
-      "cells": 269040,
-      "band_ranges": [
-        {
-          "lo": 0.7573,
-          "hi": 1.05,
-          "edge_lo": false,
-          "edge_hi": true
-        }
-      ]
-    },
-    {
       "file": "branchline-coupler.json",
       "name": "Branch-line coupler (2.4 GHz)",
       "model": "branchline-coupler",

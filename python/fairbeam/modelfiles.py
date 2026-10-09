@@ -31,7 +31,7 @@ BUNDLED_MODELS = frozenset({
     "patch_array_4x1", "pyramidal_horn", "sierpinski_monopole", "wilkinson_divider",
 })
 BUNDLED_DESIGNS = frozenset({
-    "blade_867", "collinear_867", "meander_dipole_867", "sleeve_dipole_867", "wideband_dipole_867", "yagi_867",
+    "collinear_867", "meander_dipole_867", "sleeve_dipole_867", "wideband_dipole_867", "yagi_867",
 })
 # Every id a bundled example uses (src/lib/designId.ts BUNDLED_EXAMPLE_IDS mirrors it). A model and a
 # design share one key space, so no new file of either kind may take one, whether or not the
@@ -44,7 +44,7 @@ BUNDLED_PROJECT_FILES = frozenset({
     "patch-array-2x1.json", "patch-array-4x1.json", "pyramidal-horn.json",
     "sierpinski-monopole--iterations-0.json", "sierpinski-monopole--iterations-3.json",
     "wilkinson-divider.json",
-    "blade-867.json", "collinear-867.json", "meander-dipole-867.json", "sleeve-dipole-867.json",
+    "collinear-867.json", "meander-dipole-867.json", "sleeve-dipole-867.json",
     "wideband-dipole-867.json", "yagi-867.json",
 })
 MAX_SOURCE = 256 * 1024

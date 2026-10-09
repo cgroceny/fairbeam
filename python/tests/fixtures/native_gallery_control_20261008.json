@@ -1,0 +1,1853 @@
+{
+  "schema": "fairbeam.native-control/1",
+  "date": "2026-10-08",
+  "review_branch_commit": "ca0114e015a389d90a911f80d65667b5ae348bfb",
+  "reproduction_tools_sha256": {
+    "python/tests/native_gallery_study.py": "fd3e5132bc5f87eed59dbbb79b87bbc84dad849dccab60ff4b546c587fcea3cc",
+    "python/tests/native_gallery_xml.py": "5288855115f3876541fce4d2435055c8984169662bf0674400c62cd4e67450dd"
+  },
+  "reproduction_scope": "The current review branch regenerated all 32 physical XML inputs. Only random FillColor and EdgeColor elements were excluded from this reproduction comparison. Recorded source hashes below describe the actual runs; current source hashes describe the reproduction.",
+  "scope": "Default gallery geometry, materials, ports and mesh, plus Sierpinski iteration 0. CPU port responses; solver stop overridden to -60 dB and 300000 steps. NF2FF disabled.",
+  "meaning": "Equal-input replay through the official native CLI, not independent physical validation or mesh convergence.",
+  "time_domain_probe_scope": "Numeric samples at saved precision, including matching monotonic time axes; comment timestamps ignored.",
+  "archive": "https://github.com/thliebig/openEMS-Project/releases/tag/v0.37.0-rc3",
+  "archive_sha256": "948d04e67a0b7ee4b149176e746b23e609a8ac46c525ba75d6c11071f354339a",
+  "installed_and_native_dll_sha256": "848f1f0bbb09706d8d25bac6c1c623d3c04f56eceac63c5114a3b58ed258bb77",
+  "native_exe_sha256": "f6a3aa9025cdbc9268b9ef0bd923d4e56ee2a5a92085aa75ebd687a812525709",
+  "host": {
+    "cpu": "AMD Ryzen 9 7900X",
+    "cores": 12,
+    "logical_cpus": 24,
+    "ram_gib": 32,
+    "os": "Windows 11 Pro"
+  },
+  "acceptance": {
+    "complex_max_abs": 1e-05,
+    "matrix_assembly_max_abs": 1e-12,
+    "bundle_rounding_max_abs": 8.1e-06,
+    "singular_power_max": 1.01,
+    "energy_end_db": -60,
+    "frequency_samples": 801,
+    "max_timesteps": 300000
+  },
+  "sequential_solver_runs": 64,
+  "cases": [
+    {
+      "id": "branchline_coupler",
+      "threads": 4,
+      "status": "results_validated",
+      "equal_input_pass": true,
+      "complex_max_abs": 0.0,
+      "complex_rmse": 0.0,
+      "ports": 4,
+      "matrix_assembly_max_abs": 3.7238012298709097e-16,
+      "bundle_rounding_max_abs": 7.014311492165268e-06,
+      "energy_all": true,
+      "passivity_max_singular_power": 0.9979376809298686,
+      "passive": true,
+      "mesh_convergence": "not tested by equal-input control",
+      "time_domain_probes": {
+        "probe_pairs": 32,
+        "max_abs_voltage_v": 0.0,
+        "max_abs_current_a": 0.0,
+        "max_abs_mode_purity": 0.0
+      },
+      "source": "python/models/branchline_coupler.py",
+      "source_sha256": "98c1850ea605cb58cf2d759f9cf463e6ed20e6a3935b3c0c5a0e0394938eacb5",
+      "params": {
+        "f0": 2.4,
+        "scale": 1.035,
+        "feed_len": 10.0,
+        "sub_h": 0.813,
+        "eps_r": 3.38,
+        "tan_d": 0.0027,
+        "cpw": 20,
+        "f_min": 1.0,
+        "f_max": 4.0
+      },
+      "cells": 81090,
+      "boundaries": [
+        "MUR",
+        "MUR",
+        "MUR",
+        "MUR",
+        "MUR",
+        "MUR"
+      ],
+      "excitation": {
+        "type": "gaussian-derivative",
+        "f_min": 1000000000.0,
+        "f_max": 4000000000.0,
+        "expression": "-2.33164398*((t-7.765228e-10)/1.553046e-10)*exp(-((t-7.765228e-10)/1.553046e-10)^2)",
+        "dc_free": true
+      },
+      "xml_sha256_by_excited_port": {
+        "1": "9109d61116e2e190043723fe9caf92ecb1faf3e4bd68731ef23fae51a0c2663d",
+        "2": "b5e593ad1e431e3976b3ca7b8d960a8b408a348f651922cfe8107fa97c1d6b61",
+        "3": "7a3158fca4d0349687383fdc48968ef7d683cb87cc8679e3139ef34667358002",
+        "4": "e1bf391067e82520a44409330bc25ed9b04e79dbbb186e2e2521908a4ebd89e5"
+      },
+      "current_source_sha256": "98c1850ea605cb58cf2d759f9cf463e6ed20e6a3935b3c0c5a0e0394938eacb5",
+      "reproduced_physical_xml_matches": true,
+      "physical_xml_sha256_by_excited_port": {
+        "1": "6dcba9bcb927a4f46f0c4757db12782e63f5a8ab206378ea2359145d6ae5077a",
+        "2": "1cd09da9291879016ef42b59388605486f9b432b19fdf5aa5e88db1e39e1630c",
+        "3": "1cc2d64977882b3949adaf6ef3cdf956a081b0d388c78dcdac81c6b23ec3fff2",
+        "4": "34b0cb47d288ee2dcd00765340b0aac841a93ecfa6e4c16780cfb9dbc8191914"
+      },
+      "port_runs": [
+        {
+          "excited_port": 1,
+          "timesteps_fairbeam_native": [
+            8883,
+            8883
+          ],
+          "energy_fairbeam_native": [
+            true,
+            true
+          ],
+          "waves_sha256": {
+            "fairbeam": "a7be3ad4875b0801846ebe4974c18cac240a228dfbe29f0ca79fa50365f0eecb",
+            "native": "a7be3ad4875b0801846ebe4974c18cac240a228dfbe29f0ca79fa50365f0eecb"
+          }
+        },
+        {
+          "excited_port": 2,
+          "timesteps_fairbeam_native": [
+            8883,
+            8883
+          ],
+          "energy_fairbeam_native": [
+            true,
+            true
+          ],
+          "waves_sha256": {
+            "fairbeam": "d652ab62c4f2ecb307130de82baf06072f10a4e00932ef93ce5945ab5cc1bdab",
+            "native": "d652ab62c4f2ecb307130de82baf06072f10a4e00932ef93ce5945ab5cc1bdab"
+          }
+        },
+        {
+          "excited_port": 3,
+          "timesteps_fairbeam_native": [
+            8883,
+            8883
+          ],
+          "energy_fairbeam_native": [
+            true,
+            true
+          ],
+          "waves_sha256": {
+            "fairbeam": "e5916ae87988cae0a6935d9c05d4ab91bd1d25ea282c27620f0e24e7e46b36f6",
+            "native": "e5916ae87988cae0a6935d9c05d4ab91bd1d25ea282c27620f0e24e7e46b36f6"
+          }
+        },
+        {
+          "excited_port": 4,
+          "timesteps_fairbeam_native": [
+            8883,
+            8883
+          ],
+          "energy_fairbeam_native": [
+            true,
+            true
+          ],
+          "waves_sha256": {
+            "fairbeam": "279dd8e4ae2cf83c989b76a1fe264ebb086a4955dfcf6d31fc23b04ab911ce6c",
+            "native": "279dd8e4ae2cf83c989b76a1fe264ebb086a4955dfcf6d31fc23b04ab911ce6c"
+          }
+        }
+      ]
+    },
+    {
+      "id": "dipole",
+      "threads": 4,
+      "status": "results_validated",
+      "equal_input_pass": true,
+      "complex_max_abs": 0.0,
+      "complex_rmse": 0.0,
+      "ports": 1,
+      "matrix_assembly_max_abs": 1.5700924586837752e-16,
+      "bundle_rounding_max_abs": 6.867925413542689e-06,
+      "energy_all": true,
+      "passivity_max_singular_power": 0.9458554661905373,
+      "passive": true,
+      "mesh_convergence": "not tested by equal-input control",
+      "time_domain_probes": {
+        "probe_pairs": 2,
+        "max_abs_voltage_v": 0.0,
+        "max_abs_current_a": 0.0,
+        "max_abs_mode_purity": 0.0
+      },
+      "source": "python/models/dipole.py",
+      "source_sha256": "97bc53d357bdab62a918f0fe1571217529587d85501f901d6d355e1299f94b24",
+      "params": {
+        "length": 58.0,
+        "width": 1.0,
+        "gap": 1.0,
+        "feed_r": 73.0,
+        "mesh_div": 20,
+        "edge_div": 4,
+        "arm_cells": 0,
+        "thirds": 1,
+        "y_refine": 1,
+        "pad": 0.0,
+        "boundary": "PML_8",
+        "mesh": "manual",
+        "f_min": 1.5,
+        "f_max": 3.5
+      },
+      "cells": 185024,
+      "boundaries": [
+        "PML_8",
+        "PML_8",
+        "PML_8",
+        "PML_8",
+        "PML_8",
+        "PML_8"
+      ],
+      "excitation": {
+        "type": "gaussian-derivative",
+        "f_min": 1500000000.0,
+        "f_max": 3500000000.0,
+        "expression": "-2.33164398*((t-8.874547e-10)/1.774909e-10)*exp(-((t-8.874547e-10)/1.774909e-10)^2)",
+        "dc_free": true
+      },
+      "xml_sha256_by_excited_port": {
+        "1": "734688b4edc305aec5c0a985e4fe77324e92c5454ea02f25039a71bd6792077c"
+      },
+      "current_source_sha256": "97bc53d357bdab62a918f0fe1571217529587d85501f901d6d355e1299f94b24",
+      "reproduced_physical_xml_matches": true,
+      "physical_xml_sha256_by_excited_port": {
+        "1": "4993b9a1db7b9d9ebd0c84468d7884ed51edbb605e52e3f619e59d2efbeeae4d"
+      },
+      "port_runs": [
+        {
+          "excited_port": 1,
+          "timesteps_fairbeam_native": [
+            8505,
+            8505
+          ],
+          "energy_fairbeam_native": [
+            true,
+            true
+          ],
+          "waves_sha256": {
+            "fairbeam": "3f296d74d7d4e690a3b76c9f3e360b136df1d6c53b2b6fac7acfaabf39e18acb",
+            "native": "3f296d74d7d4e690a3b76c9f3e360b136df1d6c53b2b6fac7acfaabf39e18acb"
+          }
+        }
+      ]
+    },
+    {
+      "id": "helix_axial",
+      "threads": 4,
+      "status": "results_validated",
+      "equal_input_pass": true,
+      "complex_max_abs": 0.0,
+      "complex_rmse": 0.0,
+      "ports": 1,
+      "matrix_assembly_max_abs": 6.206335383118183e-17,
+      "bundle_rounding_max_abs": 6.989583823570127e-06,
+      "energy_all": true,
+      "passivity_max_singular_power": 0.2249072205496813,
+      "passive": true,
+      "mesh_convergence": "not tested by equal-input control",
+      "time_domain_probes": {
+        "probe_pairs": 2,
+        "max_abs_voltage_v": 0.0,
+        "max_abs_current_a": 0.0,
+        "max_abs_mode_purity": 0.0
+      },
+      "source": "python/models/helix_axial.py",
+      "source_sha256": "baf9ddf9a1a7ac288ad9e42594500f33360231b5bc50ba602a0f6d41127dcb73",
+      "params": {
+        "f0": 2.4,
+        "c_lambda": 1.0,
+        "pitch_deg": 13.0,
+        "turns": 7.0,
+        "feed_gap": 3.0,
+        "gnd": 100.0,
+        "port_r": 120.0,
+        "pts_turn": 36,
+        "cpw": 30,
+        "f_min": 1.8,
+        "f_max": 3.0
+      },
+      "cells": 1360800,
+      "boundaries": [
+        "PML_8",
+        "PML_8",
+        "PML_8",
+        "PML_8",
+        "PML_8",
+        "PML_8"
+      ],
+      "excitation": {
+        "type": "gaussian-derivative",
+        "f_min": 1800000000.0,
+        "f_max": 3000000000.0,
+        "expression": "-2.33164398*((t-1.035364e-09)/2.070728e-10)*exp(-((t-1.035364e-09)/2.070728e-10)^2)",
+        "dc_free": true
+      },
+      "xml_sha256_by_excited_port": {
+        "1": "9edb59bd490ea7fbf4bd809e91d0dec8674bf7fd1d6ac15ba02c9551be4cb874"
+      },
+      "current_source_sha256": "baf9ddf9a1a7ac288ad9e42594500f33360231b5bc50ba602a0f6d41127dcb73",
+      "reproduced_physical_xml_matches": true,
+      "physical_xml_sha256_by_excited_port": {
+        "1": "570bfeb990a96a3d254d1b8d19829f059fba3e766a2047b1893b93091285bc1b"
+      },
+      "port_runs": [
+        {
+          "excited_port": 1,
+          "timesteps_fairbeam_native": [
+            17215,
+            17215
+          ],
+          "energy_fairbeam_native": [
+            true,
+            true
+          ],
+          "waves_sha256": {
+            "fairbeam": "9c000ac881a00c0f20b81b5b1a3106a7a6d4ae82c0570c352036c68cb9557d3d",
+            "native": "9c000ac881a00c0f20b81b5b1a3106a7a6d4ae82c0570c352036c68cb9557d3d"
+          }
+        }
+      ]
+    },
+    {
+      "id": "inset_patch",
+      "threads": 4,
+      "status": "results_validated",
+      "equal_input_pass": true,
+      "complex_max_abs": 0.0,
+      "complex_rmse": 0.0,
+      "ports": 1,
+      "matrix_assembly_max_abs": 1.5700924586837752e-16,
+      "bundle_rounding_max_abs": 6.864236594165166e-06,
+      "energy_all": true,
+      "passivity_max_singular_power": 0.8670376344941961,
+      "passive": true,
+      "mesh_convergence": "not tested by equal-input control",
+      "time_domain_probes": {
+        "probe_pairs": 2,
+        "max_abs_voltage_v": 0.0,
+        "max_abs_current_a": 0.0,
+        "max_abs_mode_purity": 0.0
+      },
+      "source": "python/models/inset_patch.py",
+      "source_sha256": "6647980dc285a4d76089d8e94be3f4cc1f43182ab8159a46404f4132824f55e6",
+      "params": {
+        "patch_l": 29.4,
+        "patch_w": 38.0,
+        "inset": 9.0,
+        "gap": 1.0,
+        "feed_w": 3.08,
+        "feed_len": 14.0,
+        "margin": 12.0,
+        "sub_h": 1.6,
+        "eps_r": 4.4,
+        "tan_d": 0.02,
+        "slot_cells": 1,
+        "sub_cells": 3,
+        "mesh_div": 20,
+        "f_min": 2.0,
+        "f_max": 3.0
+      },
+      "cells": 164604,
+      "boundaries": [
+        "PML_8",
+        "PML_8",
+        "PML_8",
+        "PML_8",
+        "PML_8",
+        "PML_8"
+      ],
+      "excitation": {
+        "type": "gaussian-derivative",
+        "f_min": 2000000000.0,
+        "f_max": 3000000000.0,
+        "expression": "-2.33164398*((t-1.035364e-09)/2.070728e-10)*exp(-((t-1.035364e-09)/2.070728e-10)^2)",
+        "dc_free": true
+      },
+      "xml_sha256_by_excited_port": {
+        "1": "85734922645be9469d2d2b1bb38c2f3082fc82a0df1c5ee9cfc664d194d4c87e"
+      },
+      "current_source_sha256": "6647980dc285a4d76089d8e94be3f4cc1f43182ab8159a46404f4132824f55e6",
+      "reproduced_physical_xml_matches": true,
+      "physical_xml_sha256_by_excited_port": {
+        "1": "aba4f96f5c3cf13e045a545f881c9c1cef8a2678adedccf502e782b1c1d395ec"
+      },
+      "port_runs": [
+        {
+          "excited_port": 1,
+          "timesteps_fairbeam_native": [
+            6966,
+            6966
+          ],
+          "energy_fairbeam_native": [
+            true,
+            true
+          ],
+          "waves_sha256": {
+            "fairbeam": "e0f6d8f424fa0a61fd196a4cda42002a24b63cfc0c7b3bf3fe6b313d6dc882e2",
+            "native": "e0f6d8f424fa0a61fd196a4cda42002a24b63cfc0c7b3bf3fe6b313d6dc882e2"
+          }
+        }
+      ]
+    },
+    {
+      "id": "lowpass_stepped",
+      "threads": 4,
+      "status": "results_validated",
+      "equal_input_pass": true,
+      "complex_max_abs": 0.0,
+      "complex_rmse": 0.0,
+      "ports": 2,
+      "matrix_assembly_max_abs": 3.342213888644167e-16,
+      "bundle_rounding_max_abs": 6.965151776073156e-06,
+      "energy_all": true,
+      "passivity_max_singular_power": 0.9999421486017597,
+      "passive": true,
+      "mesh_convergence": "not tested by equal-input control",
+      "time_domain_probes": {
+        "probe_pairs": 8,
+        "max_abs_voltage_v": 0.0,
+        "max_abs_current_a": 0.0,
+        "max_abs_mode_purity": 0.0
+      },
+      "source": "python/models/lowpass_stepped.py",
+      "source_sha256": "585206097a7ded99621a6d045e9379505614b429795720473738ed67ad8ac590",
+      "params": {
+        "fc": 2.5,
+        "order": 5,
+        "ripple": 0.5,
+        "z_high": 110.0,
+        "z_low": 20.0,
+        "feed_len": 10.0,
+        "sub_h": 0.813,
+        "eps_r": 3.38,
+        "tan_d": 0.0027,
+        "cpw": 20,
+        "f_min": 0.2,
+        "f_max": 6.0
+      },
+      "cells": 133000,
+      "boundaries": [
+        "MUR",
+        "MUR",
+        "MUR",
+        "MUR",
+        "MUR",
+        "MUR"
+      ],
+      "excitation": {
+        "type": "gaussian-derivative",
+        "f_min": 200000000.0,
+        "f_max": 6000000000.0,
+        "expression": "-2.33164398*((t-5.176819e-10)/1.035364e-10)*exp(-((t-5.176819e-10)/1.035364e-10)^2)",
+        "dc_free": true
+      },
+      "xml_sha256_by_excited_port": {
+        "1": "b7414dd4919613b9f6be496f78226682b695acdcb9e79d3632c36f3d82a589ad",
+        "2": "29ffcb2dee5c455c97e8f5bbab5d32ca844479839729ff6d5ca70d3bb15d89b5"
+      },
+      "current_source_sha256": "585206097a7ded99621a6d045e9379505614b429795720473738ed67ad8ac590",
+      "reproduced_physical_xml_matches": true,
+      "physical_xml_sha256_by_excited_port": {
+        "1": "eae4eed18bc719b579bcc3c40418a579462ee7698d156b6c6ecae36db3495565",
+        "2": "63e9b33c56131a0f1f3eb44516bfa0616d34d1e235741c605e05aa6aff8087bb"
+      },
+      "port_runs": [
+        {
+          "excited_port": 1,
+          "timesteps_fairbeam_native": [
+            23744,
+            23744
+          ],
+          "energy_fairbeam_native": [
+            true,
+            true
+          ],
+          "waves_sha256": {
+            "fairbeam": "461b22a4a3fd2cd65d60fd724aa4c81f1d16b22d9dbf4230993dab30f83149f5",
+            "native": "461b22a4a3fd2cd65d60fd724aa4c81f1d16b22d9dbf4230993dab30f83149f5"
+          }
+        },
+        {
+          "excited_port": 2,
+          "timesteps_fairbeam_native": [
+            23744,
+            23744
+          ],
+          "energy_fairbeam_native": [
+            true,
+            true
+          ],
+          "waves_sha256": {
+            "fairbeam": "017c1469f9d13a52b563092758a48725db5cc38f747088bd572994d95fdbf88d",
+            "native": "017c1469f9d13a52b563092758a48725db5cc38f747088bd572994d95fdbf88d"
+          }
+        }
+      ]
+    },
+    {
+      "id": "microstrip_line",
+      "threads": 4,
+      "status": "results_validated",
+      "equal_input_pass": true,
+      "complex_max_abs": 0.0,
+      "complex_rmse": 0.0,
+      "ports": 2,
+      "matrix_assembly_max_abs": 4.449557262054371e-16,
+      "bundle_rounding_max_abs": 7.031527820519062e-06,
+      "energy_all": true,
+      "passivity_max_singular_power": 0.9990134720538267,
+      "passive": true,
+      "mesh_convergence": "not tested by equal-input control",
+      "time_domain_probes": {
+        "probe_pairs": 8,
+        "max_abs_voltage_v": 0.0,
+        "max_abs_current_a": 0.0,
+        "max_abs_mode_purity": 0.0
+      },
+      "source": "python/models/microstrip_line.py",
+      "source_sha256": "815a684ec624cde9b690764e45841f7f40615e827bb40acd566c0d02544e7a8e",
+      "params": {
+        "length": 40.0,
+        "width": 0.0,
+        "sub_h": 0.813,
+        "eps_r": 3.38,
+        "tan_d": 0.0027,
+        "board_w": 20.0,
+        "strip_cells": 8,
+        "sub_cells": 8,
+        "mesh_div": 20,
+        "f_min": 0.5,
+        "f_max": 6.0
+      },
+      "cells": 49600,
+      "boundaries": [
+        "MUR",
+        "MUR",
+        "MUR",
+        "MUR",
+        "MUR",
+        "MUR"
+      ],
+      "excitation": {
+        "type": "gaussian-derivative",
+        "f_min": 500000000.0,
+        "f_max": 6000000000.0,
+        "expression": "-2.33164398*((t-5.176819e-10)/1.035364e-10)*exp(-((t-5.176819e-10)/1.035364e-10)^2)",
+        "dc_free": true
+      },
+      "xml_sha256_by_excited_port": {
+        "1": "ec758a93896a2c565602dee66d425ddf14479cac8efc37a7f16ffe4e5b31d9cd",
+        "2": "87d6f9b9396f0eda0696a30c5e25216512ae1e787205ba9312ada0874f25f371"
+      },
+      "current_source_sha256": "815a684ec624cde9b690764e45841f7f40615e827bb40acd566c0d02544e7a8e",
+      "reproduced_physical_xml_matches": true,
+      "physical_xml_sha256_by_excited_port": {
+        "1": "bc304e88b749fa1479320531e87f4df8f8135472a4ae8a42ad7ee7a24e277949",
+        "2": "58412307e4a890eadeac1fa75d3c39a925e43c71efb741ab179b6d42085117b5"
+      },
+      "port_runs": [
+        {
+          "excited_port": 1,
+          "timesteps_fairbeam_native": [
+            7040,
+            7040
+          ],
+          "energy_fairbeam_native": [
+            true,
+            true
+          ],
+          "waves_sha256": {
+            "fairbeam": "cc85365d58dd009220d6aa520446c7656dc02fe216d19acda36464bcc755a5c9",
+            "native": "cc85365d58dd009220d6aa520446c7656dc02fe216d19acda36464bcc755a5c9"
+          }
+        },
+        {
+          "excited_port": 2,
+          "timesteps_fairbeam_native": [
+            7040,
+            7040
+          ],
+          "energy_fairbeam_native": [
+            true,
+            true
+          ],
+          "waves_sha256": {
+            "fairbeam": "113f1206ecca0269a2fb958f82edb9e675262bd3a202f3df6b1e81e7570f963b",
+            "native": "113f1206ecca0269a2fb958f82edb9e675262bd3a202f3df6b1e81e7570f963b"
+          }
+        }
+      ]
+    },
+    {
+      "id": "minkowski_patch",
+      "threads": 4,
+      "status": "results_validated",
+      "equal_input_pass": true,
+      "complex_max_abs": 0.0,
+      "complex_rmse": 0.0,
+      "ports": 1,
+      "matrix_assembly_max_abs": 1.5700924586837752e-16,
+      "bundle_rounding_max_abs": 6.948380634542884e-06,
+      "energy_all": true,
+      "passivity_max_singular_power": 0.9970009266128683,
+      "passive": true,
+      "mesh_convergence": "not tested by equal-input control",
+      "time_domain_probes": {
+        "probe_pairs": 2,
+        "max_abs_voltage_v": 0.0,
+        "max_abs_current_a": 0.0,
+        "max_abs_mode_purity": 0.0
+      },
+      "source": "python/models/minkowski_patch.py",
+      "source_sha256": "9bc4eb2545a9891cdc86ed6f9b00e38fba40ba7a82a560a3fce5f7a8f77f3706",
+      "params": {
+        "iterations": 1,
+        "size": 30.0,
+        "depth": 0.5,
+        "feed_x": -3.5,
+        "sub_size": 60.0,
+        "sub_h": 1.524,
+        "eps_r": 3.38,
+        "tan_d": 0.0027,
+        "cell": 1.25,
+        "mesh_div": 20,
+        "boundary": "MUR",
+        "f_min": 1.6,
+        "f_max": 3.2
+      },
+      "cells": 115351,
+      "boundaries": [
+        "MUR",
+        "MUR",
+        "MUR",
+        "MUR",
+        "MUR",
+        "MUR"
+      ],
+      "excitation": {
+        "type": "gaussian-derivative",
+        "f_min": 1600000000.0,
+        "f_max": 3200000000.0,
+        "expression": "-2.33164398*((t-9.706535e-10)/1.941307e-10)*exp(-((t-9.706535e-10)/1.941307e-10)^2)",
+        "dc_free": true
+      },
+      "xml_sha256_by_excited_port": {
+        "1": "be0082d60a83ef07682bfe261b146fc0d47e8437eeffb6a05a0e72fbd23ffa3b"
+      },
+      "current_source_sha256": "9bc4eb2545a9891cdc86ed6f9b00e38fba40ba7a82a560a3fce5f7a8f77f3706",
+      "reproduced_physical_xml_matches": true,
+      "physical_xml_sha256_by_excited_port": {
+        "1": "38886590a49bb6940e8e415bc6563fe304ce7fe64bc8730ecdbf24659974d367"
+      },
+      "port_runs": [
+        {
+          "excited_port": 1,
+          "timesteps_fairbeam_native": [
+            26334,
+            26334
+          ],
+          "energy_fairbeam_native": [
+            true,
+            true
+          ],
+          "waves_sha256": {
+            "fairbeam": "71b803e8ac91688a38ec1b5ea0ec1408493dafd32eb93f784b584f6546610fd7",
+            "native": "71b803e8ac91688a38ec1b5ea0ec1408493dafd32eb93f784b584f6546610fd7"
+          }
+        }
+      ]
+    },
+    {
+      "id": "patch_antenna",
+      "threads": 4,
+      "status": "results_validated",
+      "equal_input_pass": true,
+      "complex_max_abs": 0.0,
+      "complex_rmse": 0.0,
+      "ports": 1,
+      "matrix_assembly_max_abs": 1.5700924586837752e-16,
+      "bundle_rounding_max_abs": 6.926671103244427e-06,
+      "energy_all": true,
+      "passivity_max_singular_power": 0.9990780627353901,
+      "passive": true,
+      "mesh_convergence": "not tested by equal-input control",
+      "time_domain_probes": {
+        "probe_pairs": 2,
+        "max_abs_voltage_v": 0.0,
+        "max_abs_current_a": 0.0,
+        "max_abs_mode_purity": 0.0
+      },
+      "source": "python/models/patch_antenna.py",
+      "source_sha256": "cfe469ab3b90e2fb5d74cadc11d55548cf0ee3a84783983fbc7008636cbbb92b",
+      "params": {
+        "patch_w": 32.0,
+        "patch_l": 40.0,
+        "sub_size": 60.0,
+        "sub_h": 1.524,
+        "eps_r": 3.38,
+        "tan_d": 0.001,
+        "feed_x": -6.0,
+        "feed_width": 0.0,
+        "feed_cells": 4,
+        "mesh_div": 30,
+        "sub_cells": 4,
+        "mesh": "manual",
+        "auto_cpw": 20,
+        "f_min": 1.0,
+        "f_max": 3.0
+      },
+      "cells": 263568,
+      "boundaries": [
+        "MUR",
+        "MUR",
+        "MUR",
+        "MUR",
+        "MUR",
+        "MUR"
+      ],
+      "excitation": {
+        "type": "gaussian-derivative",
+        "f_min": 1000000000.0,
+        "f_max": 3000000000.0,
+        "expression": "-2.33164398*((t-1.035364e-09)/2.070728e-10)*exp(-((t-1.035364e-09)/2.070728e-10)^2)",
+        "dc_free": true
+      },
+      "xml_sha256_by_excited_port": {
+        "1": "d29110bd3332e39c3008ae9069f56b2791377d6411fe326059c09dfb9a7e68fb"
+      },
+      "current_source_sha256": "eccce41f5a172fbad49cc9017122e2d2844d26de9a7fb1dd921dcfaba0b512a9",
+      "reproduced_physical_xml_matches": true,
+      "physical_xml_sha256_by_excited_port": {
+        "1": "a8802f79e24b8aebe3f692899ccc1fc43c8a5790d68387055ba54c3fde3a5e1a"
+      },
+      "port_runs": [
+        {
+          "excited_port": 1,
+          "timesteps_fairbeam_native": [
+            12628,
+            12628
+          ],
+          "energy_fairbeam_native": [
+            true,
+            true
+          ],
+          "waves_sha256": {
+            "fairbeam": "28f30046fbb498c15023447507b99aecd3c044543a528e09328787accd4587f8",
+            "native": "28f30046fbb498c15023447507b99aecd3c044543a528e09328787accd4587f8"
+          }
+        }
+      ]
+    },
+    {
+      "id": "patch_array_2x1",
+      "threads": 4,
+      "status": "results_validated",
+      "equal_input_pass": true,
+      "complex_max_abs": 0.0,
+      "complex_rmse": 0.0,
+      "ports": 2,
+      "matrix_assembly_max_abs": 3.1401849173675503e-16,
+      "bundle_rounding_max_abs": 6.9826420269882076e-06,
+      "energy_all": true,
+      "passivity_max_singular_power": 0.9963090515487232,
+      "passive": true,
+      "mesh_convergence": "not tested by equal-input control",
+      "time_domain_probes": {
+        "probe_pairs": 8,
+        "max_abs_voltage_v": 0.0,
+        "max_abs_current_a": 0.0,
+        "max_abs_mode_purity": 0.0
+      },
+      "source": "python/models/patch_array_2x1.py",
+      "source_sha256": "f456cc7cc04e30a9d08f5b9fecdc0410c2bc3de99b5bc9cdf825b867f6325335",
+      "params": {
+        "spacing": 61.2,
+        "patch_w": 32.0,
+        "patch_l": 40.0,
+        "margin": 10.0,
+        "sub_h": 1.524,
+        "eps_r": 3.38,
+        "tan_d": 0.001,
+        "feed_x": -6.0,
+        "mesh_div": 20,
+        "f_min": 1.8,
+        "f_max": 3.0
+      },
+      "cells": 48672,
+      "boundaries": [
+        "MUR",
+        "MUR",
+        "MUR",
+        "MUR",
+        "MUR",
+        "MUR"
+      ],
+      "excitation": {
+        "type": "gaussian-derivative",
+        "f_min": 1800000000.0,
+        "f_max": 3000000000.0,
+        "expression": "-2.33164398*((t-1.035364e-09)/2.070728e-10)*exp(-((t-1.035364e-09)/2.070728e-10)^2)",
+        "dc_free": true
+      },
+      "xml_sha256_by_excited_port": {
+        "1": "f2668ed83fe1fa07e6c9f0d12acdfdd13f401b9deb8743075ba48f512e90713d",
+        "2": "230f9870a17f8fe7f2b89c0982ae7f4a76f9b3d33f1c2bd3d106152cda1b260b"
+      },
+      "current_source_sha256": "f456cc7cc04e30a9d08f5b9fecdc0410c2bc3de99b5bc9cdf825b867f6325335",
+      "reproduced_physical_xml_matches": true,
+      "physical_xml_sha256_by_excited_port": {
+        "1": "ca74c919c15e9411c3fb0349f5dec28906c0febe0565c6d80596b6df6ebd72a3",
+        "2": "1d502f0f2473a70465bc01c76844f35aec86a793fbc69cd60c5902380cc76d0c"
+      },
+      "port_runs": [
+        {
+          "excited_port": 1,
+          "timesteps_fairbeam_native": [
+            15225,
+            15225
+          ],
+          "energy_fairbeam_native": [
+            true,
+            true
+          ],
+          "waves_sha256": {
+            "fairbeam": "610474e0a014c43e5b8cb43c1ad353b649853aaad89fb9e4a30de8cd54fa0d01",
+            "native": "610474e0a014c43e5b8cb43c1ad353b649853aaad89fb9e4a30de8cd54fa0d01"
+          }
+        },
+        {
+          "excited_port": 2,
+          "timesteps_fairbeam_native": [
+            15225,
+            15225
+          ],
+          "energy_fairbeam_native": [
+            true,
+            true
+          ],
+          "waves_sha256": {
+            "fairbeam": "3505d0cc4fd0a5f7654dbbb300314c6d59d64ce7cf0533567799b6e626efb76a",
+            "native": "3505d0cc4fd0a5f7654dbbb300314c6d59d64ce7cf0533567799b6e626efb76a"
+          }
+        }
+      ]
+    },
+    {
+      "id": "patch_array_4x1",
+      "threads": 4,
+      "status": "results_validated",
+      "equal_input_pass": true,
+      "complex_max_abs": 0.0,
+      "complex_rmse": 0.0,
+      "ports": 4,
+      "matrix_assembly_max_abs": 5.578801654593729e-16,
+      "bundle_rounding_max_abs": 6.971005451527227e-06,
+      "energy_all": true,
+      "passivity_max_singular_power": 0.9975586130551108,
+      "passive": true,
+      "mesh_convergence": "not tested by equal-input control",
+      "time_domain_probes": {
+        "probe_pairs": 32,
+        "max_abs_voltage_v": 0.0,
+        "max_abs_current_a": 0.0,
+        "max_abs_mode_purity": 0.0
+      },
+      "source": "python/models/patch_array_4x1.py",
+      "source_sha256": "907413f590543286308b1c529bd5899e8a06bf451d6e8ac1c2a3a6cbd6d492d2",
+      "params": {
+        "elements": 4,
+        "spacing": 61.2,
+        "patch_w": 32.0,
+        "patch_l": 40.0,
+        "margin": 10.0,
+        "sub_h": 1.524,
+        "eps_r": 3.38,
+        "tan_d": 0.001,
+        "feed_x": -6.0,
+        "cpw": 20,
+        "f_min": 1.8,
+        "f_max": 3.0
+      },
+      "cells": 451200,
+      "boundaries": [
+        "PML_8",
+        "PML_8",
+        "PML_8",
+        "PML_8",
+        "PML_8",
+        "PML_8"
+      ],
+      "excitation": {
+        "type": "gaussian-derivative",
+        "f_min": 1800000000.0,
+        "f_max": 3000000000.0,
+        "expression": "-2.33164398*((t-1.035364e-09)/2.070728e-10)*exp(-((t-1.035364e-09)/2.070728e-10)^2)",
+        "dc_free": true
+      },
+      "xml_sha256_by_excited_port": {
+        "1": "dbc6940b2bd6a73fc829bc6c876359d4a7c09111be105671de7805f45043a53d",
+        "2": "a49a6e31ff3d42b0a5827d99812c90cf6b748fceed7108b3d77bf594b73dfbaa",
+        "3": "8b75342d78524feea5ba5aff756b51a47cfe7cc0db17fa6179a085a9335c1e72",
+        "4": "d3982fd383d8178ca059b82397a01d21f9eb03d1ae11e61abb3d45a1ccfd0b60"
+      },
+      "current_source_sha256": "907413f590543286308b1c529bd5899e8a06bf451d6e8ac1c2a3a6cbd6d492d2",
+      "reproduced_physical_xml_matches": true,
+      "physical_xml_sha256_by_excited_port": {
+        "1": "975cbdd36f82b2d792ff81e38e0b754816760a42b7a8a7ba148b412f3ad614fd",
+        "2": "2970994ec63e29462bc02f0dafa713b3a25508aac2b40443d6004caad4039dec",
+        "3": "d2c7d4d7dd970e26383a1bea0521df378c1c6d610d925bb68793cc2d7650d807",
+        "4": "748efd6a2f0869852fd5b08b3f8c8591d3e6cd389d9bd10a593316045d9b55c4"
+      },
+      "port_runs": [
+        {
+          "excited_port": 1,
+          "timesteps_fairbeam_native": [
+            20541,
+            20541
+          ],
+          "energy_fairbeam_native": [
+            true,
+            true
+          ],
+          "waves_sha256": {
+            "fairbeam": "8b7816ba22ac49cad4634dcceac9cb2b389dec39ba1aaa462c395ac558158e29",
+            "native": "8b7816ba22ac49cad4634dcceac9cb2b389dec39ba1aaa462c395ac558158e29"
+          }
+        },
+        {
+          "excited_port": 2,
+          "timesteps_fairbeam_native": [
+            21543,
+            21543
+          ],
+          "energy_fairbeam_native": [
+            true,
+            true
+          ],
+          "waves_sha256": {
+            "fairbeam": "77158acc6728f9e13dd03d29df14e480cfba4634e25a4c600ee403dedff13302",
+            "native": "77158acc6728f9e13dd03d29df14e480cfba4634e25a4c600ee403dedff13302"
+          }
+        },
+        {
+          "excited_port": 3,
+          "timesteps_fairbeam_native": [
+            21543,
+            21543
+          ],
+          "energy_fairbeam_native": [
+            true,
+            true
+          ],
+          "waves_sha256": {
+            "fairbeam": "aa1b7d4ac51f867dd06f16d66e7b62d851065cc4e208d2921a00ccad3b72d012",
+            "native": "aa1b7d4ac51f867dd06f16d66e7b62d851065cc4e208d2921a00ccad3b72d012"
+          }
+        },
+        {
+          "excited_port": 4,
+          "timesteps_fairbeam_native": [
+            20541,
+            20541
+          ],
+          "energy_fairbeam_native": [
+            true,
+            true
+          ],
+          "waves_sha256": {
+            "fairbeam": "4069477a2cf531d7cea347a75a3283492bea43ae0032a47f2539146fe27b3a00",
+            "native": "4069477a2cf531d7cea347a75a3283492bea43ae0032a47f2539146fe27b3a00"
+          }
+        }
+      ]
+    },
+    {
+      "id": "pyramidal_horn",
+      "threads": 4,
+      "status": "results_validated",
+      "equal_input_pass": true,
+      "complex_max_abs": 0.0,
+      "complex_rmse": 0.0,
+      "ports": 1,
+      "matrix_assembly_max_abs": 2.8609792490763984e-17,
+      "bundle_rounding_max_abs": 6.977152700316565e-06,
+      "energy_all": true,
+      "passivity_max_singular_power": 0.021142481936384086,
+      "passive": true,
+      "mesh_convergence": "not tested by equal-input control",
+      "time_domain_probes": {
+        "probe_pairs": 2,
+        "max_abs_voltage_v": 0.0,
+        "max_abs_current_a": 0.0,
+        "max_abs_mode_purity": 0.0
+      },
+      "source": "python/models/pyramidal_horn.py",
+      "source_sha256": "0d626d710cf01f6373dded088bd334833eeb85504500f32a61511a1d73d6b0c2",
+      "params": {
+        "gain": 16.0,
+        "f0": 10.0,
+        "wg_a": 22.86,
+        "wg_b": 10.16,
+        "wall": 2.0,
+        "feed_len": 30.0,
+        "cpw": 20,
+        "pad": 0.25,
+        "f_min": 8.0,
+        "f_max": 12.0
+      },
+      "cells": 1103856,
+      "boundaries": [
+        "PML_8",
+        "PML_8",
+        "PML_8",
+        "PML_8",
+        "PML_8",
+        "PML_8"
+      ],
+      "excitation": {
+        "type": "gaussian-derivative",
+        "f_min": 8000000000.0,
+        "f_max": 12000000000.0,
+        "expression": "-2.33164398*((t-2.588409e-10)/5.176819e-11)*exp(-((t-2.588409e-10)/5.176819e-11)^2)",
+        "dc_free": true
+      },
+      "xml_sha256_by_excited_port": {
+        "1": "3764fd56ac9489d740b5cdf427190d6621584da19360f1a82f099112bdd8760e"
+      },
+      "current_source_sha256": "0d626d710cf01f6373dded088bd334833eeb85504500f32a61511a1d73d6b0c2",
+      "reproduced_physical_xml_matches": true,
+      "physical_xml_sha256_by_excited_port": {
+        "1": "edbcf01e5390dfd578b3acc6fea2a656b797cebb14557f7dd52586a08b10a2bb"
+      },
+      "port_runs": [
+        {
+          "excited_port": 1,
+          "timesteps_fairbeam_native": [
+            9840,
+            9840
+          ],
+          "energy_fairbeam_native": [
+            true,
+            true
+          ],
+          "waves_sha256": {
+            "fairbeam": "3a3bdff5f82f4af4fb4583c57a39553859e8b18fbdf4fcd39e974f504a3119d2",
+            "native": "3a3bdff5f82f4af4fb4583c57a39553859e8b18fbdf4fcd39e974f504a3119d2"
+          }
+        }
+      ]
+    },
+    {
+      "id": "sierpinski_monopole",
+      "threads": 4,
+      "status": "results_validated",
+      "equal_input_pass": true,
+      "complex_max_abs": 0.0,
+      "complex_rmse": 0.0,
+      "ports": 1,
+      "matrix_assembly_max_abs": 1.2412670766236366e-16,
+      "bundle_rounding_max_abs": 6.959864244558021e-06,
+      "energy_all": true,
+      "passivity_max_singular_power": 0.9731446529304133,
+      "passive": true,
+      "mesh_convergence": "not tested by equal-input control",
+      "time_domain_probes": {
+        "probe_pairs": 2,
+        "max_abs_voltage_v": 0.0,
+        "max_abs_current_a": 0.0,
+        "max_abs_mode_purity": 0.0
+      },
+      "source": "python/models/sierpinski_monopole.py",
+      "source_sha256": "1360c20421854ef012c821ee56755f9c454ae83f0e93ef90cb04c08211dfb592",
+      "params": {
+        "iterations": 3,
+        "height": 48.0,
+        "flare": 60.0,
+        "gap": 1.0,
+        "bridge": 1.2,
+        "cell": 0.8,
+        "f_min": 0.5,
+        "f_max": 8.0
+      },
+      "cells": 1964256,
+      "boundaries": [
+        "MUR",
+        "MUR",
+        "MUR",
+        "MUR",
+        "PEC",
+        "MUR"
+      ],
+      "excitation": {
+        "type": "gaussian-derivative",
+        "f_min": 500000000.0,
+        "f_max": 8000000000.0,
+        "expression": "-2.33164398*((t-3.882614e-10)/7.765228e-11)*exp(-((t-3.882614e-10)/7.765228e-11)^2)",
+        "dc_free": true
+      },
+      "xml_sha256_by_excited_port": {
+        "1": "8ab7d80759cbc507e44f8826ad8f0f360184e7d4b81291bc5e2ebb06aaabb30f"
+      },
+      "current_source_sha256": "1360c20421854ef012c821ee56755f9c454ae83f0e93ef90cb04c08211dfb592",
+      "reproduced_physical_xml_matches": true,
+      "physical_xml_sha256_by_excited_port": {
+        "1": "04f439236623bfc893abe88bc35ffdd0166a7f35a0f01069de08274ee935c543"
+      },
+      "port_runs": [
+        {
+          "excited_port": 1,
+          "timesteps_fairbeam_native": [
+            5250,
+            5250
+          ],
+          "energy_fairbeam_native": [
+            true,
+            true
+          ],
+          "waves_sha256": {
+            "fairbeam": "f2e709587fd327c4a03b05c3e12a56bb21cd741ece0f8f40d570f38d8a5ea59e",
+            "native": "f2e709587fd327c4a03b05c3e12a56bb21cd741ece0f8f40d570f38d8a5ea59e"
+          }
+        }
+      ]
+    },
+    {
+      "id": "wilkinson_divider",
+      "threads": 4,
+      "status": "results_validated",
+      "equal_input_pass": true,
+      "complex_max_abs": 0.0,
+      "complex_rmse": 0.0,
+      "ports": 3,
+      "matrix_assembly_max_abs": 3.510833468576701e-16,
+      "bundle_rounding_max_abs": 6.8691016070418794e-06,
+      "energy_all": true,
+      "passivity_max_singular_power": 0.9960165355709512,
+      "passive": true,
+      "mesh_convergence": "not tested by equal-input control",
+      "time_domain_probes": {
+        "probe_pairs": 18,
+        "max_abs_voltage_v": 0.0,
+        "max_abs_current_a": 0.0,
+        "max_abs_mode_purity": 0.0
+      },
+      "source": "python/models/wilkinson_divider.py",
+      "source_sha256": "452b16b867d8d62735a6746307171f7091d19dbb8b32dd9ad1196f4286375f6e",
+      "params": {
+        "f0": 2.4,
+        "sub_h": 0.813,
+        "eps_r": 3.38,
+        "tan_d": 0.0027,
+        "r_iso": 100.0,
+        "gap": 0.0,
+        "offset": 5.0,
+        "clearance": 3.0,
+        "arm_scale": 1.0,
+        "feed_len": 10.0,
+        "strip_cells": 6,
+        "sub_cells": 6,
+        "mesh_div": 20,
+        "f_min": 1.0,
+        "f_max": 4.0
+      },
+      "cells": 105560,
+      "boundaries": [
+        "MUR",
+        "MUR",
+        "MUR",
+        "MUR",
+        "MUR",
+        "MUR"
+      ],
+      "excitation": {
+        "type": "gaussian-derivative",
+        "f_min": 1000000000.0,
+        "f_max": 4000000000.0,
+        "expression": "-2.33164398*((t-7.765228e-10)/1.553046e-10)*exp(-((t-7.765228e-10)/1.553046e-10)^2)",
+        "dc_free": true
+      },
+      "xml_sha256_by_excited_port": {
+        "1": "dd7e11ac5abc7291779cf7060f761b94cc1bd1d3d7cbcc5907220b627f3f24c6",
+        "2": "35d0ec3f041df87483a79392a7b3f2640efe9f10d4f4fffde69cddc44f8fc6e7",
+        "3": "567584bb1b66ee776ee43909b8432ac0a95f9e15b30b208db74ebafbbc25966e"
+      },
+      "current_source_sha256": "452b16b867d8d62735a6746307171f7091d19dbb8b32dd9ad1196f4286375f6e",
+      "reproduced_physical_xml_matches": true,
+      "physical_xml_sha256_by_excited_port": {
+        "1": "69f08218b9ca6b9b8c0137db3b5b24e94e0c1808f9dfd599c69a4f8f1f102270",
+        "2": "544e674ee94b486c7e140bd7d15822f62b1d0dde3377ec6ef0ef15bf916f75b1",
+        "3": "e3bb58768c15265a619a429bea4f1d92f6b03de493f97f5f79c33a8ef1fabca2"
+      },
+      "port_runs": [
+        {
+          "excited_port": 1,
+          "timesteps_fairbeam_native": [
+            9519,
+            9519
+          ],
+          "energy_fairbeam_native": [
+            true,
+            true
+          ],
+          "waves_sha256": {
+            "fairbeam": "a6f60f1eddf2d5d27f90e674bb39a8171e483b6f7925f3a7b20eb29c5888aa38",
+            "native": "a6f60f1eddf2d5d27f90e674bb39a8171e483b6f7925f3a7b20eb29c5888aa38"
+          }
+        },
+        {
+          "excited_port": 2,
+          "timesteps_fairbeam_native": [
+            10020,
+            10020
+          ],
+          "energy_fairbeam_native": [
+            true,
+            true
+          ],
+          "waves_sha256": {
+            "fairbeam": "514870ff848d3da146e2e5a9d44e19056b6b2b32fd5393f6184994b4722ff063",
+            "native": "514870ff848d3da146e2e5a9d44e19056b6b2b32fd5393f6184994b4722ff063"
+          }
+        },
+        {
+          "excited_port": 3,
+          "timesteps_fairbeam_native": [
+            10521,
+            10521
+          ],
+          "energy_fairbeam_native": [
+            true,
+            true
+          ],
+          "waves_sha256": {
+            "fairbeam": "2e2c0977f7acbf25472ba17221aaf5b63e4e4e02d6c247168a47156bbce4f9a5",
+            "native": "2e2c0977f7acbf25472ba17221aaf5b63e4e4e02d6c247168a47156bbce4f9a5"
+          }
+        }
+      ]
+    },
+    {
+      "id": "blade_867",
+      "threads": 4,
+      "status": "results_validated",
+      "equal_input_pass": true,
+      "complex_max_abs": 0.0,
+      "complex_rmse": 0.0,
+      "ports": 1,
+      "matrix_assembly_max_abs": 6.206335383118183e-17,
+      "bundle_rounding_max_abs": 6.862659300118799e-06,
+      "energy_all": true,
+      "passivity_max_singular_power": 0.1945090346405573,
+      "passive": true,
+      "mesh_convergence": "not tested by equal-input control",
+      "time_domain_probes": {
+        "probe_pairs": 2,
+        "max_abs_voltage_v": 0.0,
+        "max_abs_current_a": 0.0,
+        "max_abs_mode_purity": 0.0
+      },
+      "source": "examples/designs/blade_867.design.json",
+      "source_sha256": "fae843418c00a8fb4244aaf8dca679ef8f3cd5510089f1d9e69aaf4e91c08438",
+      "params": {
+        "f0": 0.867,
+        "gnd": 300.0,
+        "h": 80.0,
+        "wb": 60.0,
+        "wt": 30.0,
+        "sweep": 25.0,
+        "g": 2.0,
+        "wf": 4.0,
+        "ht": 12.0
+      },
+      "cells": 269040,
+      "boundaries": [
+        "MUR",
+        "MUR",
+        "MUR",
+        "MUR",
+        "MUR",
+        "MUR"
+      ],
+      "excitation": {
+        "type": "gaussian-derivative",
+        "f_min": 700000000.0,
+        "f_max": 1050000000.0,
+        "expression": "-2.33164398*((t-2.958182e-09)/5.916364e-10)*exp(-((t-2.958182e-09)/5.916364e-10)^2)",
+        "dc_free": true
+      },
+      "xml_sha256_by_excited_port": {
+        "1": "bd26825fcdfc37f4349d3f4abd31f156e272af0e6335f21199e3fd03a83630f9"
+      },
+      "current_source_sha256": "fae843418c00a8fb4244aaf8dca679ef8f3cd5510089f1d9e69aaf4e91c08438",
+      "reproduced_physical_xml_matches": true,
+      "physical_xml_sha256_by_excited_port": {
+        "1": "9e89916236fcda6bab6262060433b86114f2442733213ef2ebaf5b0a489ac207"
+      },
+      "port_runs": [
+        {
+          "excited_port": 1,
+          "timesteps_fairbeam_native": [
+            11431,
+            11431
+          ],
+          "energy_fairbeam_native": [
+            true,
+            true
+          ],
+          "waves_sha256": {
+            "fairbeam": "f3ab15b1e8f78ebd3ec5bc1d7fbcf5c161ef6da603ee64a675743aff5e6bd06d",
+            "native": "f3ab15b1e8f78ebd3ec5bc1d7fbcf5c161ef6da603ee64a675743aff5e6bd06d"
+          }
+        }
+      ]
+    },
+    {
+      "id": "collinear_867",
+      "threads": 12,
+      "status": "results_validated",
+      "equal_input_pass": true,
+      "complex_max_abs": 0.0,
+      "complex_rmse": 0.0,
+      "ports": 1,
+      "matrix_assembly_max_abs": 1.2412670766236366e-16,
+      "bundle_rounding_max_abs": 6.9351040436134935e-06,
+      "energy_all": true,
+      "passivity_max_singular_power": 0.8023454530395558,
+      "passive": true,
+      "mesh_convergence": "not tested by equal-input control",
+      "time_domain_probes": {
+        "probe_pairs": 2,
+        "max_abs_voltage_v": 0.0,
+        "max_abs_current_a": 0.0,
+        "max_abs_mode_purity": 0.0
+      },
+      "source": "examples/designs/collinear_867.design.json",
+      "source_sha256": "85003b665ad737824542fc96bb7e82013b4fde03e3954c50d251ea428142d20d",
+      "params": {
+        "f0": 0.867,
+        "l_up": 68.8,
+        "l_sl": 68.8,
+        "w_up": 10.0,
+        "w_sl": 16.0,
+        "g": 2.0,
+        "w_f": 1.2,
+        "w_t": 1.2,
+        "l_t": 58.0,
+        "w_v": 1.0,
+        "s": 1.0,
+        "hb": 3.0,
+        "n_m": 6.0,
+        "p_m": 12.0,
+        "a_m": 13.0,
+        "w_m": 2.0,
+        "l_top": 142.0,
+        "w_top": 10.0,
+        "wb": 30.0,
+        "t": 1.6,
+        "m": 4.0
+      },
+      "cells": 3516544,
+      "boundaries": [
+        "PML_8",
+        "PML_8",
+        "PML_8",
+        "PML_8",
+        "PML_8",
+        "PML_8"
+      ],
+      "excitation": {
+        "type": "gaussian-derivative",
+        "f_min": 750000000.0,
+        "f_max": 1000000000.0,
+        "expression": "-2.33164398*((t-3.106091e-09)/6.212183e-10)*exp(-((t-3.106091e-09)/6.212183e-10)^2)",
+        "dc_free": true
+      },
+      "xml_sha256_by_excited_port": {
+        "1": "03fe3cd5eb1a3753de48309a8dfe76a1c3347d83bde6af7be5fa855bae01a8cb"
+      },
+      "current_source_sha256": "85003b665ad737824542fc96bb7e82013b4fde03e3954c50d251ea428142d20d",
+      "reproduced_physical_xml_matches": true,
+      "physical_xml_sha256_by_excited_port": {
+        "1": "8a73c30198617622e568eb2e2bde49ae5586966e51496248b88c695fdc407068"
+      },
+      "port_runs": [
+        {
+          "excited_port": 1,
+          "timesteps_fairbeam_native": [
+            227360,
+            227360
+          ],
+          "energy_fairbeam_native": [
+            true,
+            true
+          ],
+          "waves_sha256": {
+            "fairbeam": "81dab5bf29b9c36d99bbc737df6ee449f62620cf7d9b9e3f334a267eacc76e8a",
+            "native": "81dab5bf29b9c36d99bbc737df6ee449f62620cf7d9b9e3f334a267eacc76e8a"
+          }
+        }
+      ]
+    },
+    {
+      "id": "meander_dipole_867",
+      "threads": 4,
+      "status": "results_validated",
+      "equal_input_pass": true,
+      "complex_max_abs": 0.0,
+      "complex_rmse": 0.0,
+      "ports": 1,
+      "matrix_assembly_max_abs": 1.2412670766236366e-16,
+      "bundle_rounding_max_abs": 6.820343002067647e-06,
+      "energy_all": true,
+      "passivity_max_singular_power": 0.6627518870319054,
+      "passive": true,
+      "mesh_convergence": "not tested by equal-input control",
+      "time_domain_probes": {
+        "probe_pairs": 2,
+        "max_abs_voltage_v": 0.0,
+        "max_abs_current_a": 0.0,
+        "max_abs_mode_purity": 0.0
+      },
+      "source": "examples/designs/meander_dipole_867.design.json",
+      "source_sha256": "af8be5dccc5e9a6ef5b68a3da30035a320487c1cc7fbbb7086ece900a862338e",
+      "params": {
+        "f0": 0.867,
+        "w": 2.0,
+        "g": 2.0,
+        "l_feed": 30.0,
+        "n": 2.0,
+        "a": 16.0,
+        "p": 8.0,
+        "l_end": 1.5,
+        "t": 1.6,
+        "t_cu": 0.035,
+        "m": 3.0,
+        "sweep": 12.0
+      },
+      "cells": 976472,
+      "boundaries": [
+        "PML_8",
+        "PML_8",
+        "PML_8",
+        "PML_8",
+        "PML_8",
+        "PML_8"
+      ],
+      "excitation": {
+        "type": "gaussian-derivative",
+        "f_min": 750000000.0,
+        "f_max": 1000000000.0,
+        "expression": "-2.33164398*((t-3.106091e-09)/6.212183e-10)*exp(-((t-3.106091e-09)/6.212183e-10)^2)",
+        "dc_free": true
+      },
+      "xml_sha256_by_excited_port": {
+        "1": "06f6741fb59f974e1b88a79e1a49e3fd71afa73c5c8817f6a07fe5a6cb8ee2ae"
+      },
+      "current_source_sha256": "af8be5dccc5e9a6ef5b68a3da30035a320487c1cc7fbbb7086ece900a862338e",
+      "reproduced_physical_xml_matches": true,
+      "physical_xml_sha256_by_excited_port": {
+        "1": "2e539244ee2718008a47905a5c219b31726ac0a9b69508c0dc16b21cf3cbe94a"
+      },
+      "port_runs": [
+        {
+          "excited_port": 1,
+          "timesteps_fairbeam_native": [
+            23760,
+            23760
+          ],
+          "energy_fairbeam_native": [
+            true,
+            true
+          ],
+          "waves_sha256": {
+            "fairbeam": "3d064cf109e67d7c96e39f9a67d44645e6b471df16b17f4af335419b51785e5e",
+            "native": "3d064cf109e67d7c96e39f9a67d44645e6b471df16b17f4af335419b51785e5e"
+          }
+        }
+      ]
+    },
+    {
+      "id": "sleeve_dipole_867",
+      "threads": 12,
+      "status": "results_validated",
+      "equal_input_pass": true,
+      "complex_max_abs": 0.0,
+      "complex_rmse": 0.0,
+      "ports": 1,
+      "matrix_assembly_max_abs": 1.1188630228279524e-16,
+      "bundle_rounding_max_abs": 6.97573390957701e-06,
+      "energy_all": true,
+      "passivity_max_singular_power": 0.3771284065801835,
+      "passive": true,
+      "mesh_convergence": "not tested by equal-input control",
+      "time_domain_probes": {
+        "probe_pairs": 2,
+        "max_abs_voltage_v": 0.0,
+        "max_abs_current_a": 0.0,
+        "max_abs_mode_purity": 0.0
+      },
+      "source": "examples/designs/sleeve_dipole_867.design.json",
+      "source_sha256": "72df10b80bd85d0b6504102ca3028b0a5900f05e19af9f190a572590dfc830bc",
+      "params": {
+        "f0": 0.867,
+        "l_up": 68.8,
+        "l_sl": 68.8,
+        "w_up": 10.0,
+        "w_sl": 16.0,
+        "g": 2.0,
+        "wb": 20.0,
+        "t": 1.6,
+        "w_f": 2.0,
+        "s": 1.0,
+        "hb": 3.0,
+        "m": 4.0
+      },
+      "cells": 442800,
+      "boundaries": [
+        "PML_8",
+        "PML_8",
+        "PML_8",
+        "PML_8",
+        "PML_8",
+        "PML_8"
+      ],
+      "excitation": {
+        "type": "gaussian-derivative",
+        "f_min": 750000000.0,
+        "f_max": 1000000000.0,
+        "expression": "-2.33164398*((t-3.106091e-09)/6.212183e-10)*exp(-((t-3.106091e-09)/6.212183e-10)^2)",
+        "dc_free": true
+      },
+      "xml_sha256_by_excited_port": {
+        "1": "494925331801f7bbe5a6be65928d6c0ac452e7f14055071915430317f76c4ca6"
+      },
+      "current_source_sha256": "72df10b80bd85d0b6504102ca3028b0a5900f05e19af9f190a572590dfc830bc",
+      "reproduced_physical_xml_matches": true,
+      "physical_xml_sha256_by_excited_port": {
+        "1": "206871d4eb6df26fb0fb55a91d4b7787a89d824f6f86c9aeef63403ba94677e3"
+      },
+      "port_runs": [
+        {
+          "excited_port": 1,
+          "timesteps_fairbeam_native": [
+            137448,
+            137448
+          ],
+          "energy_fairbeam_native": [
+            true,
+            true
+          ],
+          "waves_sha256": {
+            "fairbeam": "59ebe4c1b7b034eb04240c0fb3c3912d8305104c309cc75289c39f1b8f1e5393",
+            "native": "59ebe4c1b7b034eb04240c0fb3c3912d8305104c309cc75289c39f1b8f1e5393"
+          }
+        }
+      ]
+    },
+    {
+      "id": "ux_inset_patch_24",
+      "threads": 12,
+      "status": "results_validated",
+      "equal_input_pass": true,
+      "complex_max_abs": 0.0,
+      "complex_rmse": 0.0,
+      "ports": 1,
+      "matrix_assembly_max_abs": 1.5700924586837752e-16,
+      "bundle_rounding_max_abs": 7.048396540235639e-06,
+      "energy_all": true,
+      "passivity_max_singular_power": 0.8859911767089146,
+      "passive": true,
+      "mesh_convergence": "not tested by equal-input control",
+      "time_domain_probes": {
+        "probe_pairs": 2,
+        "max_abs_voltage_v": 0.0,
+        "max_abs_current_a": 0.0,
+        "max_abs_mode_purity": 0.0
+      },
+      "source": "examples/designs/ux_inset_patch_24.design.json",
+      "source_sha256": "a549c9166a8f1aa8d56aa0210911291d4cd4b3ca4319a04292eaa9a944e6d45a",
+      "params": {
+        "f0": 2.4
+      },
+      "cells": 123420,
+      "boundaries": [
+        "MUR",
+        "MUR",
+        "MUR",
+        "MUR",
+        "MUR",
+        "MUR"
+      ],
+      "excitation": {
+        "type": "gaussian-derivative",
+        "f_min": 1800000000.0,
+        "f_max": 3200000000.0,
+        "expression": "-2.33164398*((t-9.706535e-10)/1.941307e-10)*exp(-((t-9.706535e-10)/1.941307e-10)^2)",
+        "dc_free": true
+      },
+      "xml_sha256_by_excited_port": {
+        "1": "00461bd65a1976aafe42ae7ef3beb2b1fe007f38b0dd6d8c3c9d6294145dbfe4"
+      },
+      "current_source_sha256": "a549c9166a8f1aa8d56aa0210911291d4cd4b3ca4319a04292eaa9a944e6d45a",
+      "reproduced_physical_xml_matches": true,
+      "physical_xml_sha256_by_excited_port": {
+        "1": "ccc1f65ad526e496b02781d93fe6c8105a25b866d04e2a11fc62ed74b7a0a7e3"
+      },
+      "port_runs": [
+        {
+          "excited_port": 1,
+          "timesteps_fairbeam_native": [
+            11220,
+            11220
+          ],
+          "energy_fairbeam_native": [
+            true,
+            true
+          ],
+          "waves_sha256": {
+            "fairbeam": "66f09fdfcf4b38a6c8600c53ea1138932a8adec0899c324473f6d269a280c240",
+            "native": "66f09fdfcf4b38a6c8600c53ea1138932a8adec0899c324473f6d269a280c240"
+          }
+        }
+      ]
+    },
+    {
+      "id": "wideband_dipole_867",
+      "threads": 12,
+      "status": "results_validated",
+      "equal_input_pass": true,
+      "complex_max_abs": 0.0,
+      "complex_rmse": 0.0,
+      "ports": 1,
+      "matrix_assembly_max_abs": 1.1443916996305594e-16,
+      "bundle_rounding_max_abs": 6.975902773061704e-06,
+      "energy_all": true,
+      "passivity_max_singular_power": 0.5371747034509406,
+      "passive": true,
+      "mesh_convergence": "not tested by equal-input control",
+      "time_domain_probes": {
+        "probe_pairs": 2,
+        "max_abs_voltage_v": 0.0,
+        "max_abs_current_a": 0.0,
+        "max_abs_mode_purity": 0.0
+      },
+      "source": "examples/designs/wideband_dipole_867.design.json",
+      "source_sha256": "07669c6eb363eca0bdf72e83ba96f50271dd8a2f50dbfea4a360bcdb7eb81b22",
+      "params": {
+        "f0": 0.867,
+        "h_arm": 54.0,
+        "w_arm": 40.0,
+        "ht": 8.0,
+        "wf": 18.0,
+        "g": 2.0,
+        "l_s": 17.0,
+        "w_s": 2.0,
+        "p_s": 10.0,
+        "z_s": 16.0,
+        "t_sub": 1.6,
+        "m": 3.0
+      },
+      "cells": 830576,
+      "boundaries": [
+        "PML_8",
+        "PML_8",
+        "PML_8",
+        "PML_8",
+        "PML_8",
+        "PML_8"
+      ],
+      "excitation": {
+        "type": "gaussian-derivative",
+        "f_min": 700000000.0,
+        "f_max": 1050000000.0,
+        "expression": "-2.33164398*((t-2.958182e-09)/5.916364e-10)*exp(-((t-2.958182e-09)/5.916364e-10)^2)",
+        "dc_free": true
+      },
+      "xml_sha256_by_excited_port": {
+        "1": "ff819b2c11e0ba532590dedfca964cc0c3aa16d25c60750f893abb37acc20622"
+      },
+      "current_source_sha256": "07669c6eb363eca0bdf72e83ba96f50271dd8a2f50dbfea4a360bcdb7eb81b22",
+      "reproduced_physical_xml_matches": true,
+      "physical_xml_sha256_by_excited_port": {
+        "1": "8975191e33f05ebf5d9a7e55c204bc79ecbd5abf77223b1f0536f9106833dfb8"
+      },
+      "port_runs": [
+        {
+          "excited_port": 1,
+          "timesteps_fairbeam_native": [
+            14460,
+            14460
+          ],
+          "energy_fairbeam_native": [
+            true,
+            true
+          ],
+          "waves_sha256": {
+            "fairbeam": "e04c8665bb26e3c450c02de018fb3702b9a1b350beda825d8e37ff0d81ef3f44",
+            "native": "e04c8665bb26e3c450c02de018fb3702b9a1b350beda825d8e37ff0d81ef3f44"
+          }
+        }
+      ]
+    },
+    {
+      "id": "yagi_867",
+      "threads": 12,
+      "status": "results_validated",
+      "equal_input_pass": true,
+      "complex_max_abs": 0.0,
+      "complex_rmse": 0.0,
+      "ports": 1,
+      "matrix_assembly_max_abs": 1.1443916996305594e-16,
+      "bundle_rounding_max_abs": 6.7828701915784615e-06,
+      "energy_all": true,
+      "passivity_max_singular_power": 0.7723174275982998,
+      "passive": true,
+      "mesh_convergence": "not tested by equal-input control",
+      "time_domain_probes": {
+        "probe_pairs": 2,
+        "max_abs_voltage_v": 0.0,
+        "max_abs_current_a": 0.0,
+        "max_abs_mode_purity": 0.0
+      },
+      "source": "examples/designs/yagi_867.design.json",
+      "source_sha256": "ed3551299351096bea368420a4f85b86c5afd08a7918962f9fdad990ee71305e",
+      "params": {
+        "f0": 0.867,
+        "d": 4.0,
+        "L_r": 162.4,
+        "L_de": 156.0,
+        "L_d1": 142.9,
+        "L_d2": 137.1,
+        "L_d3": 129.8,
+        "s_r": 78.0,
+        "s_1": 47.0,
+        "s_2": 60.0,
+        "s_3": 98.0,
+        "g": 6.0,
+        "l_hp": 23.0
+      },
+      "cells": 714840,
+      "boundaries": [
+        "PML_8",
+        "PML_8",
+        "PML_8",
+        "PML_8",
+        "PML_8",
+        "PML_8"
+      ],
+      "excitation": {
+        "type": "gaussian-derivative",
+        "f_min": 800000000.0,
+        "f_max": 950000000.0,
+        "expression": "-2.33164398*((t-3.269570e-09)/6.539140e-10)*exp(-((t-3.269570e-09)/6.539140e-10)^2)",
+        "dc_free": true
+      },
+      "xml_sha256_by_excited_port": {
+        "1": "658d8e212c19f4c9e063261d412f9b706cf886af5e54dcaaf2a1a26cd8a9b885"
+      },
+      "current_source_sha256": "ed3551299351096bea368420a4f85b86c5afd08a7918962f9fdad990ee71305e",
+      "reproduced_physical_xml_matches": true,
+      "physical_xml_sha256_by_excited_port": {
+        "1": "83c98f72a0bd7f17579c8ba30bee5e4669752e68f7140455a6148230270bac92"
+      },
+      "port_runs": [
+        {
+          "excited_port": 1,
+          "timesteps_fairbeam_native": [
+            79206,
+            79206
+          ],
+          "energy_fairbeam_native": [
+            true,
+            true
+          ],
+          "waves_sha256": {
+            "fairbeam": "06dcd797ef709ac17fa28a6e2b5c034fee424ea4a721eeea9e8244138505d3eb",
+            "native": "06dcd797ef709ac17fa28a6e2b5c034fee424ea4a721eeea9e8244138505d3eb"
+          }
+        }
+      ]
+    },
+    {
+      "id": "sierpinski_monopole_0",
+      "threads": 12,
+      "status": "results_validated",
+      "equal_input_pass": true,
+      "complex_max_abs": 0.0,
+      "complex_rmse": 0.0,
+      "ports": 1,
+      "matrix_assembly_max_abs": 1.2412670766236366e-16,
+      "bundle_rounding_max_abs": 6.972553415218112e-06,
+      "energy_all": true,
+      "passivity_max_singular_power": 0.9752121228873877,
+      "passive": true,
+      "mesh_convergence": "not tested by equal-input control",
+      "time_domain_probes": {
+        "probe_pairs": 2,
+        "max_abs_voltage_v": 0.0,
+        "max_abs_current_a": 0.0,
+        "max_abs_mode_purity": 0.0
+      },
+      "source": "python/models/sierpinski_monopole.py",
+      "source_sha256": "1360c20421854ef012c821ee56755f9c454ae83f0e93ef90cb04c08211dfb592",
+      "params": {
+        "iterations": 0,
+        "height": 48.0,
+        "flare": 60.0,
+        "gap": 1.0,
+        "bridge": 1.2,
+        "cell": 0.8,
+        "f_min": 0.5,
+        "f_max": 8.0
+      },
+      "cells": 1833552,
+      "boundaries": [
+        "MUR",
+        "MUR",
+        "MUR",
+        "MUR",
+        "PEC",
+        "MUR"
+      ],
+      "excitation": {
+        "type": "gaussian-derivative",
+        "f_min": 500000000.0,
+        "f_max": 8000000000.0,
+        "expression": "-2.33164398*((t-3.882614e-10)/7.765228e-11)*exp(-((t-3.882614e-10)/7.765228e-11)^2)",
+        "dc_free": true
+      },
+      "xml_sha256_by_excited_port": {
+        "1": "82a76dcf15f375cda058d533b244dcde2b6321fe8c730adecdce4878726a408d"
+      },
+      "current_source_sha256": "1360c20421854ef012c821ee56755f9c454ae83f0e93ef90cb04c08211dfb592",
+      "reproduced_physical_xml_matches": true,
+      "physical_xml_sha256_by_excited_port": {
+        "1": "e3f733b5b5105b239a4e37ffa6566d4cb59e5fec6316d6331ee42c7d45471f0b"
+      },
+      "port_runs": [
+        {
+          "excited_port": 1,
+          "timesteps_fairbeam_native": [
+            3960,
+            3960
+          ],
+          "energy_fairbeam_native": [
+            true,
+            true
+          ],
+          "waves_sha256": {
+            "fairbeam": "2aa720bc9c8ef82ce72f0b8a9339fd84e892f4db5a4925fabd758c1e4240b4bf",
+            "native": "2aa720bc9c8ef82ce72f0b8a9339fd84e892f4db5a4925fabd758c1e4240b4bf"
+          }
+        }
+      ]
+    }
+  ]
+}
