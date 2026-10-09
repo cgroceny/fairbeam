@@ -53843,7 +53843,7 @@ Please either apply this, the MIT license, or the license in './FEEL-FREE.md'
 
 </details>
 
-### solid-js 1.9.15
+### solid-js 1.9.17
 
 License: MIT. Source: https://github.com/solidjs/solid.
 

@@ -541,7 +541,7 @@ Her adım beklenen durumu doğrular ve sayfayı inceler: kapsayıcı dışına t
 
 ## Bilinen sınırlamalar
 
-- **Horn verimliliği %100 üzerinde.** Piramidal horn (dalga kılavuzu portlu model), %100'ün biraz üstünde ışıma verimliliği bildirir; daha ince mesh'te fazlalık artar. Sebep araştırılmaktadır; %100 üstü sonuçlar kalite kontrol uyarısı taşır.
+- **Kayıpsız horn güç dengesi.** Birlikte sunulan piramidal horn kayıpsız olarak işaretlidir. Ölçülen güç dengesi çözücünün toleransını sağladığında ışıma verimliliği model varsayımı gereği %100 bildirilir; bu, bağımsız bir doğruluk denetimi değildir. Kazancı kullanmadan önce `rad_efficiency_raw` değerini (ışıyan güç / portun kabul ettiği güç), kalite notlarını ve mesh yakınsamasını inceleyin. Daha ince mesh, port problarını ve NF2FF güç dengesini değiştirebilir. Tolerans dışındaki sonuçlarda ölçülen verimlilik korunur ve kalite uyarısı gösterilir.
 - **İmzasız Windows yükleyicisi.** macOS uygulaması imzalı ve Apple tarafından doğrulanmıştır, çift tıklamayla açılır. Windows yükleyicisinde kod imzası yoktur: SmartScreen ilk çalıştırmada uyarır (Daha fazla bilgi › Yine de çalıştır; [DESKTOP.md](DESKTOP.md)).
 
 ## Geri bildirim

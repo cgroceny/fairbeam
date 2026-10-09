@@ -4,7 +4,7 @@
 //    keys, document scroll),
 //  - a console watch (errors and warnings from our code, `[i18n]` warnings for missing keys),
 //  - screenshots of the failing step.
-import { mkdirSync } from 'node:fs';
+import { mkdirSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
@@ -26,7 +26,7 @@ export function auditInPage(scope) {
     const cs = getComputedStyle(e);
     return cs.visibility !== 'hidden' && cs.display !== 'none' && cs.opacity !== '0';
   };
-  const skip = (e) => e.closest('svg, canvas, [data-audit-skip], .cm-editor, script, style, .visually-hidden') || ['INPUT', 'TEXTAREA', 'SELECT', 'OPTION', 'CANVAS'].includes(e.tagName);
+  const skip = (e) => e.closest('svg, canvas, [data-audit-skip], .cm-editor, script, style, .visually-hidden, .skip-link:not(:focus)') || ['INPUT', 'TEXTAREA', 'SELECT', 'OPTION', 'CANVAS'].includes(e.tagName);
   const add = (kind, e, extra = '') => {
     const key = `${kind}|${label(e)}|${text(e)}`;
     if (!seen.has(key)) { seen.add(key); out.push(`${kind}: ${label(e)} "${text(e)}"${extra}`); }
@@ -233,8 +233,14 @@ export class Session {
     let fatal = false;
     const t0 = Date.now();
     try { await fn(); }
-    catch (e) { problems.push(`function: ${e.message}`); fatal = true; }
+    catch (e) { problems.push(`function: ${e.stack ?? e.message}${e.actual !== undefined ? `\nactual: ${JSON.stringify(e.actual)}\nexpected: ${JSON.stringify(e.expected)}` : ''}`); fatal = true; }
     await sleep(settle);
+    // Resize/MutationObservers queue layout work in animation frames. Inspect the completed
+    // layout, not the intermediate DOM immediately before the ribbon's scheduled refit.
+    await this.page.evaluate(async () => {
+      await document.fonts.ready;
+      await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+    });
     try {
       const issues = await this.page.evaluate(auditInPage, audit);
       for (const i of issues) if (!this.auditIgnore.some((re) => re.test(i))) problems.push(`visual: ${i}`);
@@ -247,6 +253,13 @@ export class Session {
         mkdirSync(failureDir, { recursive: true });
         rec.screenshot = join(failureDir, `${this.scenario}-${this.lang}-${name.replace(/[^a-z0-9]+/gi, '-').slice(0, 40)}.png`);
         await this.page.screenshot({ path: rec.screenshot });
+        const layout = await this.page.evaluate(() => [...document.querySelectorAll('.rb-shell, .rb:not([hidden]) .rb-toolbar, .rb:not([hidden]) .rb-toolbar *')].map(e => {
+          const r = e.getBoundingClientRect(), c = getComputedStyle(e);
+          return { tag: e.tagName, class: typeof e.className === 'string' ? e.className : '', text: e.textContent.slice(0, 80),
+            data: { ...e.dataset }, x: r.x, width: r.width, client: e.clientWidth, scroll: e.scrollWidth,
+            display: c.display, position: c.position, margin: c.margin, padding: c.padding };
+        }));
+        writeFileSync(rec.screenshot.replace(/\.png$/, '.json'), JSON.stringify({ problems, layout }, null, 2));
       } catch { /* the page is gone */ }
     }
     this.results.push(rec);

@@ -416,7 +416,7 @@ export default function LineChart(props: LineChartProps) {
     <div class="chart-container" classList={{ "chart-inspector-wrap": !!props.inspection }}>
     <div class="chart" ref={box}>
       <Show when={legendCount() > 1}>
-        <div class="chart-legend" aria-hidden="true" style={{ left: `${M.l}px` }} ref={legendRef}>
+        <div class="chart-legend line-chart-legend chart-legend-full" aria-hidden="true" style={{ left: `${M.l}px` }} ref={legendRef}>
           <For each={props.series}>
             {(s) => (
               <span class="legend-item">

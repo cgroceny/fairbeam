@@ -213,6 +213,7 @@ textarea.dz-autogrow { resize: none; overflow-y: auto; min-height: 0; max-height
   /* the Python source in Properties needs room for its lines and its Edit / Copy / Save row: the column
      is at least 360 px while it is open (a wider dragged width stays) */
   .app .workspace.design-mode:not(.side-collapsed):has(> .panel-right .python-panel) { --dw-right-col: max(360px, var(--scaling-right, var(--al-right-w))); }
+  .workspace.design-mode > .panel-resize-right { right: calc(var(--dw-right-col, var(--scaling-right, var(--al-right-w))) - 4px); }
   .workspace.design-mode.tree-collapsed > :is(.panel-left, .panel-resize-left),
   .workspace.design-mode.side-collapsed > :is(.panel-right, .panel-resize-right) { display: none; }
   .workspace.design-mode > .dw-strip {

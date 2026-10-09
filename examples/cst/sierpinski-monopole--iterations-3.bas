@@ -43,7 +43,7 @@ Sub Main ()
     sCommand = sCommand + "     .XmaxSpace ""0""" + vbLf
     sCommand = sCommand + "     .YminSpace ""0""" + vbLf
     sCommand = sCommand + "     .YmaxSpace ""0""" + vbLf
-    sCommand = sCommand + "     .ZminSpace ""1""" + vbLf
+    sCommand = sCommand + "     .ZminSpace ""0""" + vbLf
     sCommand = sCommand + "     .ZmaxSpace ""0""" + vbLf
     sCommand = sCommand + "     .ApplyInAllDirections ""False""" + vbLf
     sCommand = sCommand + "End With" + vbLf

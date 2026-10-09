@@ -22,6 +22,13 @@ action cannot accidentally capture a previously visible chart or canvas.
 
 ### Parameters in the VBA macro export
 
+The macro transfers supported geometry and setup commands; it does not reproduce the openEMS
+discretization. Mesh line counts in comments are metadata, not a prescribed solver grid. After
+import, inspect the calculation box, absorbing-boundary spacing, port contact and reference
+impedance before solving. A completed run or an energy stopping criterion alone does not establish
+mesh convergence. Check S-parameters with successive global and feed-local refinements while
+keeping the geometry, boundary positions and port definition fixed.
+
 When the Export dialog is opened on a design, the VBA macro is **parametric**: each design parameter becomes a
 macro parameter with its value and description, and the fields that are expressions over them are
 written as VBA expressions, so changing a parameter moves the model:

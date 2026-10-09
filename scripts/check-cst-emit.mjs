@@ -492,6 +492,24 @@ eq(decomposeAffine(hom([[1, 0, 0], [0, 1, 0], [0, 0, 0]], [0, 0, 0])), null, "si
   ok(!plain.warnings.some((w) => w.includes("frequency-dependent")), "a constant material has no dispersion warning");
 }
 
+// A port can reach a PEC domain wall beyond the solid. Background spacing is measured from
+// the exported structure (including the port), otherwise that wall moves away from the feed.
+{
+  for (let axis = 0; axis < 3; axis++) for (const upper of [false, true]) {
+    const start = [2, 2, 2], stop = [2, 2, 2];
+    start[axis] = upper ? 3 : 0; stop[axis] = upper ? 4 : 1;
+    const face = 'xyz'[axis] + (upper ? '+' : '-');
+    const b = mk([metal('radiator', [prim({ kind: 'box', start: [1, 1, 1], stop: [3, 3, 3], bbox: [[1, 1, 1], [3, 3, 3]] })])], {
+      domain: { min: [0, 0, 0], max: [4, 4, 4] },
+      solver: { ...base.solver, boundaries: { ...base.solver.boundaries, [face]: 'PEC' } },
+      ports: [{ number: 1, type: 'lumped', direction: 'xyz'[axis], start, stop, R: 50, excite: true }],
+    });
+    const spacing = options => blocks(cstMacro(b, options).text).find(x => x[0] === 'With Background')
+      .find(x => x.includes('.' + 'XYZ'[axis] + (upper ? 'max' : 'min') + 'Space'));
+    eq(lits(spacing(DEFAULT_CST_OPTIONS))[0], '0', `${face}: the port reaches the wall; no extra background gap`);
+    eq(lits(spacing({ ...DEFAULT_CST_OPTIONS, includePorts: false }))[0], '1', `${face}: omitted ports do not change the exported extent`);
+  }
+}
 // A finite source is reduced to an axial line. Warn at the lossy export boundary;
 // keep its endpoints centered rather than silently creating a diagonal source.
 for (const direction of ["x", "y", "z"]) {
@@ -521,4 +539,4 @@ for (const direction of ["x", "y", "z"]) {
   ok(!result.warnings.includes(finitePortWarning(2)), "waveguide aperture is not reduced to a discrete line");
 }
 
-console.log(`CST emit checks passed (${checks} assertions): transforms, waveguide ports, finite-source warnings, RLC, wires, circles, revolution, polyhedra (STL), parametric export.`);
+console.log(`CST emit checks passed (${checks} assertions): transforms, waveguide ports, finite-source warnings, RLC, wires, circles, revolution, polyhedra (STL), parametric export, port boundary extent.`);
