@@ -37,7 +37,7 @@ Simülasyon ayarları › Mesh altındaki **İnce ayrıntıları sıklaştırın
 
 Ne zaman açılmalı: tasarımda otomatik mesh'in üç hücreden azıyla (eğik şeritte tek hücreyle) kapladığı dar boşluklar, çentikler, besleme aralıkları veya eğik ince şeritler varsa. Ayar kapalıyken mesh değişmez; yine de Denetimler listesi bu tür ayrıntıları `mesh-fine-feature` olarak bildirir (sayıyı ve en kötü genişlikleri içeren bir bilgi) ve ayarı açmanızı önerir. Ayarı açtıktan sonra önizlemeyi yeniden oluşturun, hücre sayısını ve denetimleri karşılaştırın.
 
-Maliyet ve doğruluk uyarısı: sıklaştırma hücre ve zaman adımı sayısını, dolayısıyla çalışma süresini artırır; paketlenmiş örneklerde hücre sayısı yaklaşık 2 katına kadar, bıçak anteninde hücre × zaman adımı maliyeti 7,5 katına kadar çıkar (aşağıdaki tablolara bakın). Ayrıca besleme çevresindeki ızgarayı değiştirir; bu da tel antenlerin giriş empedansını kaydırabilir: aşağıdaki kaba helis denetiminde giriş direnci %27,7 değişmiştir. Geometrik çözünürlük, elektromanyetik yakınsama demek değildir; bu yüzden empedansa güvenmeden önce ayar açıkken ve kapalıyken birer çalıştırmayı karşılaştırın veya [yakınsama çalışmasını](#convergence-study) yapın. Paketlenmiş İHA bıçak anteni örneği (`blade_867`) ayar açık olarak gelir.
+Maliyet ve doğruluk uyarısı: sıklaştırma hücre ve zaman adımı sayısını, dolayısıyla çalışma süresini artırır; paketlenmiş örneklerde hücre sayısı yaklaşık 2 katına kadar, bıçak anteninde hücre × zaman adımı maliyeti 7,5 katına kadar çıkar (aşağıdaki tablolara bakın). Ayrıca besleme çevresindeki ızgarayı değiştirir; bu da tel antenlerin giriş empedansını kaydırabilir: aşağıdaki kaba helis denetiminde giriş direnci %27,7 değişmiştir. Geometrik çözünürlük, elektromanyetik yakınsama demek değildir; bu yüzden empedansa güvenmeden önce ayar açıkken ve kapalıyken birer çalıştırmayı karşılaştırın veya [yakınsama çalışmasını](#convergence-study) yapın. Dağıtımdan kaldırılan Blade araştırma kaynağı bu ayarı kullanır; artık örnek olarak sunulmaz.
 
 Uyarlamalı *Otomatik* modu `mesh: {"mode":"design", "overrides": {...}}` kullanır. İnce desenli metal levhalar için yaklaşık 30 hücre/λ ve tam levha kenarlarını, diğer durumlarda 24 hücre/λ ve üçte bir kuralını seçer. Hava çözünürlüğü şekil sayısıyla azalır (8 ile geometrik ayrıntı çözünürlüğü arasında sınırlıdır), varsa dielektrik katmanlar en az beş alt bölüme ayrılır ve kademelenme oranı 1,4'tür. Hava payı uzak alan hesaplanmıyorsa λ(f_min)/8, hesaplanıyorsa λ(f_min)/4'tür. NF2FF kutusu mesh çizgilerinden oluşturulur; openEMS, `Simulation.add_nf2ff_box` içinde asgari açıklık şartı getirmez. Daha büyük çeyrek dalga payı, ışıma sınırı için temkinli seçimdir. Alan değerleri `overrides` altında sabitlenebilir; bu değerler aynen raporlanır ve notları elle belirlenen ayarı gösterir. Uyarlamalı değerler oluşturma sırasında hesaplanır, tasarım JSON'una geri yazılmaz. Eksik mod ve `mode: auto` eski seçimleri korur.
 
@@ -77,6 +77,10 @@ Mesh oluşturucu tüm CSXCAD şekillerini (box, polygon, linpoly, cylinder, cyli
 İnce ayrıntının enine hücre sayısı temkinli bir değerdir: ayrıntının genişliği, her eksendeki kesişen en geniş hücre genişliklerinin toplamına bölünür ve ayrıntının genişlik yönüne izdüşürülür. Bu, geometrik çözünürlüğü ölçer; elektromanyetik yakınsamayı değil. Ayrıntılar ayar kapalıyken de ölçülür. Önizleme üretildikten sonra, bildirilen bir ayrıntı gereken çözünürlüğün altındaysa tasarım denetimleri `mesh-fine-feature` bildirir: ayar kapalıysa ayarı açmanızı öneren bir bilgi, ayar açıkken hücre sınırı yüzünden bir ayrıntı yetersiz kalmışsa bir uyarı. Rapor ve hücre sayısı karşılaştırması işlem içi mesh önizlemesini kullanır; çözücüyü çalıştırmaz. Elle girilen mesh'te veya bu raporu içermeyen eski bir önizlemede ince ayrıntı değerlendirmesi yoktur. Sıklaştırma hücre eklediğinde Denetimler listesi başlangıç ve sıklaştırılmış toplamları, eklenen hücreleri ve oranı gösterir. Sıklaştırma her koordinat ekseni boyunca yereldir; Kartezyen mesh çizgileri bölge boyunca uzandığından uzun bir eğik şeridi sıklaştırmak yine de çok sayıda hücre ekleyebilir.
 
 ## İnce ayrıntı mesh regresyonu
+
+Aşağıdaki tablolar belirtilen eski sürümlerde, beslemenin enine denetiminden önce ölçülmüştür.
+Ayar açıldığında artık dallı kuplör, kademeli alçak geçiren süzgeç, dikdörtgen patch ve dört
+elemanlı patch dizisinde daha önce atlanan besleme çevreleri de sıklaştırılır.
 
 Yeniden üretilebilir işlem içi karşılaştırma, `63e3550cbb5f07b92dd3c18dd22833ab6366251d` ana dal sürümünü ve gözden geçirilmiş sıklaştırma algoritmasını kullanır. Ayar varsayılan olarak kapalı olsa ve yalnızca bıçak örneği açık gelse de, kayıtlı her örnek karşılaştırma için açıkça açılmıştır. Tüm değerler `python/tests/fixtures/automesh_fine_features_comparison.json` dosyasındadır. Bunlar mesh ölçümleridir, elektriksel yakınsama ölçümleri değildir.
 
@@ -183,6 +187,44 @@ GPU motoru, −60 dB durdurma ölçütü. VALIDATION.md'deki yakınsamış, elle
 - Monopol şablonu (PEC toprak sınırı, bölge z = 0'da başlar) otomatik mesh ile çalışır: 180 k hücre, 25 mm tel için 2,66 GHz rezonans (X = 0).
 
 ## Yakınsama çalışması
+
+Kararlı bir sonuç çifti ancak iki koşu da enerji sönümü ölçütünü sağladığında (çok portlu bir
+çalışmada uyarılan bütün portlar dahil) ve otomatik mesh'lerin hiçbirinde yetersiz ince ayrıntı
+bildirilmediğinde kabul edilir. Enerji durumu eksikse denetim geçmez. Rapor bunu rezonans
+değişiminden ayrı belirtir. Beslemelerde `cells_across`, aralık genişliğinin eksen yönündeki ve
+tüm enine yönlerdeki hücre boyutlarına oranlarının en küçüğüdür; sonlu enine genişlikte
+ölçeği, bu genişlik ile besleme aralığının küçüğü belirler.
+`axial_cells_across` ve `transverse_cells_across` bu değerleri ayrı kaydeder.
+Enine denetim, besleme çizgisinin iki yanındaki hücreleri de kapsar. Bunlar geometrik alt
+sınırlardır; doğruluk belgesi değildir. Besleme çevresinde en az iki ek sıklaştırma yapın ve
+S11 çukurunun derinliği önemliyse sınır uzaklığını ayrıca denetleyin. Yalnızca dalga boyu başına
+hücre sayısını artırmak besleme ve dielektrik kalınlığı hücrelerini değiştirmeyebilir.
+
+Bağımsız yerel geometri denetimi için `python/` klasöründen
+`FAIRBEAM_TEST_FDTD=1 python -m unittest discover -s tests -p test_native_geometry_parity.py -v`
+çalıştırılabilir (PowerShell'de önce `$env:FAIRBEAM_TEST_FDTD='1'` ayarlayın, sonra `python -m unittest ...`
+komutunu çalıştırın). Denetim bıçak antenini doğrudan openEMS/CSXCAD ile kurar; aynı mesh, kaynak,
+sınırlar ve port üzerinde tasarım oluşturucusuyla karşılaştırır. Kurulu çözücüyle geometri
+aktarımını ve S11 hesabını denetler; fiziksel doğruluğu veya farklı çözücü derlemelerinin
+eşdeğerliğini kanıtlamaz.
+
+Kontrollü dikdörtgen patch çalışmasını yinelemek için `python/` klasöründen
+`python -m tests.feed_resolution_study --out <yeni-klasör>` çalıştırın. Betik girdileri, ham port
+verilerini, tam karmaşık S11/Zin değerlerini, günlükleri ve manifestleri saklar; dört CPU iş
+parçacığıyla aynı anda yalnızca bir çözüm çalıştırır. Önce eski, yalnızca eksen boyunca yapılan
+denetimi yeni denetimle karşılaştırır; ardından besleme merkezi çevresindeki sabit 3 mm bölgede
+hücreleri iki kez yarıya indirir. Geometri, malzemeler, dış bölge, MUR sınırları, kaynak,
+50 ohm referansı ve −60 dB enerji eşiği sabit kalır. Her koşu için 15 dakika zaman sınırı vardır;
+başarısız veya durdurulan koşular çıktı klasöründe korunur.
+
+Windows ve openEMS 0.37.0-rc3 ile 20 hücre/λ otomatik dikdörtgen patch, eski denetimde 167.040,
+yeni denetimde 266.400 hücre kullandı. İki ek yerel sıklaştırmada 427.056 ve 912.288 hücre oluştu.
+S11 minimumları sırasıyla −40,08, −34,01, −26,70 ve −23,11 dB idi (801 noktalı tam banda ek olarak,
+kaydedilen port verileri 2,43–2,49 GHz arasında 50 kHz adımla değerlendirildi).
+Dört koşu da enerji eşiğini sağladı, ancak çukur derinliği değişmeye devam etti:
+**bu çalışma besleme mesh'inin yakınsadığını kanıtlamaz**. Düzeltme, atlanan çözünürlük denetimini
+tamamlar; üç hücre hedefi bir başlangıçtır, önerilen son mesh değildir. Özellikle bu kadar derin
+ve dar çukurlarda örneklenen minimum, frekans adımına da bağlıdır.
 
 Mesh'in yeterince ince olup olmadığını, sonuçlar değişmeyene kadar incelterek belirleyebilirsiniz. Tasarım dosyasında bunun için tek komut (veya tasarımcının Mesh yakınsaması… penceresi, [DESIGNER.md](DESIGNER.md#mesh-convergence)) yeterlidir:
 

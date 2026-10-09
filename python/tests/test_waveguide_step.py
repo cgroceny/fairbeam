@@ -77,12 +77,17 @@ def read_pair(root, cpw, padding):
                 or stats.get('exact_endcriteria') is not True or stats.get('engine') != 'cpu'
                 or stats.get('hit_timestep_limit') is not False
                 or not isinstance(stats.get('timesteps'), int) or not 0 < stats['timesteps'] < 200000
-                or not energy or max(energy) > -70+1e-9
+                or not energy or max(energy) > f.END_DB+1e-9
                 or any(isinstance(t, bool) or not isinstance(t, (int, float))
                        or not np.isfinite(t) or not 0 < t <= f.CASE_SECONDS for t in durations)
                 or isinstance(meta.get('dt_s'), bool) or not isinstance(meta.get('dt_s'), (int, float))
                 or not np.isfinite(meta['dt_s']) or meta['dt_s'] <= 0):
             raise ValueError('case is incomplete, over budget or lacks a confirmed exact energy stop')
+        pulse_steps = meta.get('excitation_timesteps')
+        if (isinstance(pulse_steps, bool) or not isinstance(pulse_steps, int)
+                or abs(pulse_steps-int(np.ceil(f.PULSE_END_S/meta['dt_s']))) > 1
+                or stats['timesteps'] < pulse_steps):
+            raise ValueError('simulation stopped before the native Gaussian excitation completed')
         with np.load(path/'data.npz') as data:
             if (not np.array_equal(data['f'], f.FREQUENCIES)
                     or any(data[k].shape != (2, len(f.FREQUENCIES)) or not np.isfinite(data[k]).all()
@@ -125,14 +130,22 @@ def compare(root):
             matches=error <= f.LIMITS['target_abs'],
             mesh_pair_passes=change is not None and change <= f.LIMITS['mesh_abs'],
             qa_passes=reciprocity <= f.LIMITS['reciprocity_abs'] and power <= f.LIMITS['power_abs'], samples=samples))
-    boundary = None
+    boundary, control = None, None
     if (f.CONTROL_MESH, f.PADDING) in spectra and (f.CONTROL_MESH, f.CONTROL_PADDING) in spectra:
-        boundary = float(np.max(abs(spectra[f.CONTROL_MESH, f.PADDING]-spectra[f.CONTROL_MESH, f.CONTROL_PADDING])))
+        s = spectra[f.CONTROL_MESH, f.CONTROL_PADDING]
+        boundary = float(np.max(abs(spectra[f.CONTROL_MESH, f.PADDING]-s)))
+        control = dict(target_abs_max=float(np.max(abs(s-f.reference()))),
+            reciprocity_abs_max=float(np.max(abs(s[:, 0, 1]-s[:, 1, 0]))),
+            power_error_max=float(np.max(abs(np.sum(abs(s)**2, axis=1)-1))))
+        control['passes'] = (control['target_abs_max'] <= f.LIMITS['target_abs']
+            and control['reciprocity_abs_max'] <= f.LIMITS['reciprocity_abs']
+            and control['power_error_max'] <= f.LIMITS['power_abs'])
     passed = (not missing and len(rows) == 3 and all(r['matches'] and r['qa_passes'] for r in rows)
               and all(r['mesh_pair_passes'] for r in rows[1:])
-              and boundary is not None and boundary <= f.LIMITS['boundary_abs'])
+              and boundary is not None and boundary <= f.LIMITS['boundary_abs']
+              and control is not None and control['passes'])
     return dict(protocol=f.PROTOCOL, limits=f.LIMITS, rows=rows, missing_cases=missing,
-                boundary_abs_max=boundary, qualified_scope=bool(passed),
+                boundary_abs_max=boundary, boundary_control=control, qualified_scope=bool(passed),
                 scope='complex TE10 power-wave S matrix on the fixed measurement planes only')
 
 
@@ -185,10 +198,10 @@ class StepTests(unittest.TestCase):
                 path.mkdir(parents=True)
                 meta = dict(protocol=f.PROTOCOL, geometry=f.geometry(), cpw=cpw, padding=padding, excited=pn,
                     frequency_hz=f.FREQUENCIES.tolist(), limits=f.LIMITS, source_ids=f.source_ids(),
-                    dt_s=1e-12, case_elapsed_s=2.,
+                    dt_s=1e-12, case_elapsed_s=2., excitation_timesteps=int(np.ceil(f.PULSE_END_S/1e-12)),
                     run=dict(converged=True, threads=4, exact_endcriteria=True, engine='cpu',
-                             hit_timestep_limit=False, timesteps=1000,
-                             final_energy_bound_db=-70., wall_time_s=1.))
+                             hit_timestep_limit=False, timesteps=30000,
+                             final_energy_bound_db=f.END_DB, wall_time_s=1.))
                 (path/'report.json').write_text(json.dumps(meta), encoding='utf-8')
                 np.savez(path/'data.npz', f=f.FREQUENCIES, a=a[:, :, pn-1].T, b=b[:, :, pn-1].T, z_ref=f.modes()[1])
         return Path(root)/'cpw40'/f'pad{f.PADDING}'/'e1'
@@ -206,12 +219,14 @@ class StepTests(unittest.TestCase):
             path = self.synthetic(folder)/'report.json'
             original = json.loads(path.read_text(encoding='utf-8'))
             for key, value in (('protocol', 'wrong'), ('source_ids', {}), ('geometry', {}),
-                               ('case_elapsed_s', f.CASE_SECONDS+1), ('case_elapsed_s', True)):
+                               ('case_elapsed_s', f.CASE_SECONDS+1), ('case_elapsed_s', True),
+                               ('excitation_timesteps', 1)):
                 path.write_text(json.dumps({**original, key:value}), encoding='utf-8')
                 with self.assertRaises(ValueError):
                     read_pair(folder, 40, f.PADDING)
             for key, value in (('converged', False), ('final_energy_bound_db', -60),
-                               ('wall_time_s', None), ('wall_time_s', float('nan')), ('threads', 8)):
+                               ('wall_time_s', None), ('wall_time_s', float('nan')), ('threads', 8),
+                               ('timesteps', 1000)):
                 path.write_text(json.dumps({**original, 'run':{**original['run'], key:value}}), encoding='utf-8')
                 with self.assertRaises(ValueError):
                     read_pair(folder, 40, f.PADDING)
@@ -228,6 +243,35 @@ class StepTests(unittest.TestCase):
             np.savez(path, **data)
             with self.assertRaises(ValueError):
                 compare(folder)
+
+    def test_boundary_control_must_pass_its_own_target_and_qa(self):
+        reference = f.reference()
+        phase = reference[:, 0, 0]/abs(reference[:, 0, 0])
+        for failure in ('reciprocity', 'power', 'target'):
+            with self.subTest(failure=failure), tempfile.TemporaryDirectory() as folder:
+                self.synthetic(folder)
+                self.assertTrue(compare(folder)['qualified_scope'])
+                for cpw, padding in [(n, f.PADDING) for n in f.MESHES]+[(f.CONTROL_MESH, f.CONTROL_PADDING)]:
+                    control = padding == f.CONTROL_PADDING
+                    s = reference.copy()
+                    if failure == 'power':
+                        s *= 1.0055 if control else 1.004
+                    elif failure == 'target':
+                        s[:, 0, 0] += 1j*phase*(.0105 if control else .0095)
+                    elif control:
+                        s[:, 0, 1] += .0015
+                        s[:, 1, 0] -= .0015
+                    for pn in (1, 2):
+                        path = Path(folder)/f'cpw{cpw}'/f'pad{padding}'/f'e{pn}'/'data.npz'
+                        with np.load(path) as src:
+                            data = dict(src)
+                        data['b'] = np.einsum('fij,jf->if', s, data['a'])
+                        np.savez(path, **data)
+                result = compare(folder)
+                self.assertTrue(all(row['matches'] and row['qa_passes'] for row in result['rows']))
+                self.assertLess(result['boundary_abs_max'], f.LIMITS['boundary_abs'])
+                self.assertFalse(result['boundary_control']['passes'])
+                self.assertFalse(result['qualified_scope'])
 
     def test_suspend_deadline_stops_only_the_owned_process(self):
         class Process:

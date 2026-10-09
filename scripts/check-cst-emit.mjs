@@ -10,7 +10,7 @@
 // positive angle about +axis) is an assumption; the documentation does not state it.
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
-import { cstMacro, decomposeAffine, DEFAULT_CST_OPTIONS, regularCircle } from "../src/export/cst.ts";
+import { cstMacro, decomposeAffine, DEFAULT_CST_OPTIONS, finitePortWarning, regularCircle } from "../src/export/cst.ts";
 import { Symbols, cstNames } from "../src/export/cstParams.ts";
 
 const base = JSON.parse(readFileSync(new URL("../public/projects/patch-antenna.json", import.meta.url), "utf8"));
@@ -492,4 +492,51 @@ eq(decomposeAffine(hom([[1, 0, 0], [0, 1, 0], [0, 0, 0]], [0, 0, 0])), null, "si
   ok(!plain.warnings.some((w) => w.includes("frequency-dependent")), "a constant material has no dispersion warning");
 }
 
-console.log(`CST emit checks passed (${checks} assertions): transforms, waveguide ports, RLC, wires, circles, revolution, polyhedra (STL), parametric export.`);
+// A port can reach a PEC domain wall beyond the solid. Background spacing is measured from
+// the exported structure (including the port), otherwise that wall moves away from the feed.
+{
+  for (let axis = 0; axis < 3; axis++) for (const upper of [false, true]) {
+    const start = [2, 2, 2], stop = [2, 2, 2];
+    start[axis] = upper ? 3 : 0; stop[axis] = upper ? 4 : 1;
+    const face = 'xyz'[axis] + (upper ? '+' : '-');
+    const b = mk([metal('radiator', [prim({ kind: 'box', start: [1, 1, 1], stop: [3, 3, 3], bbox: [[1, 1, 1], [3, 3, 3]] })])], {
+      domain: { min: [0, 0, 0], max: [4, 4, 4] },
+      solver: { ...base.solver, boundaries: { ...base.solver.boundaries, [face]: 'PEC' } },
+      ports: [{ number: 1, type: 'lumped', direction: 'xyz'[axis], start, stop, R: 50, excite: true }],
+    });
+    const spacing = options => blocks(cstMacro(b, options).text).find(x => x[0] === 'With Background')
+      .find(x => x.includes('.' + 'XYZ'[axis] + (upper ? 'max' : 'min') + 'Space'));
+    eq(lits(spacing(DEFAULT_CST_OPTIONS))[0], '0', `${face}: the port reaches the wall; no extra background gap`);
+    eq(lits(spacing({ ...DEFAULT_CST_OPTIONS, includePorts: false }))[0], '1', `${face}: omitted ports do not change the exported extent`);
+  }
+}
+// A finite source is reduced to an axial line. Warn at the lossy export boundary;
+// keep its endpoints centered rather than silently creating a diagonal source.
+for (const direction of ["x", "y", "z"]) {
+  const k = "xyz".indexOf(direction), transverse = (k + 1) % 3;
+  const start = [0, 0, 0], stop = [0, 0, 0];
+  stop[k] = 2; start[transverse] = -2; stop[transverse] = 2;
+  const port = { number: 1, type: "lumped", R: 50, direction, start, stop };
+  const source = mk([metal("ground", [prim({ kind: "box", start: [-3, -3, 0], stop: [3, 3, 0] })])], { ports: [port] });
+  const result = cstMacro(source);
+  eq(result.warnings.filter(w => w === finitePortWarning(1)).length, 1, `${direction}: finite source warning once`);
+  ok(result.text.includes("WARNING: " + finitePortWarning(1)), `${direction}: warning travels with macro`);
+  const block = blocks(result.text).find(b => b[0] === "With DiscretePort");
+  const a = lits(block.find(l => l.includes(".SetP1"))).slice(1).map(Number);
+  const b = lits(block.find(l => l.includes(".SetP2"))).slice(1).map(Number);
+  near(a[k], 0, 1e-12, `${direction}: axial start`);
+  near(b[k], 2, 1e-12, `${direction}: axial stop`);
+  near(a[transverse], 0, 1e-12, `${direction}: centered start`);
+  near(b[transverse], 0, 1e-12, `${direction}: centered stop`);
+  ok(!cstMacro(source, { ...DEFAULT_CST_OPTIONS, includePorts: false }).warnings.includes(finitePortWarning(1)),
+    `${direction}: geometry-only export has no source warning`);
+  start[transverse] = stop[transverse] = 0;
+  ok(!cstMacro(source).warnings.includes(finitePortWarning(1)), `${direction}: true line needs no approximation warning`);
+}
+{
+  const result = cstMacro(mk([], { ports: [{ number: 2, type: "waveguide", mode: "TE10", a: 10, b: 5,
+    direction: "z", start: [-5, -2.5, 0], stop: [5, 2.5, 1] }] }));
+  ok(!result.warnings.includes(finitePortWarning(2)), "waveguide aperture is not reduced to a discrete line");
+}
+
+console.log(`CST emit checks passed (${checks} assertions): transforms, waveguide ports, finite-source warnings, RLC, wires, circles, revolution, polyhedra (STL), parametric export, port boundary extent.`);

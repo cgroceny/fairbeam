@@ -176,6 +176,13 @@ that cell size; 4 cells across the substrate; frequency step 2.5 MHz = 0.1 %):
 At mesh_div 30, 8 instead of 4 substrate cells gave the same resonance (2.4525 GHz) and Dmax
 (6.786 dBi). Only the S11 depth changed, to −41.2 dB.
 
+These are global-mesh observations, not a converged feed-impedance certificate. In a separate
+fixed-domain local-feed refinement with −60 dB energy completion and 50 kHz frequency sampling,
+the final step moved the S11 minimum by only 0.055% but its depth by 3.59 dB. The default ideal
+line source therefore needs a separate port-resolution check; frequency stability alone is
+insufficient. The optional finite-footprint model and reproducible controls are described in
+[STUDIES.md](STUDIES.md#separate-feed-refinement-from-the-global-mesh).
+
 - The resonance converges to **2.455 GHz, 2.3 % below the transmission-line estimate**. That is
   within the model's stated accuracy, and in the usual direction: the simple model ignores the
   probe inductance, the finite 60 mm ground, and dispersion. The old default (mesh_div 20) read
@@ -1111,14 +1118,30 @@ The record contains our model parameters, equations and numerical results, and a
 
 The [Chapter 3 record](benchmarks/pozar-chapter-03.md) collects matching, mesh-qualified
 quantities for Examples 3.1–3.7, with reproduction commands and explicit model limits.
-The retained pre-migration cohorts and fresh Fairbeam migration controls keep their
-original provenance. Qualification applies only to each listed quantity and geometry.
+Example 3.1 uses a fresh source-completed 20/30/40 study with exact -80 dB stops;
+the historical prematurely stopped columns remain excluded. Other retained cohorts
+and migration controls keep their original provenance. The record states finite
+mesh-change limits and nonmonotonicity explicitly; qualification applies only to
+each listed quantity and geometry, not an asymptotic order.
 
 It excludes conductor-loss discrepancies, the unqualified microstrip impedance/loss
 results, the incomplete 3.8 mesh sequence and the separate group-velocity limitation
 noted above. No gallery model or generated bundle is changed.
 
-## Chapter 5 comparison scopes
+## 20. Chapter 4 comparison scopes
+
+The [Chapter 4 record](benchmarks/pozar-chapter-04.md) collects the matching,
+mesh-qualified ideal-current modal amplitude and input resistance for 4.8. It passes
+two consecutive mesh-change gates, an independent boundary control and its own
+target/QA limits after source completion and exact -90 dB energy stops. The 4.2
+interface remains excluded because its new boundary control failed its energy stop.
+
+Filament reactance, practical launches and general mode conversion are excluded.
+The probe's target errors are nonmonotone; boundary/triplet sensitivity limits the
+accuracy claim to the declared tolerances. Six calculation-only examples require
+no new FDTD. No gallery model or generated bundle is changed.
+
+## 21. Chapter 5 comparison scopes
 
 The [Chapter 5 record](benchmarks/pozar-chapter-05.md) collects the sampled ideal TEM
 scopes that meet the declared target, successive mesh and independent-boundary limits

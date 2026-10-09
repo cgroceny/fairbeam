@@ -60,6 +60,7 @@ def summarize(bundle: dict) -> dict:
     """Compact metrics used by study files and the convergence report."""
     res = bundle.get("results") or {}
     run = bundle.get("run") or {}
+    features = ((bundle.get("mesh") or {}).get("auto") or {}).get("fine_features")
     fr = first_resonance(bundle)
     ff_list = res.get("farfield", [])
     ff = None
@@ -91,7 +92,9 @@ def summarize(bundle: dict) -> dict:
         "max_cell": (bundle.get("mesh") or {}).get("max_cell"),
         "timesteps": run.get("timesteps"),
         "wall_time_s": run.get("wall_time_s"),
-        "converged": run.get("converged"),
+        "converged": (run.get("converged") if all(p.get("converged") is True
+                                                for p in run.get("port_runs", [])) else False),
+        "fine_features_resolved": (None if features is None else all(f.get("resolved") is True for f in features)),
     }
 
 
@@ -207,26 +210,36 @@ def format_network_steps(steps) -> list[str]:
     return lines
 
 
-def convergence_report(summaries: list[dict], tol_f_pct: float = 0.5, tol_d_db: float = 0.1) -> dict:
+def convergence_report(summaries: list[dict], tol_f_pct: float = 0.5, tol_d_db: float = 0.1,
+                       tol_s11_db: float = 1.0) -> dict:
     """Change of first resonance and Dmax between successive refinements (listed coarse -> fine).
 
-    A step is converged when |df| < ``tol_f_pct`` % and |dDmax| < ``tol_d_db`` dB. The study is
+    A step needs stable resonance, S11 depth, available Dmax, energy and local mesh checks. The study is
     converged when its last step is.
     """
     steps = []
+    if not np.isfinite(tol_s11_db) or tol_s11_db <= 0:
+        raise ValueError("S11 tolerance must be finite and positive")
     for a, b in zip(summaries, summaries[1:]):
         fa, fb = (a.get("first_resonance") or {}).get("f"), (b.get("first_resonance") or {}).get("f")
         da, db = a.get("dmax_dbi"), b.get("dmax_dbi")
         df = None if not (fa and fb) else 100.0 * (fb - fa) / fa
         dd = None if da is None or db is None else db - da
-        ok = df is not None and abs(df) < tol_f_pct and (dd is None or abs(dd) < tol_d_db)
+        sa, sb = (a.get("first_resonance") or {}).get("s11_db"), (b.get("first_resonance") or {}).get("s11_db")
+        ds = None if sa is None or sb is None else sb - sa
+        energy_ok = a.get("converged") is True and b.get("converged") is True
+        local_ok = all(m.get("fine_features_resolved") is not False for m in (a, b))
+        ok = (energy_ok and local_ok and df is not None and abs(df) < tol_f_pct
+              and ds is not None and abs(ds) < tol_s11_db and (dd is None or abs(dd) < tol_d_db))
         step = {"df_pct": None if df is None else round(df, 4),
-                "d_dmax_db": None if dd is None else round(dd, 4), "converged": bool(ok)}
+                "d_dmax_db": None if dd is None else round(dd, 4), "converged": bool(ok),
+                "ds11_db": None if ds is None else round(ds, 4),
+                "solver_converged": energy_ok, "fine_features_resolved": local_ok}
         if "network" in a or "network" in b:
             step["network"] = compare_network(a.get("network"), b.get("network"))
             step["converged"] &= step["network"]["converged"]
         steps.append(step)
-    return {"tol_f_pct": tol_f_pct, "tol_d_db": tol_d_db, "steps": steps,
+    return {"tol_f_pct": tol_f_pct, "tol_d_db": tol_d_db, "tol_s11_db": tol_s11_db, "steps": steps,
             "converged": bool(steps and steps[-1]["converged"])}
 
 
@@ -271,13 +284,15 @@ def cartesian(axes: list[tuple[str, list[str]]]) -> list[dict]:
 
 def run_study(model_path: str, axes, *, kind: str = "sweep", fixed: dict | None = None,
               name: str | None = None, out: Path, sim_root: Path, threads: int = 4, points: int = 801,
-              pattern=None, echo: bool = False, tol_f_pct: float = 0.5, tol_d_db: float = 0.1,
+              pattern=None, echo: bool = False, tol_f_pct: float = 0.5, tol_d_db: float = 0.1, tol_s11_db: float = 1.0,
               end_db: float | None = None, exact: bool = True, engine: str = "cpu",
               excite: str | None = None, log=print, network_criteria: dict | None = None) -> dict:
     from .cli import _slug
     from .model import load_model, resolve_params
     from .multiport import run_model
 
+    if kind == "convergence":
+        convergence_report([], tol_f_pct, tol_d_db, tol_s11_db)  # validate before any solver work
     module = load_model(model_path)
     fixed = dict(fixed or {})
     grid = cartesian(axes)
@@ -319,7 +334,7 @@ def run_study(model_path: str, axes, *, kind: str = "sweep", fixed: dict | None 
         "members": members,
     }
     if kind == "convergence":
-        study["convergence"] = convergence_report([m["summary"] for m in members], tol_f_pct, tol_d_db)
+        study["convergence"] = convergence_report([m["summary"] for m in members], tol_f_pct, tol_d_db, tol_s11_db)
         if network_criteria:
             study["network_criteria"] = network_criteria
     study_dir.mkdir(parents=True, exist_ok=True)
@@ -351,7 +366,7 @@ def _num(v: str):
 
 def format_convergence(study: dict) -> str:
     key = study["axes"][0]["key"]
-    rows = [f"{key:>10}  {'cells':>9}  {'f_res GHz':>10}  {'df %':>8}  {'Dmax dBi':>8}  {'dD dB':>7}  ok"]
+    rows = [f"{key:>10}  {'cells':>9}  {'f_res GHz':>10}  {'df %':>8}  {'dS11 dB':>8}  {'Dmax dBi':>8}  {'dD dB':>7}  ok"]
     rep = study["convergence"]
     for i, m in enumerate(study["members"]):
         s = m["summary"]
@@ -359,9 +374,11 @@ def format_convergence(study: dict) -> str:
         step = rep["steps"][i - 1] if i else {}
         rows.append(f"{str(m['params'][key]):>10}  {s['cells'] or 0:>9}  "
                     f"{(fr or 0) / 1e9:>10.4f}  {_fmt(step.get('df_pct'), 8, 3)}  "
+                    f"{_fmt(step.get('ds11_db'), 8, 3)}  "
                     f"{_fmt(s['dmax_dbi'], 8, 2)}  {_fmt(step.get('d_dmax_db'), 7, 3)}  "
                     f"{'' if not i else ('yes' if step['converged'] else 'no')}")
-    rows.append(f"converged (last step |df| < {rep['tol_f_pct']} %, |dD| < {rep['tol_d_db']} dB): "
+    rows.append(f"converged (last step |df| < {rep['tol_f_pct']} %, "
+                f"|dS11| < {rep.get('tol_s11_db', 1.0)} dB, |dD| < {rep['tol_d_db']} dB): "
                 f"{'YES' if rep['converged'] else 'NO'}")
     rows.extend(format_network_steps(rep["steps"]))
     return "\n".join(rows)
@@ -413,7 +430,7 @@ def add_commands(sub, defaults: dict):
     p.add_argument("--tol-f", type=float, default=DEFAULT_TOL["f_pct"],
                    help="resonance tolerance in %% (default 0.5)")
     p.add_argument("--tol-s11", type=float, default=DEFAULT_TOL["s11_db"],
-                   help="designs: tolerance of |S11| at the resonance in dB (default 1)")
+                   help="tolerance of |S11| at the resonance in dB (default 1)")
     p.add_argument("--tol-dmax", "--tol-d", dest="tol_d", type=float,
                    help="Dmax tolerance in dB (default 0.2 for a design, 0.1 with --param)")
     p.add_argument("--max-runs", type=int, default=DEFAULT_MAX_RUNS,
@@ -468,7 +485,7 @@ def _cmd_study(args, kind):
     if kind == "convergence" and len(axes[0][1]) < 2:
         raise ValueError("converge needs at least two values")
     pattern = [float(x) * 1e9 for x in args.pattern.split(",")] if args.pattern else None
-    kw = {"tol_f_pct": args.tol_f, "tol_d_db": args.tol_d,
+    kw = {"tol_f_pct": args.tol_f, "tol_d_db": args.tol_d, "tol_s11_db": args.tol_s11,
           "network_criteria": getattr(args, "network_criteria", None)} if kind == "convergence" else {}
     study = run_study(args.model, axes, kind=kind, fixed=_overrides(args.set), name=args.name,
                       out=Path(args.out), sim_root=Path(args.sim_root), threads=args.threads,

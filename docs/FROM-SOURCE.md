@@ -10,7 +10,7 @@ launcher. The installation commands below cover macOS.
 
 ## Install and first run
 
-Requirements: macOS with Homebrew, Xcode command line tools, Python 3.10+ (the python.org build is recommended) and Node.js 20+.
+Requirements: macOS with Homebrew, Xcode command line tools, Python 3.10+ (the python.org build is recommended) and Node.js 22.12+.
 
 ```bash
 # 1. Build openEMS + CSXCAD from source into ~/opt/openEMS and install fairbeam into its venv

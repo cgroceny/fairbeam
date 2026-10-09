@@ -57,7 +57,7 @@ The cost and the accuracy caveat: refinement adds cells and timesteps: up to abo
 shifts the input impedance of wire antennas: the coarse helix check below moved the input
 resistance by +27.7 %. Geometric resolution is not electromagnetic convergence, so compare a run
 with and without the setting, or run the [convergence study](#convergence-study), before you
-trust the impedance. The bundled UAV blade antenna example (`blade_867`) ships with the setting on.
+trust the impedance. The retired Blade research fixture uses the setting; it is no longer shipped as an example.
 
 The adaptive *Auto* mode uses `mesh: {"mode":"design", "overrides": {...}}`. It selects about
 30 cells/λ and exact sheet edges for thin patterned sheet metal, otherwise 24 cells/λ and thirds;
@@ -116,7 +116,10 @@ records of the `Simulation`, and the boundary conditions. Per axis:
      at 0.843 GHz at 20 cells/λ, converging (0.908 GHz) only from 50; now it is 0.904 GHz at 20.
    - **Fine gaps, notches and slanted strips.** Automatic meshes first check narrow features against
      the mesh produced by the rules above. Parallel sheet edges with finite overlap identify strip
-     widths, notches and gaps; lumped feed gaps are checked along their excitation direction. A
+     widths, notches and gaps; lumped feed gaps are checked along their excitation direction and
+     across their whole transverse footprint, including cells on both sides of every flat
+     coordinate. Finite-width sources use the smaller of gap length and transverse width as
+     the local scale. A fine axial mesh alone does not resolve the surrounding field. A
      detected gap, notch or feed gap with fewer than three cells across receives a local size
      limit. Slanted strips use a 1.1-cell projected target (at least one projected cell in the
      resolution check) for connectivity, typically yielding about 1–1.5 cells. For a slanted strip, both axes in its plane are refined using the edge-normal projections, so its
@@ -194,6 +197,10 @@ cells and their ratio. Refinement is local along each coordinate axis; Cartesian
 extend through the domain, so refining a long slanted strip can still add many cells.
 
 ## Fine-feature mesh regression
+
+The tables below are historical measurements from the cited revisions, before the transverse
+feed check. Opting in now also refines the previously overlooked feed neighborhoods in the
+branch-line coupler, stepped low-pass filter, rectangular patch and four-element patch array.
 
 The reproducible in-process comparison uses main revision
 `63e3550cbb5f07b92dd3c18dd22833ab6366251d` and the revised refinement algorithm. Every saved
@@ -334,6 +341,40 @@ GPU engine, −60 dB end criterion. Compare with the converged hand-tuned result
   mesh: 180 k cells, resonance 2.66 GHz (X = 0) for a 25 mm wire.
 
 ## Convergence study
+
+A stable pair is accepted only after both runs meet the energy-decay criterion, including every
+excited port in a multiport run, and neither automatic mesh reports an unresolved fine feature.
+Missing energy status is not a pass. The report distinguishes this from a change in resonance.
+For feed features, `cells_across` is the smallest gap-width/cell-size ratio across the axial and
+all transverse directions; for a finite transverse span, the smaller of that span and the gap
+sets the scale. `axial_cells_across` and `transverse_cells_across` record them separately.
+These are geometric minimums, not an accuracy certificate: check at least two further refinements
+of the port neighborhood, and test boundary clearance independently when S11 depth matters.
+Increasing cells per wavelength alone may leave the feed and substrate cells unchanged.
+
+An independent native-geometry control is available with
+`FAIRBEAM_TEST_FDTD=1 python -m unittest discover -s tests -p test_native_geometry_parity.py -v`
+from `python/`. It constructs the blade directly with openEMS/CSXCAD and compares it with the
+design builder on the same mesh, source, boundaries and port. This checks geometry translation and
+S11 extraction using the installed solver binary; it does not establish physical accuracy or
+equivalence between different solver builds.
+
+To repeat the controlled rectangular-patch study, run
+`python -m tests.feed_resolution_study --out <new-directory>` from `python/`.
+The script retains inputs, raw probe data, full complex S11/Zin, logs and manifests and runs one
+CPU solve at a time with four threads. It compares the old axial-only check with the new check,
+then halves the cells in a fixed 3 mm neighborhood around the feed twice. Geometry, materials,
+the outer domain, MUR boundaries, source, 50-ohm reference and −60 dB energy threshold stay fixed.
+Each case has a 15-minute timeout. Failed or interrupted runs remain in the output directory.
+
+On Windows with openEMS 0.37.0-rc3, the automatic rectangular patch at 20 cells/λ used 167,040
+cells with the old check and 266,400 with the new check. The two further local refinements used
+427,056 and 912,288 cells. Their S11 minimum depths were −40.08, −34.01, −26.70 and −23.11 dB,
+respectively (saved probes evaluated at 50 kHz steps over 2.43–2.49 GHz, in addition to the
+801-point full band). All four runs met the energy threshold, but the depth
+was still changing: **this study does not establish feed-mesh convergence**. The correction closes
+a missed resolution check; its three-cell target is a starting point, not a recommended final mesh.
+The printed minimum is sampling-dependent, especially for such deep, narrow dips.
 
 Whether a mesh is fine enough is answered by refining it until the results stop changing. For a
 design file this is one command (or the designer's Mesh convergence… dialog,

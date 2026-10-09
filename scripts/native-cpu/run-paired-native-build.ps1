@@ -12,7 +12,8 @@ param(
 	[Parameter(Mandatory = $true)] [string]$CandidateSource,
 	[Parameter(Mandatory = $true)] [string]$CMakeExe,
 	[Parameter(Mandatory = $true)] [string]$NinjaExe,
-	[Parameter(Mandatory = $true)] [string]$ClExe
+	[Parameter(Mandatory = $true)] [string]$ClExe,
+	[ValidateSet('phase-dispatch', 'periodic-sheets')] [string]$Experiment = 'phase-dispatch'
 )
 
 $ErrorActionPreference = 'Stop'
@@ -21,6 +22,10 @@ $OpenEMSRevision = '08e15ff532a7f4cfd1d4e7164ec262f5187bf30e'
 $VcpkgRevision = '37bb045f3c7a747d3e5d1c13b6fe6a0aec4b5d00'
 $FParserRevision = '4b9c845b449b520c4b8c5f23c74cd04820084f81'
 $CSXCADRevision = '1ceb60bbdd0c0ac975025a8f71df7279791804ce'
+if ($Experiment -eq 'periodic-sheets') {
+	$OpenEMSRevision = '67d378488ee40de815eed00f8aaa808f0a9e3c6d'
+	$CSXCADRevision = 'dcdb62bcfd1111ee3594ba22d06089b41b380990'
+}
 $TargetTriplet = 'x64-windows-cpu-study'
 $HostTriplet = 'x64-windows'
 $Jobs = '2'
@@ -266,16 +271,31 @@ Check-Revision $BaselineSource $OpenEMSRevision 'baseline openEMS source'
 Check-Clean $BaselineSource 'baseline openEMS source'
 Check-Revision $CandidateSource $OpenEMSRevision 'candidate openEMS source'
 $expectedCandidate = @('FDTD/engine_multithread.cpp', 'FDTD/engine_multithread.h', 'FDTD/extensions/engine_extension_phase_dispatch.h') | Sort-Object
+if ($Experiment -eq 'periodic-sheets') {
+	$expectedCandidate = @('FDTD/extensions/conducting_sheet_periodic_topology.h', 'FDTD/extensions/operator_ext_conductingsheet.cpp', 'FDTD/extensions/operator_ext_conductingsheet.h') | Sort-Object
+}
 $candidateStatusLines = & git -C $CandidateSource status --porcelain=v1 --untracked-files=all
 if ($LASTEXITCODE -ne 0) { throw "Could not read candidate status: $CandidateSource" }
 $candidateStatus = $candidateStatusLines -join "`n"
 $actualCandidate = @($candidateStatusLines | Where-Object { $_ } | ForEach-Object { ([string]$_).Substring(3).Trim() } | Sort-Object)
-if (Compare-Object $expectedCandidate $actualCandidate) { throw "Candidate must contain only the pinned phase-dispatch patch files:`n$candidateStatus" }
+if (Compare-Object $expectedCandidate $actualCandidate) { throw "Candidate must contain only the pinned $Experiment patch files:`n$candidateStatus" }
 foreach ($source in @($BaselineSource, $CandidateSource)) {
 	if (Test-Path -LiteralPath (Join-Path $source 'localConfig.cmake')) { throw "Remove localConfig.cmake before building: $source" }
 }
-$candidateCode = [IO.File]::ReadAllText((Join-Path $CandidateSource 'FDTD\engine_multithread.cpp'))
-foreach ($marker in @('OPENEMS_EXPERIMENTAL_CPU_PHASE_DISPATCH', 'phase-lists', 'Experimental CPU phase dispatch enabled')) {
+$candidateCodePath = 'FDTD\engine_multithread.cpp'
+$candidateMarkers = @('OPENEMS_EXPERIMENTAL_CPU_PHASE_DISPATCH', 'phase-lists', 'Experimental CPU phase dispatch enabled')
+$patchFile = Join-Path $PSScriptRoot 'openems-cpu-phase-dispatch.patch'
+if ($Experiment -eq 'periodic-sheets') {
+	$candidateCodePath = 'FDTD\extensions\operator_ext_conductingsheet.cpp'
+	$candidateMarkers = @('OPENEMS_EXPERIMENTAL_CLOSED_ALPHA_SHEETS', 'ConductingSheetPeriodicTopology::Previous', 'Experimental periodic conducting-sheet topology enabled')
+	$patchFile = Join-Path $PSScriptRoot 'openems-periodic-sheets.patch'
+	$actualDiff = Git-Text $CandidateSource @('diff', '--no-ext-diff', '--no-color', 'HEAD')
+	if ((Normalize-LF $actualDiff).Trim() -cne (Normalize-LF ([IO.File]::ReadAllText($patchFile))).Trim()) {
+		throw 'Periodic-sheet candidate must match the reviewed patch exactly, including the new header.'
+	}
+}
+$candidateCode = [IO.File]::ReadAllText((Join-Path $CandidateSource $candidateCodePath))
+foreach ($marker in $candidateMarkers) {
 	if (-not $candidateCode.Contains($marker)) { throw "Candidate patch is missing expected opt-in marker: $marker" }
 }
 
@@ -344,9 +364,11 @@ try {
 }
 finally { $ErrorActionPreference = $previousErrorAction }
 $cmakeVersion = $cmakeVersionLines -join "`n"
-if ($cmakeExitCode -ne 0 -or $cmakeVersion -notmatch 'cmake version 3\.29\.5') { throw "Use CMake 3.29.5; found $($cmakeVersion -split "`n" | Select-Object -First 1)" }
+$requiredCMake = if ($Experiment -eq 'periodic-sheets') { '3.31.6' } else { '3.29.5' }
+$requiredCompiler = if ($Experiment -eq 'periodic-sheets') { '19.44.' } else { '19.42.' }
+if ($cmakeExitCode -ne 0 -or $cmakeVersion -notmatch ('cmake version ' + [regex]::Escape($requiredCMake))) { throw "Use CMake $requiredCMake; found $($cmakeVersion -split "`n" | Select-Object -First 1)" }
 if ($ninjaExitCode -ne 0) { throw 'Could not read Ninja version.' }
-if ($clExitCode -ne 0 -or $clVersion -notmatch '19\.42\.') { throw 'The native study requires MSVC 14.42 / compiler 19.42.' }
+if ($clExitCode -ne 0 -or $clVersion -notmatch [regex]::Escape($requiredCompiler)) { throw "The $Experiment study requires compiler $requiredCompiler" }
 
 $BuildRoot = Join-Path (Join-Path $StudyRoot 'builds') $RunName
 $StageRoot = Join-Path (Join-Path $StudyRoot 'stages') $RunName
@@ -360,7 +382,6 @@ foreach ($path in @($BuildRoot, $StageRoot, $ResultRoot, $NativePrefix)) {
 New-Item -ItemType Directory -Path $BuildRoot, $StageRoot, $LogsRoot, $NativePrefix | Out-Null
 $CommandsFile = Join-Path $ResultRoot 'commands.json'
 
-$patchFile = Join-Path $PSScriptRoot 'openems-cpu-phase-dispatch.patch'
 if (-not (Test-Path -LiteralPath $patchFile -PathType Leaf)) { throw "Pinned source patch missing: $patchFile" }
 $patchHash = Hash-File $patchFile
 $candidateFiles = @()
@@ -382,6 +403,7 @@ $provenance = [ordered]@{
 	builds = @()
 	studyRoot = $StudyRoot
 	runName = $RunName
+	experiment = $Experiment
 	buildType = 'Release'
 	parallelJobs = 2
 	cuda = 'OFF'
@@ -393,7 +415,7 @@ $provenance = [ordered]@{
 		fparser = [ordered]@{ root = $FParserSource; revision = $FParserRevision }
 		CSXCAD = [ordered]@{ root = $CSXCADSource; revision = $CSXCADRevision }
 		openEMSBaseline = [ordered]@{ root = $BaselineSource; revision = $OpenEMSRevision }
-		openEMSCandidate = [ordered]@{ root = $CandidateSource; revision = $OpenEMSRevision; files = $candidateFiles; dispatchPatchSha256 = $patchHash }
+		openEMSCandidate = [ordered]@{ root = $CandidateSource; revision = $OpenEMSRevision; files = $candidateFiles; patchSha256 = $patchHash; dispatchPatchSha256 = $(if ($Experiment -eq 'phase-dispatch') { $patchHash } else { $null }) }
 	}
 	dependencies = [ordered]@{
 		manifest = [ordered]@{

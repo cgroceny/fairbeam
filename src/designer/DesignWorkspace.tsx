@@ -451,7 +451,9 @@ export function Ribbon() {
     // shown) changes the needed width without resizing the shell: fit again. fitRibbon
     // only sets attributes, so this does not trigger itself.
     const content = new MutationObserver(refit);
-    for (const toolbar of shell.querySelectorAll(".rb-toolbar")) content.observe(toolbar, { childList: true, subtree: true });
+    // Tab contents mount lazily. Watching only the initial toolbar misses every subsequently
+    // mounted tab (and its asynchronous text updates) while the shell width stays unchanged.
+    content.observe(shell, { childList: true, subtree: true, characterData: true });
     // compact widths (scaling.css, max-width 1040px): the tree and properties overlay the centre
     // below the ribbon, so every ribbon tab stays reachable; they start at the ribbon's height
     const wrap = shell.closest<HTMLElement>(".rb-wrap") ?? shell;

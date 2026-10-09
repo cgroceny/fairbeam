@@ -101,13 +101,15 @@ def example_measurements():
     baseline = json.loads((FIXTURE.parent / "automesh_fine_features_before.json").read_text())
     rows = {}
     for name, old in baseline["examples"].items():
-        sim = build_measured(root / old["source"], old["overrides"])
+        source = "python/tests/fixtures/blade_retired.design.json" if name == "blade-867" else old["source"]
+        sim = build_measured(root / source, old["overrides"])
         if old["mode"] == "automatic from geometry at defaults":
             sim.auto_mesh(keep_existing=False)
         report = sim.mesh_report
         rows[name] = {**mesh_cost(report), **{key: report[key] for key in ("cells", "total_cells", "min_cell", "max_neighbour_ratio")}}
         if "fine_feature_refinement" in report:
             rows[name]["fine_feature_refinement"] = report["fine_feature_refinement"]
+            rows[name]["feed_resolution"] = [f for f in report["fine_features"] if f["kind"] == "feed"]
     return rows
 
 

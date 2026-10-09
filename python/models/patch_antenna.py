@@ -24,13 +24,19 @@ PARAMS = [
     Param("eps_r", 3.38, "Substrate permittivity", "", minimum=1),
     Param("tan_d", 1e-3, "Loss tangent", "", minimum=0),
     Param("feed_x", -6.0, "Feed position (x)", "mm"),
+    Param("feed_width", 0.0, "Square feed footprint", "mm",
+          "0 retains the tutorial's ideal line source. A positive width defines a fixed square lumped-source footprint; it is not a coaxial connector model.", minimum=0),
+    Param("feed_cells", 4, "Cells across a finite feed footprint", "",
+          "Used only when feed_width > 0. Increase this separately from the global mesh density to check port sensitivity.", minimum=2, maximum=32),
     Param("mesh_div", 30, "Mesh: cells per λ at f max", "",
-          "30 is within 0.1 % of the converged resonance (docs/VALIDATION.md); 20 reads ~0.9 % low",
+          "30 and 40 differ by about 0.1% in the global-mesh resonance study (docs/VALIDATION.md). Check feed resolution and S11 depth separately.",
           minimum=8, maximum=80),
     Param("sub_cells", 4, "Mesh cells across the substrate thickness", "", minimum=1, maximum=16),
     Param("mesh", "manual", "Mesh", "",
           "manual: the hand-tuned mesh below; auto: fairbeam.automesh with auto_cpw cells per wavelength"),
     Param("auto_cpw", 20, "Cells per wavelength (auto mesh)", "", minimum=8, maximum=80),
+    Param("max_timesteps", 30000, "Maximum solver timesteps", "",
+          "Raise this for fine feed meshes; a step-limit exit does not establish energy convergence.", minimum=1000, maximum=1000000),
     Param("f_min", 1.0, "Band start", "GHz", minimum=0.01),
     Param("f_max", 3.0, "Band stop", "GHz", minimum=0.02),
 ]
@@ -39,7 +45,8 @@ PARAMS = [
 def build(p: dict) -> Simulation:
     f_min, f_max = p["f_min"] * 1e9, p["f_max"] * 1e9
     # -60 dB: S11 depth and radiation efficiency need the ring-down to decay well below -40 dB
-    sim = Simulation(f_min, f_max, boundaries=["MUR"] * 6, max_timesteps=30000, end_criteria_db=-60)
+    sim = Simulation(f_min, f_max, boundaries=["MUR"] * 6,
+                     max_timesteps=p.get("max_timesteps", 30000), end_criteria_db=-60)
     mesh = sim.mesh
     res = C0 / f_max / 1e-3 / p["mesh_div"]
     if p["mesh"] not in ("manual", "auto"):
@@ -53,6 +60,13 @@ def build(p: dict) -> Simulation:
         mesh.AddLine("z", [-box[2] / 3, box[2] * 2 / 3])
 
     w, l, s, h = p["patch_w"], p["patch_l"], p["sub_size"], p["sub_h"]
+    feed_width = p.get("feed_width", 0.0)
+    feed_cells = p.get("feed_cells", 4)
+    if (not np.isfinite(feed_width) or feed_width < 0 or not np.isfinite(feed_cells)
+            or feed_cells != int(feed_cells) or not 2 <= feed_cells <= 32):
+        raise ValueError("feed_width must be finite and nonnegative; feed_cells must be an integer from 2 to 32")
+    if feed_width and (abs(p["feed_x"]) + feed_width / 2 >= min(w, s) / 2 or feed_width >= min(l, s)):
+        raise ValueError("the finite feed footprint must lie inside the patch and substrate")
 
     patch = sim.metal("patch", label="Patch")
     patch.AddBox(priority=10, start=[-w / 2, -l / 2, h], stop=[w / 2, l / 2, h])
@@ -70,8 +84,13 @@ def build(p: dict) -> Simulation:
     if not auto:
         sim.fdtd.AddEdges2Grid(dirs="xy", properties=gnd)
 
-    sim.lumped_port(1, 50, [p["feed_x"], 0, 0], [p["feed_x"], 0, h], "z", priority=5,
+    half_feed = feed_width / 2
+    sim.lumped_port(1, 50, [p["feed_x"] - half_feed, -half_feed, 0],
+                    [p["feed_x"] + half_feed, half_feed, h], "z", priority=5,
                     **({} if auto else {"edges2grid": "xy"}))
+    if feed_width:
+        for axis, center in (("x", p["feed_x"]), ("y", 0)):
+            mesh.AddLine(axis, np.linspace(center - half_feed, center + half_feed, int(feed_cells) + 1))
 
     if auto:
         sim.auto_mesh(cells_per_wavelength=p["auto_cpw"], dielectric_cells=p["sub_cells"])

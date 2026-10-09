@@ -132,6 +132,13 @@ Varsayımlar: sonsuz toprak düzlemi ve alttaş, yarı statik ε_eff, h ≪ λ; 
 
 mesh_div 30'da alttaş boyunca 4 yerine 8 hücre kullanılması aynı rezonansı (2,4525 GHz) ve Dmax'ı (6,786 dBi) vermiştir. Yalnızca S11 derinliği −41,2 dB'ye değişmiştir.
 
+Bunlar global mesh gözlemleridir; besleme empedansının yakınsadığını kanıtlamaz. Sabit dış
+bölgede, −60 dB enerji sönümü ve 50 kHz frekans örneklemesiyle yapılan ayrı bir yerel besleme
+inceltmesinde son adım S11 minimum frekansını yalnızca %0,055, derinliğini ise 3,59 dB değiştirdi.
+Varsayılan ideal çizgi kaynak için port çözünürlüğü ayrıca denetlenmelidir; frekans kararlılığı
+tek başına yeterli değildir. İsteğe bağlı sonlu ayak izi modeli ve tekrarlanabilir kontroller
+[STUDIES.md](STUDIES.md#separate-feed-refinement-from-the-global-mesh) içinde açıklanır.
+
 - Rezonans **2,455 GHz'e, iletim hattı tahmininin %2,3 altına** yakınsar. Bu, modelin belirtilen doğruluğu içindedir ve olağan yöndedir: basit model, sonda endüktansını, sonlu 60 mm toprak düzlemini ve dispersiyonu ihmal eder. Eski varsayılan (mesh_div 20) %0,9 düşük okuyordu. Modelin varsayılanı artık mesh_div 30'dur (mesh_div 40'tan %0,1 fark, 11 s).
 - mesh_div 30'da kenar hücresi 1,7 mm, yani yaklaşık alttaş yüksekliğidir. Mikroşeritte ışıyan kenarlardaki hücreyi ≲ h tutun.
 - **Dmax 6,79–6,81 dBi**, ince ve düşük ε değerli alttaş üzerindeki yama için olağan 6–8 dBi aralığındadır.
@@ -728,14 +735,30 @@ Kayıt model parametrelerimizi, denklemleri ve sayısal sonuçları içerir; gal
 
 [Bölüm 3 kaydı](benchmarks/pozar-chapter-03.md), Örnek 3.1–3.7 için hedefi ve mesh
 ölçütlerini sağlayan büyüklükleri, çoğaltma komutları ve açık model sınırlarıyla toplar.
-Taşınmadan önceki koşu grupları ve yeni Fairbeam taşıma kontrolleri, özgün kaynak
-bilgilerini korur. Kabul yalnızca listelenen büyüklük ve geometri için geçerlidir.
+Örnek 3.1, kaynak darbesi tamamlanmış ve tam -80 dB duruşlu yeni 20/30/40 koşu
+grubunu kullanır; tarihsel erken durdurulmuş kolonlar kapsam dışında kalır. Diğer
+eski gruplar ve taşıma kontrolleri özgün kaynak bilgilerini korur. Kayıt sonlu mesh
+farkı sınırlarını ve monoton olmayan değişimi açıkça belirtir; kabul yalnızca
+listelenen büyüklük ve geometri için geçerlidir, asimptotik sıra iddiası taşımaz.
 
 İletken kaybı sapmaları, kabul edilmeyen mikroşerit empedans/kayıp sonuçları, eksik 3.8
 mesh dizisi ve yukarıda belirtilen ayrı grup hızı sınırlaması bu kapsamın dışındadır.
 Hiçbir galeri modeli veya üretilmiş paket değişmez.
 
-## Bölüm 5 karşılaştırma kapsamları
+## 20. Bölüm 4 karşılaştırma kapsamları
+
+[Bölüm 4 kaydı](benchmarks/pozar-chapter-04.md), 4.8 için hedefi ve mesh ölçütlerini
+sağlayan ideal akımla hesaplanan modal genlik ve giriş direncini toplar. Darbe
+tamamlanıp kesin -90 dB enerji duruşuna ulaşıldıktan sonra iki ardışık mesh farkı,
+bağımsız sınır kontrolü ve kendi hedef/kalite ölçütlerini sağlar. 4.2 arayüzü,
+yeni sınır kontrolü enerji duruşunu sağlayamadığı için kapsam dışında kalır.
+
+Filament reaktansı, pratik beslemeler ve genel mod dönüşümü kapsam dışındadır.
+Probun hedef hataları monoton değildir; sınır/prob üçlüsü duyarlılığı doğruluk iddiasını
+belirlenen toleranslarla sınırlar. Yalnız hesap içeren altı örnek yeni FDTD gerektirmez.
+Hiçbir galeri modeli veya üretilmiş paket değişmez.
+
+## 21. Bölüm 5 karşılaştırma kapsamları
 
 [Bölüm 5 kaydı](benchmarks/pozar-chapter-05.md), Örnek 5.3 ve 5.5–5.8 için ilan edilen
 hedef, ardışık mesh ve bağımsız sınır ölçütlerini sağlayan örneklenmiş ideal TEM

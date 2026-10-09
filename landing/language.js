@@ -279,7 +279,7 @@
 
     ["The visual workspace: modeling, checks, simulation settings, the mesh, running and reading results, design files, and importing VBA macros and PCB artwork.", "Görsel çalışma alanı: modelleme, denetimler, simülasyon ayarları, mesh, çalıştırma ve sonuçları inceleme, tasarım dosyaları, VBA makrosu ve PCB çizimi içe aktarma."],
     ["Interface presets, accent colors, chart palettes and custom colors under General settings › Appearance.", "Genel ayarlar › Tema ve yazı tipi altındaki arayüz hazır ayarları, vurgu renkleri, grafik paletleri ve özel renkler."],
-    ["Six 867 MHz antennas as designer files, with their parameters, results and how to scale them.", "Tasarım dosyalarıyla altı adet 867 MHz anten: parametreleri, sonuçları ve ölçekleme yöntemleri."],
+    ["Five 867 MHz antennas as designer files, with their parameters, results and how to scale them.", "Tasarım dosyalarıyla beş adet 867 MHz anten: parametreleri, sonuçları ve ölçekleme yöntemleri."],
     ["How the automatic mesh is built from the geometry: options, rules, the mesh report and checks against hand-made meshes.", "Otomatik mesh'in geometriden nasıl oluşturulduğu: seçenekler, kurallar, mesh raporu ve elle oluşturulmuş mesh'lerle karşılaştırmalar."],
     ["The local run server behind the Run panel: run setup, your own materials, optimization and comparing projects.", "Simülasyon çalıştır panelinin kullandığı yerel çalıştırma sunucusu: çalıştırma ayarları, kendi malzemeleriniz, optimizasyon ve sonuçları karşılaştırma."],
     ["Parameter sweeps, mesh convergence studies, the study file format and Touchstone export from the command line.", "Komut satırından parametre taramaları, mesh yakınsama çalışmaları, çalışma dosyası biçimi ve Touchstone dışa aktarımı."],

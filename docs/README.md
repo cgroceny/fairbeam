@@ -26,7 +26,7 @@ translated. To check a locally served site in Chrome, run `npm run check:docs-la
 | [Getting started](GETTING-STARTED.md) | Installing the desktop app (macOS signed with a Developer ID and notarized by Apple, Windows), a walkthrough from the patch starter to results, the other starters, mesh convergence, field planes, sweeps and the optimizer, importing a VBA macro, where files live, reporting a problem |
 | [Running from source](FROM-SOURCE.md) | Requirements, building openEMS and installing Fairbeam from the repository, first run, the test suite, platform notes |
 | [The designer](DESIGNER.md) | The visual workspace: start screen and starters, the one-row ribbon (Home, Modeling, Transform, Simulation, Optimize, Post-processing), navigation tree and components, modeling, checks, simulation settings, mesh view and mesh convergence, running and results (efficiency, gain patterns, field planes), design files, VBA macro import, known limitations, feedback |
-| [Example designs](../examples/designs/README.md) | Six 867 MHz antennas as designer files (blade, wideband, meander and sleeve dipoles, collinear, Yagi), with parameters, results and how to scale them |
+| [Example designs](../examples/designs/README.md) | Five 867 MHz antennas as designer files (wideband, meander and sleeve dipoles, collinear, Yagi), with parameters, results and how to scale them |
 | [CLI reference](CLI.md) | Every `fairbeam` command and the options of `run` |
 | [Writing models](MODELS.md) | Model files (`MODEL`, `PARAMS`, `build`), an example, templates and the in-app editor |
 | [Automatic meshing](MESHING.md) | `sim.auto_mesh()`: options, rules, report, validation against hand meshes |

@@ -46,7 +46,8 @@ def fake_bundle(f_res, s11_db=-25.0, dmax=6.5, cells=1000, farfield=True):
 
 
 def m(f=2.4e9, s11=-20.0, dmax=6.0, z=(50.0, 0.0), no_resonance=False):
-    return {"f_res": f, "s11_db": s11, "dmax_dbi": dmax, "zin_re": z[0], "zin_im": z[1], "no_resonance": no_resonance}
+    return {"f_res": f, "s11_db": s11, "dmax_dbi": dmax, "zin_re": z[0], "zin_im": z[1],
+            "no_resonance": no_resonance, "solver_converged": True}
 
 
 class DensityTest(unittest.TestCase):
@@ -220,7 +221,7 @@ class StoppingRuleTest(unittest.TestCase):
         self.assertEqual(set(ev), {"tolerances", "densities", "max_runs", "steps", "converged", "converged_at",
                                    "done", "reason", "verdict", "next"})
         self.assertEqual(set(ev["steps"][0]), {"from", "to", "df_pct", "ds11_db", "ddmax_db", "dzin_ohm", "ok",
-                                               "comparable", "converged"})
+                                           "comparable", "converged", "quality"})
         json.dumps(ev, allow_nan=False)
 
 

@@ -84,6 +84,9 @@ Tasarımcının Mesh yakınsaması… penceresi aynı çalışmayı çalıştır
 
 - `converged_at`, ilk yakınsayan adımın daha kaba yoğunluğudur; daha ince çalıştırma bunu doğrular.
 - `reason`: `converged`, `exhausted` (yoğunluk kalmadı: “yakınsamadı: daha da inceltin veya modeli kontrol edin”), `failed`, `cancelled` veya `running` (bu durumda `next`, sıradaki yoğunluktur).
+- Daha önce başarılı sayılmış, enerji ve yerel mesh denetimleri doğrulanmamış Design raporu açıldığında
+  `reason: "unverified"` döner; önerilen yoğunluk kaldırılır, eski hüküm `recorded_verdict`
+  alanında tutulur. Kayıt dosyası korunur; güncel kanıt için çalışmayı yeniden çalıştırın.
 - Çalıştırmada uzak alan yoksa `ok.dmax`, `null` olur; Dmax hesaba katılmaz.
 - Rezonans frekans örnekleri arasında iyileştirilir (S11 minimumu ve dB cinsinden komşularından geçen parabol); böylece ızgara aralığı %0,5 toleransa baskın olmaz.
 
@@ -98,8 +101,15 @@ Bu, `sweep` komutunun tam bir eksenli ve değerlerini **kabadan inceye** sırala
 
 - **ilk rezonansın** değişimi: −10 dB altındaki ilk bandın merkezi (S11 minimumu), uyumlu bant yoksa global S11 minimumu
 - bu rezonansa en yakın uzak alan frekansındaki **Dmax** değişimi
+- `--param` ile başlatılan çalışmalar dahil, bu rezonanstaki **S11 derinliği** değişimi
 
-|Δf| < `--tol-f` (varsayılan %0,5) ve |ΔDmax| < `--tol-d` (varsayılan 0,1 dB) olduğunda adım yakınsamış sayılır. Çalışma, **son** adımı yakınsamışsa yakınsamıştır. Çıktı:
+|Δf| < `--tol-f` (varsayılan %0,5), |ΔS11| < `--tol-s11` (varsayılan 1 dB) ve varsa
+|ΔDmax| < `--tol-d` (varsayılan 0,1 dB) olduğunda adım yakınsamış sayılır. İki koşu da enerji
+sönümü ölçütünü sağlamalı; hiçbirinde yetersiz ince ayrıntı bildirilmemelidir. S11 derinliği
+eksikse denetim geçmez. Çalışma, **son** adımı yakınsamışsa yakınsamıştır. Global mesh parametresi
+değişirken port hücreleri sabit kalıyorsa, bu denetimler iki ek yerel inceltmenin yerini tutmaz.
+
+Aşağıdaki tarihsel çıktı S11 derinliği denetiminden öncedir; güncel tablo ayrıca `dS11 dB` gösterir:
 
 ```
   mesh_div      cells   f_res GHz      df %  Dmax dBi    dD dB  ok
@@ -111,6 +121,165 @@ converged (last step |df| < 0.5 %, |dD| < 0.1 dB): YES
 ```
 
 Yalnızca global hücre boyutunu değil, metal üzerindeki mesh'i kontrol eden parametreyi (`mesh_div`, `cell`, ...) inceltin. Bkz. [VALIDATION.md](VALIDATION.md#5-recommended-settings).
+
+### Besleme inceltmesini global mesh'ten ayırın
+
+Patch örneği varsayılan olarak özgün ideal çizgi beslemesini korur (`feed_width=0`).
+**Farklı, açıkça sonlu bir kaynak modeli** için `feed_width` değerini mm cinsinden belirleyin;
+fiziksel kare ayak izini sabit tutup `feed_cells` değerini artırın. Bu, dağıtılmış ayrık kaynaktır;
+koaksiyel konektör modeli değildir. Alttaş boyunca `sub_cells` değerini de artırın. Küçülen
+hücreler kararlı zaman adımını düşürdüğünde `max_timesteps` sınırını yükseltin. Fiziksel ayak
+izi, malzeme, sınırlar ve kaynak aynı kalmalıdır.
+
+`python/` klasöründen aşağıdaki isteğe bağlı deney, 1 × 1 mm ayak iziyle besleme ve alttaş
+boyunca 2, 4, 8, 16 hücre kullanarak dört CPU çözümünü sırayla çalıştırır:
+
+```bash
+python -m tests.patch_feed_study --out /path/to/new-patch-study
+```
+
+Ham karmaşık S11, minimum çevresinde sık frekans örnekleri, mesh çizgileri, çözücü günlükleri
+ve ardışık iki inceltmenin denetimini kaydeder. Yalnızca frekans testini geçmek, eşleşme
+derinliğinin kararlı olduğunu göstermez. İdeal çizgi beslemeli örnek Design'a dönüştürülürken
+`feed_width` sabit tutulur; çizgiden alana geçiş yeni mesh çizgileri gerektirir. Design'da
+düzenlenebilir sonlu ayak izi için örneği pozitif genişlik değeriyle dönüştürün.
+
+8 Ekim 2026 Windows CPU kontrolünde dört düzeyin tümü −60 dB enerji sönümüne ulaştı:
+
+| Besleme / altlık hücresi | S11 minimumu (GHz) | Derinlik (dB) | Derinlik değişimi (dB) | En büyük karmaşık S11 değişimi |
+| --- | --- | --- | --- | --- |
+| 2 | 2.44700 | −35.630 | — | — |
+| 4 | 2.45395 | −33.521 | 2.109 | 0.11322 |
+| 8 | 2.45580 | −32.885 | 0.636 | 0.03220 |
+| 16 | 2.45645 | −32.564 | 0.321 | 0.01084 |
+
+Son frekans değişimi %0,0265 olsa da tüm banttaki karmaşık değişim, önceden belirlenen 0,01
+sınırını aştı. Frekans ve minimum derinliği son iki adımda kendi eşiklerini sağladı;
+**üç ölçütün tamamını** geçen ardışık iki adım elde edilmedi. Sonlu kaynak açık bir modelleme
+seçeneğidir; çizgi beslemenin doğrulanmış yerine geçmez ve başka antenler için bir düzeltme
+sayılmaz. Özet girdiler, ölçütler ve ölçümler `python/tests/fixtures/patch_finite_feed_20261008.json`
+dosyasında korunur; yukarıdaki komut ham verileri yeniden üretir.
+
+### Bıçak: mesh kararından önce kaynağı tanımlayın
+
+Bıçak, ölçülmüş anteni veya belirtilmiş konnektörü olmayan sayısal bir galeri geometrisidir.
+İdeal çizgi port ve sonlu genişlikli düzlemsel aralık kaynağı farklı modellerdir. S11 eğrilerinin
+farklı olması tek başına fiziksel doğruluğu göstermez. Mesh'i inceltirken genişliği sabit tutun;
+kaynak duyarlılığını gizlemek için geometriyi ayarlamayın.
+
+8 Ekim 2026 denetiminde PEC bıçak, toprak, bant, 50 Ω referans ve tam hassasiyetli iç mesh sabit
+tutuldu. PML kutusunu her yönde 8 ve ardından 16 kenar genişliğinde hücreyle uzatma, iki ardışık
+denetimi geçti (en büyük karmaşık S11 değişimleri 0,000504 ve 0,000389).
+Ayrı besleme çalışması x/y ±4 mm, z −2 ile 6 mm aralığına iki kez yerel orta noktalar ekledi.
+Yalnızca ikinci kaynak modeli portu mevcut 4 mm dilin tamamına yayar; koaksiyel pim içermez.
+
+| Kaynak | İnceltme seviyesi | S11 minimumu (GHz) | Minimum (dB) | 867 MHz'de S11 (dB) | En büyük ardışık karmaşık değişim |
+| --- | --- | --- | --- | --- | --- |
+| İdeal çizgi | 0 | 0.919597 | -14.768 | -14.036 | — |
+| İdeal çizgi | 1 | 0.919972 | -13.982 | -13.308 | 0.030059 |
+| İdeal çizgi | 2 | 0.920203 | -13.315 | -12.689 | 0.028877 |
+| 4 mm düzlemsel | 0 | 0.916355 | -17.316 | -16.427 | — |
+| 4 mm düzlemsel | 1 | 0.916450 | -17.137 | -16.266 | 0.004309 |
+| 4 mm düzlemsel | 2 | 0.916494 | -17.038 | -16.177 | 0.002567 |
+
+Çizgi kaynak denetimi geçmedi. Sabit genişlikli kaynak iki ardışık yerel denetimi de **geçti**.
+Her adımda frekans değişimi %0,5'in; minimum derinliği ve 867 MHz değişimleri 0,5 dB'nin;
+0,7–1,05 GHz boyunca en büyük karmaşık S11 farkı 0,01'in altında olmalıdır. Bütün koşular ayrıca
+−60 dB enerji sönümüne ulaşmalı, 1,001 yansıyan güç sınırını geçmemeli ve minimumu sabit
+0,85–1,00 GHz izleme aralığında tutmalıdır. Yalnızca frekansın uyuşması yeterli değildir.
+
+`python/` içinden, yeni çıktı klasörleri kullanarak çalışmaları tek tek çalıştırın:
+
+```bash
+python -m tests.blade_feed_study --phase boundary --width 0 --threads 12 --out /path/to/new-blade-boundary
+python -m tests.blade_feed_study --phase feed --width 0 --threads 12 --out /path/to/new-blade-line
+python -m tests.blade_feed_study --phase feed --width 4 --threads 12 --out /path/to/new-blade-planar
+python -m tests.blade_feed_study --phase auto --width 4 --threads 12 --out /path/to/new-blade-auto
+python -m tests.blade_feed_study --phase auto --width 4 --densities 40 50 60 --threads 12 --out /path/to/new-blade-fine
+python -m tests.blade_feed_study --phase auto --width 4 --densities 40 60 80 --air-density 20 --threads 12 --out /path/to/new-blade-fixed-air
+python -m tests.blade_feed_study --phase auto --width 4 --densities 60 80 100 --air-density 20 --threads 12 --out /path/to/new-blade-final
+python -m tests.blade_feed_study --phase auto --width 4 --densities 20 30 40 --air-density 20 --threads 12 --out /path/to/new-blade-footprint
+```
+
+Sabit kaynak `python/tests/fixtures/blade_feed_base.design.json` dosyasındadır. `--phase auto`,
+dalga boyu başına 20, 30 ve 40 hücreyle otomatik mesh oluşturur; yalnızca sabit ızgarayı değil,
+türetilen dış kutu dahil bu ayarı denetler. Her koşu en çok sekiz milyon hücre ve 5.400 saniyeyle
+sınırlıdır. Sonuçlar tam girdiyi, ham gerilim/akım kayıtlarını, karmaşık S11 CSV'sini, mesh'i,
+enerjiyi ve kabul kayıtlarını içerir. Komutun bitmesi yakınsama kanıtı değildir:
+iki ardışık geçiş için `comparison.json` dosyasını inceleyin.
+
+`--densities`, önceden seçilen üç seviyeli diziyi belirler. `--air-density 20`, özellik meshi
+inceltilirken dış hava yoğunluğunu sabit tutar; bu seçenek yoksa iki yoğunluk birlikte değişir.
+20/30/40 ve 40/50/60 dizileri iki ardışık geçiş sağlamadı: en büyük karmaşık değişimleri
+0,01767 ve 0,01448 oldu. Hava yoğunluğu 20'de sabitken 40→60 değişimi 0,01014 oldu
+(değiştirilmeyen 0,01 sınırının üzerinde); 60→80 adımı 0,00448 ile geçti. Başarısız adımların
+tamamı kanıtlarda korunur; minimum frekansının kararlı olması bu sonuçları geçersiz kılmaz.
+Sonraki 80→100 değişimi de geçmedi (0,01521). Tarihsel otomatik kontroller, kaynak genişliği
+düzeltmesinden önceki `be2e5d1` commit'iyle tekrarlanabilir; son komutu güncel kodda çalıştırın.
+
+İncelemede ayrı bir mesh raporlama hatası bulundu: 4 mm genişlikli kaynak, enine tek 4 mm hücreye
+düştüğü halde yalnızca sıfır genişlikli enine eksen denetlendiğinden yeterli sayılıyordu.
+Düzeltilen kontrol ve inceltme, kaynağın kapladığı alanın tamamını kapsar. Geometrik regresyon
+testleri geçti; sonraki 20→30→40 testinin ilk adımı geçti (0,00567), ikinci adımı geçmedi
+(karmaşık S11 farkı 0,02866; minimum derinliği değişimi 0,689 dB). Bu, **tam S11 yakınsama
+çözümü değildir**. Blade bu yüzden dağıtılan örneklerden kaldırıldı. Yalnızca regresyon testleri
+ve araştırma için tutulan `python/tests/fixtures/blade_retired.design.json`, ideal çizgi
+varsayılanını ve deneysel `feed_fraction` seçeneğini korur.
+
+Ölçülen özetler, girdi/çıktı özet değerleri ve sınırlar
+`python/tests/fixtures/blade_source_study_20261008.json` dosyasındadır. Windows 11 üzerinde
+Ryzen 9 7900X, 32 GiB RAM, openEMS 0.37.0rc3 ve CSXCAD 0.7.0rc3 kullanıldı; yeni koşular
+12 CPU iş parçacığıyla çalıştı. Tekrar kullanılan çizgi kaynak yarım mesh koşusu dört iş
+parçacığı kullandı: normalize girdiler birebir eşleşti, dört/on iki iş parçacıklı başlangıç
+yanıtlarının farkı sıfırdı. Süreler hız kıyaslaması değildir. Bu yerel testler fiziksel doğruluğu,
+uzak alan yakınsamasını veya GPU eşliğini göstermez.
+
+### Ayrı kurulmuş openEMS CLI ile karşılaştırma
+
+```bash
+python -m tests.native_gallery_study --native /path/to/openEMS --out /path/to/new-control --timeout 15000
+```
+
+Bu isteğe bağlı uzun kontrol Python örneklerini, kayıtlı örnek Design'ları ve sıfır yinelemeli
+Sierpinski varyantını kapsar. Alt küme için `--models dipole,wideband_dipole_867` kullanın. Her portu iki
+yolda da sırayla, dört CPU iş parçacığıyla, aynı tam hassasiyetli CSXCAD geometrisi, mesh ve
+−60 dB enerji ölçütüyle çalıştırır; modelin adım sınırı yerine 300.000 adımlık üst sınır kullanır.
+Ham dalgaları, tam S matrislerini, çözücü girdisini, model
+kaynağını, özetleri ve günlükleri korur. Düzlemsel kaynakların CSXCAD XML yazımı sırasında
+mesh'ten kaymaması için ilkel koordinatları 17 anlamlı basamakla aktarılır.
+
+Tüm galeri saatler sürebilir. Komut, büyük örnekler için native çözüm başına zaman aşımını
+900'den 15.000 saniyeye çıkarır; bir çift için bunun iki katı artı 50 saniye ayrılır.
+`--threads N`, fiziksel girdiyi değiştirmeden iki yoldaki CPU iş parçacığı sayısını ayarlar.
+Her denemede yeni çıktı klasörü kullanın; yarıda kesilen koşuların çıktıları korunur.
+
+Kontroller aynı girdinin eşdeğerliğini, enerji sönümünü, matris pasifliğini, S matrisi hesabını
+ve sonuç saklama yuvarlamasını ayrı değerlendirir. Uzak alanı kapsamaz; mesh yakınsaması veya
+fiziksel doğruluk kanıtı değildir. Ayrı arşivden çıkarılmış çalıştırılabilir dosya, uygulamayla
+aynı upstream çözücü ikilisini içerebilir; kütüphane özetini karşılaştırıp bu durumu kaydedin.
+
+8 Ekim 2026 Windows CPU kontrolünde 21 galeri örneği/varyantı, sırayla 64 çözücü koşusunda
+tamamlandı. Çiftlerin iki tarafında aynı olmak üzere dört veya 12 iş parçacığı kullanıldı.
+Ham karmaşık S matrisleri birebir aynıydı; bağımsız matris hesabındaki en büyük fark 5.58e-16,
+paket yuvarlamasındaki en büyük fark 7.05e-6 oldu. Tüm örnekler enerji ve matris pasifliği
+sınırlarını sağladı. 136 gerilim/akım probu çifti de kayıt hassasiyetinde aynıydı. Uygulama ve
+resmi arşiv aynı openEMS DLL'ini içeriyordu: bu sonuç iki çalıştırma yolunun uyumunu gösterir;
+bağımsız bir çözücü veya fiziksel ölçümlerle uyum kanıtı değildir. CPU girdileri, ikili/kaynak
+özetleri, ölçütler ve örnek bazındaki sonuçlar
+`python/tests/fixtures/native_gallery_control_20261008.json` dosyasındadır.
+Tam galeri kaydı, önceki çizgi kaynaklı Blade modelini kullanır; kaynak özetleri kanıtın parçasıdır.
+Bu kayıt, sonradan düzenlenmiş bir kaynağın tekrar çalıştırılması gibi sunulmamalıdır.
+Tarihsel 21 örneklik toplam, artık dağıtılmayan Blade'i de içerir. Güncel varsayılan galeri
+koşuları Blade'i dışarıda tutar; `--models blade_867` araştırma kaynağını açıkça seçer.
+Bu kontrolde GPU çalıştırması ve uzak alanlar test edilmedi.
+
+Yenilenen Blade kaynağı, 9 Ekim'de iki yolda da 12 CPU iş parçacığıyla, aynı −60 dB/300.000
+adım kontrolüyle ve uzak alan hesabı olmadan yeniden sınandı. Ham karmaşık S11 ile kayıtlı
+gerilim/akım verileri birebir aynıydı; paket yuvarlamasındaki en büyük fark 6.87e-6 oldu.
+Enerji ve pasiflik kontrolleri geçti. Kaynak özeti ve ölçümler,
+`python/tests/fixtures/blade_source_study_20261008.json` dosyasındaki
+`new_gallery_native_control` alanındadır. Bu, aynı upstream DLL ile çalıştırma eşliğidir;
+Blade mesh yakınsamasının kanıtı değildir.
 
 ## Çalışma dosyası: `fairbeam.study/1`
 

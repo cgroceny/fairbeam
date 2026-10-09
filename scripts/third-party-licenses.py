@@ -65,16 +65,16 @@ for target in ('aarch64-apple-darwin', 'x86_64-pc-windows-msvc'):
         for dep in nodes[id]['deps']:
             if any(d['kind'] is None for d in dep['dep_kinds']): pending.append(dep['pkg'])
 rust = []
-crate_sources = json.loads((ROOT / 'scripts/licenses/crate-sources.json').read_text())
+crate_sources = json.loads((ROOT / 'scripts/licenses/crate-sources.json').read_text(encoding="utf-8"))
 for p in metadata['packages']:
     if p['id'] not in resolved or not p['source']:
         continue
     directory = Path(p['manifest_path']).parent
-    content = texts({str(f.relative_to(directory)): f.read_bytes() for f in directory.rglob('*') if f.is_file()})
+    content = texts({f.relative_to(directory).as_posix(): f.read_bytes() for f in directory.rglob('*') if f.is_file()})
     if p.get('license_file'):
         f = directory / p['license_file']
         if not any(t['name'] == p['license_file'] for t in content):
-            content.append({'name': p['license_file'], 'text': f.read_text()})
+            content.append({'name': p['license_file'], 'text': f.read_text(encoding="utf-8")})
     rust.append(item('cargo', p['name'], p['version'], p['license'], p['repository'] or crate_sources.get(f"{p['name']}@{p['version']}") or f"https://crates.io/crates/{p['name']}/{p['version']}", content))
     rust[-1]['evidence'] = 'Release targets: ' + ', '.join(platforms[p['id']]) + '. Default features; normal dependencies only.'
 
@@ -91,7 +91,7 @@ for p in rust:
     vcs = Path(cargo['manifest_path']).parent / '.cargo_vcs_info.json'
     repo = p['source'].rstrip('/')
     if vcs.exists() and repo.startswith('https://github.com/'):
-        commit = json.loads(vcs.read_text())['git']['sha1']
+        commit = json.loads(vcs.read_text(encoding="utf-8"))['git']['sha1']
         slug = repo.removeprefix('https://github.com/').removesuffix('.git')
         tree = json.loads(get(f'https://api.github.com/repos/{slug}/git/trees/{commit}'))
         files = {v['path']:get(f"https://raw.githubusercontent.com/{slug}/{commit}/{v['path']}") for v in tree.get('tree',[]) if v['type']=='blob' and re.match(r'^(LICENSE|COPYING|COPYRIGHT|NOTICE)',v['path'],re.I)}
@@ -106,12 +106,12 @@ for p in rust:
         p['texts'] = [{'name':'Mozilla Public License 2.0', 'text':get('https://www.mozilla.org/media/MPL/2.0/index.815ca599c9df.txt').decode()}]
 
 
-lock = json.loads((ROOT / 'package-lock.json').read_text())['packages']
-modules = json.loads((CACHE / 'viewer-modules.json').read_text())
+lock = json.loads((ROOT / 'package-lock.json').read_text(encoding="utf-8"))['packages']
+modules = json.loads((CACHE / 'viewer-modules.json').read_text(encoding="utf-8"))
 modules += ['node_modules/@fontsource/ibm-plex-mono', 'node_modules/@fontsource/ibm-plex-sans']
 def npm(lock_path):
     p = lock[lock_path]
-    installed = json.loads((ROOT / lock_path / 'package.json').read_text())
+    installed = json.loads((ROOT / lock_path / 'package.json').read_text(encoding="utf-8"))
     name = installed['name']
     if installed['version'] != p['version']:
         raise ValueError(f'Build install differs from lockfile: {name}')
@@ -132,11 +132,11 @@ def npm(lock_path):
 with ThreadPoolExecutor(max_workers=4) as pool:
     viewer = list(pool.map(npm, sorted(set(modules))))
 
-requirements = re.findall(r'^([\w-]+)==([^\s\\]+)', (ROOT / 'runtime/requirements.txt').read_text(), re.M)
+requirements = re.findall(r'^([\w-]+)==([^\s\\]+)', (ROOT / 'runtime/requirements.txt').read_text(encoding="utf-8"), re.M)
 def python_package(pair):
     name, version = pair
     meta = json.loads(get(f'https://pypi.org/pypi/{name}/{version}/json'))
-    requirement_block = re.search(rf'^{re.escape(name)}=={re.escape(version)}[\s\S]*?(?=^[\w-]+==|\Z)', (ROOT / 'runtime/requirements.txt').read_text(), re.M).group()
+    requirement_block = re.search(rf'^{re.escape(name)}=={re.escape(version)}[\s\S]*?(?=^[\w-]+==|\Z)', (ROOT / 'runtime/requirements.txt').read_text(encoding="utf-8"), re.M).group()
     locked_hashes = set(re.findall(r'--hash=sha256:([0-9a-f]{64})', requirement_block))
     urls = [p for p in meta['urls'] if p['digests']['sha256'] in locked_hashes]
     if not urls:
@@ -163,7 +163,7 @@ def python_package(pair):
 with ThreadPoolExecutor(max_workers=4) as pool:
     python = list(pool.map(python_package, requirements))
 
-pins = json.loads((ROOT / 'runtime/pins.json').read_text())
+pins = json.loads((ROOT / 'runtime/pins.json').read_text(encoding="utf-8"))
 uv_version = pins['uv']['version']
 uv_files = archive(get(f'https://github.com/astral-sh/uv/archive/refs/tags/{uv_version}.tar.gz'))
 python.insert(0, item('runtime', 'uv', uv_version, 'MIT OR Apache-2.0', f'https://github.com/astral-sh/uv/tree/{uv_version}', texts(uv_files)))
@@ -175,7 +175,7 @@ for os_name, arch in [('darwin', 'aarch64'), ('windows', 'x86_64')]:
     files = archive(get(pin['url'], pin['sha256']))
     python.append(item('runtime', f'CPython / python-build-standalone {os_name}', f"{pin['major']}.{pin['minor']}.{pin['patch']}+{pin['build']}", 'Python-2.0 and bundled library terms', pin['url'], texts(files)))
 solver = []
-component_rules = json.loads((ROOT / 'scripts/licenses/solver-components.json').read_text())
+component_rules = json.loads((ROOT / 'scripts/licenses/solver-components.json').read_text(encoding="utf-8"))
 def reference_text(pair):
     name, rule = pair
     if name == 'TinyXML (static)':
@@ -252,4 +252,4 @@ sections = [
     dict(title='Microsoft WebView2', description='The Windows installer includes the Evergreen bootstrapper. The separately installed runtime updates independently; it has no fixed version in Fairbeam\'s locks. Microsoft redistribution terms apply: https://developer.microsoft.com/en-us/microsoft-edge/webview2/ and https://learn.microsoft.com/en-us/microsoft-edge/webview2/concepts/distribution. These proprietary terms are separate from the Rust webview2 bindings.', packages=[item('runtime', 'Microsoft WebView2', 'Evergreen', 'Microsoft proprietary terms', 'https://developer.microsoft.com/en-us/microsoft-edge/webview2/', [])]),
     dict(title='Fonts and assets', description='IBM Plex Sans and Mono use SIL OFL 1.1. Lucide icons and their upstream notices are in the viewer section. Fairbeam\'s own marks and application icons remain covered by the project license.', packages=[p for p in viewer if p['name'].startswith('@fontsource/')]),
 ]
-(ROOT / 'scripts/licenses/inventory.json').write_text(json.dumps(dict(sections=sections), indent=2, ensure_ascii=False)+'\n')
+(ROOT / 'scripts/licenses/inventory.json').write_text(json.dumps(dict(sections=sections), indent=2, ensure_ascii=False)+'\n', encoding='utf-8')

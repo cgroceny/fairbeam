@@ -41,6 +41,7 @@ NOT_CONVERGED = "not converged: refine further or check the model"
 # every step of a study whose runs have no resonance in the band (the |S11| minimum is at a band edge,
 # which moves with nothing): the steps cannot be compared, so the study cannot converge
 NOT_COMPARABLE = "not comparable: no resonance in the band (the minimum is at the band edge)"
+NOT_VERIFIED = "not converged: energy decay or local mesh resolution is unverified"
 
 
 # ---------------------------------------------------------------------------- the design's mesh
@@ -208,6 +209,7 @@ def metrics(bundle: dict, *, network_criteria: dict | None = None) -> dict:
     out = {"f_res": None, "s11_db": None, "zin_re": None, "zin_im": None, "matched": None, "no_resonance": False,
            "dmax_dbi": s.get("dmax_dbi"), "cells": s.get("cells"), "timesteps": s.get("timesteps"),
            "wall_time_s": s.get("wall_time_s"), "solver_converged": s.get("converged")}
+    out["fine_features_resolved"] = s.get("fine_features_resolved")
     if network_criteria:
         from .study import network_metrics
         out["network"] = network_metrics(bundle, network_criteria)
@@ -250,9 +252,11 @@ def compare(a: dict, b: dict, tol: dict) -> dict:
           "dmax": None if dd is None else abs(dd) < tol["dmax_db"]}
     r = lambda x, n: None if x is None else round(float(x), n)  # noqa: E731
     comparable = not (a.get("no_resonance") or b.get("no_resonance"))
+    quality = {"energy": all(m.get("solver_converged") is True for m in (a, b)),
+               "local_mesh": all(m.get("fine_features_resolved") is not False for m in (a, b))}
     step = {"df_pct": r(df, 4), "ds11_db": r(ds, 4), "ddmax_db": r(dd, 4), "dzin_ohm": r(dz, 3),
-            "ok": ok, "comparable": comparable,
-            "converged": comparable and bool(ok["f"] and ok["s11"] and ok["dmax"] is not False)}
+            "ok": ok, "comparable": comparable, "quality": quality,
+            "converged": comparable and all(quality.values()) and bool(ok["f"] and ok["s11"] and ok["dmax"] is not False)}
     if "network" in a or "network" in b:
         from .study import compare_network
         step["network"] = compare_network(a.get("network"), b.get("network"))
@@ -292,7 +296,10 @@ def evaluate(members: list[dict], planned: list[float], tol: dict | None = None)
     if reason == "converged":
         verdict = f"converged at {density_text(converged_at)}"
     elif reason == "exhausted":
-        verdict = NOT_COMPARABLE if steps and not any(st["comparable"] for st in steps) else NOT_CONVERGED
+        if steps and not all(steps[-1]["quality"].values()):
+            verdict = NOT_VERIFIED
+        else:
+            verdict = NOT_COMPARABLE if steps and not any(st["comparable"] for st in steps) else NOT_CONVERGED
     elif reason == "failed":
         verdict = f"stopped: the run at {density_text(last['density'])} failed"
     elif reason == "cancelled":
@@ -541,6 +548,20 @@ class ServerStudies:
             return None
         study.pop("job_kw", None)
         conv = study["convergence"]
+        if conv.get("converged"):
+            accepted = [step for step in conv.get("steps", []) if step.get("converged")]
+            def verified(step):
+                quality = step.get("quality") or {}
+                return all(quality.get(key) is True for key in ("energy", "local_mesh"))
+            if not accepted or not all(verified(step) for step in accepted):
+                # Old reports predate the quality checks. Preserve the on-disk
+                # result, but do not recommend its density from a cached verdict.
+                conv.update(recorded_verdict=conv.get("verdict"), converged=False,
+                            converged_at=None, done=True, reason="unverified",
+                            verdict=NOT_VERIFIED, next=None)
+                for step in accepted:
+                    if not verified(step):
+                        step["converged"] = False
         if not conv["done"]:
             with self.manager.lock:
                 active = [j for j in self.manager.jobs.values()

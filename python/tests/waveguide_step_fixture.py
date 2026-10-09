@@ -24,8 +24,9 @@ MESHES, PADDING, CONTROL_PADDING = (40, 50, 60), 16, 24
 CONTROL_MESH = MESHES[1]
 LIMITS = dict(target_abs=.01, mesh_abs=.003, boundary_abs=.002,
               reciprocity_abs=.002, power_abs=.01)
-PROTOCOL = 'uniform-te10-dielectric-step-v2'
+PROTOCOL = 'uniform-te10-dielectric-step-v3'
 CASE_SECONDS = 1800.
+END_DB, PULSE_END_S = -90., 9/(np.pi*2e8)
 
 
 def source_ids():
@@ -71,7 +72,7 @@ def build(cpw, excited, padding=PADDING):
             or isinstance(padding, bool) or not isinstance(padding, int) or padding < 16):
         raise ValueError('cpw=10..80 by ten, port=1/2 and padding>=16 required')
     sim = Simulation(FREQUENCIES[0], FREQUENCIES[-1], excitation='gauss',
-        boundaries=['PEC']*4+['PML_8']*2, end_criteria_db=-70, max_timesteps=200000)
+        boundaries=['PEC']*4+['PML_8']*2, end_criteria_db=END_DB, max_timesteps=200000)
     step = C0/FREQUENCIES[-1]/np.sqrt(ER)/sim.unit/cpw
     for axis, size in (('x', A), ('y', B)):
         count = 2*int(np.ceil(size/step/2))
@@ -102,7 +103,8 @@ def acquire(out, cpw, excited, padding=PADDING):
     b = np.array([p.uf_ref for p in ports])/np.sqrt(z)
     np.savez_compressed(out/'data.npz', f=FREQUENCIES, a=a, b=b, z_ref=z,
         voltage=np.array([p.uf_tot for p in ports]), current=np.array([p.if_tot for p in ports]))
-    dt = float(np.diff(np.loadtxt(out/'raw/et', max_rows=2)[:, 0])[0])
+    excitation = np.loadtxt(out/'raw/et')
+    dt = float(np.diff(excitation[:2, 0])[0])
     versions = {}
     for package in ('openEMS', 'CSXCAD'):
         try:
@@ -112,7 +114,7 @@ def acquire(out, cpw, excited, padding=PADDING):
     meta = dict(protocol=PROTOCOL, geometry=geometry(), cpw=cpw, excited=excited,
         padding=padding, frequency_hz=FREQUENCIES.tolist(), limits=LIMITS,
         cells=int(np.prod([len(sim.mesh.GetLines(ax))-1 for ax in 'xyz'])),
-        dt_s=dt, source_ids=source_ids(), excitation=sim.excitation,
+        dt_s=dt, excitation_timesteps=len(excitation), source_ids=source_ids(), excitation=sim.excitation,
         runtime_versions=versions, run=sim.run_stats)
     (out/'report.json').write_text(json.dumps(meta, indent=2)+'\n', encoding='utf-8')
     return meta

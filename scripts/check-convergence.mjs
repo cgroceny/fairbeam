@@ -154,4 +154,19 @@ ok(server.includes('r"/api/convergence"') && server.includes('r"/api/convergence
   ok(readFileSync(join(root, "src/designer/ConvergenceDialog.tsx"), "utf8").includes('r.notComparable ? t("conv.notComparable")'), "the table cell says n/a");
 }
 
+{
+  const unverified = structuredClone(study);
+  unverified.convergence.reason = "exhausted";
+  unverified.convergence.converged = false;
+  unverified.convergence.converged_at = null;
+  unverified.convergence.verdict = "not converged: energy decay or local mesh resolution is unverified";
+  const last = unverified.convergence.steps.at(-1);
+  last.quality = { energy: false, local_mesh: true };
+  last.converged = false;
+  eq(verdictText(unverified.convergence.verdict), t("conv.verdict.notVerified"), "energy-quality verdict is localized");
+  eq(verdictDetail(unverified), t("conv.verdict.notVerified"), "quality failure takes precedence over small metric changes");
+  last.quality = { energy: true, local_mesh: false };
+  eq(verdictDetail(unverified), t("conv.verdict.notVerified"), "local-mesh failure cannot display a successful verdict");
+}
+
 console.log(`convergence: ${checks} checks passed`);

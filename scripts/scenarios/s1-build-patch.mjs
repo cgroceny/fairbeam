@@ -216,6 +216,28 @@ export default {
       assert.equal(again.parts.length, 3);
       assert.equal(again.ports.length, 1);
     });
+    await s.step('configure a coarse mesh through the current settings dialog', async () => {
+      await ribbonTab(s, 'ribbon.tab.sim');
+      if (!await s.find('.rb-btn', await s.T('ribbon.sim.meshSettings'))) {
+        await s.click('ribbon.sim.mesh', { sel: '.rb-group-toggle' });
+      }
+      await s.click('ribbon.sim.meshSettings', { sel: '.rb-btn' });
+      await s.wait('[aria-labelledby="ss-title"]');
+      const mesh = (await draftOf(s)).mesh;
+      if (mesh.mode === 'design') {
+        const label = await s.T('sim.mesh.cpw');
+        const override = await s.T('sim.mesh.override', { label });
+        const selector = `input[type="checkbox"][aria-label=${JSON.stringify(override)}]`;
+        await s.page.locator(selector).click();
+        await s.fill(`input[aria-label=${JSON.stringify(label)}]`, '6');
+      } else {
+        await s.fill(await s.field(await s.T('sim.mesh.cpwAtFmax'), { within: '[aria-labelledby="ss-title"]' }), '6');
+      }
+      await s.click('common.ok', { within: '[aria-labelledby="ss-title"]' });
+      await s.gone('[aria-labelledby="ss-title"]');
+      const configured = (await draftOf(s)).mesh;
+      assert.equal(Number(configured.mode === 'design' ? configured.overrides.cells_per_wavelength : configured.cells_per_wavelength), 6);
+    });
     // One coarse solver run, at low priority and only while nobody else holds the sim lock
     const release = ctx.skipRun ? null : ctx.takeSimLock();
     if (!release) {
@@ -225,8 +247,6 @@ export default {
     try {
       await s.step('run one coarse simulation', async () => {
         await ribbonTab(s, 'ribbon.tab.sim');
-        await s.click('ribbon.sim.mesh', { sel: '.rb-group-toggle' }).catch(() => {});
-        await s.fill(await s.field(await s.T('ribbon.sim.cellsPerWavelength'), { within: '.rb' }), 6);
         await s.click('ribbon.sim.run', { sel: '.rb-btn' });
         await s.wait('[role=dialog]');
         await s.click(['run.saveAndRun', 'run.run'], { within: '[role=dialog]' });
