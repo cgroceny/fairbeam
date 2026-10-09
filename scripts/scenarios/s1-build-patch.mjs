@@ -54,6 +54,17 @@ export default {
       await s.page.goto(s.url, { waitUntil: 'domcontentloaded' });
       await s.wait('.home');
       await s.wait('button', await s.T('home.newProject.create'));
+      await s.page.keyboard.press('Tab');
+      const skip = await s.page.evaluate(() => {
+        const link = document.activeElement;
+        const rect = link?.getBoundingClientRect();
+        const style = link && getComputedStyle(link);
+        return { focused: link?.matches('.skip-link'), width: rect?.width, height: rect?.height, visibility: style?.visibility, clip: style?.clip };
+      });
+      assert.equal(skip.focused, true, 'the first Tab stop is the skip link');
+      assert.ok(skip.width > 1 && skip.height > 1 && skip.visibility === 'visible' && skip.clip === 'auto', `the focused skip link is visible (${JSON.stringify(skip)})`);
+      await s.page.keyboard.press('Enter');
+      assert.equal(await s.page.evaluate(() => document.activeElement?.matches('main')), true, 'Enter moves focus to the current screen main region');
     });
     await s.step('create an empty design', async () => {
       await s.fill(await s.field(await s.T('home.newProject.name')), design, { blur: false });
@@ -181,6 +192,39 @@ export default {
       const sim = (await draftOf(s)).simulation;
       assert.deepEqual([Number(sim.f_min), Number(sim.f_max)], [1.8, 3.2]);
     });
+    await s.step('set a coarse run profile, edit mesh density and close Simulation Settings', async () => {
+      await ribbonTab(s, 'ribbon.tab.sim');
+      const meshGroup = await s.find('.rb-group-toggle', await s.T('ribbon.sim.mesh'), { within: '.rb' });
+      if (meshGroup) await meshGroup.click();
+      await s.click('ribbon.sim.meshSettings', { sel: '.rb-btn', within: '.rb' });
+      await s.wait('[role="dialog"]');
+      await s.click('sim.profile.title', { sel: '[role="tab"]', within: '[role="dialog"]' });
+      await s.pick(await s.page.$('#ss-profile select'), await s.T('sim.profile.quick'));
+      await s.click('sim.profile.apply', { sel: 'button', within: '[role="dialog"]' });
+      let mesh = (await draftOf(s)).mesh;
+      assert.equal(Number(mesh.overrides?.cells_per_wavelength), 10, 'the Quick profile applies its starting mesh density through the settings UI');
+      await s.click('sim.section.mesh', { sel: '[role="tab"]', within: '[role="dialog"]' });
+      const cpwLabel = await s.T('sim.mesh.cpw');
+      const airCpwLabel = await s.T('sim.mesh.airCpw');
+      await s.fill(await s.wait('input.rp-input[aria-label]', cpwLabel, { within: '[role="dialog"]', exact: true }), 6);
+      await s.fill(await s.wait('input.rp-input[aria-label]', airCpwLabel, { within: '[role="dialog"]', exact: true }), 6);
+      mesh = (await draftOf(s)).mesh;
+      assert.equal(Number(mesh.overrides?.cells_per_wavelength), 6, 'the enabled mesh override changes the draft to the bounded coarse test density');
+      assert.equal(Number(mesh.overrides?.air_cells_per_wavelength), 6, 'air-cell resolution stays within the feature-cell limit');
+      await s.click('sim.section.freq', { sel: '[role="tab"]', within: '[role="dialog"]' });
+      await s.fill(await s.field('f min', { within: '[role="dialog"]' }), '1.9');
+      const edited = (await draftOf(s)).simulation;
+      assert.equal(Number(edited.f_min), 1.9, 'the frequency field updates the draft from inside the settings dialog');
+      await s.click('common.ok', { within: '[role="dialog"]' });
+      await s.gone('[role="dialog"]');
+      const simulation = (await draftOf(s)).simulation;
+      mesh = (await draftOf(s)).mesh;
+      assert.equal(Number(simulation.f_min), 1.9, 'the settings dialog closes after applying the frequency change');
+      assert.equal(Number(mesh.overrides?.cells_per_wavelength), 6, 'the coarse mesh override persists after settings close');
+      assert.equal(Number(mesh.overrides?.air_cells_per_wavelength), 6, 'the matching air-cell override persists after settings close');
+      assert.equal(await s.page.$eval('.dz-checks', (panel) => !!panel.querySelector('.dz-checks-head .dz-bad-icon')), false,
+        'the edited coarse mesh has no blocking design errors');
+    });
     await s.step('color a solid from the right-click menu', async () => {
       await (await treeRow(s, 'ground', 'part')).click({ button: 'right' });
       await s.click('contextMenu.color', { sel: '[role=menuitem]' });
@@ -225,8 +269,6 @@ export default {
     try {
       await s.step('run one coarse simulation', async () => {
         await ribbonTab(s, 'ribbon.tab.sim');
-        await s.click('ribbon.sim.mesh', { sel: '.rb-group-toggle' }).catch(() => {});
-        await s.fill(await s.field(await s.T('ribbon.sim.cellsPerWavelength'), { within: '.rb' }), 6);
         await s.click('ribbon.sim.run', { sel: '.rb-btn' });
         await s.wait('[role=dialog]');
         await s.click(['run.saveAndRun', 'run.run'], { within: '[role=dialog]' });

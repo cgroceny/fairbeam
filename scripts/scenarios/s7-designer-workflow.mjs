@@ -9,6 +9,7 @@ import { pythonPath, root } from './stack.mjs';
 const COMPONENT = 'Assembly/Feed';
 const REFERENCE = 'Assembly/Reference';
 const TRANSFORM_PANEL = '.tf-panel';
+const WCS_DIALOG = '[aria-labelledby="wcs-title"]';
 
 async function screenshot(s, name) {
   const dir = process.env.FAIRBEAM_SCENARIO_SCREENSHOTS;
@@ -174,19 +175,22 @@ async function openComponentTransform(s, path, count) {
   await s.wait(TRANSFORM_PANEL);
 }
 
-// The ribbon folds a group into one drop-down button when the window is narrow: open the WCS group first then.
-async function openWcsPanel(s) {
-  const group = `.rb-group[aria-label="${await s.T('ribbon.wcs.group')}"]`;
-  const shown = await s.page.$$eval(`${group} .rb-wcs .rb-btn`, (els) => els.some((e) => e.getClientRects().length > 0));
-  const toggle = await s.page.$(`${group} .rb-group-toggle`);
-  if (!shown && toggle && await toggle.evaluate((e) => e.getClientRects().length > 0)) await s.click('ribbon.wcs.group', { sel: '.rb-group-toggle', within: group, exact: true });
-  await s.clickSel(`${group} .rb-wcs .rb-btn`);
+// Reach the same real action whether the ribbon group is inline or folded into a flyout.
+async function clickRibbonAction(s, groupKey, actionKey) {
+  const group = `.rb-group[aria-label="${await s.T(groupKey)}"]`;
+  if (!await s.find('.rb-btn', await s.T(actionKey), { within: group, exact: true })) {
+    await s.click(groupKey, { sel: '.rb-group-toggle', within: group, exact: true });
+  }
+  await s.click(actionKey, { sel: '.rb-btn', within: group, exact: true });
+}
+
+async function openWcsTransform(s) {
+  await clickRibbonAction(s, 'ribbon.wcs.group', 'ribbon.wcs.transform');
+  await s.wait(WCS_DIALOG);
 }
 
 async function openBoxDialog(s) {
-  const group = `.rb-group[aria-label="${await s.T('ribbon.shapes.group')}"]`;
-  await s.click('ribbon.shapes.group', { sel: '.rb-group-toggle', within: group, exact: true });
-  await s.click('ribbon.shapes.box', { sel: '.rb-btn', within: group, exact: true });
+  await clickRibbonAction(s, 'ribbon.shapes.group', 'ribbon.shapes.box');
   await s.wait('.sd');
 }
 
@@ -269,7 +273,7 @@ export default {
       await s.fill(scaleX, '0');
       await s.wait('[aria-live="polite"]', await s.T('transform.preview.fixFields'), { within: TRANSFORM_PANEL });
       const scaleError = await scaleX.evaluate((e) => e.closest('.dz-field')?.querySelector('.dz-value.dz-bad')?.textContent.trim() ?? '');
-      assert.equal(scaleError, await s.T('checks.msg.scale.equalPositive'), 'the invalid uniform scale has one precise field error');
+      assert.equal(scaleError.toLocaleLowerCase(), (await s.T('checks.msg.scale.equalPositive')).toLocaleLowerCase(), 'the invalid uniform scale has one precise field error');
       const applyButton = await s.wait('button', await s.T('common.apply'), { within: TRANSFORM_PANEL, exact: true });
       assert.equal(await applyButton.evaluate((e) => e.disabled), true,
         'a nonpositive scale is rejected before Apply');
@@ -361,7 +365,8 @@ export default {
       await s.wait('[aria-live="polite"]', await s.T('transform.preview.fixFields'), { within: TRANSFORM_PANEL });
       const visibleErrors = await s.page.$eval(TRANSFORM_PANEL,
         (panel) => [...panel.querySelectorAll('.dz-field .dz-value.dz-bad')].map((el) => el.textContent.trim()).filter(Boolean));
-      assert.deepEqual(visibleErrors, [oneAngleError], 'an unresolved angle produces one clear field error');
+      assert.deepEqual(visibleErrors.map((message) => message.toLocaleLowerCase()), [oneAngleError.toLocaleLowerCase()],
+        'an unresolved angle produces the localized field error (capitalization may differ at sentence start)');
       assert.equal(await angle.evaluate((e) => e.getAttribute('aria-invalid')), 'true', 'the angle field is marked invalid');
       assert.equal(await apply.evaluate((e) => e.disabled), true, 'an unresolved angle cannot be applied');
       assert.deepEqual(await previewBounds(s), [], 'an invalid angle clears the previous preview');
@@ -564,32 +569,47 @@ export default {
 
     await s.step('WCS quarter-turn controls preview and create the expected world-space brick', async () => {
       await s.click('ribbon.tab.model', { sel: '.rb-tab' });
-      await openWcsPanel(s);
-      await s.wait('.rb-pop');
-      await s.fill(await s.field(await s.T('draw.localFrame.origin', { axis: 'X' }), { within: '.rb-pop' }), 'S7_UNKNOWN_ORIGIN');
+      await openWcsTransform(s);
       const beforeInvalidFrame = await draftOf(s);
       const invalidFrameHistory = await historyAt(s);
-      await openBoxDialog(s);
-      await s.wait('p', await s.T('draw.localFrame.invalid'), { within: '.sd' });
-      await s.click('common.ok', { within: '.sd' });
-      await s.wait('.sd');
+      await s.fill(await s.field('u', { within: WCS_DIALOG }), 'S7_UNKNOWN_ORIGIN');
+      await s.wait('[role="alert"]', await s.T('wcs.error.value'), { within: WCS_DIALOG });
+      const frameOk = await s.wait('button', await s.T('common.ok'), { within: WCS_DIALOG, exact: true });
+      assert.equal(await frameOk.evaluate((e) => e.disabled), true, 'an unresolved origin cannot be committed');
+      assert.equal(await s.page.$(`${WCS_DIALOG} [role="status"]`), null, 'an invalid frame has no stale result preview');
+      await frameOk.click();
+      await s.wait(WCS_DIALOG);
       assert.equal(await draftOf(s), beforeInvalidFrame, 'an invalid local frame cannot change the design');
       assert.equal(await historyAt(s), invalidFrameHistory, 'an invalid local frame cannot create an undo entry');
-      await s.click('common.cancel', { within: '.sd' });
-      await s.gone('.sd');
+      await s.fill(await s.field('u', { within: WCS_DIALOG }), '10');
+      const rotation = await s.field(await s.T('wcs.dialog.about', { axis: 'w' }), { within: WCS_DIALOG });
+      await s.fill(rotation, '45');
+      await s.wait('[role="alert"]', await s.T('wcs.error.angle'), { within: WCS_DIALOG });
+      assert.equal(await frameOk.evaluate((e) => e.disabled), true, 'a non-quarter-turn cannot enter the drawing frame');
+      assert.equal(await draftOf(s), beforeInvalidFrame, 'invalid rotation and uncommitted movement leave the draft untouched');
+      assert.equal(await historyAt(s), invalidFrameHistory, 'invalid rotation adds no undo entry');
+      await s.click('common.cancel', { within: WCS_DIALOG });
+      await s.gone(WCS_DIALOG);
+      assert.equal(await draftOf(s), beforeInvalidFrame, 'Cancel discards all proposed WCS changes');
 
-      await openWcsPanel(s);
-      await s.wait('.rb-pop');
-      for (const [axis, value] of [['X', '10'], ['Y', '20'], ['Z', '0']]) {
-        await s.fill(await s.field(await s.T('draw.localFrame.origin', { axis }), { within: '.rb-pop' }), value);
+      await openWcsTransform(s);
+      for (const [axis, value] of [['u', '10'], ['v', '20'], ['w', '0']]) {
+        await s.fill(await s.field(axis, { within: WCS_DIALOG }), value);
       }
-      const rotation = await s.field(await s.T('draw.localFrame.rotation', { axis: 'Z' }), { within: '.rb-pop' });
-      await s.pick(rotation, '90');
+      await s.fill(await s.field(await s.T('wcs.dialog.about', { axis: 'w' }), { within: WCS_DIALOG }), '90');
+      await s.wait('[role="status"]', await s.T('wcs.dialog.preview', { origin: '10, 20, 0', u: '+y', v: '−x', w: '+z' }), { within: WCS_DIALOG });
+      assert.equal(await draftOf(s), beforeInvalidFrame, 'the WCS result preview does not edit the design');
+      assert.equal(await historyAt(s), invalidFrameHistory, 'the WCS result preview has no undo entry');
       await screenshot(s, 'wcs-frame-1440');
+      await s.click('common.ok', { within: WCS_DIALOG });
+      await s.gone(WCS_DIALOG);
+      assert.equal(await historyAt(s), invalidFrameHistory + 1, 'the WCS transform commits as one undo transaction');
+      assert.deepEqual(await s.ev((_, m) => JSON.parse(JSON.stringify(m.d.wcs())), null, { d: '/src/designer/draw.ts' }),
+        { normal: 'z', origin: [10, 20, 0], angle: 90 }, 'the committed frame matches its preview');
 
       await openBoxDialog(s);
       await s.wait('p', await s.T('shape.intro.frameNewPart'), { within: '.sd' });
-      for (const [field, value] of [['Xmin', '0'], ['Xmax', '2'], ['Ymin', '0'], ['Ymax', '4'], ['Zmin', '0'], ['Zmax', '1']]) {
+      for (const [field, value] of [['Umin', '0'], ['Umax', '2'], ['Vmin', '0'], ['Vmax', '4'], ['Wmin', '0'], ['Wmax', '1']]) {
         await s.fill(await s.field(field, { within: '.sd' }), value);
       }
       await s.waitFor(async () => (await import('/src/designer/draw.ts')).ghost() !== null,
@@ -622,9 +642,7 @@ export default {
       assert.deepEqual(created.part.transforms, ghostBounds.transforms, 'the committed part stores the exact frame transform');
       assertBounds([created.bounds], [[[6, 20, 0], [10, 22, 1]]], 'the committed geometry matches its preview');
 
-      await openWcsPanel(s);
-      await s.wait('.rb-pop');
-      await s.click('draw.localFrame.returnGlobal', { within: '.rb-pop' });
+      await clickRibbonAction(s, 'ribbon.wcs.group', 'ribbon.wcs.global');
       assert.equal(await s.ev((_, m) => m.d.localFrameActive(), null, { d: '/src/designer/draw.ts' }), false,
         'Return to global resets the temporary frame for later drawing');
     }, { settle: 500 });
@@ -667,10 +685,11 @@ export default {
       await s.wait(`.nt-row[data-id="run:${runFile}"]`);
 
       await s.click('ribbon.tab.model', { sel: '.rb-tab' });
-      await openWcsPanel(s);
+      await clickRibbonAction(s, 'ribbon.draw.group', 'ribbon.draw.options');
       await s.wait('.rb-pop');
       await s.fill(await s.field(await s.T('draw.wcs.gridSnap'), { within: '.rb-pop' }), '0.5');
-      await openWcsPanel(s);
+      await s.click('common.close', { within: '.rb-pop', exact: true });
+      await s.gone('.rb-pop');
       const beforeSnap = await s.ev((_, m) => m.d.snap(), null, { d: '/src/designer/draw.ts' });
       assert.equal(beforeSnap, 0.5, 'the WCS UI set a non-default grid snap');
 

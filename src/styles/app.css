@@ -639,6 +639,9 @@ input[type="range"] { height: var(--al-control-h-sm); margin: 0; accent-color: v
   display: flex; flex-wrap: wrap; gap: var(--al-space-1) var(--al-space-4);
   font-size: var(--al-text-xs); line-height: 16px; color: var(--al-text-2); pointer-events: none;
 }
+.chart-legend-line { right: var(--al-space-3); }
+.chart-legend-line .legend-item { min-width: 0; max-width: 100%; white-space: normal; overflow-wrap: anywhere; pointer-events: auto; }
+.chart-legend-line .legend-key { flex: none; }
 .legend-item { display: inline-flex; align-items: center; gap: var(--al-space-2); white-space: nowrap; }
 /* legend strip spanning the chart, with a units note at its end (wraps under the entries if needed) */
 .chart-legend-full { right: var(--al-space-3); }

@@ -48,12 +48,19 @@ export default {id:'S9',title:'Export the active visible surface',async run(s,ct
   await s.click('ribbon.tab.home',{sel:'.rb-tab'});await s.click('common.save',{sel:'.rb-btn'});await s.sleep(300);await s.page.reload({waitUntil:'domcontentloaded'});await s.wait('.rb');
   await s.showDesignPanel();await (await s.wait('.nt-row[data-id^="run:"]')).click();await s.click('ribbon.tab.post',{sel:'.rb-tab'});await s.click('ribbon.post.sparams',{sel:'.rb-btn'});await s.wait('.dw-result-plot .chart svg');
   await menu(s);assert.equal(await s.page.$$eval('[data-export-action="geometry"]',e=>e.length),0);assert.equal(await s.page.$eval('[data-export-action="result-csv"]',e=>e.disabled),false);await s.press('Escape');
-  await exportItem(s,'result-csv');await s.sleep(150);assert.ok(await s.page.evaluate(()=>window.__exports.some(e=>e.name?.endsWith('-sparams.csv'))));
-  await exportItem(s,'figure-svg');await s.sleep(150);assert.ok(await s.page.evaluate(()=>window.__exports.some(e=>e.type==='image/svg+xml'&&e.text?.includes('<svg'))));
+  await exportItem(s,'result-csv');
+  await s.waitFor(()=>window.__exports.some(e=>e.name?.includes('_sparams_')&&e.name.endsWith('.csv'))&&window.__exports.some(e=>e.type?.startsWith('text/csv')&&e.text?.includes('S11')),null,{what:'the named S-parameter CSV and its data'});
+  const csv=await s.page.evaluate(()=>window.__exports.find(e=>e.type?.startsWith('text/csv'))?.text);
+  const rows=csv.trim().split(/\r?\n/);
+  assert.match(rows[0],/f \(GHz\)/,'the CSV identifies frequency units');
+  assert.equal(rows.length,fixture.results.frequency.length+1,'the CSV retains every result frequency');
+  await exportItem(s,'figure-svg');
+  await s.waitFor(()=>window.__exports.some(e=>e.type==='image/svg+xml'&&e.text?.includes('<svg')),null,{what:'the actual visible chart SVG'});
   const before=await s.page.evaluate(()=>window.__exports.filter(e=>e.url?.startsWith('data:image/png')).length);
-  await s.click('header.screenshot.aria',{sel:'.header-secondary button',attr:'aria-label'});await s.sleep(750);
+  await s.click('header.screenshot.aria',{sel:'.header-secondary button',attr:'aria-label'});
+  await s.waitFor(()=>window.__exports.some(e=>e.name?.includes('_sparams_')&&e.name.endsWith('.png')),null,{what:'the visible S-parameter chart PNG'});
   assert.equal(await s.page.evaluate(()=>window.__exports.filter(e=>e.url?.startsWith('data:image/png')).length),before,'result screenshot never calls hidden3D');
-  assert.ok(await s.page.evaluate(()=>window.__exports.some(e=>e.name?.endsWith('-sparams.png'))));
+  assert.ok(await s.page.evaluate(()=>window.__exports.some(e=>e.name?.includes('_sparams_')&&e.name.endsWith('.png'))));
  });
  await s.step('Drawing exports route to the visible sheet and report a global outcome',async()=>{
   await menu(s);
