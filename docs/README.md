@@ -30,6 +30,7 @@ translated. To check a locally served site in Chrome, run `npm run check:docs-la
 | [CLI reference](CLI.md) | Every `fairbeam` command and the options of `run` |
 | [External Elmer experiment](ELMER-EXPERIMENT.md) | Opt-in native PEC cavity research benchmark |
 | [Experimental solvers in the app](RESEARCH-SOLVERS.md) | Bounded periodic unit-cell and Elmer cavity jobs, shared queue, results, supported geometry and limitations |
+| [Research preparation](RESEARCH-PREPARATION.md) | Floquet channel plans and bounded Design-to-Elmer mesh export; no solver execution |
 | [Writing models](MODELS.md) | Model files (`MODEL`, `PARAMS`, `build`), an example, templates and the in-app editor |
 | [Automatic meshing](MESHING.md) | `sim.auto_mesh()`: options, rules, report, validation against hand meshes |
 | [Run server and Run panel](RUN-SERVER.md) | `fairbeam serve`, the Run panel, sweeps, comparison overlays, the optimizer in the UI |
