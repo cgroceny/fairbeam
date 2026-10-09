@@ -29,7 +29,7 @@ H, ER, Z0, F0 = 1.59, 2.08, 50., 5e9
 TAN_D, SIGMA, SHEET_T = .0004, 5.8e7, .035
 KINDS = ("pec", "dielectric", "copper_sheet", "both_sheet")
 ENDS, MESHES = ("open", "pmc", "boxed"), (4, 6, 8)
-PULSES = ("narrow", "broad")
+PULSES = ("auto", "narrow", "broad")
 CAP_S, MAX_CAP_S, END_DB, THREADS = 60e-9, 1.6e-6, -70., 4
 BROAD_WINDOWS = ((3e-9, 11e-9), (11e-9, 19e-9), (19e-9, 27e-9))
 WINDOWS = ((22e-9, 28e-9), (28e-9, 34e-9), (34e-9, 40e-9))
@@ -140,11 +140,13 @@ def narrow_signal(t):
     return np.exp(-(u/PULSE_TAU)**2)*(-2*u/(PULSE_TAU**2*omega)*np.cos(omega*u)-np.sin(omega*u))
 
 
-def build(n, kind, end="open", air_h=6, cap_s=CAP_S, pulse="narrow"):
+def build(n, kind, end="open", air_h=6, cap_s=CAP_S, pulse="auto"):
     if isinstance(n,bool) or not isinstance(n,int) or n not in MESHES:
         raise ValueError("mesh must be 4, 6 or 8")
     if kind not in KINDS or end not in ENDS or air_h not in (6,8) or pulse not in PULSES:
         raise ValueError("unsupported loss/end/air control")
+    if pulse=="auto":
+        pulse="broad" if end=="open" else "narrow"
     minimum = 45e-9 if pulse=="narrow" else 30e-9
     if not np.isfinite(cap_s) or not minimum <= cap_s <= MAX_CAP_S:
         raise ValueError("cap must cover post-source windows (45 ns narrow / 30 ns broad), at most 1600 ns")
@@ -267,7 +269,7 @@ def energy_trend(t,energy,f_hz):
                 span_db=float(-slope*np.ptp(t)*10/np.log(10)),samples=len(t),physical_energy=False)
 
 
-def acquire(out,n,kind,end,air_h,cap_s,pulse="narrow"):
+def acquire(out,n,kind,end,air_h,cap_s,pulse="auto"):
     out=Path(out)
     out.mkdir(parents=True,exist_ok=False)
     sim,meta=build(n,kind,end,air_h,cap_s,pulse)
@@ -306,7 +308,9 @@ def read(out):
     if any(meta[k]!=expected[k] for k in expected):
         raise ValueError("case parameter identity changed")
     native,run=meta["native"],meta["run"]
-    header_ok=meta.get("native_header",{}).get("version")=="v0.37.0-rc3"
+    header=meta.get("native_header",{})
+    header_ok=(header.get("version")=="v0.37.0-rc3" and header.get("threads")==THREADS
+               and header.get("nyquist_interval")==int(1/(2*meta["f_max_hz"]*native["dt_s"])))
     clock_ok=abs(native["dt_s"]/meta["declared_dt_s"]-1)<1e-8
     grid_ok=native["cells"]==meta["native_cells"] and run.get("grid")==meta["native_lines"]
     stopped=bool(run.get("converged") and native["timesteps"]<meta["max_timesteps"]
@@ -322,6 +326,8 @@ def read(out):
             for j,(lo,hi) in enumerate(meta["windows_s"]):
                 mask=(data["t"]>=lo)&(data["t"]<hi)
                 try:
+                    if t[0]>lo or t[-1]<hi-native["dt_s"]*meta["probe_stride_steps"]:
+                        raise ValueError("incomplete post-source window")
                     poles.append(dict(probe=i,window=j,**field_pole(data["t"][mask],u[mask])))
                 except ValueError as exc:
                     errors.append(f"probe{i}/window{j}: {exc}")
@@ -365,7 +371,7 @@ def read(out):
             # The finite open strip has a different analytical model. Even a
             # mesh-stable result cannot qualify the no-fringe line reference.
             target_ok=(meta["end"]=="boxed" and meta["kind"]=="dielectric"
-                       and result["guide_frequency_rel"]<=GATES["f_target"]
+                       and result["f_target_rel"]<=GATES["f_target"]
                        and result.get("q_target_rel",1)<=GATES["q_target"])
             result.update(field_stable=bool(stable),energy_proxy_passes=proxy_ok,
                           matches=bool(stopped and clock_ok and probe_clock_ok and grid_ok and header_ok and stable and proxy_ok and target_ok))

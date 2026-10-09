@@ -68,7 +68,7 @@ def audit_header(text,meta):
     return dict(version=version[1],threads=fixture.THREADS,nyquist_interval=int(interval[1]))
 
 
-def acquire_serial(out,n,kind,end,air,cap,rate,pulse="narrow"):
+def acquire_serial(out,n,kind,end,air,cap,rate,pulse="auto"):
     out=Path(out).resolve()
     if out.exists():
         raise ValueError("acquisition already exists")
@@ -184,7 +184,9 @@ class MicrostripResonatorTests(unittest.TestCase):
             self.assertEqual(float(node.get("f0")),narrow.f_max)
         self.assertLess(meta["reference"]["guide_frequency_hz"],fixture.F0)
         with self.assertRaisesRegex(ValueError,"post-source"):
-            fixture.build(4,"pec",cap_s=30e-9)
+            fixture.build(4,"pec","boxed",cap_s=30e-9)
+        self.assertEqual(fixture.build(4,"pec","open")[1]["pulse"],"broad")
+        self.assertEqual(fixture.build(4,"pec","boxed")[1]["pulse"],"narrow")
 
     def test_free_pole_frequency_damping_and_offset(self):
         t=np.arange(0,40e-9,2e-12)
@@ -270,12 +272,14 @@ class MicrostripResonatorTests(unittest.TestCase):
                 (out/"input.xml").write_text("<own-synthetic-input/>",encoding="utf-8")
                 np.savez_compressed(out/"data.npz",t=t,u=np.array([np.cos(2*np.pi*fixture.F0*t)]*2),
                                     energy_t=np.linspace(4e-9,25e-9,30),energy=np.linspace(1,.01,30))
-                f=meta["reference"]["guide_frequency_hz"]
+                f=fixture.F0
                 q=fixture.reference("dielectric",f)["q_distributed"]
                 meta.update(source_sha256=fixture.identity(),runtime=fixture.runtime_identity(),gates=fixture.GATES,
                             input_sha256=fixture.sha(out/"input.xml"),data_sha256=fixture.sha(out/"data.npz"),
                             native=dict(dt_s=dt,cells=meta["native_cells"],timesteps=meta["max_timesteps"]-(2 if stopped else 0),numerical_time_s=fixture.CAP_S),
-                            run=dict(grid=meta["native_lines"],converged=stopped,threads=fixture.THREADS),native_header=dict(version="v0.37.0-rc3"))
+                            run=dict(grid=meta["native_lines"],converged=stopped,threads=fixture.THREADS),
+                            native_header=dict(version="v0.37.0-rc3",threads=fixture.THREADS,
+                                nyquist_interval=int(1/(2*meta["f_max_hz"]*dt))))
                 fixture.save(out/"report.json",meta)
                 with patch.object(fixture,"field_pole",return_value=dict(f_hz=f,q=q,alpha_s=1.,decaying=True,relative_residual=0.)), \
                      patch.object(fixture,"energy_decay",return_value=dict(q=q,fitted_span_db=50.,log_rms=0.,q_rel_95_uncertainty=.001)):
@@ -284,6 +288,32 @@ class MicrostripResonatorTests(unittest.TestCase):
                 self.assertFalse(result["qualified"])
                 if wrong_clock:
                     self.assertFalse(result["probe_clock_ok"])
+                if end=="boxed" and stopped and not wrong_clock:
+                    # A matching alternate dispersion approximation cannot
+                    # silently replace the frozen 5 GHz acceptance target.
+                    with patch.object(fixture,"field_pole",return_value=dict(
+                            f_hz=meta["reference"]["guide_frequency_hz"],q=q,alpha_s=1.,decaying=True,relative_residual=0.)):
+                        self.assertFalse(fixture.read(out)["matches"])
+                    meta["native_header"]["threads"]=8
+                    fixture.save(out/"report.json",meta)
+                    self.assertFalse(fixture.read(out)["header_ok"])
+
+    def test_early_stop_cannot_substitute_a_partial_window(self):
+        with tempfile.TemporaryDirectory() as directory:
+            out=Path(directory)
+            _,meta=fixture.build(4,"pec","open",pulse="narrow")
+            dt=meta["declared_dt_s"]
+            t=np.arange(int(36e-9/(dt*meta["probe_stride_steps"])))*dt*meta["probe_stride_steps"]
+            (out/"input.xml").write_text("<own-synthetic-input/>",encoding="utf-8")
+            np.savez_compressed(out/"data.npz",t=t,u=np.array([np.cos(2*np.pi*fixture.F0*t)]*2),energy_t=[],energy=[])
+            meta.update(source_sha256=fixture.identity(),runtime=fixture.runtime_identity(),gates=fixture.GATES,
+                input_sha256=fixture.sha(out/"input.xml"),data_sha256=fixture.sha(out/"data.npz"),
+                native=dict(dt_s=dt,cells=meta["native_cells"],timesteps=int(36e-9/dt),numerical_time_s=36e-9),
+                run=dict(grid=meta["native_lines"],converged=True,threads=fixture.THREADS))
+            fixture.save(out/"report.json",meta)
+            result=fixture.read(out)
+            self.assertFalse(result["matches"])
+            self.assertTrue(any("incomplete" in e for e in result["extraction_errors"]))
 
     def test_study_requires_distinct_fine_mesh_and_boundary_identity(self):
         base=dict(n=4,kind="dielectric",end="pmc",air_h=6,pulse="narrow",f_hz=fixture.F0,q=2900.,matches=True)
@@ -315,7 +345,7 @@ def main():
     p.add_argument("--mesh",type=int,choices=fixture.MESHES,default=4)
     p.add_argument("--case",choices=fixture.KINDS,default="pec")
     p.add_argument("--end",choices=fixture.ENDS,default="open")
-    p.add_argument("--pulse",choices=fixture.PULSES,default="narrow")
+    p.add_argument("--pulse",choices=fixture.PULSES,default="auto")
     p.add_argument("--air",type=int,choices=(6,8),default=6)
     p.add_argument("--cap-ns",type=float,default=fixture.CAP_S*1e9)
     p.add_argument("--rate-mcps",type=float,default=15.)
