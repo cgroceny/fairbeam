@@ -67,6 +67,15 @@ breaking changes bump its version. The fabrication outputs
 have not yet been checked by a fab. Known gaps and plans are in
 [the roadmap](docs/ARCHITECTURE.md#roadmap).
 
+## Use and limitations
+
+Fairbeam is shared to support education, research and open-source collaboration, without warranties.
+Results may contain errors and should be independently verified through mesh-convergence checks
+and suitable analytical references or measurements. To the extent permitted by applicable law,
+the authors and contributors accept no liability for losses arising from its use; see
+[LICENSE](LICENSE), sections 15–17. This statement does not restrict uses permitted by the license,
+including commercial use. See [Validation](docs/VALIDATION.md) for tested cases and their limits.
+
 ## Privacy
 
 Usage counts and sign-in are built but OFF in Fairbeam 0.7.0. No usage counts are recorded or sent,

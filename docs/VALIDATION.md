@@ -6,6 +6,12 @@ converged numbers. Every run listed here can be reproduced with the commands sho
 are committed in `public/projects/studies/`. The focused comparison in section 18 has a separate
 numerical record; its raw simulation outputs are not committed to the repository.
 
+Validation applies to the specific models, settings and quantities documented here; it does not
+guarantee correct results for every design. Results may contain errors. Check mesh convergence and
+verify critical results against suitable independent references or measurements before relying on
+them. Fairbeam is provided without warranties, with liability limited as described in
+[LICENSE](../LICENSE), sections 15–17, to the extent permitted by applicable law.
+
 **Summary**
 
 | Check | Result |
