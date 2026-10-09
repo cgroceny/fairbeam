@@ -162,7 +162,7 @@
     "exports": "pass",
     "legal": "pass",
     "new_unit_tests": "6 passed",
-    "full_python": "1500 tests; 1 environment failure: legacy antenlab installed outside checkout; 8 skipped",
+    "full_python": "1500 tests; 1 environment failure: a legacy package installed outside the checkout; 8 skipped",
     "scenarios": "baseline UI failures; skip-link clipping and older scenario assumptions; no app UI files changed"
   }
 }
