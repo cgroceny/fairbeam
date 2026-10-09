@@ -175,18 +175,20 @@ async function openComponentTransform(s, path, count) {
 }
 
 // The ribbon folds a group into one drop-down button when the window is narrow: open the WCS group first then.
+async function ribbonAction(s, groupKey, actionKey) {
+  const group = `.rb-group[aria-label="${await s.T(groupKey)}"]`;
+  if (!await s.find('.rb-btn:not(.rb-group-toggle)', await s.T(actionKey), { within: group, exact: true })) {
+    await s.click(groupKey, { sel: '.rb-group-toggle', within: group, exact: true });
+  }
+  await s.click(actionKey, { sel: '.rb-btn', within: group, exact: true });
+}
 async function openWcsPanel(s) {
-  const group = `.rb-group[aria-label="${await s.T('ribbon.wcs.group')}"]`;
-  const shown = await s.page.$$eval(`${group} .rb-wcs .rb-btn`, (els) => els.some((e) => e.getClientRects().length > 0));
-  const toggle = await s.page.$(`${group} .rb-group-toggle`);
-  if (!shown && toggle && await toggle.evaluate((e) => e.getClientRects().length > 0)) await s.click('ribbon.wcs.group', { sel: '.rb-group-toggle', within: group, exact: true });
-  await s.clickSel(`${group} .rb-wcs .rb-btn`);
+  await ribbonAction(s, 'ribbon.wcs.group', 'ribbon.wcs.transform');
+  await s.wait('[aria-labelledby="wcs-title"]');
 }
 
 async function openBoxDialog(s) {
-  const group = `.rb-group[aria-label="${await s.T('ribbon.shapes.group')}"]`;
-  await s.click('ribbon.shapes.group', { sel: '.rb-group-toggle', within: group, exact: true });
-  await s.click('ribbon.shapes.box', { sel: '.rb-btn', within: group, exact: true });
+  await ribbonAction(s, 'ribbon.shapes.group', 'ribbon.shapes.box');
   await s.wait('.sd');
 }
 
@@ -269,7 +271,8 @@ export default {
       await s.fill(scaleX, '0');
       await s.wait('[aria-live="polite"]', await s.T('transform.preview.fixFields'), { within: TRANSFORM_PANEL });
       const scaleError = await scaleX.evaluate((e) => e.closest('.dz-field')?.querySelector('.dz-value.dz-bad')?.textContent.trim() ?? '');
-      assert.equal(scaleError, await s.T('checks.msg.scale.equalPositive'), 'the invalid uniform scale has one precise field error');
+      const expectedScaleError = await s.ev((text, m) => m.c.sentenceCase(text), await s.T('checks.msg.scale.equalPositive'), { c: '/src/designer/checkText.ts' });
+      assert.equal(scaleError, expectedScaleError, 'the invalid uniform scale has one precise field error');
       const applyButton = await s.wait('button', await s.T('common.apply'), { within: TRANSFORM_PANEL, exact: true });
       assert.equal(await applyButton.evaluate((e) => e.disabled), true,
         'a nonpositive scale is rejected before Apply');
@@ -357,7 +360,7 @@ export default {
 
       const missing = 'S7_UNKNOWN_ANGLE';
       await s.fill(angle, missing);
-      const oneAngleError = await s.T('checks.msg.expr.unknownName', { name: missing });
+      const oneAngleError = await s.ev((text, m) => m.c.sentenceCase(text), await s.T('checks.msg.expr.unknownName', { name: missing }), { c: '/src/designer/checkText.ts' });
       await s.wait('[aria-live="polite"]', await s.T('transform.preview.fixFields'), { within: TRANSFORM_PANEL });
       const visibleErrors = await s.page.$eval(TRANSFORM_PANEL,
         (panel) => [...panel.querySelectorAll('.dz-field .dz-value.dz-bad')].map((el) => el.textContent.trim()).filter(Boolean));
@@ -565,31 +568,29 @@ export default {
     await s.step('WCS quarter-turn controls preview and create the expected world-space brick', async () => {
       await s.click('ribbon.tab.model', { sel: '.rb-tab' });
       await openWcsPanel(s);
-      await s.wait('.rb-pop');
-      await s.fill(await s.field(await s.T('draw.localFrame.origin', { axis: 'X' }), { within: '.rb-pop' }), 'S7_UNKNOWN_ORIGIN');
       const beforeInvalidFrame = await draftOf(s);
       const invalidFrameHistory = await historyAt(s);
-      await openBoxDialog(s);
-      await s.wait('p', await s.T('draw.localFrame.invalid'), { within: '.sd' });
-      await s.click('common.ok', { within: '.sd' });
-      await s.wait('.sd');
+      await s.fill(await s.field('u', { within: '#wcs-form' }), 'S7_UNKNOWN_ORIGIN');
+      await s.wait('[role="alert"]', undefined, { within: '[aria-labelledby="wcs-title"]' });
+      assert.equal(await s.page.$eval('button[form="wcs-form"]', e => e.disabled), true, 'invalid WCS expressions cannot be committed');
       assert.equal(await draftOf(s), beforeInvalidFrame, 'an invalid local frame cannot change the design');
       assert.equal(await historyAt(s), invalidFrameHistory, 'an invalid local frame cannot create an undo entry');
       await s.click('common.cancel', { within: '.sd' });
       await s.gone('.sd');
 
       await openWcsPanel(s);
-      await s.wait('.rb-pop');
-      for (const [axis, value] of [['X', '10'], ['Y', '20'], ['Z', '0']]) {
-        await s.fill(await s.field(await s.T('draw.localFrame.origin', { axis }), { within: '.rb-pop' }), value);
+      for (const [axis, value] of [['u', '10'], ['v', '20'], ['w', '0']]) {
+        await s.fill(await s.field(axis, { within: '#wcs-form' }), value);
       }
-      const rotation = await s.field(await s.T('draw.localFrame.rotation', { axis: 'Z' }), { within: '.rb-pop' });
-      await s.pick(rotation, '90');
+      const rotation = await s.field(await s.T('wcs.dialog.about', { axis: 'w' }), { within: '#wcs-form' });
+      await s.fill(rotation, '90');
       await screenshot(s, 'wcs-frame-1440');
+      await s.click('common.ok', { within: '[aria-labelledby="wcs-title"]' });
+      await s.gone('[aria-labelledby="wcs-title"]');
 
       await openBoxDialog(s);
-      await s.wait('p', await s.T('shape.intro.frameNewPart'), { within: '.sd' });
-      for (const [field, value] of [['Xmin', '0'], ['Xmax', '2'], ['Ymin', '0'], ['Ymax', '4'], ['Zmin', '0'], ['Zmax', '1']]) {
+      await s.wait('p', await s.T('shape.wcsNote'), { within: '.sd' });
+      for (const [field, value] of [['Umin', '0'], ['Umax', '2'], ['Vmin', '0'], ['Vmax', '4'], ['Wmin', '0'], ['Wmax', '1']]) {
         await s.fill(await s.field(field, { within: '.sd' }), value);
       }
       await s.waitFor(async () => (await import('/src/designer/draw.ts')).ghost() !== null,
@@ -622,9 +623,7 @@ export default {
       assert.deepEqual(created.part.transforms, ghostBounds.transforms, 'the committed part stores the exact frame transform');
       assertBounds([created.bounds], [[[6, 20, 0], [10, 22, 1]]], 'the committed geometry matches its preview');
 
-      await openWcsPanel(s);
-      await s.wait('.rb-pop');
-      await s.click('draw.localFrame.returnGlobal', { within: '.rb-pop' });
+      await ribbonAction(s, 'ribbon.wcs.group', 'ribbon.wcs.global');
       assert.equal(await s.ev((_, m) => m.d.localFrameActive(), null, { d: '/src/designer/draw.ts' }), false,
         'Return to global resets the temporary frame for later drawing');
     }, { settle: 500 });
@@ -667,10 +666,10 @@ export default {
       await s.wait(`.nt-row[data-id="run:${runFile}"]`);
 
       await s.click('ribbon.tab.model', { sel: '.rb-tab' });
-      await openWcsPanel(s);
+      await ribbonAction(s, 'ribbon.draw.group', 'ribbon.draw.options');
       await s.wait('.rb-pop');
       await s.fill(await s.field(await s.T('draw.wcs.gridSnap'), { within: '.rb-pop' }), '0.5');
-      await openWcsPanel(s);
+      await s.click('common.close', { within: '.rb-pop' });
       const beforeSnap = await s.ev((_, m) => m.d.snap(), null, { d: '/src/designer/draw.ts' });
       assert.equal(beforeSnap, 0.5, 'the WCS UI set a non-default grid snap');
 

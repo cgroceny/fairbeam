@@ -48,12 +48,12 @@ export default {id:'S9',title:'Export the active visible surface',async run(s,ct
   await s.click('ribbon.tab.home',{sel:'.rb-tab'});await s.click('common.save',{sel:'.rb-btn'});await s.sleep(300);await s.page.reload({waitUntil:'domcontentloaded'});await s.wait('.rb');
   await s.showDesignPanel();await (await s.wait('.nt-row[data-id^="run:"]')).click();await s.click('ribbon.tab.post',{sel:'.rb-tab'});await s.click('ribbon.post.sparams',{sel:'.rb-btn'});await s.wait('.dw-result-plot .chart svg');
   await menu(s);assert.equal(await s.page.$$eval('[data-export-action="geometry"]',e=>e.length),0);assert.equal(await s.page.$eval('[data-export-action="result-csv"]',e=>e.disabled),false);await s.press('Escape');
-  await exportItem(s,'result-csv');await s.sleep(150);assert.ok(await s.page.evaluate(()=>window.__exports.some(e=>e.name?.endsWith('-sparams.csv'))));
+  await exportItem(s,'result-csv');await s.sleep(150);assert.ok(await s.page.evaluate(()=>window.__exports.some(e=>/_sparams_.*\.csv$/.test(e.name??''))));
   await exportItem(s,'figure-svg');await s.sleep(150);assert.ok(await s.page.evaluate(()=>window.__exports.some(e=>e.type==='image/svg+xml'&&e.text?.includes('<svg'))));
   const before=await s.page.evaluate(()=>window.__exports.filter(e=>e.url?.startsWith('data:image/png')).length);
   await s.click('header.screenshot.aria',{sel:'.header-secondary button',attr:'aria-label'});await s.sleep(750);
   assert.equal(await s.page.evaluate(()=>window.__exports.filter(e=>e.url?.startsWith('data:image/png')).length),before,'result screenshot never calls hidden3D');
-  assert.ok(await s.page.evaluate(()=>window.__exports.some(e=>e.name?.endsWith('-sparams.png'))));
+  assert.ok(await s.page.evaluate(()=>window.__exports.some(e=>/_sparams_.*\.png$/.test(e.name??''))));
  });
  await s.step('Drawing exports route to the visible sheet and report a global outcome',async()=>{
   await menu(s);
