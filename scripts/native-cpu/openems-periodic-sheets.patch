@@ -1,0 +1,131 @@
+diff --git a/FDTD/extensions/conducting_sheet_periodic_topology.h b/FDTD/extensions/conducting_sheet_periodic_topology.h
+new file mode 100644
+index 0000000..5893c69
+--- /dev/null
++++ b/FDTD/extensions/conducting_sheet_periodic_topology.h
+@@ -0,0 +1,41 @@
++// Experimental closed-alpha conducting-sheet topology. GPL-3.0-or-later.
++#ifndef CONDUCTING_SHEET_PERIODIC_TOPOLOGY_H
++#define CONDUCTING_SHEET_PERIODIC_TOPOLOGY_H
++
++#include <cstring>
++
++namespace ConductingSheetPeriodicTopology
++{
++inline bool Enabled(const char* option, bool closedAlpha, unsigned int angularLines, bool originalExtension = true)
++{
++	return originalExtension && option && std::strcmp(option, "periodic") == 0 && closedAlpha && angularLines >= 4;
++}
++
++inline bool BoundaryBlocked(unsigned int direction, unsigned int position,
++	unsigned int lines, unsigned int lowerSize, unsigned int upperSize, bool periodic)
++{
++	// Both seam representatives are usable. The final angular ghost is not.
++	if (periodic && direction == 1)
++		return position >= lines - 1;
++	return position <= lowerSize || position >= lines - upperSize - 1;
++}
++
++inline unsigned int Previous(unsigned int direction, unsigned int position,
++	unsigned int angularLines, bool periodic)
++{
++	// numLines includes the duplicated seam and the final angular ghost.
++	if (periodic && direction == 1 && position == 0)
++		return angularLines - 3;
++	return position - 1;
++}
++
++inline unsigned int PrimitiveAlpha(unsigned int position, unsigned int angularLines, bool periodic)
++{
++	// Query the same physical primitives as GetYeeCoords at aliased planes.
++	if (periodic && position >= angularLines - 2)
++		return position - (angularLines - 2);
++	return position;
++}
++}
++
++#endif
+diff --git a/FDTD/extensions/operator_ext_conductingsheet.cpp b/FDTD/extensions/operator_ext_conductingsheet.cpp
+index b8c1577..159997e 100644
+--- a/FDTD/extensions/operator_ext_conductingsheet.cpp
++++ b/FDTD/extensions/operator_ext_conductingsheet.cpp
+@@ -19,6 +19,10 @@
+ #include "tools/arraylib/array_nijk.h"
+ #include "tools/constants.h"
+ #include "cond_sheet_parameter.h"
++#include "conducting_sheet_periodic_topology.h"
++#include "FDTD/operator_cylinder.h"
++#include <cstdlib>
++#include <typeinfo>
+ 
+ #include "CSPropConductingSheet.h"
+ 
+@@ -28,11 +32,14 @@ using std::endl;
+ Operator_Ext_ConductingSheet::Operator_Ext_ConductingSheet(Operator* op, double f_max) : Operator_Ext_LorentzMaterial(op)
+ {
+ 	m_f_max = f_max;
++	m_OriginalSheetExtension = true;
+ }
+ 
+ Operator_Ext_ConductingSheet::Operator_Ext_ConductingSheet(Operator* op, Operator_Ext_ConductingSheet* op_ext) : Operator_Ext_LorentzMaterial(op, op_ext)
+ {
+ 	m_f_max = op_ext->m_f_max;
++	// Multigrid clones can have the exact ordinary-cylinder type at a leaf.
++	m_OriginalSheetExtension = false;
+ }
+ 
+ Operator_Extension* Operator_Ext_ConductingSheet::Clone(Operator* op)
+@@ -46,6 +53,13 @@ bool Operator_Ext_ConductingSheet::BuildExtension()
+ 	unsigned int pos[] = {0,0,0};
+ 	double coord[3];
+ 	unsigned int numLines[3] = {m_Op->GetNumberOfLines(0,true),m_Op->GetNumberOfLines(1,true),m_Op->GetNumberOfLines(2,true)};
++	const Operator_Cylinder* cylinder = dynamic_cast<const Operator_Cylinder*>(m_Op);
++	const bool periodicSheets = ConductingSheetPeriodicTopology::Enabled(
++		std::getenv("OPENEMS_EXPERIMENTAL_CLOSED_ALPHA_SHEETS"),
++		cylinder && typeid(*m_Op) == typeid(Operator_Cylinder) && cylinder->GetClosedAlpha(),
++		numLines[1], m_OriginalSheetExtension);
++	if (periodicSheets)
++		cerr << "Experimental periodic conducting-sheet topology enabled" << endl;
+ 
+ 	m_Order = 0;
+ 	std::vector<unsigned int> v_pos[3];
+@@ -63,7 +77,7 @@ bool Operator_Ext_ConductingSheet::BuildExtension()
+ 		for (pos[1]=0; pos[1]<numLines[1]; ++pos[1])
+ 		{
+ 			std::vector<CSPrimitives*> vPrims = m_Op->GetPrimitivesBoundBox(
+-				pos[0], pos[1], -1,
++				pos[0], ConductingSheetPeriodicTopology::PrimitiveAlpha(pos[1], numLines[1], periodicSheets), -1,
+ 				(CSProperties::PropertyType)(CSProperties::MATERIAL | CSProperties::METAL)
+ 			);
+ 
+@@ -73,7 +87,8 @@ bool Operator_Ext_ConductingSheet::BuildExtension()
+ 				disable_pos = false;
+ 				// disable conducting sheet model inside the boundary conditions, especially inside a pml
+ 				for (int m=0;m<3;++m)
+-					if ((pos[m]<=(unsigned int)m_Op->GetBCSize(2*m)) || (pos[m]>=(numLines[m]-m_Op->GetBCSize(2*m+1)-1)))
++					if (ConductingSheetPeriodicTopology::BoundaryBlocked(m, pos[m], numLines[m],
++						m_Op->GetBCSize(2*m), m_Op->GetBCSize(2*m+1), periodicSheets))
+ 						disable_pos = true;
+ 
+ 				for (int n=0; n<3; ++n)
+@@ -232,7 +247,7 @@ bool Operator_Ext_ConductingSheet::BuildExtension()
+ 				factor = 1;
+ 				if (tanDir(t_dir, tpos[0], tpos[1], tpos[2])<0)
+ 					factor = 2;
+-				--tpos[t_dir];
++				tpos[t_dir] = ConductingSheetPeriodicTopology::Previous(t_dir, tpos[t_dir], numLines[1], periodicSheets);
+ 				if (tanDir(t_dir, tpos[0], tpos[1], tpos[2])<0)
+ 					factor = 2;
+ 
+diff --git a/FDTD/extensions/operator_ext_conductingsheet.h b/FDTD/extensions/operator_ext_conductingsheet.h
+index 7a9590b..d6a94c7 100644
+--- a/FDTD/extensions/operator_ext_conductingsheet.h
++++ b/FDTD/extensions/operator_ext_conductingsheet.h
+@@ -48,6 +48,7 @@ protected:
+ 	//! Copy constructor
+ 	Operator_Ext_ConductingSheet(Operator* op, Operator_Ext_ConductingSheet* op_ext);
+ 	double m_f_max;
++	bool m_OriginalSheetExtension;
+ };
+ 
+ #endif // OPERATOR_EXT_CONDUCTINGSHEET_H
