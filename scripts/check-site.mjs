@@ -50,8 +50,9 @@ assert.match(features, /same-timestep Windows CPU \/ macOS Metal/);
 assert.ok([...translations.values()].some((tr) => tr.includes("−30 dB") && tr.includes("0,004 dB")));
 const meshClaim = features.match(/<p>(Auto mode picks.*?)<\/p>/)[1];
 assert.match(translations.get(meshClaim), /dipol ve yama.*rezonans.*%0,1/);
-assert.equal(index.length, 20);
-assert.match(home, /20 simulated example projects/);
+// the counts on the pages follow the shipped examples
+assert.ok(home.includes(`opens ${index.length} simulated example projects`), `home page says ${index.length} examples`);
+for (const page of [home, features]) assert.ok(page.includes(`Open all ${index.length} examples in the demo`), `demo link says ${index.length} examples`);
 const roadmap = read("landing/roadmap.json");
 assert.doesNotMatch(roadmap, /interrupted downloads resume|No lost work|same results|half the time|4 to 64 times/);
 assert.match(roadmap, /partial downloads restart/);
