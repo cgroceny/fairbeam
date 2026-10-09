@@ -388,7 +388,7 @@ class Api(unittest.TestCase):
 
     def test_broken_model_is_an_error_entry(self):
         with tempfile.TemporaryDirectory() as d:
-            (Path(d) / "good.py").write_text((MODELS / "dipole.py").read_text(encoding="utf-8"))
+            (Path(d) / "good.py").write_text((MODELS / "dipole.py").read_text(encoding="utf-8"), encoding="utf-8")
             (Path(d) / "broken.py").write_text("import sys\nsys.exit('nope')\n")
             (Path(d) / "incomplete.py").write_text("MODEL = {}\n")
             from fairbeam.server import ModelRegistry
@@ -400,7 +400,7 @@ class Api(unittest.TestCase):
     def test_registry_describes_in_the_preview_worker(self):
         from fairbeam.server import ModelRegistry, PreviewWorker
         with tempfile.TemporaryDirectory() as d:
-            (Path(d) / "good.py").write_text((MODELS / "dipole.py").read_text(encoding="utf-8"))
+            (Path(d) / "good.py").write_text((MODELS / "dipole.py").read_text(encoding="utf-8"), encoding="utf-8")
             (Path(d) / "broken.py").write_text("import sys\nsys.exit('nope')\n")
             worker = PreviewWorker(sys.executable)
             try:
