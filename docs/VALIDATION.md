@@ -1118,8 +1118,11 @@ The record contains our model parameters, equations and numerical results, and a
 
 The [Chapter 3 record](benchmarks/pozar-chapter-03.md) collects matching, mesh-qualified
 quantities for Examples 3.1–3.7, with reproduction commands and explicit model limits.
-The retained pre-migration cohorts and fresh Fairbeam migration controls keep their
-original provenance. Qualification applies only to each listed quantity and geometry.
+Example 3.1 uses a fresh source-completed 20/30/40 study with exact -80 dB stops;
+the historical prematurely stopped columns remain excluded. Other retained cohorts
+and migration controls keep their original provenance. The record states finite
+mesh-change limits and nonmonotonicity explicitly; qualification applies only to
+each listed quantity and geometry, not an asymptotic order.
 
 It excludes conductor-loss discrepancies, the unqualified microstrip impedance/loss
 results, the incomplete 3.8 mesh sequence and the separate group-velocity limitation
