@@ -1,0 +1,168 @@
+{
+  "measured_utc": "2026-10-09T05:39:46.926073+00:00",
+  "status": "research gates passed",
+  "source_revision": "08e15ff532a7f4cfd1d4e7164ec262f5187bf30e",
+  "candidate_exe_sha256": "11de71e56e5a85937820d7805f0003c0bdf7e804f7b2d55f109df5c3707be55b",
+  "candidate_dll_sha256": "93cd88b3cb968f167a653f19589e1b3672c140fecc615d5ce1ff16ab632a89e1",
+  "patch_sha256": "05f20f649280dfb01c6c9acaf8cacca5e94ec60af6d6b36cda6cba65edd618d8",
+  "conditions": "Synthetic 1–10 GHz; Windows AMD Ryzen 9 7900X / 32 GiB; scalar CPU; uniform mesh; PML16; explicit 80% vacuum CFL; one solve at a time.",
+  "slabs": [
+    {
+      "cpw": 20,
+      "cells": 5652,
+      "analytic_max_complex_error": 0.005586865864828798,
+      "empty_reference_max_reflection": 0.00029570137224121495,
+      "energy_converged": true
+    },
+    {
+      "cpw": 30,
+      "cells": 6732,
+      "analytic_max_complex_error": 0.0024806128424095944,
+      "empty_reference_max_reflection": 0.00012581513444069516,
+      "energy_converged": true
+    },
+    {
+      "cpw": 40,
+      "cells": 7884,
+      "analytic_max_complex_error": 0.001532643861155503,
+      "empty_reference_max_reflection": 7.822730223606419e-05,
+      "energy_converged": true
+    }
+  ],
+  "pec_sheet": [
+    {
+      "cpw": 20,
+      "cells": 24336,
+      "analytic_max_complex_error": 0.0021179651552477906,
+      "empty_reference_max_reflection": 0.00024050040156340383,
+      "energy_converged": true
+    },
+    {
+      "cpw": 30,
+      "cells": 54108,
+      "analytic_max_complex_error": 0.0014213572340261813,
+      "empty_reference_max_reflection": 0.00018353848788790438,
+      "energy_converged": true
+    },
+    {
+      "cpw": 40,
+      "cells": 119232,
+      "analytic_max_complex_error": 0.0006937031365307267,
+      "empty_reference_max_reflection": 7.022424724799731e-05,
+      "energy_converged": true
+    }
+  ],
+  "gates": {
+    "slab_analytic": true,
+    "slab_two_refinements": true,
+    "translation_including_box_face_ties": true,
+    "pec_pattern_translation": true,
+    "independent_empty_reference": true,
+    "pec_sheet_analytic": true,
+    "co_polar_power_upper_bound": true,
+    "energy_stop": true,
+    "ordinary_boundary_raw_probes_unchanged": true,
+    "unsupported_inputs_rejected": true
+  },
+  "slab_refinement_max_complex_delta": [
+    0.003455372772239823,
+    0.0010529108359058307
+  ],
+  "translation_max_complex_delta": [
+    5.23691153334427e-16,
+    5.661048867003677e-16,
+    6.731800026102354e-16
+  ],
+  "pec_pattern_translation_max_complex_delta": [
+    4.613190423717512e-16,
+    6.9444428003588885e-16,
+    6.206335383118183e-16
+  ],
+  "ordinary_boundary_raw_max_delta": 0.0,
+  "ordinary_boundary_probe_files": 36,
+  "limitations": [
+    "Zero phase, normal incidence, co-polar fundamental amplitudes only.",
+    "No oblique/Bloch/Floquet modal ports, dispersion, GPU or general-shape support.",
+    "Structured cells still need independent full-wave validation; no production qualification.",
+    "Energy termination and mesh convergence are separate gates; co-polar power is not full multimode passivity."
+  ],
+  "guards": {
+    "unpaired": {
+      "exit_code": 2,
+      "expected_diagnostic": "paired x/y",
+      "pass": true
+    },
+    "nonuniform": {
+      "exit_code": 2,
+      "expected_diagnostic": "uniform transverse",
+      "pass": true
+    },
+    "sse": {
+      "exit_code": 2,
+      "expected_diagnostic": "basic Cartesian",
+      "pass": true
+    },
+    "z-periodic": {
+      "exit_code": 2,
+      "expected_diagnostic": "paired x/y",
+      "pass": true
+    },
+    "sphere": {
+      "exit_code": 2,
+      "expected_diagnostic": "axis-aligned",
+      "pass": true
+    },
+    "cell-constant": {
+      "exit_code": 2,
+      "expected_diagnostic": "quarter-cell",
+      "pass": true
+    },
+    "automatic-dt": {
+      "exit_code": 2,
+      "expected_diagnostic": "explicit timestep",
+      "pass": true
+    },
+    "unsafe-dt": {
+      "exit_code": 2,
+      "expected_diagnostic": "explicit timestep",
+      "pass": true
+    },
+    "weight": {
+      "exit_code": 2,
+      "expected_diagnostic": "spatially constant",
+      "pass": true
+    },
+    "anisotropy": {
+      "exit_code": 2,
+      "expected_diagnostic": "passive isotropic",
+      "pass": true
+    },
+    "active": {
+      "exit_code": 2,
+      "expected_diagnostic": "passive isotropic",
+      "pass": true
+    },
+    "hard-source": {
+      "exit_code": 2,
+      "expected_diagnostic": "soft electric",
+      "pass": true
+    }
+  },
+  "completed_solver_runs": 40,
+  "evidence_run_ids": {
+    "uniform": "runs-uniform-20261009T053408Z",
+    "uniform-translation": "runs-uniform-translation-20261009T053413Z",
+    "pec": "runs-pec-20261009T053524Z",
+    "metal-translation": "runs-metal-translation-20261009T053555Z",
+    "baseline": "runs-baseline-20261009T053723Z"
+  },
+  "checks": {
+    "typecheck": "pass",
+    "designer": "pass",
+    "exports": "pass",
+    "legal": "pass",
+    "new_unit_tests": "6 passed",
+    "full_python": "1500 tests; 1 environment failure: legacy antenlab installed outside checkout; 8 skipped",
+    "scenarios": "baseline UI failures; skip-link clipping and older scenario assumptions; no app UI files changed"
+  }
+}

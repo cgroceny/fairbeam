@@ -10,6 +10,7 @@ import SpecPanel from "./components/SpecPanel";
 import Dock from "./components/Dock";
 import ViewSwitch from "./components/ViewSwitch";
 import PanelBoundary from "./components/PanelBoundary";
+import { researchOpen, setResearchOpen } from "./runner/researchState";
 import { importReferenceFile } from "./compare/store";
 import Home from "./home/Home";
 import { DesignDock, DesignKeys, DesignSide, DesignTreePanel, DrawHint, Ribbon } from "./designer/DesignWorkspace";
@@ -31,6 +32,7 @@ const ExportDialog = lazy(() => import("./components/ExportDialog"));
 const PackageDialog = lazy(() => import("./components/PackageDialog"));
 const RenderDialog = lazy(() => import("./render/RenderDialog"));
 const RunPanel = lazy(() => import("./components/RunPanel"));
+const ResearchDialog = lazy(() => import("./designer/ResearchDialog"));
 const CstImportDialog = lazy(() => import("./components/CstImportDialog"));
 const PcbImportDialog = lazy(() => import("./components/PcbImportDialog"));
 // usage statistics (docs/TELEMETRY.md): asks once, only in a desktop build with the feature
@@ -448,6 +450,11 @@ export default function App() {
       <Show when={packageOpen() && bundle()}>
         <PanelBoundary name="Package export" loading={<div class="scrim" />} onClose={() => setPackageOpen(false)}>
           <PackageDialog />
+        </PanelBoundary>
+      </Show>
+      <Show when={researchOpen()}>
+        <PanelBoundary name={t("research.title")} loading={<div class="scrim" />} onClose={() => setResearchOpen(false)}>
+          <ResearchDialog />
         </PanelBoundary>
       </Show>
       <Show when={dragging()}>

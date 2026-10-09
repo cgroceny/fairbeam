@@ -1,0 +1,338 @@
+{
+  "schema": "fairbeam.fem-dielectric-qualification/1",
+  "date": "2026-10-09",
+  "evidence_domain": "synthetic",
+  "execution": "Actual native Windows ElmerSolver, serial CPU, one thread; no WSL or ElmerGrid.",
+  "geometry_m": [
+    0.1,
+    0.05,
+    0.2
+  ],
+  "cpu": "AMD Ryzen 9 7900X",
+  "installed_ram_bytes": 33485258752,
+  "timing_claim": "Validation only; these tiny cases are not a performance benchmark.",
+  "solver_sha256": "8dd293b48be151b8f7af524e0eaa742811f76f59657f272807a2ee263a9d1e11",
+  "source_sha256": {
+    "qualification_module": "a27539d1ea20c1ebc2d2acc61def06b37cd2eff01e9664fa1c3e1a015f8aa588",
+    "geometry_exporter": "10a6cf864e08c5a12dda1ac8bc9fcc4bc1e198e805527ce4e157d0d0a8450872"
+  },
+  "result_sha256": "ffff54822a6c41d0543da50927a709b65109e5d7f35645f37f80414ab5dc7ba2",
+  "source_base": "dee5752a63c90c7707e79cc125b69be6a3b3abdb",
+  "source_state": "Uncommitted candidate; exact source hashes identify the tested code.",
+  "result": {
+    "schema": "fairbeam.elmer-fem-qualification-result/1",
+    "status": "study_validated",
+    "physics": "uniform_dielectric_pec_cavity_eigenmode",
+    "case_count": 4,
+    "case_results": [
+      {
+        "schema": "fairbeam.elmer-fem-qualification-case-result/1",
+        "status": "case_validated",
+        "physics": "uniform_dielectric_pec_cavity_eigenmode",
+        "mode_family": "TE101 (z axis)",
+        "eps_r": 1.0,
+        "mu_r": 1.0,
+        "mesh_size_mm": 25.0,
+        "geometric_frequency_per_m": [
+          5.713177472526,
+          7.25391915463
+        ],
+        "frequency_hz": [
+          1712767517.478797,
+          2174670253.4998097
+        ],
+        "analytic_frequency_hz": 1675890788.0743763,
+        "relative_frequency_error": 0.02200425568708586,
+        "complex_field_shape_correlation": 0.9999999999999999,
+        "criteria": {
+          "relative_frequency_error_max_exclusive": 0.03,
+          "complex_field_shape_correlation_min_exclusive": 0.98
+        },
+        "precision_converged": false,
+        "s_parameters": null,
+        "qualifies_driven_antenna": false,
+        "mode_coverage": {
+          "point_count": 135,
+          "coordinate_tolerance_m": 1e-12,
+          "matches_prepared_mesh": true
+        },
+        "raw_sha256": {
+          "eigen.dat": "c19124cdc4e305d5da2c05c524655926806eddf87bec903f79195f97057a93c7",
+          "mesh/mode_t0001.vtu": "fa4a310d6fe9a8f890844c0525e362d8c71ffe41d8cfd2cd59eaf33a8a831f81"
+        }
+      },
+      {
+        "schema": "fairbeam.elmer-fem-qualification-case-result/1",
+        "status": "case_validated",
+        "physics": "uniform_dielectric_pec_cavity_eigenmode",
+        "mode_family": "TE101 (z axis)",
+        "eps_r": 1.0,
+        "mu_r": 1.0,
+        "mesh_size_mm": 12.5,
+        "geometric_frequency_per_m": [
+          5.620765658805,
+          7.116586418568
+        ],
+        "frequency_hz": [
+          1685063152.6951404,
+          2133498934.9919174
+        ],
+        "analytic_frequency_hz": 1675890788.0743763,
+        "relative_frequency_error": 0.005473127894749741,
+        "complex_field_shape_correlation": 0.9999999999999998,
+        "criteria": {
+          "relative_frequency_error_max_exclusive": 0.01,
+          "complex_field_shape_correlation_min_exclusive": 0.98
+        },
+        "precision_converged": false,
+        "s_parameters": null,
+        "qualifies_driven_antenna": false,
+        "mode_coverage": {
+          "point_count": 765,
+          "coordinate_tolerance_m": 1e-12,
+          "matches_prepared_mesh": true
+        },
+        "raw_sha256": {
+          "eigen.dat": "2e13383134f6496241fc0776d53ef56bb0e6bd4159cfb70772286bab603d5043",
+          "mesh/mode_t0001.vtu": "36586b197fa6eba8642ebdc5735875e8318eed8a38692a5e7f80644d990c8f7f"
+        }
+      },
+      {
+        "schema": "fairbeam.elmer-fem-qualification-case-result/1",
+        "status": "case_validated",
+        "physics": "uniform_dielectric_pec_cavity_eigenmode",
+        "mode_family": "TE101 (z axis)",
+        "eps_r": 4.0,
+        "mu_r": 1.0,
+        "mesh_size_mm": 25.0,
+        "geometric_frequency_per_m": [
+          2.856588736263,
+          3.626959577315
+        ],
+        "frequency_hz": [
+          856383758.7393985,
+          1087335126.7499049
+        ],
+        "analytic_frequency_hz": 837945394.0371882,
+        "relative_frequency_error": 0.02200425568708586,
+        "complex_field_shape_correlation": 0.9999999999999999,
+        "criteria": {
+          "relative_frequency_error_max_exclusive": 0.03,
+          "complex_field_shape_correlation_min_exclusive": 0.98
+        },
+        "precision_converged": false,
+        "s_parameters": null,
+        "qualifies_driven_antenna": false,
+        "mode_coverage": {
+          "point_count": 135,
+          "coordinate_tolerance_m": 1e-12,
+          "matches_prepared_mesh": true
+        },
+        "raw_sha256": {
+          "eigen.dat": "70b181cc9e38fa5bcb18cce75d89654ced509574c314b2596bcb937c8c526eab",
+          "mesh/mode_t0001.vtu": "4ee50b4a7999beaa52cdd4bbaadfe7e87c1edebbb05553fc33f4b2a91eb95f28"
+        }
+      },
+      {
+        "schema": "fairbeam.elmer-fem-qualification-case-result/1",
+        "status": "case_validated",
+        "physics": "uniform_dielectric_pec_cavity_eigenmode",
+        "mode_family": "TE101 (z axis)",
+        "eps_r": 4.0,
+        "mu_r": 1.0,
+        "mesh_size_mm": 12.5,
+        "geometric_frequency_per_m": [
+          2.810382829403,
+          3.558293209284
+        ],
+        "frequency_hz": [
+          842531576.3477201,
+          1066749467.4959587
+        ],
+        "analytic_frequency_hz": 837945394.0371882,
+        "relative_frequency_error": 0.005473127894928709,
+        "complex_field_shape_correlation": 0.9999999999999998,
+        "criteria": {
+          "relative_frequency_error_max_exclusive": 0.01,
+          "complex_field_shape_correlation_min_exclusive": 0.98
+        },
+        "precision_converged": false,
+        "s_parameters": null,
+        "qualifies_driven_antenna": false,
+        "mode_coverage": {
+          "point_count": 765,
+          "coordinate_tolerance_m": 1e-12,
+          "matches_prepared_mesh": true
+        },
+        "raw_sha256": {
+          "eigen.dat": "fd737624e5f4a06cd0634f1a87e4c31d62f86a4c41c2c0a5695d6d37d1e3827c",
+          "mesh/mode_t0001.vtu": "2f341d32743aafed3f10c29330ec61fdc07cbdd73d028f830b618a79f748bdf1"
+        }
+      }
+    ],
+    "same_mesh_scaling": [
+      {
+        "mesh_size_mm": 25.0,
+        "eps4_to_eps1_frequency_ratio": 0.5,
+        "expected_ratio": 0.5,
+        "relative_ratio_error": 0.0,
+        "passed": true
+      },
+      {
+        "mesh_size_mm": 12.5,
+        "eps4_to_eps1_frequency_ratio": 0.5000000000000889,
+        "expected_ratio": 0.5,
+        "relative_ratio_error": 1.7785772854495008e-13,
+        "passed": true
+      }
+    ],
+    "refinement": [
+      {
+        "eps_r": 1.0,
+        "coarse_relative_error": 0.02200425568708586,
+        "fine_relative_error": 0.005473127894749741,
+        "error_decreased": true
+      },
+      {
+        "eps_r": 4.0,
+        "coarse_relative_error": 0.02200425568708586,
+        "fine_relative_error": 0.005473127894928709,
+        "error_decreased": true
+      }
+    ],
+    "criteria": {
+      "coarse_relative_frequency_error_max": 0.03,
+      "fine_relative_frequency_error_max": 0.01,
+      "mode_shape_correlation_min_exclusive": 0.98,
+      "same_mesh_eps4_to_eps1_ratio": 0.5,
+      "same_mesh_ratio_relative_error_max_exclusive": 1e-06,
+      "fine_error_less_than_coarse": true
+    },
+    "precision_converged": false,
+    "driven_ports": false,
+    "radiation": false,
+    "s_parameters": null,
+    "qualifies_driven_antenna": false
+  },
+  "cases": [
+    {
+      "case": "epsr-1-h-25p0mm",
+      "solver_version": "26.2-unknown (Rev: Release, Compiled: 2026-08-05)",
+      "solver_seconds": 0.11083550000330433,
+      "solver_exit_code": 0,
+      "active_body_ids": [
+        2
+      ],
+      "body_material_map": {
+        "2": 1
+      },
+      "input_sha256": {
+        "case.sif": "7e4ddea68edc3ab7fa3c9a82dc1763c965493875da1671630182f7b54bef0fcc",
+        "mesh/mesh.header": "25712bae0431f228b11e57b3c6dbb3d4d2c190ca5f01cb38fc630266170c88e9",
+        "mesh/mesh.nodes": "fb2eb94f78459b752f9b3e5d5beb437f33b13db5fad7cb0b3f9ef88a65e20834",
+        "mesh/mesh.elements": "038b5976abf783bfde890b57ee60a1368927fca78dc292368811e0dc2329c19f",
+        "mesh/mesh.boundary": "f6a39ecdaa88c7a763f288ac1219ca171726f32395b218cc99821b746891cfcc",
+        "mesh/mesh.names": "93ca30afdf879bfe3e4ccad9026246c0dd58e7a018423c64847d2d2db5388503"
+      },
+      "solver_log_sha256": "6c37e3e67ba0b93c0d2c5bc3e78f44804652a53e643f41759e8ff375c99d2ba0",
+      "raw_sha256": {
+        "eigen.dat": "c19124cdc4e305d5da2c05c524655926806eddf87bec903f79195f97057a93c7",
+        "mesh/mode_t0001.vtu": "fa4a310d6fe9a8f890844c0525e362d8c71ffe41d8cfd2cd59eaf33a8a831f81"
+      },
+      "result_sha256": "4aa556f10d1b1e195058c3cbca0c81e2c6d9995af672f3bc5bd3dd2775b07257"
+    },
+    {
+      "case": "epsr-1-h-12p5mm",
+      "solver_version": "26.2-unknown (Rev: Release, Compiled: 2026-08-05)",
+      "solver_seconds": 0.20836629999394063,
+      "solver_exit_code": 0,
+      "active_body_ids": [
+        2
+      ],
+      "body_material_map": {
+        "2": 1
+      },
+      "input_sha256": {
+        "case.sif": "7e4ddea68edc3ab7fa3c9a82dc1763c965493875da1671630182f7b54bef0fcc",
+        "mesh/mesh.header": "10f86cea44e86fea813f80ac6d437c55c86c920a3201df20168876fdccfa1d4a",
+        "mesh/mesh.nodes": "8ed4e4036c79f0e8c30bce6bb516050c8ac5e16b6ebe549a77a5d2080cf3fd3e",
+        "mesh/mesh.elements": "418a73394ee5a9853fe2683c292a80316335e46d5b02c93001475458fcd0b844",
+        "mesh/mesh.boundary": "6a0836c253e92e0112244b05915e3fbd28476a5fd2be8358227a3e5e01ca95bd",
+        "mesh/mesh.names": "93ca30afdf879bfe3e4ccad9026246c0dd58e7a018423c64847d2d2db5388503"
+      },
+      "solver_log_sha256": "5ebcdc1662f4217f751bfa56c1d8fcba51a87b33e260e0fe1b5e089599c11c5d",
+      "raw_sha256": {
+        "eigen.dat": "2e13383134f6496241fc0776d53ef56bb0e6bd4159cfb70772286bab603d5043",
+        "mesh/mode_t0001.vtu": "36586b197fa6eba8642ebdc5735875e8318eed8a38692a5e7f80644d990c8f7f"
+      },
+      "result_sha256": "b34e40822616b7dafc1b5f670d3c37d5229a9e86babf2520cab5a5472b7aeb4f"
+    },
+    {
+      "case": "epsr-4-h-25p0mm",
+      "solver_version": "26.2-unknown (Rev: Release, Compiled: 2026-08-05)",
+      "solver_seconds": 0.10695459999260493,
+      "solver_exit_code": 0,
+      "active_body_ids": [
+        2
+      ],
+      "body_material_map": {
+        "2": 1
+      },
+      "input_sha256": {
+        "case.sif": "35d9e35f690744975f3b336e611afe91061ac91b9d5c44a8d25f70edca2d34ab",
+        "mesh/mesh.header": "25712bae0431f228b11e57b3c6dbb3d4d2c190ca5f01cb38fc630266170c88e9",
+        "mesh/mesh.nodes": "fb2eb94f78459b752f9b3e5d5beb437f33b13db5fad7cb0b3f9ef88a65e20834",
+        "mesh/mesh.elements": "038b5976abf783bfde890b57ee60a1368927fca78dc292368811e0dc2329c19f",
+        "mesh/mesh.boundary": "f6a39ecdaa88c7a763f288ac1219ca171726f32395b218cc99821b746891cfcc",
+        "mesh/mesh.names": "93ca30afdf879bfe3e4ccad9026246c0dd58e7a018423c64847d2d2db5388503"
+      },
+      "solver_log_sha256": "52ef4204a1e174611be92ba1c9c583fc334a2a32ea4cb259c357edd7b110e535",
+      "raw_sha256": {
+        "eigen.dat": "70b181cc9e38fa5bcb18cce75d89654ced509574c314b2596bcb937c8c526eab",
+        "mesh/mode_t0001.vtu": "4ee50b4a7999beaa52cdd4bbaadfe7e87c1edebbb05553fc33f4b2a91eb95f28"
+      },
+      "result_sha256": "bf725cbe18564b6a3a81b0e2ebe217460d7749c3ca0f939aabab57b44dc4293a"
+    },
+    {
+      "case": "epsr-4-h-12p5mm",
+      "solver_version": "26.2-unknown (Rev: Release, Compiled: 2026-08-05)",
+      "solver_seconds": 0.2077794999931939,
+      "solver_exit_code": 0,
+      "active_body_ids": [
+        2
+      ],
+      "body_material_map": {
+        "2": 1
+      },
+      "input_sha256": {
+        "case.sif": "35d9e35f690744975f3b336e611afe91061ac91b9d5c44a8d25f70edca2d34ab",
+        "mesh/mesh.header": "10f86cea44e86fea813f80ac6d437c55c86c920a3201df20168876fdccfa1d4a",
+        "mesh/mesh.nodes": "8ed4e4036c79f0e8c30bce6bb516050c8ac5e16b6ebe549a77a5d2080cf3fd3e",
+        "mesh/mesh.elements": "418a73394ee5a9853fe2683c292a80316335e46d5b02c93001475458fcd0b844",
+        "mesh/mesh.boundary": "6a0836c253e92e0112244b05915e3fbd28476a5fd2be8358227a3e5e01ca95bd",
+        "mesh/mesh.names": "93ca30afdf879bfe3e4ccad9026246c0dd58e7a018423c64847d2d2db5388503"
+      },
+      "solver_log_sha256": "006a2b29a26a7de6707a869a07211efb8533dc52ad8c186b19cbf49fce72949f",
+      "raw_sha256": {
+        "eigen.dat": "fd737624e5f4a06cd0634f1a87e4c31d62f86a4c41c2c0a5695d6d37d1e3827c",
+        "mesh/mode_t0001.vtu": "2f341d32743aafed3f10c29330ec61fdc07cbdd73d028f830b618a79f748bdf1"
+      },
+      "result_sha256": "745e41fbd72321e501a6703ef10cb79bf8b824ca5c997c53577d6f6e5886e363"
+    }
+  ],
+  "failed_controls": [
+    {
+      "attempt": "v1",
+      "case": "epsr-1-h-25p0mm",
+      "failure": "Elmer refused noncontiguous SIF Body/Material sections starting at 2.",
+      "fix": "Use contiguous SIF Body 1 / Material 1 with explicit Target Bodies(1)=2; retain mesh body ID 2.",
+      "solver_log_sha256": "9bccf60234503ea788d919323a987bc0e2d5817a0eec9029b954c1bfd8dd9afb",
+      "excluded_from_numerical_comparisons": true
+    }
+  ],
+  "limitations": [
+    "Uniform, positive, lossless isotropic dielectric in a closed PEC cavity only.",
+    "No heterogeneous interface, radiation, driven port, S-parameter or antenna qualification.",
+    "Native macOS execution has not been tested."
+  ]
+}

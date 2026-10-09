@@ -1,0 +1,370 @@
+diff --git a/FDTD/engine.cpp b/FDTD/engine.cpp
+index 7487af9..64e467b 100644
+--- a/FDTD/engine.cpp
++++ b/FDTD/engine.cpp
+@@ -109,6 +109,29 @@ void Engine::Reset()
+ 
+ void Engine::UpdateVoltages(unsigned int startX, unsigned int numX)
+ {
++	if (Op->IsPeriodic(0) || Op->IsPeriodic(1))
++	{
++		auto& v=*volt_ptr; auto& h=*curr_ptr;
++		auto& vv=*Op->vv_ptr; auto& vi=*Op->vi_ptr;
++		unsigned int p[3], prev[3];
++		for (p[0]=startX; p[0]<startX+numX; ++p[0])
++		for (p[1]=0; p[1]<numLines[1]; ++p[1])
++		for (p[2]=0; p[2]<numLines[2]; ++p[2])
++		{
++			for (int a=0; a<3; ++a)
++				prev[a]=p[a] ? p[a]-1 : (Op->IsPeriodic(a) ? numLines[a]-2 : 0);
++			for (int c=0; c<3; ++c)
++			{
++				int a=(c+1)%3, b=(c+2)%3;
++				unsigned int pa[3]={p[0],p[1],p[2]}, pb[3]={p[0],p[1],p[2]};
++				pa[a]=prev[a]; pb[b]=prev[b];
++				v(c,p[0],p[1],p[2]) = vv(c,p[0],p[1],p[2])*v(c,p[0],p[1],p[2]) +
++				    vi(c,p[0],p[1],p[2])*(h(b,p[0],p[1],p[2])-h(b,pa[0],pa[1],pa[2])
++				                        -h(a,p[0],p[1],p[2])+h(a,pb[0],pb[1],pb[2]));
++			}
++		}
++		return;
++	}
+ 	ArrayLib::ArrayNIJK<FDTD_FLOAT>& volt = *volt_ptr;
+ 	ArrayLib::ArrayNIJK<FDTD_FLOAT>& curr = *curr_ptr;
+ 	ArrayLib::ArrayNIJK<FDTD_FLOAT>& vv = *Op->vv_ptr;
+@@ -264,6 +287,22 @@ void Engine::Apply2Current()
+ 		m_Eng_exts.at(n)->Apply2Current();
+ }
+ 
++void Engine::SyncPeriodicPlanes(bool voltage)
++{
++	for (int axis=0; axis<3; ++axis) if (Op->IsPeriodic(axis))
++	{
++		int a=(axis+1)%3, b=(axis+2)%3;
++		unsigned int p[3]; p[axis]=0;
++		for (p[a]=0; p[a]<numLines[a]; ++p[a])
++		for (p[b]=0; p[b]<numLines[b]; ++p[b])
++		for (int c=0; c<3; ++c)
++		{
++			unsigned int q[3]={p[0],p[1],p[2]}; q[axis]=numLines[axis]-1;
++			if (voltage) SetVolt(c,q,GetVolt(c,p)); else SetCurr(c,q,GetCurr(c,p));
++		}
++	}
++}
++
+ bool Engine::IterateTS(unsigned int iterTS)
+ {
+ 	for (unsigned int iter=0; iter<iterTS; ++iter)
+@@ -273,12 +312,14 @@ bool Engine::IterateTS(unsigned int iterTS)
+ 		UpdateVoltages(0,numLines[0]);
+ 		DoPostVoltageUpdates();
+ 		Apply2Voltages();
++		SyncPeriodicPlanes(true);
+ 
+ 		//current updates with extensions
+ 		DoPreCurrentUpdates();
+ 		UpdateCurrents(0,numLines[0]-1);
+ 		DoPostCurrentUpdates();
+ 		Apply2Current();
++		SyncPeriodicPlanes(false);
+ 
+ 		++numTS;
+ 	}
+diff --git a/FDTD/engine.h b/FDTD/engine.h
+index a9d29d2..bd95309 100644
+--- a/FDTD/engine.h
++++ b/FDTD/engine.h
+@@ -46,6 +46,7 @@ public:
+ 
+ 	//!Iterate a number of timesteps
+ 	virtual bool IterateTS(unsigned int iterTS);
++	void SyncPeriodicPlanes(bool voltage);
+ 
+ 	virtual unsigned int GetNumberOfTimesteps() {return numTS;}
+ 
+diff --git a/FDTD/operator.cpp b/FDTD/operator.cpp
+index 54e7b7e..3c20754 100644
+--- a/FDTD/operator.cpp
++++ b/FDTD/operator.cpp
+@@ -18,6 +18,7 @@
+ #include <fstream>
+ #include <algorithm>
+ #include <stdexcept>
++#include <limits>
+ #include "operator.h"
+ #include "engine.h"
+ #include "extensions/operator_extension.h"
+@@ -223,8 +224,12 @@ double Operator::GetCellVolume(const unsigned int pos[3], bool dualMesh) const
+ 	return vol;
+ }
+ 
+-double Operator::GetNodeWidth(int ny, const int pos[3], bool dualMesh) const
++double Operator::GetNodeWidth(int ny, const int input[3], bool dualMesh) const
+ {
++	int wrapped[3] = {input[0],input[1],input[2]};
++	for (int a=0; a<3; ++a)
++		if (IsPeriodic(a)) { int cells=numLines[a]-1; wrapped[a]=(wrapped[a]%cells+cells)%cells; }
++	const int* pos=wrapped;
+ 	if ( (pos[0]<0) || (pos[1]<0) || (pos[2]<0) )
+ 		return 0.0;
+ 
+@@ -240,8 +245,12 @@ double Operator::GetNodeArea(int ny, const unsigned int pos[3], bool dualMesh) c
+ 	return GetNodeWidth(nyP,pos,dualMesh) * GetNodeWidth(nyPP,pos,dualMesh);
+ }
+ 
+-double Operator::GetNodeArea(int ny, const int pos[3], bool dualMesh) const
++double Operator::GetNodeArea(int ny, const int input[3], bool dualMesh) const
+ {
++	int wrapped[3] = {input[0],input[1],input[2]};
++	for (int a=0; a<3; ++a)
++		if (IsPeriodic(a)) { int cells=numLines[a]-1; wrapped[a]=(wrapped[a]%cells+cells)%cells; }
++	const int* pos=wrapped;
+ 	if ( (pos[0]<0) || (pos[1]<0) || (pos[2]<0) )
+ 		return 0.0;
+ 
+@@ -1044,7 +1053,7 @@ int Operator::CalcECOperator( DebugFlags debugFlags )
+ 	bool PEC[6]={1,1,1,1,1,1};
+ 	//make an exception for BC == -1
+ 	for (int n=0; n<6; ++n)
+-		if (m_BC[n]==-1)
++		if (m_BC[n]==-1 || m_BC[n]==4)
+ 			PEC[n] = false;
+ 	ApplyElectricBC(PEC);
+ 
+@@ -1252,6 +1261,8 @@ bool Operator::Calc_ECPos(
+ 
+ double Operator::GetRawDiscDelta(int ny, const int pos) const
+ {
++	// Uniform periodic transverse mesh is enforced by SetupBoundaryConditions.
++	if (IsPeriodic(ny)) return discLines[ny][1]-discLines[ny][0];
+ 	//numLines[ny] is expected to be larger then 1 !
+ 
+ 	if (pos<0)
+@@ -1275,6 +1286,47 @@ bool Operator::GetCellCenterMaterialAvgCoord(const int pos[], double coord[3]) c
+ 	return true;
+ }
+ 
++CSProperties* Operator::PeriodicProperty(const double* coords, std::vector<CSPrimitives*> vPrims, bool markAsUsed) const
++{
++	double wrapped[3]={coords[0],coords[1],coords[2]};
++	for (int a=0; a<3; ++a) if (IsPeriodic(a))
++	{
++		double lo=discLines[a][0], length=discLines[a][numLines[a]-1]-lo;
++		wrapped[a]=lo+fmod(fmod(wrapped[a]-lo,length)+length,length);
++	}
++	coords=wrapped;
++	CSProperties* prop = NULL;
++	if (IsPeriodic(0) || IsPeriodic(1))
++	{
++		// Quarter-cell samples can lie exactly on a box face. Modulo arithmetic and
++		// translated coordinates may differ by a few ulps. Preserve the inclusive
++		// box convention within roundoff, not a mesh-sized geometric tolerance.
++		// This restricted backend rejects non-box and transformed materials.
++		for (size_t i=0; i<vPrims.size(); ++i)
++		{
++			double bounds[6];
++			if (!vPrims[i]->GetBoundBox(bounds)) continue;
++			bool inside=true;
++			for (int a=0; a<3; ++a)
++			{
++				double scale=std::max(fabs(coords[a]),std::max(fabs(bounds[2*a]),fabs(bounds[2*a+1])));
++				scale=std::max(scale,GetDiscDelta(a,0));
++				double tol=64*std::numeric_limits<double>::epsilon()*scale;
++				inside=inside && coords[a]>=bounds[2*a]-tol && coords[a]<=bounds[2*a+1]+tol;
++			}
++			if (inside)
++			{
++				prop=vPrims[i]->GetProperty();
++				if (markAsUsed) vPrims[i]->SetPrimitiveUsed(true);
++				break; // candidate list is priority sorted, as in CSXCAD
++			}
++		}
++	}
++	else prop = CSX->GetPropertyByCoordPriority(coords,vPrims,markAsUsed);
++
++	return prop;
++}
++
+ double Operator::GetMaterial(
+ 	int ny,
+ 	const double* coords,
+@@ -1283,7 +1335,7 @@ double Operator::GetMaterial(
+ 	bool markAsUsed
+ ) const
+ {
+-	CSProperties* prop = CSX->GetPropertyByCoordPriority(coords,vPrims,markAsUsed);
++	CSProperties* prop = PeriodicProperty(coords,vPrims,markAsUsed);
+ 
+ 	CSPropMaterial* mat = dynamic_cast<CSPropMaterial*>(prop);
+ 	if (mat)
+@@ -1809,7 +1861,7 @@ Operator::GetPrimitivesBoundBox(
+ 	int BBpos[3] = {posX, posY, posZ};
+ 	for (int n=0;n<3;++n)
+ 	{
+-		if (BBpos[n]<0)
++		if (BBpos[n]<0 || IsPeriodic(n))
+ 		{
+ 			boundBox[2*n]   = this->GetDiscLine(n,0);
+ 			boundBox[2*n+1] = this->GetDiscLine(n,numLines[n]-1);
+@@ -2045,7 +2097,7 @@ void Operator::CalcPEC_Range(unsigned int startX, unsigned int stopX, unsigned i
+ 				for (int n=0; n<3; ++n)
+ 				{
+ 					GetYeeCoords(n,pos,coord,false);
+-					CSProperties* prop = CSX->GetPropertyByCoordPriority(coord, vPrims, true);
++					CSProperties* prop = PeriodicProperty(coord, vPrims, true);
+ 					if (prop)
+ 					{
+ 						if (prop->GetType()==CSProperties::METAL) //set to PEC
+diff --git a/FDTD/operator.h b/FDTD/operator.h
+index 57e64c9..dac4235 100644
+--- a/FDTD/operator.h
++++ b/FDTD/operator.h
+@@ -53,6 +53,9 @@ public:
+ 	static Operator* New();
+ 	virtual ~Operator();
+ 
++	// Research-only boundary ID 4: paired, zero-phase Cartesian periodicity.
++	CSProperties* PeriodicProperty(const double* coords, std::vector<CSPrimitives*> prims, bool markAsUsed) const;
++	bool IsPeriodic(int axis) const { return m_BC[2*axis]==4 && m_BC[2*axis+1]==4; }
+ 	virtual Engine* CreateEngine();
+ 	virtual Engine* GetEngine() const {return m_Engine;}
+ 
+diff --git a/main.cpp b/main.cpp
+index 8b5dcfc..1c8abab 100644
+--- a/main.cpp
++++ b/main.cpp
+@@ -31,6 +31,12 @@ using namespace std;
+ 
+ int main(int argc, const char* argv[])
+ {
++	// An explicit handshake prevents older binaries treating an unknown boundary as PEC.
++	if (argc==2 && std::string(argv[1])=="--fairbeam-periodic-capabilities")
++	{
++		std::cout << openEMS::ExperimentalPeriodicCapabilities() << std::endl;
++		return 0;
++	}
+ 	openEMS FDTD;
+ 
+ 	openEMS::WelcomeScreen();
+diff --git a/openems.cpp b/openems.cpp
+index cc1852e..ee22308 100644
+--- a/openems.cpp
++++ b/openems.cpp
+@@ -54,6 +54,8 @@
+ #include "ContinuousStructure.h"
+ #include "CSPropProbeBox.h"
+ #include "CSPrimBox.h"
++#include "CSPropMaterial.h"
++#include "CSPropExcitation.h"
+ #include "CSPropDumpBox.h"
+ 
+ using namespace std;
+@@ -401,8 +403,78 @@ void openEMS::WelcomeScreen()
+ 	cout << openEMS::GetExtLibsInfo("\t") << endl;
+ }
+ 
++const char* openEMS::ExperimentalPeriodicCapabilities()
++{
++	// Exported from the solver library, so an old DLL cannot advertise this capability.
++	return "{\"schema\":1,\"backend\":\"fairbeam-periodic-cpu\",\"revision\":4,\"boundary\":\"PERIODIC_TEST\",\"phase\":\"zero\",\"axes\":\"xy\",\"engine\":\"basic\",\"geometry\":\"axis-aligned-boxes\"}";
++}
++
+ bool openEMS::SetupBoundaryConditions()
+ {
++	bool periodic=false;
++	for (int n=0; n<6; ++n) periodic=periodic || m_BC_type[n]==4;
++	if (periodic)
++	{
++		if (CylinderCoords || m_engine!=EngineType_Basic || m_CellConstantMaterial ||
++		    m_BC_type[0]!=4 || m_BC_type[1]!=4 || m_BC_type[2]!=4 || m_BC_type[3]!=4 ||
++		    m_BC_type[4]!=3 || m_BC_type[5]!=3)
++		{
++			cerr << "PERIODIC_TEST requires basic Cartesian CPU, quarter-cell averaging, paired x/y periodic and z PML." << endl;
++			return false;
++		}
++		for (int a=0; a<2; ++a)
++		{
++			unsigned int count=FDTD_Op->GetNumberOfLines(a);
++			double step=FDTD_Op->GetDiscDelta(a,0);
++			if (count<4 || step<=0) return false;
++			for (unsigned int i=1; i<count-1; ++i)
++				if (fabs(FDTD_Op->GetDiscDelta(a,i)-step)>1e-9*step)
++				{ cerr << "PERIODIC_TEST requires uniform transverse mesh." << endl; return false; }
++		}
++		for (size_t i=0; i<m_CSX->GetQtyProperties(); ++i)
++		{
++			CSProperties* p=m_CSX->GetProperty(i);
++			int type=p->GetType();
++			if (type!=CSProperties::MATERIAL && type!=CSProperties::METAL && type!=CSProperties::EXCITATION && type!=CSProperties::PROBEBOX)
++			{ cerr << "PERIODIC_TEST only permits nondispersive material, PEC, source and probe properties." << endl; return false; }
++		}
++		std::vector<CSPrimitives*> materials=m_CSX->GetAllPrimitives(true,(CSProperties::PropertyType)(CSProperties::MATERIAL | CSProperties::METAL));
++		for (size_t i=0; i<materials.size(); ++i)
++		{
++			double bounds[6];
++			if (!dynamic_cast<CSPrimBox*>(materials[i]) || materials[i]->HasTransform() || !materials[i]->GetBoundBox(bounds))
++			{ cerr << "PERIODIC_TEST only permits axis-aligned material boxes." << endl; return false; }
++		}
++		double invSquare=0;
++		for (int a=0; a<3; ++a)
++		{
++			double h=FDTD_Op->GetDiscDelta(a,0);
++			for (unsigned int j=1; j<FDTD_Op->GetNumberOfLines(a)-1; ++j)
++				h=(std::min)(h,FDTD_Op->GetDiscDelta(a,j));
++			h*=FDTD_Op->GetGridDelta(); invSquare+=1/(h*h);
++		}
++		if (!(m_TS>0 && m_TS<=0.95/(299792458.0*sqrt(invSquare))))
++		{ cerr << "PERIODIC_TEST requires an explicit timestep at or below 95% of vacuum CFL." << endl; return false; }
++		if (FDTD_Op->GetBackgroundEpsR()!=1 || FDTD_Op->GetBackgroundMueR()!=1 || FDTD_Op->GetBackgroundKappa()!=0 || FDTD_Op->GetBackgroundSigma()!=0)
++		{ cerr << "PERIODIC_TEST requires a vacuum background." << endl; return false; }
++		for (size_t i=0; i<m_CSX->GetQtyProperties(); ++i)
++		{
++			CSProperties* p=m_CSX->GetProperty(i);
++			if (p->GetType()==CSProperties::EXCITATION && dynamic_cast<CSPropExcitation*>(p)->GetExcitType()!=0)
++			{ cerr << "PERIODIC_TEST requires a soft electric source." << endl; return false; }
++			if (p->GetType()==CSProperties::MATERIAL)
++			{
++				CSPropMaterial* m=dynamic_cast<CSPropMaterial*>(p);
++				if (!m->GetIsotropy() || !(m->GetEpsilon()>=1 && m->GetMue()>=1 && m->GetKappa()>=0 && m->GetSigma()>=0))
++				{ cerr << "PERIODIC_TEST requires passive isotropic materials with eps_r, mu_r >= 1." << endl; return false; }
++				double weightPoint[3]={0,0,0};
++				for (int a=0; a<3; ++a)
++					if (m->GetEpsilonWeighted(a,weightPoint)!=m->GetEpsilon(a) || m->GetMueWeighted(a,weightPoint)!=m->GetMue(a) || m->GetKappaWeighted(a,weightPoint)!=m->GetKappa(a) || m->GetSigmaWeighted(a,weightPoint)!=m->GetSigma(a) || (!m->GetEpsilonWeightFunction(a).empty() && m->GetEpsilonWeightFunction(a)!="1") || (!m->GetMueWeightFunction(a).empty() && m->GetMueWeightFunction(a)!="1") || (!m->GetKappaWeightFunction(a).empty() && m->GetKappaWeightFunction(a)!="1") || (!m->GetSigmaWeightFunction(a).empty() && m->GetSigmaWeightFunction(a)!="1"))
++					{ cerr << "PERIODIC_TEST requires spatially constant material properties." << endl; return false; }
++			}
++		}
++		cout << "EXPERIMENTAL zero-phase periodic x/y, scalar CPU; not Floquet port support." << endl;
++	}
+ 	FDTD_Op->SetBoundaryCondition(m_BC_type); //operator only knows about PEC and PMC, everything else is defined by extensions (see below)
+ 
+ 	/**************************** create all operator/engine extensions here !!!! **********************************/
+@@ -937,6 +1009,8 @@ bool openEMS::Parse_XML_FDTDSetup(TiXmlElement* FDTD_Opts)
+ 				this->Set_BC_Type(n, 0);
+ 			else if (s_bc=="PMC")
+ 				this->Set_BC_Type(n, 1);
++			else if (s_bc=="PERIODIC_TEST")
++				this->Set_BC_Type(n, 4);
+ 			else if (s_bc=="MUR")
+ 				this->Set_BC_Type(n, 2);
+ 			else if (strncmp(s_bc.c_str(),"PML_=",4)==0)
+@@ -1226,7 +1300,7 @@ int openEMS::SetupFDTD()
+ 		return(2);
+ 	}
+ 
+-	SetupBoundaryConditions();
++	if (!SetupBoundaryConditions()) return 2;
+ 
+ 	FDTD_Op->SetTimeStepMethod(m_TS_method);
+ 
+diff --git a/openems.h b/openems.h
+index 3a9ad54..8843e0f 100644
+--- a/openems.h
++++ b/openems.h
+@@ -98,6 +98,7 @@ public:
+ 
+ 	//! Get welcome screen for openEMS
+ 	static void WelcomeScreen();
++	static const char* ExperimentalPeriodicCapabilities();
+ 
+ 	//! Set this to about FDTD iteration process
+ 	void SetAbort(bool val) {m_Abort=val;}

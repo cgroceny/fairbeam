@@ -9,6 +9,7 @@ import { pythonPath, root } from './stack.mjs';
 const COMPONENT = 'Assembly/Feed';
 const REFERENCE = 'Assembly/Reference';
 const TRANSFORM_PANEL = '.tf-panel';
+const WCS_DIALOG = '[aria-labelledby="wcs-title"]';
 
 async function screenshot(s, name) {
   const dir = process.env.FAIRBEAM_SCENARIO_SCREENSHOTS;
@@ -364,7 +365,8 @@ export default {
       await s.wait('[aria-live="polite"]', await s.T('transform.preview.fixFields'), { within: TRANSFORM_PANEL });
       const visibleErrors = await s.page.$eval(TRANSFORM_PANEL,
         (panel) => [...panel.querySelectorAll('.dz-field .dz-value.dz-bad')].map((el) => el.textContent.trim()).filter(Boolean));
-      assert.deepEqual(visibleErrors, [oneAngleError], 'an unresolved angle produces one clear field error');
+      assert.deepEqual(visibleErrors.map((message) => message.toLocaleLowerCase()), [oneAngleError.toLocaleLowerCase()],
+        'an unresolved angle produces the localized field error (capitalization may differ at sentence start)');
       assert.equal(await angle.evaluate((e) => e.getAttribute('aria-invalid')), 'true', 'the angle field is marked invalid');
       assert.equal(await apply.evaluate((e) => e.disabled), true, 'an unresolved angle cannot be applied');
       assert.deepEqual(await previewBounds(s), [], 'an invalid angle clears the previous preview');
@@ -575,8 +577,16 @@ export default {
       assert.equal(await s.page.$eval('button[form="wcs-form"]', e => e.disabled), true, 'invalid WCS expressions cannot be committed');
       assert.equal(await draftOf(s), beforeInvalidFrame, 'an invalid local frame cannot change the design');
       assert.equal(await historyAt(s), invalidFrameHistory, 'an invalid local frame cannot create an undo entry');
-      await s.click('common.cancel', { within: '.sd' });
-      await s.gone('.sd');
+      await s.fill(await s.field('u', { within: WCS_DIALOG }), '10');
+      const rotation = await s.field(await s.T('wcs.dialog.about', { axis: 'w' }), { within: WCS_DIALOG });
+      await s.fill(rotation, '45');
+      await s.wait('[role="alert"]', await s.T('wcs.error.angle'), { within: WCS_DIALOG });
+      assert.equal(await frameOk.evaluate((e) => e.disabled), true, 'a non-quarter-turn cannot enter the drawing frame');
+      assert.equal(await draftOf(s), beforeInvalidFrame, 'invalid rotation and uncommitted movement leave the draft untouched');
+      assert.equal(await historyAt(s), invalidFrameHistory, 'invalid rotation adds no undo entry');
+      await s.click('common.cancel', { within: WCS_DIALOG });
+      await s.gone(WCS_DIALOG);
+      assert.equal(await draftOf(s), beforeInvalidFrame, 'Cancel discards all proposed WCS changes');
 
       await openWcsPanel(s);
       for (const [axis, value] of [['u', '10'], ['v', '20'], ['w', '0']]) {

@@ -610,6 +610,8 @@ class App:
         self.render_jobs = blender_job.RenderManager(self.models_dir.parent)
 
         def finished(job):
+            if job.kind == "research":
+                return  # research results never become antenna viewer bundles
             if self.projects_dir.exists():
                 rebuild_index(self.projects_dir)
             self.studies.on_finished(job)  # a mesh convergence study queues its next density
@@ -637,7 +639,7 @@ class App:
     # ---- endpoint implementations (return JSON-able objects or raise ApiError)
 
     def health(self) -> dict:
-        return {"ok": True, "api": 1, **self.versions, "cpu_count": self.cpu,
+        return {"ok": True, "api": 1, "research": True, **self.versions, "cpu_count": self.cpu,
                 "physical_cores": self.physical, "host_cpu": resources.host_cpu_name(),
                 "default_threads": resources.auto_threads(self.cpu, self.physical),
                 "throughput": resources.measured_throughput(self.projects_dir, resources.host_cpu_name()),
@@ -1687,6 +1689,46 @@ class App:
                                             "method": method, "excite": excite})
         return job.to_dict()
 
+    def research_probe(self, body: dict) -> dict:
+        from .research import probe
+        try:
+            return probe(body)
+        except (ValueError, TypeError) as exc:
+            raise ApiError(400, str(exc)) from exc
+        except OSError as exc:
+            return {"backend": body.get("backend"), "available": False, "reason": str(exc)}
+
+    def research_submit(self, body: dict) -> dict:
+        try:
+            return self.manager.submit_research(body).to_dict()
+        except (ValueError, TypeError) as exc:
+            raise ApiError(400, str(exc)) from exc
+        except OSError as exc:
+            raise ApiError(409, str(exc)) from exc
+
+    def research_runs(self) -> dict:
+        return {"runs": [row for row in self.manager.list() if row.get("kind") == "research"]}
+
+    def research_job(self, job_id: str):
+        job = self.job(job_id)
+        if job.kind != "research":
+            raise ApiError(404, f"no research job {job_id}")
+        if job.dir.resolve().parent != self.manager.root.resolve():
+            raise ApiError(409, "research job directory escapes jobs root")
+        return job
+
+    def research_detail(self, job_id: str) -> dict:
+        job = self.research_job(job_id)
+        if job.result is not None:
+            from .research import load_result
+            try:
+                result, checksum = load_result(job)
+                if checksum != job.research.get("result_sha256") or result.get("input_sha256") != job.research.get("snapshot_sha256"):
+                    raise ValueError("research output checksum/input identity mismatch")
+            except (OSError, ValueError, TypeError) as exc:
+                raise ApiError(409, f"research result changed or unavailable: {exc}") from exc
+        return job.to_dict()
+
     def job(self, job_id: str):
         job = self.manager.get(job_id)
         if job is None:
@@ -1868,6 +1910,11 @@ class Handler(BaseHTTPRequestHandler):
             ("POST", r"/api/render-jobs/(rb-[0-9a-f]+)/cancel", self._cancel_render),
             ("GET", r"/api/models", lambda: self._json(200, app.models())),
             ("POST", r"/api/preview", lambda: self._json(200, app.do_preview(self._body()))),
+            ("POST", r"/api/research/probe", lambda: self._json(200, app.research_probe(self._body()))),
+            ("POST", r"/api/research/runs", lambda: self._json(201, app.research_submit(self._body()))),
+            ("GET", r"/api/research/runs", lambda: self._json(200, app.research_runs())),
+            ("GET", r"/api/research/runs/([\w.-]+)", lambda i: self._json(200, app.research_detail(i))),
+            ("POST", r"/api/research/runs/([\w.-]+)/cancel", self._cancel_research),
             ("GET", r"/api/runs", lambda: self._json(200, {"runs": app.manager.list()})),
             ("POST", r"/api/runs", lambda: self._json(201, app.submit(self._body()))),
             ("GET", r"/api/runs/([\w.-]+)", lambda i: self._json(200, app.job(i).to_dict())),
@@ -1991,6 +2038,12 @@ class Handler(BaseHTTPRequestHandler):
         job = self.app.render_jobs.cancel(job_id)
         if job is None:
             raise ApiError(404, f"no render {job_id}")
+        self._json(202, job.to_dict())
+
+    def _cancel_research(self, job_id: str):
+        self._body()  # same JSON/CSRF restriction as ordinary jobs
+        self.app.research_job(job_id)  # do not alias ordinary job cancellation
+        job = self.app.manager.cancel(job_id)
         self._json(202, job.to_dict())
 
     def _cancel(self, job_id: str):

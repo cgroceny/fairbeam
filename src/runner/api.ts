@@ -12,6 +12,7 @@ export interface Preflight { level: "ok" | "warn" | "refuse" | "unknown"; messag
 const withThreads = <T extends { threads: number }>(b: T) => ({ ...b, threads: b.threads === 0 ? "auto" : b.threads });
 
 export interface Health {
+  research?: boolean;
   ok: boolean;
   api: number;
   fairbeam: string;
@@ -362,10 +363,27 @@ export interface OptDone {
   wall_time_s: number;
 }
 
+/** Experimental results are never ordinary antenna bundles. */
+export interface ResearchResult {
+  backend?: string;
+  status: string;
+  frequency_hz: number[];
+  s11_real?: number[];
+  s11_imag?: number[];
+  s21_real?: number[];
+  s21_imag?: number[];
+  mode1?: { family: string; analytic_frequency_hz: number; relative_frequency_error: number; complex_field_shape_correlation?: number };
+  precision_converged?: boolean;
+  limitations?: string[];
+  provenance?: unknown;
+}
+
 export interface Job {
   id: string;
   /** "run" (fairbeam run) or "optimize" (fairbeam optimize) */
-  kind?: "run" | "optimize";
+  kind?: "run" | "optimize" | "research";
+  research?: { backend: "periodic" | "elmer"; path: string; settings: Record<string, unknown>; snapshot_sha256: string };
+  result?: ResearchResult | null;
   optimize?: { vary: OptVary[]; goals: OptGoal[]; max_evals: number; method: string; excite?: string } | null;
   /** display name given by the user (the bundle file name is its slug, `name`) */
   label: string | null;
@@ -468,6 +486,13 @@ async function call<T>(method: "GET" | "POST" | "PUT", path: string, body?: unkn
 }
 
 export const api = {
+  researchProbe: (backend: "periodic" | "elmer", path: string, signal?: AbortSignal) =>
+    call<{ backend: string; available: boolean; reason?: string }>("POST", "/research/probe", { backend, path }, signal),
+  researchRuns: (signal?: AbortSignal) => call<{ runs: Job[] }>("GET", "/research/runs", undefined, signal),
+  researchRun: (id: string, signal?: AbortSignal) => call<Job>("GET", `/research/runs/${encodeURIComponent(id)}`, undefined, signal),
+  researchStart: (body: { backend: "periodic" | "elmer"; path: string; settings: Record<string, unknown>; design?: Design }, signal?: AbortSignal) =>
+    call<Job>("POST", "/research/runs", body, signal),
+  researchCancel: (id: string, signal?: AbortSignal) => call<Job>("POST", `/research/runs/${encodeURIComponent(id)}/cancel`, {}, signal),
   previewExampleConversion: (body: { from: string; project?: string }, signal?: AbortSignal) =>
     call<{ source_cells: number | null; design_cells: number | null; within_tolerance: boolean | null; params_carried?: number; params_total?: number; params_partial?: string[]; expressions?: number }>("POST", "/examples/conversion-preview", body, signal),
   copyExample: (body: { from: string; id: string; name: string; project?: string }) =>

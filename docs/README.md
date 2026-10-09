@@ -28,6 +28,10 @@ translated. To check a locally served site in Chrome, run `npm run check:docs-la
 | [The designer](DESIGNER.md) | The visual workspace: start screen and starters, the one-row ribbon (Home, Modeling, Transform, Simulation, Optimize, Post-processing), navigation tree and components, modeling, checks, simulation settings, mesh view and mesh convergence, running and results (efficiency, gain patterns, field planes), design files, VBA macro import, known limitations, feedback |
 | [Example designs](../examples/designs/README.md) | Five 867 MHz antennas as designer files (wideband, meander and sleeve dipoles, collinear, Yagi), with parameters, results and how to scale them |
 | [CLI reference](CLI.md) | Every `fairbeam` command and the options of `run` |
+| [External Elmer experiment](ELMER-EXPERIMENT.md) | Opt-in native PEC cavity research benchmark |
+| [Dielectric cavity qualification](FEM-QUALIFICATION.md) | Opt-in native Elmer material-mapping, eigenfrequency scaling and refinement controls |
+| [Experimental solvers in the app](RESEARCH-SOLVERS.md) | Bounded periodic unit-cell and Elmer cavity jobs, shared queue, results, supported geometry and limitations |
+| [Research preparation](RESEARCH-PREPARATION.md) | Floquet channel plans and bounded Design-to-Elmer mesh export; no solver execution |
 | [Writing models](MODELS.md) | Model files (`MODEL`, `PARAMS`, `build`), an example, templates and the in-app editor |
 | [Automatic meshing](MESHING.md) | `sim.auto_mesh()`: options, rules, report, validation against hand meshes |
 | [Run server and Run panel](RUN-SERVER.md) | `fairbeam serve`, the Run panel, sweeps, comparison overlays, the optimizer in the UI |
@@ -47,6 +51,7 @@ translated. To check a locally served site in Chrome, run `npm run check:docs-la
 | --- | --- |
 | [How results are computed](RESULTS.md) | Excitation, end criterion, S11/Zin, bands, far field, efficiency, gain; accuracy notes |
 | [Validation](VALIDATION.md) | Comparison with closed-form theory; mesh convergence; recommended settings |
+| [Experimental periodic CPU study](../scripts/experimental-periodic/README.md) | Opt-in native source patch and reproducible zero-phase unit-cell research gates; not production Floquet support |
 | [Lumped resistor in openEMS](openems-lumped-resistor.md) | How the lumped resistor behaves, and why the Wilkinson residual is not a resistor error |
 | [Bundle schema](BUNDLE.md) | `fairbeam.project/1`, field by field |
 | [Architecture](ARCHITECTURE.md) | Data flow, run server, project layout, roadmap |
