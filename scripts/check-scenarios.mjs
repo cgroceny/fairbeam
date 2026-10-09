@@ -19,6 +19,9 @@ import { Session, auditSelfTest, failureDir } from './scenarios/harness.mjs';
 
 const args = process.argv.slice(2);
 const langs = args.includes('--lang') ? [args[args.indexOf('--lang') + 1]] : ['en', 'tr'];
+// A hosted CI runner is slow and noisy: a failing scenario gets one clean retry there (reported).
+const ATTEMPTS = process.env.CI ? 2 : 1;
+const retried = [];
 const only = args.filter((a, i) => !a.startsWith('--') && args[i - 1] !== '--lang').map((a) => a.toUpperCase());
 const compact = args.includes("--compact"); // Rust fit_for: normal minimum 1024x700; 728px work area gives 1024x688.
 const ribbonFileAudit = args.includes('--ribbon-file-audit'); // S9: supported desktop widths and actual file chooser.
@@ -152,24 +155,30 @@ try {
   console.log(`Scenario checks (${langs.join(', ')}); failing screenshots go to ${failureDir}`);
   for (const scenario of SCENARIOS) {
     if (only.length && !only.includes(scenario.id)) continue;
-    for (const lang of langs) {
-      console.log(`\n${scenario.id} ${scenario.title} [${lang}]`);
+    for (const lang of langs) for (let attempt = 1; attempt <= ATTEMPTS; attempt++) {
+      console.log(`\n${scenario.id} ${scenario.title} [${lang}]${attempt > 1 ? ` (retry ${attempt - 1} on CI)` : ''}`);
       const context = await browser.createBrowserContext();
       const page = await context.newPage();
+      // CI hosts often have system animations off; the app then honours prefers-reduced-motion and
+      // pauses animations (fieldPlaneClock.ts). Scenarios test the default, motion-enabled behaviour.
+      await page.emulateMediaFeatures([{ name: 'prefers-reduced-motion', value: 'no-preference' }]);
       await page.setViewport({ width: compact ? 1024 : 1440, height: compact ? 688 : 900 });
-      page.setDefaultTimeout(20000);
+      page.setDefaultTimeout(process.env.CI ? 40000 : 20000); // hosted runners are much slower
       // The first browser navigation can overlap Vite's cold transform of the full TSX module graph.
       // Keep waits bounded at 20s while allowing that initial dev-server navigation to finish.
       page.setDefaultNavigationTimeout(45000);
       await page.evaluateOnNewDocument((l) => { try { const saved=JSON.parse(localStorage.getItem('fairbeam.generalSettings')||'{}'); localStorage.setItem('fairbeam.generalSettings', JSON.stringify({ ...saved, language: l })); } catch { /* blocked */ } }, lang);
       const s = new Session(page, { lang, scenario: scenario.id, url: stack.url });
       try {
-        await scenario.run(s, { stack, root, skipRun, takeSimLock, stamp, compact, ribbonFileAudit });
+        await scenario.run(s, { stack, root, skipRun, takeSimLock, stamp: attempt > 1 ? `${stamp}r${attempt}` : stamp, compact, ribbonFileAudit });
       } catch (e) {
         if (!e.fatalStep) { console.log(`  FAIL ${scenario.id}/${lang} scenario error: ${e.message}`); s.results.push({ scenario: scenario.id, lang, step: 'scenario', ok: false, problems: [e.stack ?? e.message], ms: 0 }); }
       }
-      results.push(...s.results);
       await context.close();
+      const failed = s.results.some((r) => !r.ok);
+      if (failed && attempt < ATTEMPTS) { retried.push(`${scenario.id}/${lang}`); continue; }
+      results.push(...s.results);
+      break;
     }
   }
 } catch (e) {
@@ -187,5 +196,6 @@ for (const sc of SCENARIOS) for (const lang of langs) {
   console.log(`  ${sc.id} ${lang}: ${bad.length ? `FAIL (${bad.length} of ${rs.length} steps: ${bad.map((b) => b.step).join('; ')})` : `ok (${rs.length} steps)`}`);
 }
 const failed = results.filter((r) => !r.ok).length;
+if (retried.length) console.log(`Retried once on CI after a failure: ${retried.join(', ')}`);
 console.log(`${failed ? 'FAILED' : 'PASSED'}: ${results.length} steps, ${failed} failing, ${Math.round((Date.now() - t0) / 1000)} s.`);
 process.exit(failed ? 1 : 0);

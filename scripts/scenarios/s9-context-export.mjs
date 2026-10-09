@@ -48,23 +48,21 @@ export default {id:'S9',title:'Export the active visible surface',async run(s,ct
   await s.click('ribbon.tab.home',{sel:'.rb-tab'});await s.click('common.save',{sel:'.rb-btn'});await s.sleep(300);await s.page.reload({waitUntil:'domcontentloaded'});await s.wait('.rb');
   await s.showDesignPanel();await (await s.wait('.nt-row[data-id^="run:"]')).click();await s.click('ribbon.tab.post',{sel:'.rb-tab'});await s.click('ribbon.post.sparams',{sel:'.rb-btn'});await s.wait('.dw-result-plot .chart svg');
   await menu(s);assert.equal(await s.page.$$eval('[data-export-action="geometry"]',e=>e.length),0);assert.equal(await s.page.$eval('[data-export-action="result-csv"]',e=>e.disabled),false);await s.press('Escape');
-  await exportItem(s,'result-csv');await s.sleep(150);assert.ok(await s.page.evaluate(()=>window.__exports.some(e=>/_sparams_.*\.csv$/.test(e.name??''))));
-  await exportItem(s,'figure-svg');await s.sleep(150);assert.ok(await s.page.evaluate(()=>window.__exports.some(e=>e.type==='image/svg+xml'&&e.text?.includes('<svg'))));
+  await exportItem(s,'result-csv');await s.waitFor((re)=>window.__exports.some(e=>new RegExp(re).test(e.name??'')),'_sparams_.*\\.csv$',{what:'_sparams_.*\\.csv$'});
+  await exportItem(s,'figure-svg');await s.waitFor(()=>window.__exports.some(e=>e.type==='image/svg+xml'&&e.text?.includes('<svg')),null,{what:'figure SVG export'});
   const before=await s.page.evaluate(()=>window.__exports.filter(e=>e.url?.startsWith('data:image/png')).length);
-  await s.click('header.screenshot.aria',{sel:'.header-secondary button',attr:'aria-label'});await s.sleep(750);
+  await s.click('header.screenshot.aria',{sel:'.header-secondary button',attr:'aria-label'});await s.waitFor((re)=>window.__exports.some(e=>new RegExp(re).test(e.name??'')),'_sparams_.*\\.png$',{what:'_sparams_.*\\.png$'});
   assert.equal(await s.page.evaluate(()=>window.__exports.filter(e=>e.url?.startsWith('data:image/png')).length),before,'result screenshot never calls hidden3D');
-  assert.ok(await s.page.evaluate(()=>window.__exports.some(e=>/_sparams_.*\.png$/.test(e.name??''))));
  });
  await s.step('Drawing exports route to the visible sheet and report a global outcome',async()=>{
   await menu(s);
   await s.ev((_,m)=>{m.w.setAppMode('results');m.state.setCenterView('drawing');},null,{w:'/src/workspace.ts',state:'/src/state.ts'});
   await s.gone('.context-export-menu');
   await s.wait('.dv-export');await menu(s);const ids=await s.page.$$eval('[data-export-action]',es=>es.map(e=>e.dataset.exportAction));assert.deepEqual(ids,['drawing-svg','drawing-pdf','drawing-png']);await s.press('Escape');
-  await exportItem(s,'drawing-svg');await s.sleep(150);assert.ok(await s.page.evaluate(()=>window.__exports.some(e=>e.name?.includes('_drawing_')&&e.name.endsWith('.svg'))));
+  await exportItem(s,'drawing-svg');await s.waitFor((re)=>window.__exports.some(e=>new RegExp(re).test(e.name??'')),'_drawing_.*\\.svg$',{what:'_drawing_.*\\.svg$'});
   const before=await s.page.evaluate(()=>window.__exports.filter(e=>e.url?.startsWith('data:image/png')).length);
-  await s.click('header.screenshot.aria',{sel:'.header-secondary button',attr:'aria-label'});await s.sleep(750);
+  await s.click('header.screenshot.aria',{sel:'.header-secondary button',attr:'aria-label'});await s.waitFor((re)=>window.__exports.some(e=>new RegExp(re).test(e.name??'')),'_drawing_.*\\.png$',{what:'_drawing_.*\\.png$'});
   assert.equal(await s.page.evaluate(()=>window.__exports.filter(e=>e.url?.startsWith('data:image/png')).length),before);
-  assert.ok(await s.page.evaluate(()=>window.__exports.some(e=>e.name?.includes('_drawing_')&&e.name.endsWith('.png'))));
  });
  await s.step('compact Header More uses the same visible-surface screenshot action',async()=>{
   await s.page.setViewport({width:768,height:900});await s.sleep(200);

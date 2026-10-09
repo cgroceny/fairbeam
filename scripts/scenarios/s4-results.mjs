@@ -122,8 +122,8 @@ export default {
       const slider = await s.wait('#field-plane-phase');
       await s.click('viewport.current.play', { sel: 'button' });
       const before = await slider.evaluate((e) => e.value);
-      await s.sleep(900);
-      assert.notEqual(await slider.evaluate((e) => e.value), before, 'the animation advances the phase');
+      await s.waitFor((start) => document.querySelector('#field-plane-phase')?.value !== start, before,
+        { what: 'the animation advances the phase' });
       await s.click('viewport.current.pause', { sel: 'button' });
     });
     await s.step('a result file that fails to load offers Retry', async () => {
