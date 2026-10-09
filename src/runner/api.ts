@@ -7,6 +7,11 @@ import type { ConvergenceStudy } from "../designer/convergence";
 import type { TemplateKey } from "../designer/templates";
 import { t } from "../i18n/index.ts";
 
+/** The optional managed Elmer package (python/fairbeam/elmer_runtime.py). */
+export interface ElmerRuntime {
+  supported: boolean; installed: boolean; path: string; version: string; size: number; license: string; source: string;
+  state: "idle" | "downloading" | "unpacking" | "done" | "failed"; received: number; total: number; error: string;
+}
 export interface Preflight { level: "ok" | "warn" | "refuse" | "unknown"; messages: string[]; estimate_bytes: number | null; free_bytes: number | null }
 /** threads 0 is Auto in the UI; the server takes "auto" */
 const withThreads = <T extends { threads: number }>(b: T) => ({ ...b, threads: b.threads === 0 ? "auto" : b.threads });
@@ -488,6 +493,8 @@ async function call<T>(method: "GET" | "POST" | "PUT", path: string, body?: unkn
 export const api = {
   researchProbe: (backend: "periodic" | "elmer", path: string, signal?: AbortSignal) =>
     call<{ backend: string; available: boolean; reason?: string }>("POST", "/research/probe", { backend, path }, signal),
+  elmerRuntime: (signal?: AbortSignal) => call<ElmerRuntime>("GET", "/research/elmer/runtime", undefined, signal),
+  elmerInstall: (signal?: AbortSignal) => call<ElmerRuntime>("POST", "/research/elmer/install", {}, signal),
   researchRuns: (signal?: AbortSignal) => call<{ runs: Job[] }>("GET", "/research/runs", undefined, signal),
   researchRun: (id: string, signal?: AbortSignal) => call<Job>("GET", `/research/runs/${encodeURIComponent(id)}`, undefined, signal),
   researchStart: (body: { backend: "periodic" | "elmer"; path: string; settings: Record<string, unknown>; design?: Design }, signal?: AbortSignal) =>

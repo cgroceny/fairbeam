@@ -28,6 +28,10 @@ source is provided at no charge beyond the cost of delivery, if any.
 - **Python** and the Python packages NumPy, h5py and matplotlib (with their dependencies). They
   are downloaded on first start from python-build-standalone and PyPI, under their own licenses.
 - **uv** (MIT / Apache-2.0), downloaded on first start.
+- **Elmer FEM** 26.1 (GPL-2.0-or-later; the ElmerSolver library is LGPL-2.1-or-later), optional and
+  Windows only. The app does not contain it; it downloads the official portable package only when you
+  choose Install Elmer in the experimental solvers panel. The package includes its license texts.
+  Source: <https://github.com/ElmerCSC/elmerfem/tree/release-26.1>.
 - Bundled open-source libraries, under their respective licenses (versions are recorded in the lockfiles):
   - desktop shell: Tauri and the Rust crates in `src-tauri/Cargo.lock`;
   - viewer: three.js, SolidJS, lucide, jsPDF, CodeMirror and the other npm packages in
