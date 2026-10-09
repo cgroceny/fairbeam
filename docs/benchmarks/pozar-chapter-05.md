@@ -40,7 +40,7 @@ The reference is the exact cascade of the declared lines, independently checked 
 
 Our profile coordinate u is normalized travel time, not physical distance. A midpoint impedance Zi is represented by a scalar dielectric slice of length c·τ·Zi/(100·M), so each slice has delay τ/M. The plate geometry is H=0.75 mm, W=2.825477351 mm. Electrical length θ=2πfτ spans 0.5..4π on 412 declared frequencies. This mapping is explicit and is not a constant-dielectric PCB realization.
 
-Exact cascades are compared with an independently integrated continuous nonuniform line and with small-reflection approximations. RK4 step doubling from 2048 to 4096 changes complex S by less than 1.4e-10; a closed exponential-line solution and independent nodal network calculations check the references. The Klopfenstein endpoint steps are retained. No length, impedance or frequency is fitted to the measured output.
+Exact cascades are compared with an independently integrated continuous nonuniform line and with small-reflection approximations. RK4 step doubling from 2048 to 4096 changes complex S by less than 1.4e-10; a closed exponential-line solution and independent nodal network calculations check the references. For Klopfenstein, Γ0=ln(1/2)/2 and A=acosh(abs(Γ0)/0.02)=3.544676496; the 98.019867331 Ω and 51.010067001 Ω endpoint steps are retained. No length, impedance or frequency is fitted to the measured output.
 
 | Profile | Fine max S error vs physical slices | Fine max S error vs continuous line | Fine max Z error vs continuous line / % | Sampled peak for θ≥A |
 |---|---:|---:|---:|---:|
