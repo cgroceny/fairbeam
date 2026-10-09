@@ -18,6 +18,7 @@ PARAMS = [
     Param("mode", "TE10", "Rectangular TE mode"),
     Param("f_min", 14.5, "Band start", "GHz", minimum=.1),
     Param("f_max", 15.5, "Band stop", "GHz", minimum=.1),
+    Param("end_criteria_db", -70.0, "Energy stop", "dB", minimum=-100, maximum=-20),
 ]
 
 
@@ -61,8 +62,11 @@ def build(p):
         raise ValueError("length_sections must be a positive integer")
     # This narrow band is above cutoff. A modulated Gaussian avoids driving
     # the below-cutoff/near-cutoff spectrum of a broadband derivative pulse.
+    end_db = p.get("end_criteria_db", -70.0)
+    if isinstance(end_db, bool) or not np.isfinite(end_db) or not -100 <= end_db <= -20:
+        raise ValueError("end_criteria_db must be finite and within -100..-20 dB")
     sim = Simulation(f_min, f_max, boundaries=["PEC"] * 4 + ["PML_8"] * 2, excitation="gauss",
-                     max_timesteps=100000, end_criteria_db=-70)
+                     max_timesteps=100000, end_criteria_db=end_db)
     target = C0 / f_max / np.sqrt(er) / 1e-3 / p["cpw"]
     n_base = int(np.ceil(base_length / target))
     dz = base_length / n_base

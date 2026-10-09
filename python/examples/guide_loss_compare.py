@@ -13,14 +13,56 @@ import numpy as np
 
 from fairbeam.model import load_model, resolve_params
 from fairbeam.multiport import assemble_s, run_model
+from fairbeam import multiport, simulation, wgport
 
 MODEL_PATH = Path(__file__).with_name("rectangular_guide_loss.py")
+PROTOCOL = "rectangular-guide-completed-source-v1"
 LOSSES = ("none", "dielectric", "copper", "both", "native_sheet")
 # Predefined across the full 201-point band, not just the middle frequency.
 TARGET_ALPHA_REL = .03
 MESH_ALPHA_REL = .02
 TARGET_BETA_REL = .005
 MESH_BETA_REL = .0025
+
+
+def source_ids():
+    paths = {"model": MODEL_PATH, "reader": Path(__file__),
+             "simulation": Path(simulation.__file__), "multiport": Path(multiport.__file__),
+             "wgport": Path(wgport.__file__)}
+    return {key: hashlib.sha256(path.read_bytes()).hexdigest() for key, path in paths.items()}
+
+
+def sources_completed(meta):
+    """Historical or incomplete records cannot establish a post-source scope."""
+    columns = meta.get("source_columns")
+    if (meta.get("protocol") != PROTOCOL or meta.get("source_ids") != source_ids()
+            or not isinstance(columns, list) or len(columns) != 2):
+        return False
+    p = meta["parameters"]
+    end_db = p.get("end_criteria_db", -70)
+    if (isinstance(end_db, bool) or not isinstance(end_db, (int, float))
+            or not np.isfinite(end_db) or not -100 <= end_db <= -20):
+        return False
+    pulse_s = 9 / (np.pi * (p["f_max"]-p["f_min"]) * .5e9)
+    for pn, column in enumerate(columns, 1):
+        if not isinstance(column, dict) or not isinstance(column.get("run"), dict):
+            return False
+        dt, length = column.get("dt_s"), column.get("signal_steps")
+        run = column.get("run", {})
+        steps = run.get("timesteps")
+        energy = [run.get(key) for key in ("final_energy_db", "final_energy_bound_db")]
+        energy = [v for v in energy if isinstance(v, (int, float))
+                  and not isinstance(v, bool) and np.isfinite(v)]
+        if (column.get("port") != pn or isinstance(column.get("port"), bool)
+                or isinstance(dt, bool) or not isinstance(dt, (int, float)) or not np.isfinite(dt) or dt <= 0
+                or isinstance(length, bool) or not isinstance(length, int)
+                or isinstance(steps, bool) or not isinstance(steps, int) or not 0 < steps < 100000
+                or abs(length-int(np.ceil(pulse_s/dt))) > 1 or steps < length
+                or run.get("converged") is not True or column.get("exact_endcriteria") is not True
+                or column.get("threads") != 4 or run.get("engine") != "cpu"
+                or not energy or max(energy) > end_db+1e-9):
+            return False
+    return True
 
 
 def propagation(short, long, length_difference, beta_hint):
@@ -50,10 +92,17 @@ def acquire(model, values, out):
     s = assemble_s(np.asarray(a), np.asarray(b), [1, 2], 2)
     f = np.asarray(sim.results["frequency"])
     np.savez_compressed(out / "data.npz", f=f, s=s, **model.analytical(f, values))
-    times = np.loadtxt(out / "raw/excite-1/et", max_rows=2)
+    columns = []
+    for pn, (item, run) in enumerate(zip(built, sim.run_stats["port_runs"]), 1):
+        signal = np.loadtxt(Path(item.sim_path) / "et")
+        columns.append({"port": pn, "dt_s": float(np.diff(signal[:2, 0])[0]),
+                        "signal_steps": len(signal), "run": dict(run),
+                        "threads": item.run_stats["threads"],
+                        "exact_endcriteria": item.run_stats["exact_endcriteria"]})
     report = {"parameters": values, "run": sim.run_stats,
+              "protocol": PROTOCOL, "source_ids": source_ids(), "source_columns": columns,
               "model_sha256": hashlib.sha256(MODEL_PATH.read_bytes()).hexdigest(),
-              "excitation": sim.excitation["type"], "dt_s": float(np.diff(times[:, 0])[0]),
+              "excitation": sim.excitation["type"], "dt_s": columns[0]["dt_s"],
               "cells": int(np.prod([len(sim.mesh.GetLines(axis)) - 1 for axis in "xyz"])),
               "scope": "Acquisition; energy stopping is not mesh convergence."}
     (out / "report.json").write_text(json.dumps(report, indent=2) + "\n", encoding="utf-8")
@@ -95,6 +144,8 @@ def analyse(root, meshes):
         for loss, (gamma, data, sm, lm) in samples.items():
             energy = all(meta["run"].get("converged") for meta in
                          (sm, lm, samples["none"][2], samples["none"][3]))
+            complete = all(sources_completed(meta) for meta in
+                           (sm, lm, samples["none"][2], samples["none"][3]))
             # Remove the measured PEC bias of the identical mesh/lengths.
             # Keep the raw bias visible; do not clip a negative attenuation.
             excess = (gamma - pec).real
@@ -113,6 +164,7 @@ def analyse(root, meshes):
                 loss == "none" or mesh_error is not None and mesh_error <= MESH_ALPHA_REL)
             mid = len(data["f"]) // 2
             rows.append({"cpw": cpw, "loss": loss, "energy_stopped": energy,
+                         "source_completed": complete,
                          "cells": [sm["cells"], lm["cells"]], "dt_ps": sm["dt_s"] * 1e12,
                          "alpha_raw_mid": float(gamma.real[mid]),
                          "pec_bias_mid": float(pec.real[mid]),
@@ -131,7 +183,7 @@ def analyse(root, meshes):
         items = [r for r in rows if r["loss"] == loss]
         for i, row in enumerate(items):
             row["validated_scope"] = bool(i >= 2 and loss != "native_sheet" and
-                all(r["energy_stopped"] for r in items[i-2:i+1]) and
+                all(r["energy_stopped"] and r["source_completed"] for r in items[i-2:i+1]) and
                 row["matches"] and items[i-1]["matches"] and
                 row["mesh_pair_passes"] and items[i-1]["mesh_pair_passes"])
     (root / "comparison.json").write_text(json.dumps(rows, indent=2) + "\n", encoding="utf-8")
@@ -143,6 +195,8 @@ def main():
     parser.add_argument("--out", type=Path, required=True)
     parser.add_argument("--meshes", default="20,30,40")
     parser.add_argument("--analyse-only", action="store_true")
+    parser.add_argument("--end-criteria-db", type=float, choices=(-70., -80., -90.), default=-70.,
+                        help="opt-in stricter energy stop; source completion is checked separately")
     args = parser.parse_args()
     meshes = [int(v) for v in args.meshes.split(",")]
     if len(meshes) < 3 or meshes != sorted(set(meshes)) or not all(10 <= v <= 100 for v in meshes):
@@ -154,6 +208,7 @@ def main():
             for loss in LOSSES:
                 for sections in (1, 3):
                     values = default | {"cpw": cpw, "length_sections": sections,
+                        "end_criteria_db": args.end_criteria_db,
                         "tan_d": .0004 if loss in ("dielectric", "both") else 0,
                         "wall_sigma": 5.8e7 if loss in ("copper", "both", "native_sheet") else 0,
                         "wall_model": "halfspace" if loss in ("copper", "both") else "sheet"}
