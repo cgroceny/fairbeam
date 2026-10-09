@@ -78,15 +78,20 @@ including commercial use. See [Validation](docs/VALIDATION.md) for tested cases 
 
 ## Privacy
 
-Usage counts and sign-in are built but OFF in Fairbeam 0.7.0. No usage counts are recorded or sent,
-and no usage-consent dialog appears. Update checks contact GitHub (fairbeam-releases). App and
-runtime downloads come from GitHub and upstream hosts. This website is hosted on Vercel. These
-services see your IP address and request data as any web server does; request-log retention is set
-by the hosting provider.
+Since Fairbeam 0.7.2, the desktop app asks once whether you want to help count installs. Counting
+is off until you choose **Allow**; **No thanks** or dismissing the dialog keeps it off. Sign-in
+remains disabled. With consent, the app sends a random install ID, app version, operating system,
+CPU architecture and report schema to `fairbeam.org/api/ping`, at most once every seven days.
+Designs, files and simulation results are not included. You can turn counting off at any time in
+**Settings > General > Install counts**, which deletes the local install ID and stops future
+install-count requests. `FAIRBEAM_NO_TELEMETRY=1` also disables counting for that process.
 
-Before any usage counting is enabled, a full notice will be published identifying the controller,
-purposes, processors, retention periods, rights and transfer arrangements. For privacy questions or
-rights requests, contact ismail@fairbeam.org. Do not post personal information in public issues.
+Update checks contact GitHub (fairbeam-releases); app and runtime downloads come from GitHub and
+upstream hosts. The website and install-count API are hosted on Vercel. Hosting providers see your
+IP address and request data; their own policies govern infrastructure logs. See the
+[privacy notice](https://fairbeam.org/privacy.html) for the controller, purpose, processors,
+retention, rights and international processing details. For privacy questions or rights requests,
+contact ismail@fairbeam.org. Do not post personal information in public issues.
 
 ## From source
 
