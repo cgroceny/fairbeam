@@ -241,6 +241,20 @@ class WilkinsonControls(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "stability"):
             audit_header("forced timestep: 1 ps larger than calculated timestep", {})
 
+    def test_actual_native_grid_counts_include_boundary_nodes(self):
+        _, meta = f.build(4, 1)
+        meta["native"] = dict(dt_s=meta["declared_dt_s"])
+        text = ("openEMS 64bit -- version v0.37.0-rc3\n"
+                "fixed number of threads: 1\n"
+                "FDTD simulation size: 37x29x14 --> 15022 FDTD cells\n"
+                "Exact-endcriteria: evaluating the end criteria every 662 timestep\n")
+        self.assertEqual(meta["native_lines"], [37, 29, 14])
+        self.assertEqual(meta["native_cells"], 15022)
+        self.assertEqual(audit_header(text, meta)["nyquist_interval"], 662)
+        meta["native_cells"] = 13104
+        with self.assertRaisesRegex(ValueError, "grid"):
+            audit_header(text, meta)
+
     def test_probe_clock_rejects_repeats_wrong_stride_and_nonfinite_samples(self):
         native = dict(dt_s=1e-12, numerical_time_s=1e-9)
         t = np.arange(12)*83e-12  # floor(1/(2*1.5GHz*1ps*4))

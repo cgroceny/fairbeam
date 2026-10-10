@@ -23,7 +23,7 @@ F0, Z0 = 1e9, 50.
 FREQUENCIES = np.linspace(.5*F0, 1.5*F0, 401)
 MESHES = (4, 6, 8)
 CAP_S, END_DB, THREADS = 20e-9, -80., 1
-PROTOCOL = "untrimmed-wilkinson-v1"
+PROTOCOL = "untrimmed-wilkinson-v2"
 LIMITS = dict(magnitude_target_abs=.05, complex_mesh_abs=.005,
               complex_control_abs=.003, phase_balance_target_deg=.5,
               phase_mesh_deg=.5, phase_control_deg=.2,
@@ -143,7 +143,7 @@ def build(n, port, expanded=False, end_db=END_DB, cap_s=CAP_S):
                 source_duration_s=excitation.dgauss_duration_s(FREQUENCIES[-1]),
                 f_min_hz=sim.f_min, f_max_hz=sim.f_max, declared_dt_s=float(dt), max_timesteps=steps,
                 native_lines=[len(axes[a]) for a in "xyz"],
-                native_cells=int(np.prod([len(axes[a])-1 for a in "xyz"])),
+                native_cells=int(np.prod([len(axes[a]) for a in "xyz"])),
                 mesh_mm={a:v.tolist() for a,v in axes.items()}, threads=THREADS,
                 geometry=dict(strip_50_mm=w50, strip_70_mm=w70, arm_prescribed_m=float(length),
                               isolation_resistor_ohm=2*Z0, substrate_h_mm=p["sub_h"],
