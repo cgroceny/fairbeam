@@ -1157,3 +1157,18 @@ It links each independent fixture PR and its reproduction commands.
 Examples 5.1, 5.2 and 5.4 remain excluded because their stopping or numerical gates
 fail. Strict Chebyshev/Klopfenstein ripple compliance, practical PCB layouts and
 arbitrary Designer measurements are outside the accepted scopes.
+
+## 22. Chapter 6 comparison scopes
+
+The [Chapter 6 record](benchmarks/pozar-chapter-06.md) collects the sampled
+dielectric-loss frequency and unloaded-Q scopes for the ideal coaxial resonator
+(6.1), rectangular TE101/TE102 cavities (6.3) and closed cylindrical TE011 cavity
+(6.4). It also records complex reflection, resonance and loaded Q for an explicitly
+declared mapped TEM circuit dual (6.6), including an independent stricter-time
+control. Both successive mesh comparisons and each declared independent control
+pass their frozen limits; no asymptotic convergence order is claimed.
+
+Open microstrip and dielectric-resonator Q, bulk-copper loss, practical coupling
+gaps and unmeasured external/radiation-Q partitions remain excluded. Examples
+6.7/6.8 are calculation-only. The record links the fixture PRs and reproduction
+commands; no gallery model, generated bundle or textbook content is added.
