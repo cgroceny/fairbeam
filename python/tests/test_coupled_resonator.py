@@ -164,6 +164,8 @@ class CoupledResonatorTests(unittest.TestCase):
                 self.assertEqual(sim.boundaries,['PMC','PEC','PMC','PMC','PEC','PEC'])
                 self.assertAlmostEqual(meta['source_plane_m']-meta['mesh_lower_x_m'],meta['dx_m'])
                 self.assertAlmostEqual(meta['source_plane_m'],-feed*fixture.LENGTH/11)
+                self.assertEqual(sim.ports[0]['start'][0],float(sim.mesh.GetLines('x')[1]))
+                self.assertEqual(sim.ports[0]['stop'][0],float(sim.mesh.GetLines('x')[1]))
                 for contour in meta['current_contours'].values():
                     self.assertTrue(0<contour['lo']<contour['hi']<fixture.WIDTH)
                     self.assertAlmostEqual(contour['weight']*(contour['hi']-contour['lo']),fixture.WIDTH)

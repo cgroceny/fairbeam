@@ -176,7 +176,10 @@ def build(n,kind,feed=1,backing=1,cap_s=400e-9,cell_map=False):
     material.AddBox([x[0]/sim.unit,0,0],[x[-1]/sim.unit,WIDTH/sim.unit,HEIGHT/sim.unit],priority=1)
     metal=sim.metal('top_backing')
     metal.AddBox([x[0]/sim.unit,0,HEIGHT/sim.unit],[x[-1]/sim.unit,WIDTH/sim.unit,z[-1]/sim.unit],priority=10)
-    sim.lumped_port(1,Z0,[-feed_length/sim.unit,0,0],[-feed_length/sim.unit,WIDTH/sim.unit,HEIGHT/sim.unit],'z')
+    # A zero-thickness excitation must match the stored mesh node exactly.
+    # Recomputing -feed_length differs by one ULP on n5 and gives no field.
+    source_x=float(sim.mesh.GetLines('x')[1])
+    sim.lumped_port(1,Z0,[source_x,0,0],[source_x,WIDTH/sim.unit,HEIGHT/sim.unit],'z')
     inductance=component(kind)
     # A native full-width primitive distributes over N+1 transverse nodes.
     # Our TEM current represents the N-cell physical span. This optional
@@ -216,7 +219,7 @@ def build(n,kind,feed=1,backing=1,cap_s=400e-9,cell_map=False):
     return sim,dict(n=n,kind=kind,feed=feed,backing=backing,cap_s=cap_s,
         declared_dt_s=DT,max_timesteps=math.ceil(cap_s/DT),native_cells=int(np.prod([len(a) for a in (x,y,z)])),
         grid=[len(a) for a in (x,y,z)],dx_m=dx,planes_m=list(planes),threads=THREADS,
-        source_plane_m=-feed_length,mesh_lower_x_m=float(x[0]),
+        source_plane_m=source_x*sim.unit,mesh_lower_x_m=float(x[0]),
         current_contours=contours,expected_current_indices=current_indices,
         cell_map=cell_map,native_shunt_l_h=native_inductance,
         physical_length_m=LENGTH,height_m=HEIGHT,width_m=WIDTH,epsilon_r=ER,kappa_s_m=KAPPA,
