@@ -118,10 +118,14 @@ def build(n, port, *, closed=False, inset=True, distance=DISTANCE, pml=PML, end_
         air = sim.csx.AddMaterial("aperture_air", epsilon=1., mue=1.)
         air.AddCylinder(priority=20, start=[g["hole_x_mm"], -dz, 0],
                         stop=[g["hole_x_mm"], dz, 0], radius=g["radius_mm"])
+    center = len(axes["z"])//2
     for number, upper, side in ((1, False, -1), (2, False, 1), (3, True, -1), (4, True, 1)):
         low, high = (0, B) if upper else (-B, 0)
-        native = sim.waveguide_port(number, [0, low, side*(distance+2*dz)],
-                    [A, high, side*distance], "z", A, B, excite=number == port)
+        # Zero-thickness excitation boxes require the exact stored mesh node.
+        # Recomputing distance+2*dz missed it by one ULP and produced no field.
+        source_z, probe_z = (float(axes["z"][center+side*offset]) for offset in (q+2, q))
+        native = sim.waveguide_port(number, [0, low, source_z],
+                    [A, high, probe_z], "z", A, B, excite=number == port)
         if inset:
             wgport.inset_mode_probes(native, cells=1)
     dt = .5/(C0*np.sqrt(sum((np.min(np.diff(v))*sim.unit)**-2 for v in axes.values())))

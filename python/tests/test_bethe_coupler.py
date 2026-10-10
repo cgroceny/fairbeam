@@ -181,6 +181,15 @@ class BetheControls(unittest.TestCase):
             sim, _ = f.build(n, 1, closed=True)
             self.assertEqual(sim.csx.GetPropertyByCoordPriority(inside).GetName(), "common_wall")
 
+    def test_every_zero_thickness_source_uses_the_exact_stored_mesh_node(self):
+        for n in f.MESHES:
+            for distance in (f.DISTANCE, f.FAR_DISTANCE):
+                _, meta = f.build(n, 1, distance=distance)
+                z = meta["mesh_mm"]["z"]
+                for port in meta["ports"]:
+                    self.assertIn(port["start"][2], z)
+                    self.assertIn(port["stop"][2], z)
+
     def test_invalid_geometry_controls_are_refused(self):
         for n, port, options in ((True, 1, {}), (24., 1, {}), (30, 1, {}), (24, True, {}), (24, 5, {}),
                 (24, 1, dict(pml=10)), (24, 1, dict(distance=70)), (24, 1, dict(inset=1)), (24, 1, dict(cap_s=1e-9))):
