@@ -35,8 +35,8 @@ DELTA = .5*np.arccos(np.exp(-2*ALPHA*LENGTH))
 F_CRITICAL = F0*(1-DELTA/np.pi)
 CAP_CRITICAL = 1/(2*np.pi*F_CRITICAL*(Z0/np.tanh(ALPHA*LENGTH+1j*np.pi*F_CRITICAL/F0)).imag)
 FREQUENCIES = np.linspace(4.7e9, 5.05e9, 401)
-MESHES, KINDS = (1, 2, 3), ('bare', 'approx', 'critical')
-DT, THREADS, END_DB = .2e-12, 1, -70.
+MESHES, COHORT, KINDS = (1, 2, 3, 4, 5, 6), (4, 5, 6), ('bare', 'approx', 'critical')
+DT, THREADS, END_DB = .1e-12, 1, -70.
 GATES = dict(gamma_target=.03, gamma_mesh=.005, gamma_control=.003,
              independent_current=.003, independent_plane=.003,
              f_target=.002, f_mesh=.0005, f_control=.0005,
@@ -149,10 +149,11 @@ class CoupledSimulation(Simulation):
         raise ValueError('research probes and circuit dual have no Designer bundle')
 
 
-def build(n,kind,feed=1,backing=1,cap_s=400e-9):
+def build(n,kind,feed=1,backing=1,cap_s=400e-9,cell_map=False):
     if (isinstance(n,bool) or n not in MESHES or not isinstance(n,int)
             or kind not in KINDS or isinstance(feed,bool) or feed not in (1,2) or not isinstance(feed,int)
-            or isinstance(backing,bool) or backing not in (1,2) or not isinstance(backing,int)):
+            or isinstance(backing,bool) or backing not in (1,2) or not isinstance(backing,int)
+            or not isinstance(cell_map,bool)):
         raise ValueError('declared integer mesh, case, feed and backing required')
     if not np.isfinite(cap_s) or not 100e-9<=cap_s<=1e-6:
         raise ValueError('cap must be 100 to 1000 ns')
@@ -177,8 +178,12 @@ def build(n,kind,feed=1,backing=1,cap_s=400e-9):
     metal.AddBox([x[0]/sim.unit,0,HEIGHT/sim.unit],[x[-1]/sim.unit,WIDTH/sim.unit,z[-1]/sim.unit],priority=10)
     sim.lumped_port(1,Z0,[-feed_length/sim.unit,0,0],[-feed_length/sim.unit,WIDTH/sim.unit,HEIGHT/sim.unit],'z')
     inductance=component(kind)
+    # A native full-width primitive distributes over N+1 transverse nodes.
+    # Our TEM current represents the N-cell physical span. This optional
+    # geometric map fixes that density; it never uses a measured spectrum.
+    native_inductance=None if inductance is None else inductance*((len(y)-1)/len(y) if cell_map else 1.)
     if inductance is not None:
-        sim.lumped_inductor('dual_coupling_L',inductance,[0,0,0],[0,WIDTH/sim.unit,HEIGHT/sim.unit],'z')
+        sim.lumped_inductor('dual_coupling_L',native_inductance,[0,0,0],[0,WIDTH/sim.unit,HEIGHT/sim.unit],'z')
     planes=(-3*feed_length/4,-feed_length/4)
     dual_y=(y[:-1]+y[1:])/2
     contours={label:dict(lo=float(dual_y[a]),hi=float(dual_y[b]),
@@ -205,16 +210,17 @@ def build(n,kind,feed=1,backing=1,cap_s=400e-9):
         grid=[len(a) for a in (x,y,z)],dx_m=dx,planes_m=list(planes),threads=THREADS,
         source_plane_m=-feed_length,mesh_lower_x_m=float(x[0]),
         current_contours=contours,expected_current_indices=current_indices,
+        cell_map=cell_map,native_shunt_l_h=native_inductance,
         physical_length_m=LENGTH,height_m=HEIGHT,width_m=WIDTH,epsilon_r=ER,kappa_s_m=KAPPA,
         dual_shunt_l_h=inductance,original_series_c_f=None if inductance is None else inductance/Z0**2,
         source_duration_s=dgauss_duration_s(sim.f_max),source_max_hz=sim.f_max,
         scope=SCOPE,frequency_hz=FREQUENCIES.tolist(),gates=GATES)
 
 
-def acquire(out,n,kind,feed,backing,cap_s):
+def acquire(out,n,kind,feed,backing,cap_s,cell_map=False):
     out=Path(out)
     out.mkdir(parents=True,exist_ok=False)
-    sim,meta=build(n,kind,feed,backing,cap_s)
+    sim,meta=build(n,kind,feed,backing,cap_s,cell_map)
     source,runtime=source_identity(),runtime_identity()
     sim.fdtd.Write2XML(str(out/'input.xml'))
     meta.update(source_sha256=source,runtime=runtime,input_sha256=sha(out/'input.xml'),
@@ -258,7 +264,7 @@ def read(out):
         raise ValueError('source/runtime/acceptance epoch changed')
     if sha(out/'input.xml')!=meta['input_sha256'] or sha(out/'data.npz')!=meta['data_sha256']:
         raise ValueError('input or data changed')
-    _,expected=build(meta['n'],meta['kind'],meta['feed'],meta['backing'],meta['cap_s'])
+    _,expected=build(meta['n'],meta['kind'],meta['feed'],meta['backing'],meta['cap_s'],meta['cell_map'])
     if any(meta[key]!=value for key,value in expected.items()):
         raise ValueError('model identity changed')
     native=meta['native']
@@ -299,7 +305,7 @@ def read(out):
     target_error=float(np.max(abs(original-target)))
     quality=bool(grid_ok and clock_ok and header_ok and probes_ok and geometry_ok and stopped
         and plane_error<=GATES['independent_plane'] and contour_error<=GATES['independent_current'])
-    result=dict(n=meta['n'],kind=meta['kind'],feed=meta['feed'],backing=meta['backing'],
+    result=dict(n=meta['n'],kind=meta['kind'],feed=meta['feed'],backing=meta['backing'],cell_map=meta['cell_map'],
         grid_ok=grid_ok,clock_ok=clock_ok,header_ok=header_ok,probe_clocks_ok=probes_ok,
         probe_geometry_ok=geometry_ok,stopped=stopped,
         gamma_target_abs=target_error,independent_plane_abs=plane_error,
@@ -315,16 +321,20 @@ def read(out):
     return result,original
 
 
-def study(out,kind):
+def study(out,kind,meshes=(1,2,3),cell_map=False):
     """Two successive mesh differences and two independent physical controls."""
     out=Path(out)
-    rows=[read(out/f'n{n}'/kind) for n in MESHES]
-    controls=[read(out/name/kind) for name in ('n2_feed','n2_backing')]
-    for n,(r,_) in zip(MESHES,rows):
-        if (r['n'],r['kind'],r['feed'],r['backing'])!=(n,kind,1,1):
+    meshes=tuple(meshes)
+    if len(meshes)!=3 or sorted(set(meshes))!=list(meshes) or any(n not in MESHES for n in meshes) or not isinstance(cell_map,bool):
+        raise ValueError('three increasing supported meshes and a boolean cell map required')
+    rows=[read(out/f'n{n}'/kind) for n in meshes]
+    middle=meshes[1]
+    controls=[read(out/name/kind) for name in (f'n{middle}_feed',f'n{middle}_backing')]
+    for n,(r,_) in zip(meshes,rows):
+        if (r['n'],r['kind'],r['feed'],r['backing'],r['cell_map'])!=(n,kind,1,1,cell_map):
             raise ValueError('mesh cohort identity differs')
     for (r,_),fb in zip(controls,((2,1),(1,2))):
-        if (r['n'],r['kind'],r['feed'],r['backing'])!=(2,kind,*fb):
+        if (r['n'],r['kind'],r['feed'],r['backing'],r['cell_map'])!=(middle,kind,*fb,cell_map):
             raise ValueError('control cohort identity differs')
     def change(a,b):
         value=dict(gamma_abs=float(np.max(abs(a[1]-b[1]))))
@@ -338,7 +348,7 @@ def study(out,kind):
     for values,role in ((mesh,'mesh'),(independent,'control')):
         passes &= all(r['gamma_abs']<=GATES['gamma_'+role] and (kind=='bare' or
             r['f_rel']<=GATES['f_'+role] and r['q_rel']<=GATES['q_'+role]) for r in values)
-    result=dict(kind=kind,mesh_changes=mesh,independent_changes=independent,
+    result=dict(kind=kind,meshes=list(meshes),cell_map=cell_map,mesh_changes=mesh,independent_changes=independent,
         numerical_circuit_scope_passes=bool(passes),qualified_physical_microstrip_gap=False,scope=SCOPE)
     save(out/(kind+'-cohort.json'),result)
     return result

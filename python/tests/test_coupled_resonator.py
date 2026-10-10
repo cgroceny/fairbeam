@@ -35,11 +35,11 @@ def audit_header(log,meta):
     return dict(version=version[1],threads=fixture.THREADS,nyquist_interval=int(interval[1]))
 
 
-def serial(out,n,kind,feed,backing,cap_s,rate):
+def serial(out,n,kind,feed,backing,cap_s,rate,cell_map=False):
     out=Path(out).resolve()
     if out.exists():
         raise ValueError('fresh native output directory required')
-    _,meta=fixture.build(n,kind,feed,backing,cap_s)
+    _,meta=fixture.build(n,kind,feed,backing,cap_s,cell_map)
     seconds=forecast(meta,rate)
     if seconds>1800:
         raise ValueError(f'forecast {seconds/60:.2f} minutes exceeds 30-minute limit')
@@ -47,6 +47,8 @@ def serial(out,n,kind,feed,backing,cap_s,rate):
     command=[sys.executable,'-m','tests.test_coupled_resonator','--fdtd','--worker',
         '--out',str(out),'--mesh',str(n),'--case',kind,'--feed',str(feed),
         '--backing',str(backing),'--cap-ns',str(cap_s*1e9)]
+    if cell_map:
+        command.append('--cell-map')
     start,wall=time.monotonic(),time.time()
     log_path=out.with_name(out.name+'.log')
     with log_path.open('w',encoding='utf-8') as log:
@@ -169,7 +171,7 @@ class CoupledResonatorTests(unittest.TestCase):
                     sim.to_bundle()
 
     def test_rejects_unsupported_and_invalid_acquisition_parameters(self):
-        for n,kind,feed,backing,cap in ((True,'bare',1,1,400e-9),(4,'bare',1,1,400e-9),
+        for n,kind,feed,backing,cap in ((True,'bare',1,1,400e-9),(7,'bare',1,1,400e-9),
                 (1,'unknown',1,1,400e-9),(1,'bare',3,1,400e-9),(1,'bare',1,True,400e-9),
                 (1,'bare',1,1,np.nan),(1,'bare',1,1,1e-9)):
             with self.assertRaises(ValueError):
@@ -289,10 +291,31 @@ class CoupledResonatorTests(unittest.TestCase):
             self.assertAlmostEqual(float(coupling.get('L')),meta['dual_shunt_l_h'])
             self.assertEqual(float(coupling.get('LEtype')),0)
 
+    def test_opt_in_node_density_map_preserves_physical_component_and_reference(self):
+        import tempfile
+        import xml.etree.ElementTree as ET
+        for n in fixture.COHORT:
+            ordinary,plain=fixture.build(n,'critical',cap_s=100e-9)
+            mapped,meta=fixture.build(n,'critical',cap_s=100e-9,cell_map=True)
+            self.assertEqual(meta['original_series_c_f'],plain['original_series_c_f'])
+            self.assertEqual(meta['dual_shunt_l_h'],plain['dual_shunt_l_h'])
+            dy=fixture.WIDTH/(4*n)
+            engine_parallel_nodes=4*n+1
+            target_density_l=meta['dual_shunt_l_h']*fixture.WIDTH/dy
+            self.assertAlmostEqual(meta['native_shunt_l_h']*engine_parallel_nodes/target_density_l,1)
+            with tempfile.TemporaryDirectory() as tmp:
+                path=Path(tmp)/'mapped.xml'
+                mapped.fdtd.Write2XML(str(path))
+                element=next(e for e in ET.parse(path).getroot().findall('.//LumpedElement') if e.get('Name')=='dual_coupling_L')
+                self.assertAlmostEqual(float(element.get('L'))/meta['native_shunt_l_h'],1)
+            self.assertEqual(ordinary.excitation,mapped.excitation)
+        with self.assertRaises(ValueError):
+            fixture.build(3,'critical',cell_map=1)
+
     def test_cohort_does_not_accept_missing_quality_or_physical_gap(self):
-        base=dict(kind='critical',target_passes=True,measured=dict(f_hz=4.92e9,q_loaded=310.))
+        base=dict(kind='critical',cell_map=False,target_passes=True,measured=dict(f_hz=4.92e9,q_loaded=310.))
         gamma=fixture.reference('critical')[0]
-        records=[(dict(base,n=n,feed=1,backing=1),gamma) for n in fixture.MESHES]
+        records=[(dict(base,n=n,feed=1,backing=1),gamma) for n in (1,2,3)]
         records += [(dict(base,n=2,feed=2,backing=1),gamma),(dict(base,n=2,feed=1,backing=2),gamma)]
         import tempfile
         with tempfile.TemporaryDirectory() as tmp,patch.object(fixture,'read',side_effect=records):
@@ -317,6 +340,8 @@ def main():
     p.add_argument('--cap-ns',type=float,default=400.)
     p.add_argument('--rate-mcps',type=float,default=20.)
     p.add_argument('--worker',action='store_true',help=argparse.SUPPRESS)
+    p.add_argument('--cell-map',action='store_true',help='Opt-in TEM node-density map; physical and native L recorded separately')
+    p.add_argument('--meshes',type=int,nargs=3,help='Three increasing meshes for the comparison cohort')
     a=p.parse_args()
     cap=a.cap_ns/1e9
     if a.preflight:
@@ -324,7 +349,7 @@ def main():
         rows=[]
         for n,feed,backing in [(n,1,1) for n in fixture.MESHES]+[(2,2,1),(2,1,2)]:
             for kind in fixture.KINDS:
-                sim,meta=fixture.build(n,kind,feed,backing,cap)
+                sim,meta=fixture.build(n,kind,feed,backing,cap,a.cell_map)
                 xml=a.out/f'{kind}_n{n}_f{feed}_b{backing}.xml'
                 sim.fdtd.Write2XML(str(xml))
                 rows.append(dict(**meta,input_sha256=fixture.sha(xml),forecast_seconds=forecast(meta,a.rate_mcps)))
@@ -334,11 +359,11 @@ def main():
     elif a.analyse:
         print(json.dumps(fixture.read(a.out)[0],indent=2))
     elif a.study:
-        print(json.dumps(fixture.study(a.out,a.case),indent=2))
+        print(json.dumps(fixture.study(a.out,a.case,a.meshes or (fixture.COHORT if a.cell_map else (1,2,3)),a.cell_map),indent=2))
     elif a.worker:
-        print(json.dumps(fixture.acquire(a.out,a.mesh,a.case,a.feed,a.backing,cap),indent=2))
+        print(json.dumps(fixture.acquire(a.out,a.mesh,a.case,a.feed,a.backing,cap,a.cell_map),indent=2))
     else:
-        print(json.dumps(serial(a.out,a.mesh,a.case,a.feed,a.backing,cap,a.rate_mcps),indent=2))
+        print(json.dumps(serial(a.out,a.mesh,a.case,a.feed,a.backing,cap,a.rate_mcps,a.cell_map),indent=2))
 
 
 if __name__=='__main__':
