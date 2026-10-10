@@ -102,7 +102,7 @@ def build(n, port, *, closed=False, inset=True, distance=DISTANCE, pml=PML, end_
             or end_db not in (-80., -90.) or not np.isfinite(cap_s) or not CAP_S <= cap_s <= 2*CAP_S):
         raise ValueError("declared mesh, port, wall, probe, distance, PML and clock controls required")
     sim = Simulation(FREQUENCIES[0], FREQUENCIES[-1], boundaries=["PEC"]*4+[f"PML_{pml}"]*2,
-                     end_criteria_db=end_db)
+                     end_criteria_db=end_db, excitation="gauss")
     dx = A/n
     ny = int(np.ceil(B/dx))
     dz = 2.5/int(np.ceil(2.5/dx))
@@ -130,11 +130,15 @@ def build(n, port, *, closed=False, inset=True, distance=DISTANCE, pml=PML, end_
     sim.fdtd.SetTimeStep(float(dt))
     sim.fdtd.SetNumberOfTimeSteps(steps)
     sim.fdtd.SetOverSampling(4)
+    errors = sim.csx.Update()
+    if errors:
+        raise ValueError(f"invalid native geometry: {errors}")
     meta = dict(protocol=PROTOCOL, n=n, excited_port=port, closed=closed, inset=inset, distance_mm=distance,
                 pml=pml, end_db=float(end_db), cap_s=float(cap_s), geometry=g, ports=sim.ports,
                 mesh_mm={a:v.tolist() for a,v in axes.items()}, native_lines=[len(axes[a]) for a in "xyz"],
                 native_cells=int(np.prod([len(axes[a]) for a in "xyz"])), declared_dt_s=float(dt),
-                max_timesteps=steps, source_duration_s=excitation.dgauss_duration_s(FREQUENCIES[-1]),
+                max_timesteps=steps, source_duration_s=9/(np.pi*(FREQUENCIES[-1]-FREQUENCIES[0])/2),
+                excitation=sim.excitation,
                 f_max_hz=float(FREQUENCIES[-1]), boundaries=sim.boundaries, scope=SCOPE, threads=THREADS)
     return sim, meta
 
@@ -164,7 +168,8 @@ def record_quality(meta):
         clock_ok=abs(native["dt_s"]/meta["declared_dt_s"]-1) < 1e-8,
         native_time_ok=native["timesteps"] > 0 and abs(native["numerical_time_s"]/(native["dt_s"]*native["timesteps"])-1) < 1e-8,
         header_ok=header.get("version") == "v0.37.0-rc3" and header.get("threads") == THREADS
-                  and header.get("nyquist_interval") == int(1/(2*FREQUENCIES[-1]*native["dt_s"])),
+                  and header.get("nyquist_interval") == int(1/(2*FREQUENCIES[-1]*native["dt_s"]))
+                  and abs(header.get("excitation_timesteps", -2)-math.ceil(meta["source_duration_s"]/native["dt_s"])) <= 1,
         source_completed=native["numerical_time_s"] > meta["source_duration_s"], native_stop=stopped(meta))
     return {k:bool(value) for k,value in quality.items()}
 

@@ -35,14 +35,18 @@ def audit_header(text, meta):
         raise ValueError("native stability bound exceeded")
     grid = re.search(r"FDTD simulation size: (\d+)x(\d+)x(\d+) --> (\d+) FDTD cells", text)
     interval = re.search(r"Exact-endcriteria: evaluating the end criteria every (\d+) timestep", text)
-    if ("openEMS 64bit -- version v0.37.0-rc3" not in text or not grid or not interval
+    pulse = re.search(r"Excitation signal length is: (\d+) timesteps", text)
+    if ("openEMS 64bit -- version v0.37.0-rc3" not in text or not grid or not interval or not pulse
             or f"fixed number of threads: {f.THREADS}" not in text):
         raise ValueError("complete bundled-runtime grid/clock/thread header required")
     if list(map(int, grid.groups()[:3])) != meta["native_lines"] or int(grid[4]) != meta["native_cells"]:
         raise ValueError("native grid differs from preflight")
     if int(interval[1]) != int(1/(2*f.FREQUENCIES[-1]*meta["native"]["dt_s"])):
         raise ValueError("native sampling interval differs from declared clock")
-    return dict(version="v0.37.0-rc3", nyquist_interval=int(interval[1]), threads=f.THREADS)
+    if abs(int(pulse[1])-int(np.ceil(meta["source_duration_s"]/meta["native"]["dt_s"]))) > 1:
+        raise ValueError("native Gaussian pulse length differs from preflight")
+    return dict(version="v0.37.0-rc3", nyquist_interval=int(interval[1]), threads=f.THREADS,
+                excitation_timesteps=int(pulse[1]))
 
 
 def wait_owned(proc, seconds=1800.):
@@ -166,6 +170,17 @@ class BetheControls(unittest.TestCase):
                     a, b = np.array(original["mesh_mm"][axis]), np.array(control["mesh_mm"][axis])
                     np.testing.assert_array_equal(b[(b >= a[0]) & (b <= a[-1])], a)
 
+    def test_real_material_query_opens_only_the_declared_circle(self):
+        g = f.design()
+        inside = [g["hole_x_mm"], 0, 0]
+        outside = [g["hole_x_mm"]+g["radius_mm"]+.5, 0, 0]
+        for n in f.MESHES:
+            sim, _ = f.build(n, 1)
+            self.assertEqual(sim.csx.GetPropertyByCoordPriority(inside).GetName(), "aperture_air")
+            self.assertEqual(sim.csx.GetPropertyByCoordPriority(outside).GetName(), "common_wall")
+            sim, _ = f.build(n, 1, closed=True)
+            self.assertEqual(sim.csx.GetPropertyByCoordPriority(inside).GetName(), "common_wall")
+
     def test_invalid_geometry_controls_are_refused(self):
         for n, port, options in ((True, 1, {}), (24., 1, {}), (30, 1, {}), (24, True, {}), (24, 5, {}),
                 (24, 1, dict(pml=10)), (24, 1, dict(distance=70)), (24, 1, dict(inset=1)), (24, 1, dict(cap_s=1e-9))):
@@ -205,6 +220,7 @@ class BetheControls(unittest.TestCase):
         interval = int(1/(2*f.FREQUENCIES[-1]*meta["declared_dt_s"]))
         text = (f"openEMS 64bit -- version v0.37.0-rc3\nfixed number of threads: 4\n"
                 f"FDTD simulation size: {lines} --> {meta['native_cells']} FDTD cells\n"
+                f"Excitation signal length is: {int(np.ceil(meta['source_duration_s']/meta['declared_dt_s']))} timesteps\n"
                 f"Exact-endcriteria: evaluating the end criteria every {interval} timestep\n")
         self.assertEqual(audit_header(text, meta)["nyquist_interval"], interval)
         meta["native_cells"] -= 1
@@ -230,7 +246,8 @@ class BetheControls(unittest.TestCase):
                               timesteps=steps, numerical_time_s=steps*meta["declared_dt_s"])
         meta["run"] = dict(grid=meta["native_lines"], converged=True, exact_endcriteria=True, threads=f.THREADS)
         meta["native_header"] = dict(version="v0.37.0-rc3", threads=f.THREADS,
-                                     nyquist_interval=int(1/(2*f.FREQUENCIES[-1]*meta["declared_dt_s"])))
+                                     nyquist_interval=int(1/(2*f.FREQUENCIES[-1]*meta["declared_dt_s"])),
+                                     excitation_timesteps=int(np.ceil(meta["source_duration_s"]/meta["declared_dt_s"])))
         self.assertTrue(all(f.record_quality(meta).values()))
         meta["native"]["numerical_time_s"] *= 2
         self.assertFalse(f.record_quality(meta)["native_time_ok"])
@@ -292,7 +309,7 @@ def main():
     parser.add_argument("--port", type=int, choices=(1, 2, 3, 4), default=1, help=argparse.SUPPRESS)
     args = parser.parse_args()
     options = dict(closed=args.closed, inset=not args.full_probes, distance=args.distance,
-                   pml=args.pml, end_db=args.end_db, cap_s=args.cap_ns*1e-9)
+                   pml=args.pml, end_db=args.end_db, cap_s=args.cap_ns/1e9)
     if args.preflight:
         args.out.mkdir(parents=True, exist_ok=False)
         rows = []
