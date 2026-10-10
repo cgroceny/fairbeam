@@ -76,7 +76,7 @@ Earlier -70 dB data fail a mesh-Gamma gate (0.005117706 > 0.005). Common time pr
 
 ## Exclusions and deferred work
 
-- 6.2 / 283: open microstrip and boxed controls remain unqualified; frequency targets and/or stopping/independent controls fail. See [PR #81](https://github.com/ismailakdag/fairbeam/pull/81). Long refinements were deferred, not started.
+- 6.2 / 283: open microstrip and boxed controls remain unqualified. The three approved long boxed refinements are now complete: all four boxed meshes/controls reach their -70 dB stop, and both successive mesh comparisons and the independent air-clearance control pass their frozen limits. The fine result is 4.949102662 GHz / Q=2837.276121; its 1.017947% frequency error exceeds the unchanged 1% target. Passing acquisition and mesh controls does not qualify target agreement. See [PR #81](https://github.com/ismailakdag/fairbeam/pull/81) for the complete before/after table, fixed extraction windows and separate late-window diagnostic.
 - 6.5 / 297: the open dielectric resonator has small core-mesh/azimuth changes but clearance/PML Q changes of 4.878555%/6.610318%, beyond its 2% limit. The far-air grid is not independently refined, and a unique PML/dispersion cause is not established. See [PR #86](https://github.com/ismailakdag/fairbeam/pull/86).
 - Bulk-copper loss, conducting-sheet accuracy and external/radiation/unloaded-Q partitions beyond the listed dielectric scopes remain unqualified. Some full-decay forecasts exceed 30 minutes; no cap or approximate sheet result substitutes for qualification.
 - 6.7 / 308 and 6.8 / 311 are symbolic perturbation/calculation examples without a specified numerical geometry; no new FDTD is required.

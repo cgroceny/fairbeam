@@ -783,3 +783,8 @@ Açık mikroşerit ve dielektrik rezonatör Q'su, hacimsel bakır kaybı, gerçe
 kuplaj boşlukları ve ölçülmemiş harici/radyasyon Q payları kapsam dışında kalır.
 Örnek 6.7/6.8 yalnız hesap içerir. Kayıt fikstür PR'larını ve çoğaltma
 komutlarını bağlar; galeri modeli, üretilmiş paket veya kitap içeriği eklemez.
+
+6.2 için onaylanan üç uzun, kapalı mikroşerit inceltme koşusu tamamlandı.
+Durdurma, ardışık mesh ve hava açıklığı kontrolleri sağlanır; ancak ince mesh
+frekans hatası %1,017947 ile değişmeyen %1 hedefini aşar. Bu kapsam kabul
+edilmez; bölüm kaydı PR #81'deki tam ölçümlere bağlantı verir.

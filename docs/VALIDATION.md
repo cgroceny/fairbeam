@@ -1172,3 +1172,8 @@ Open microstrip and dielectric-resonator Q, bulk-copper loss, practical coupling
 gaps and unmeasured external/radiation-Q partitions remain excluded. Examples
 6.7/6.8 are calculation-only. The record links the fixture PRs and reproduction
 commands; no gallery model, generated bundle or textbook content is added.
+
+The three approved long boxed-microstrip refinements for 6.2 are complete.
+Their stopping, successive mesh and air-clearance controls pass, but the fine
+frequency error is 1.017947%, above the unchanged 1% target. This scope remains
+excluded; the chapter record links the full measurements in PR #81.
