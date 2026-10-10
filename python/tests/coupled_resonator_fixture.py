@@ -157,7 +157,9 @@ def build(n,kind,feed=1,backing=1,cap_s=400e-9):
         raise ValueError('cap must be 100 to 1000 ns')
     dx=LENGTH/(44*n)
     feed_length=feed*LENGTH/11
-    x=np.arange(-4*n*feed,44*n+1)*dx
+    # Native lower-PMC current coefficients vanish on its first dual plane.
+    # Keep the source one axial node inside, at the same physical feed plane.
+    x=np.arange(-4*n*feed-1,44*n+1)*dx
     y=np.linspace(0,WIDTH,4*n+1)
     z=np.r_[np.linspace(0,HEIGHT,2*n+1),HEIGHT+np.arange(1,backing+1)*HEIGHT/(2*n)]
     sim=CoupledSimulation(FREQUENCIES[0],FREQUENCIES[-1],end_criteria_db=END_DB,
@@ -172,7 +174,7 @@ def build(n,kind,feed=1,backing=1,cap_s=400e-9):
     material.AddBox([x[0]/sim.unit,0,0],[x[-1]/sim.unit,WIDTH/sim.unit,HEIGHT/sim.unit],priority=1)
     metal=sim.metal('top_backing')
     metal.AddBox([x[0]/sim.unit,0,HEIGHT/sim.unit],[x[-1]/sim.unit,WIDTH/sim.unit,z[-1]/sim.unit],priority=10)
-    sim.lumped_port(1,Z0,[x[0]/sim.unit,0,0],[x[0]/sim.unit,WIDTH/sim.unit,HEIGHT/sim.unit],'z')
+    sim.lumped_port(1,Z0,[-feed_length/sim.unit,0,0],[-feed_length/sim.unit,WIDTH/sim.unit,HEIGHT/sim.unit],'z')
     inductance=component(kind)
     if inductance is not None:
         sim.lumped_inductor('dual_coupling_L',inductance,[0,0,0],[0,WIDTH/sim.unit,HEIGHT/sim.unit],'z')
@@ -192,6 +194,7 @@ def build(n,kind,feed=1,backing=1,cap_s=400e-9):
     return sim,dict(n=n,kind=kind,feed=feed,backing=backing,cap_s=cap_s,
         declared_dt_s=DT,max_timesteps=math.ceil(cap_s/DT),native_cells=int(np.prod([len(a) for a in (x,y,z)])),
         grid=[len(a) for a in (x,y,z)],dx_m=dx,planes_m=list(planes),threads=THREADS,
+        source_plane_m=-feed_length,mesh_lower_x_m=float(x[0]),
         physical_length_m=LENGTH,height_m=HEIGHT,width_m=WIDTH,epsilon_r=ER,kappa_s_m=KAPPA,
         dual_shunt_l_h=inductance,original_series_c_f=None if inductance is None else inductance/Z0**2,
         source_duration_s=dgauss_duration_s(sim.f_max),source_max_hz=sim.f_max,
@@ -264,7 +267,8 @@ def read(out):
             for j,distance in enumerate(meta['planes_m']):
                 vv,ii=deembed(v[j],current[j],-distance)
                 denominator=vv+Z0*ii
-                if np.any(abs(denominator)<1e-10*np.max(abs(denominator))):
+                scale=float(np.max(abs(denominator)))
+                if not np.isfinite(scale) or scale<=0 or np.any(abs(denominator)<=1e-10*scale):
                     raise ValueError('singular incident spectrum')
                 planes.append(-(vv-Z0*ii)/denominator)
             spectra.append(np.array(planes))

@@ -160,6 +160,8 @@ class CoupledResonatorTests(unittest.TestCase):
                 self.assertEqual(len(sim.lumped_elements),1)
                 self.assertEqual(sim.lumped_elements[0]['topology'],'parallel')
                 self.assertEqual(sim.boundaries,['PMC','PEC','PMC','PMC','PEC','PEC'])
+                self.assertAlmostEqual(meta['source_plane_m']-meta['mesh_lower_x_m'],meta['dx_m'])
+                self.assertAlmostEqual(meta['source_plane_m'],-feed*fixture.LENGTH/11)
                 with self.assertRaisesRegex(ValueError,'no Designer bundle'):
                     sim.to_bundle()
 
@@ -247,6 +249,16 @@ class CoupledResonatorTests(unittest.TestCase):
             value,_=fixture.read(out)
             self.assertTrue(value['target_passes'])
             self.assertFalse(value['qualified'])
+            with np.load(out/'data.npz') as valid:
+                retained={key:valid[key].copy() for key in valid.files}
+            np.savez_compressed(out/'data.npz',**{key:np.zeros_like(value) if key!='f' else value for key,value in retained.items()})
+            empty=dict(meta,data_sha256=fixture.sha(out/'data.npz'))
+            fixture.save(out/'report.json',empty)
+            with self.assertRaisesRegex(ValueError,'singular incident spectrum'):
+                fixture.read(out)
+            np.savez_compressed(out/'data.npz',**retained)
+            meta['data_sha256']=fixture.sha(out/'data.npz')
+            fixture.save(out/'report.json',meta)
             for key,change in (('run',dict(meta['run'],converged=False)),
                     ('native',dict(meta['native'],dt_s=fixture.DT*2)),
                     ('native_header',{}),
