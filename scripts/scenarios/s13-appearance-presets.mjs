@@ -1,4 +1,8 @@
 import assert from 'node:assert/strict';
+async function openAppearance(s) {
+ await s.click('header.settings');await s.wait('#gs-title');await s.clickSel('#gs-tab-appearance');
+ await s.waitFor(()=>document.querySelector('#gs-tab-appearance')?.getAttribute('aria-selected')==='true'&&!!document.querySelector('#gs-panel-appearance select'),null,{what:'selected appearance panel'});
+}
 export default {id:'S13',title:'Appearance presets and individual reset',async run(s){
  await s.step('default tokens and keyboard appearance settings',async()=>{
   await s.page.goto(s.url,{waitUntil:'domcontentloaded'});await s.wait('.home');
@@ -10,7 +14,7 @@ export default {id:'S13',title:'Appearance presets and individual reset',async r
   for(const[key,value]of Object.entries({colorPreset:'ocean',accent:'teal',chartPalette:'accessible',chartWeight:'3',viewportPalette:'blueprint'}))await s.page.select(`[data-appearance="${key}"]`,value);
   const tokens=await s.page.evaluate(()=>({action:document.documentElement.style.getPropertyValue('--al-action'),weight:getComputedStyle(document.querySelector('.gs-style-preview .c-line')).strokeWidth,grid:document.documentElement.style.getPropertyValue('--al-viewport-grid')}));
   assert.ok(tokens.action);assert.equal(tokens.weight,'3px');assert.ok(tokens.grid);
-  await s.page.reload({waitUntil:'domcontentloaded'});await s.wait('.home');await s.click('header.settings');await s.clickSel('#gs-tab-appearance');
+  await s.page.reload({waitUntil:'domcontentloaded'});await s.wait('.home');await openAppearance(s);
   assert.equal(await s.page.$eval('[data-appearance="accent"]',el=>el.value),'teal');
   await s.page.$eval('.gs-custom-colors',el=>el.open=true);
   for(const key of ['customAccent','traceColor','viewportColor','gridColor']){
@@ -18,7 +22,7 @@ export default {id:'S13',title:'Appearance presets and individual reset',async r
    await s.page.$eval(`[data-custom-color="${key}"]`,el=>{el.value='#1234ab';el.dispatchEvent(new Event('input',{bubbles:true}));});
   }
   assert.equal(await s.page.evaluate(()=>document.documentElement.style.getPropertyValue('--al-series-1')),'#1234ab');
-  await s.page.reload({waitUntil:'domcontentloaded'});await s.wait('.home');await s.click('header.settings');await s.clickSel('#gs-tab-appearance');
+  await s.page.reload({waitUntil:'domcontentloaded'});await s.wait('.home');await openAppearance(s);
   assert.equal(await s.page.evaluate(()=>JSON.parse(localStorage.getItem('fairbeam.generalSettings')).gridColor),'#1234ab');
  });
  await s.step('individual reset and global reset restore exact incumbent tokens',async()=>{
@@ -33,14 +37,14 @@ export default {id:'S13',title:'Appearance presets and individual reset',async r
   await s.page.select('#gs-panel-appearance select','light');await s.press('Escape');
   await s.click('header.theme.light',{sel:'header button',attr:'aria-label'});
   assert.equal(await s.page.evaluate(()=>document.documentElement.dataset.theme),'dark');
-  await s.click('header.settings');await s.clickSel('#gs-tab-appearance');
+  await openAppearance(s);
   await s.page.select('[data-appearance="chartWeight"]','3');await s.page.select('[data-appearance="colorPreset"]','ocean');
   await s.page.reload({waitUntil:'domcontentloaded'});await s.wait('.home');
   assert.deepEqual(await s.page.evaluate(()=>({display:document.documentElement.dataset.theme,legacy:localStorage.getItem('fairbeam.theme'),settings:JSON.parse(localStorage.getItem('fairbeam.generalSettings')).theme})),{display:'dark',legacy:'dark',settings:'dark'});
-  await s.click('header.settings');await s.clickSel('#gs-tab-appearance');await s.page.select('#gs-panel-appearance select','light');await s.press('Escape');
+  await openAppearance(s);await s.page.select('#gs-panel-appearance select','light');await s.press('Escape');
   assert.ok(await s.find('header button',await s.T('header.theme.light'),{attr:'aria-label'}));
   await s.page.reload({waitUntil:'domcontentloaded'});await s.wait('.home');assert.equal(await s.page.evaluate(()=>document.documentElement.dataset.theme),'light');
-  await s.click('header.settings');await s.clickSel('#gs-tab-appearance');await s.page.$eval('#gs-panel-appearance > button',el=>el.click());
+  await openAppearance(s);await s.page.$eval('#gs-panel-appearance > button',el=>el.click());
  });
  await s.step('real Cartesian, polar and Smith plots update their rendered strokes live',async()=>{
   const result=await s.page.evaluate(async()=>{

@@ -16,6 +16,7 @@ import { join } from 'node:path';
 import { createRequire } from 'node:module';
 import { chromePath, root, startStack } from './scenarios/stack.mjs';
 import { Session, auditSelfTest, failureDir } from './scenarios/harness.mjs';
+import { interactionSelfTest } from './scenarios/harness-self-test.mjs';
 
 const args = process.argv.slice(2);
 const langs = args.includes('--lang') ? [args[args.indexOf('--lang') + 1]] : ['en', 'tr'];
@@ -151,7 +152,16 @@ try {
   const reuse = process.env.FAIRBEAM_SCENARIO_STACK ? JSON.parse(process.env.FAIRBEAM_SCENARIO_STACK) : null;
   stack = reuse ? { ...reuse, stop: async () => {} } : await startStack({ log: (m) => console.log(m) });
   browser = await puppeteer.launch({ headless: true, executablePath: await chromePath(), args: ['--no-sandbox', '--enable-unsafe-swiftshader', '--use-angle=swiftshader'] });
-  { const page = await browser.newPage(); await auditSelfTest(page); await page.close(); console.log('Visual audit self-test passed.'); }
+  {
+    const page = await browser.newPage();
+    await auditSelfTest(page); console.log('Visual audit self-test passed.');
+    await interactionSelfTest(page); console.log('Pointer interaction self-test passed.');
+    // Vite's first request transforms the app's module graph. Check actual app readiness once,
+    // before the scenario contexts, instead of spending a step's 15s wait on a cold dev server.
+    await page.goto(stack.url, { waitUntil: 'domcontentloaded', timeout: 45000 });
+    await page.waitForSelector('.home', { visible: true, timeout: 45000 });
+    await page.close();
+  }
   console.log(`Scenario checks (${langs.join(', ')}); failing screenshots go to ${failureDir}`);
   for (const scenario of SCENARIOS) {
     if (only.length && !only.includes(scenario.id)) continue;

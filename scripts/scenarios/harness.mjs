@@ -55,6 +55,21 @@ export function auditInPage(scope) {
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
+/** Runs in the page; use the same matching rules for inspection and live click locators. */
+function visibleMatch(sel, text, within, exact) {
+  const wants = [].concat(text ?? []).filter((x) => x !== undefined);
+  const vis = (e) => { const r = e.getBoundingClientRect(); return r.width > 0 && r.height > 0 && getComputedStyle(e).visibility !== 'hidden'; };
+  const norm = (s) => (s || '').replace(/\s+/g, ' ').trim();
+  const roots = [...document.querySelectorAll(within)].reverse();
+  for (const root of roots) for (const e of root.querySelectorAll(sel)) {
+    if (!vis(e)) continue;
+    if (!wants.length) return e;
+    const hay = [norm(e.getAttribute('aria-label')), norm(e.textContent), norm(e.title)];
+    if (wants.some((w) => hay.some((h) => (exact ? h === norm(w) : h.includes(norm(w)))))) return e;
+  }
+  return null;
+}
+
 export class Session {
   constructor(page, { lang, scenario, url }) {
     this.page = page; this.lang = lang; this.scenario = scenario; this.url = url;
@@ -102,21 +117,7 @@ export class Session {
 
   /** The first visible element matching `sel` whose text or aria-label contains `text` (or `[text]`, any of). */
   async find(sel, text, { within = 'body', exact = false } = {}) {
-    const handle = await this.page.evaluateHandle((sel, text, within, exact) => {
-      const wants = [].concat(text ?? []).filter((x) => x !== undefined);
-      const vis = (e) => { const r = e.getBoundingClientRect(); return r.width > 0 && r.height > 0 && getComputedStyle(e).visibility !== 'hidden'; };
-      const norm = (s) => (s || '').replace(/\s+/g, ' ').trim();
-      const roots = [...document.querySelectorAll(within)].reverse(); // the topmost dialog first
-      for (const root of roots) {
-        for (const e of root.querySelectorAll(sel)) {
-          if (!vis(e)) continue;
-          if (!wants.length) return e;
-          const hay = [norm(e.getAttribute('aria-label')), norm(e.textContent), norm(e.title)];
-          if (wants.some((w) => hay.some((h) => (exact ? h === norm(w) : h.includes(norm(w)))))) return e;
-        }
-      }
-      return null;
-    }, sel, text, within, exact);
+    const handle = await this.page.evaluateHandle(visibleMatch, sel, text, within, exact);
     const el = handle.asElement();
     if (!el) { await handle.dispose(); return null; }
     return el;
@@ -147,13 +148,22 @@ export class Session {
   async click(keyOrKeys, { sel = 'button, [role=menuitem], [role=tab], a, .rb-btn, summary', within = 'body', params, exact = false } = {}) {
     const keys = [].concat(keyOrKeys);
     const texts = await Promise.all(keys.map((k) => this.T(k, params)));
-    const el = await this.wait(sel, texts, { within, exact });
-    await el.evaluate((e) => e.scrollIntoView({ block: 'nearest', inline: 'nearest' }));
-    await el.click();
-    await sleep(60);
-    return el;
+    await this.#click(sel, texts, { within, exact });
   }
-  async clickSel(sel, opts = {}) { const el = await this.need(sel, undefined, opts); await el.click(); await sleep(60); return el; }
+  async #click(sel, text, { within = 'body', exact = false, timeout = 15000 } = {}) {
+    // A locator reacquires a replaced node and waits for a stable target before clicking.
+    // Embed only JSON-encoded arguments: browser evaluation cannot capture Node-side variables.
+    const args = [sel, text ?? null, within, exact].map((v) => JSON.stringify(v)).join(',');
+    const match = new Function(`return (${visibleMatch.toString()})(${args});`);
+    // Preserve the old helper's pointer semantics: clicking a disabled control is a no-op.
+    // S7 legitimately clicks Save after reopening an already-saved design.
+    // puppeteer-core 25.12 drops chained options on function locators; mapped locators retain them.
+    const target = this.page.locator(match).map(el => el);
+    try { await target.setWaitForEnabled(false).setTimeout(timeout).click(); }
+    catch (error) { throw new Error(`click ${sel}${text ? ` ${JSON.stringify(text)}` : ''} in ${within}: ${error.message}`, { cause: error }); }
+    await sleep(60);
+  }
+  async clickSel(sel, opts = {}) { await this.#click(sel, undefined, opts); }
   /** Type into an input the way a user does: focus, select all, type, Tab. */
   async fill(elOrSel, value, { blur = true } = {}) {
     const el = typeof elOrSel === 'string' ? await this.wait(elOrSel) : elOrSel;
