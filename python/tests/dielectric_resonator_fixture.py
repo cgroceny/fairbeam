@@ -161,7 +161,7 @@ def build(n, kind, angular=4, clearance=30., pml=8, cap_s=190e-9):
         reported_grid_lines=[len(radius), angular, len(z)], declared_dt_s=float(dt),
         max_timesteps=steps, threads=THREADS, reference=reference(),
         f_max_hz=sim.f_max, source_duration_s=dgauss_duration_s(sim.f_max),
-        windows_s=WINDOWS, pole_max_order=4, pole_band_hz=F_BAND,
+        windows_s=WINDOWS, pole_max_order=8, pole_order_check=6, pole_band_hz=F_BAND,
         probe_stride_steps=int(1/(2*sim.f_max*dt))//4,
         probes_mm=probes, physical_dimensions_mm=[RADIUS_MM, LENGTH_MM], eps_r=ER,
         sigma_dielectric_s_m=float(2*np.pi*F_REF*EPS0*ER*TAN_D) if kind == 'dielectric' else 0.,
@@ -170,11 +170,13 @@ def build(n, kind, angular=4, clearance=30., pml=8, cap_s=190e-9):
 
 
 def pole(t, signal):
-    """Free signed AR4 poles; require one identifiable pole in the source band.
+    """Free signed AR8 poles; require one identifiable pole in the source band.
 
-    A second damped pair can separate an out-of-band mode from the pole of
-    interest. A rank-deficient single-pair trace uses AR2. Two in-band pairs
-    are ambiguous and rejected, never selected by proximity to the formula.
+    Up to four damped pairs separate out-of-band modes from the pole of
+    interest. Identifiable lower ranks use AR6/4/2. Two in-band pairs are
+    rejected, never selected by proximity to the formula. Full AR8 fits
+    must also agree with independent AR6 fits under the existing probewise
+    frequency and damping tolerances; residual reduction alone is not enough.
     """
     t, y = np.asarray(t, float), np.asarray(signal, float)
     if t.ndim != 1 or y.shape != t.shape or len(t) < 100 or not np.isfinite(t).all() or not np.isfinite(y).all():
@@ -186,16 +188,15 @@ def pole(t, signal):
     if not scale > 0:
         raise ValueError('zero signal')
     y = y/scale
-    order = 4
     def fit(degree):
         x = np.column_stack([y[degree-j-1:len(y)-j-1] for j in range(degree)]
                             + [np.ones(len(y)-degree)])
         coeff, _, rank, _ = np.linalg.lstsq(x, y[degree:], rcond=None)
         return x, coeff, rank
-    x, coeff, rank = fit(order)
-    if rank < order+1:
-        order = 2
-        x, coeff, _ = fit(order)
+    for order in (8, 6, 4, 2):
+        x, coeff, rank = fit(order)
+        if rank == order+1 or order == 2:
+            break
     roots = np.roots(np.r_[1., -coeff[:-1]])
     oscillatory = [value for value in roots if value.imag > 0 and abs(value) > 0]
     candidates = [value for value in oscillatory
@@ -204,10 +205,24 @@ def pole(t, signal):
         raise ValueError('one unambiguous oscillatory pole in the source band required')
     value = candidates[0]
     alpha, omega = -np.log(abs(value))/dt, np.angle(value)/dt
+    order_check, order_stable = None, True
+    if order == 8:
+        _, lower, _ = fit(6)
+        lower_roots = np.roots(np.r_[1., -lower[:-1]])
+        lower_band = [v for v in lower_roots if v.imag > 0 and abs(v) > 0
+                      and F_BAND[0] < np.angle(v)/dt/(2*np.pi) < F_BAND[1]]
+        order_stable = False
+        if len(lower_band) == 1:
+            v = lower_band[0]
+            lower_alpha, lower_omega = -np.log(abs(v))/dt, np.angle(v)/dt
+            order_check = dict(f_rel=float(abs(lower_omega/omega-1)),
+                alpha_rel=float(abs(lower_alpha-alpha)/max(abs(alpha), 1.)), lower_order=6)
+            order_stable = (order_check['f_rel'] <= GATES['f_probe']
+                            and order_check['alpha_rel'] <= GATES['q_probe'])
     return dict(f_hz=float(omega/(2*np.pi)), alpha_s=float(alpha),
         q=float(omega/(2*alpha)) if alpha > 0 else None,
         relative_residual=float(np.linalg.norm(x@coeff-y[order:])/np.linalg.norm(y[order:])),
-        fitted_order=order,
+        fitted_order=order, order_stable=bool(order_stable), order_check=order_check,
         other_poles=[dict(f_hz=float(np.angle(v)/dt/(2*np.pi)), alpha_s=float(-np.log(abs(v))/dt))
                      for v in oscillatory if v != value])
 
@@ -303,7 +318,8 @@ def read(out):
             q_window = float(max(np.ptp(qs, axis=1))/q)
             stable = (result['f_probe_rel'] <= GATES['f_probe'] and result['f_window_rel'] <= GATES['f_window']
                 and q_probe <= GATES['q_probe'] and q_window <= GATES['q_window']
-                and max(value['relative_residual'] for value in poles) <= GATES['residual'])
+                and max(value['relative_residual'] for value in poles) <= GATES['residual']
+                and all(value.get('order_stable', False) for value in poles))
             proxy_ok = bool(proxy and proxy['fitted_span_db'] >= GATES['energy_span_db']
                 and proxy['log_rms'] <= GATES['energy_log_rms']
                 and proxy['q_rel_95_uncertainty'] <= GATES['energy_uncertainty']

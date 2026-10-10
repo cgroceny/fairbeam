@@ -177,6 +177,21 @@ class Analysis(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, 'unambiguous'):
             fixture.pole(t, np.cos(2*np.pi*5.71e9*t))
 
+    def test_multiple_out_of_band_pairs_and_order_agreement(self):
+        t = np.arange(0, 50e-9, 30e-12)
+        f, q = 3.329e9, 127.
+        primary = np.exp(-np.pi*f/q*t)*np.cos(2*np.pi*f*t+.3)
+        other = (.02*np.exp(-6e7*t)*np.sin(2*np.pi*5.71e9*t)
+                 + .005*np.exp(-1.5e8*t)*np.cos(2*np.pi*9.12e9*t+.2)
+                 + .0001*np.exp(-2e9*t)*np.sin(2*np.pi*13.3e9*t))
+        value = fixture.pole(t, primary+other+.001)
+        self.assertEqual(value['fitted_order'], 8)
+        self.assertAlmostEqual(value['f_hz']/f, 1, places=8)
+        self.assertAlmostEqual(value['q']/q, 1, places=7)
+        self.assertTrue(value['order_stable'])
+        self.assertEqual(value['order_check']['lower_order'], 6)
+        self.assertEqual(len(value['other_poles']), 3)
+
     def test_native_log_delegation_and_failure_restores_handle(self):
         sim, _ = fixture.build(8, 'lossless')
         sim.fdtd = native = Mock()
@@ -239,8 +254,9 @@ class Analysis(unittest.TestCase):
                 fixture.study('unused', meshes=meshes)
 
     def test_record_requires_complete_windows_stop_clocks_and_pml(self):
-        for stopped, wrong_clock, short in ((True, False, False), (False, False, False),
-                                          (True, True, False), (True, False, True)):
+        for stopped, wrong_clock, short, order_stable in ((True, False, False, True), (False, False, False, True),
+                                          (True, True, False, True), (True, False, True, True),
+                                          (True, False, False, False)):
             with tempfile.TemporaryDirectory() as directory:
                 out = Path(directory)
                 _, meta = fixture.build(8, 'dielectric')
@@ -262,10 +278,10 @@ class Analysis(unittest.TestCase):
                     native_header=dict(version='v0.37.0-rc3', threads=1, axis_included=True, closed_alpha=True,
                         pml_enabled=True, nyquist_interval=int(1/(2*meta['f_max_hz']*dt))))
                 fixture.save(out/'report.json', meta)
-                with patch.object(fixture, 'pole', return_value=dict(f_hz=3.35e9, q=850., alpha_s=1., relative_residual=0.)), \
+                with patch.object(fixture, 'pole', return_value=dict(f_hz=3.35e9, q=850., alpha_s=1., relative_residual=0., order_stable=order_stable)), \
                         patch.object(fixture, 'energy_decay', return_value=dict(q=850., fitted_span_db=50., log_rms=0., q_rel_95_uncertainty=.001)):
                     result = fixture.read(out)
-                self.assertEqual(result['completed_pole_control'], stopped and not wrong_clock and not short)
+                    self.assertEqual(result['completed_pole_control'], stopped and not wrong_clock and not short and order_stable)
                 self.assertFalse(result['qualified'])
                 if short:
                     self.assertTrue(any('incomplete' in error for error in result['extraction_errors']))
