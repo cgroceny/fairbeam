@@ -35,18 +35,18 @@ def audit_header(log,meta):
     return dict(version=version[1],threads=fixture.THREADS,nyquist_interval=int(interval[1]))
 
 
-def serial(out,n,kind,feed,backing,cap_s,rate,cell_map=False):
+def serial(out,n,kind,feed,backing,cap_s,rate,cell_map=False,end_db=fixture.END_DB):
     out=Path(out).resolve()
     if out.exists():
         raise ValueError('fresh native output directory required')
-    _,meta=fixture.build(n,kind,feed,backing,cap_s,cell_map)
+    _,meta=fixture.build(n,kind,feed,backing,cap_s,cell_map,end_db)
     seconds=forecast(meta,rate)
     if seconds>1800:
         raise ValueError(f'forecast {seconds/60:.2f} minutes exceeds 30-minute limit')
     out.parent.mkdir(parents=True,exist_ok=True)
     command=[sys.executable,'-m','tests.test_coupled_resonator','--fdtd','--worker',
         '--out',str(out),'--mesh',str(n),'--case',kind,'--feed',str(feed),
-        '--backing',str(backing),'--cap-ns',str(cap_s*1e9)]
+        '--backing',str(backing),'--cap-ns',str(cap_s*1e9),'--end-db',str(end_db)]
     if cell_map:
         command.append('--cell-map')
     start,wall=time.monotonic(),time.time()
@@ -345,7 +345,8 @@ class CoupledResonatorTests(unittest.TestCase):
             fixture.build(3,'critical',cell_map=1)
 
     def test_cohort_does_not_accept_missing_quality_or_physical_gap(self):
-        base=dict(kind='critical',cell_map=False,target_passes=True,measured=dict(f_hz=4.92e9,q_loaded=310.))
+        base=dict(kind='critical',cell_map=False,end_criteria_db=fixture.END_DB,
+            target_passes=True,measured=dict(f_hz=4.92e9,q_loaded=310.))
         gamma=fixture.reference('critical')[0]
         records=[(dict(base,n=n,feed=1,backing=1),gamma) for n in (1,2,3)]
         records += [(dict(base,n=2,feed=2,backing=1),gamma),(dict(base,n=2,feed=1,backing=2),gamma)]
@@ -357,6 +358,57 @@ class CoupledResonatorTests(unittest.TestCase):
         records[1][0]['target_passes']=False
         with tempfile.TemporaryDirectory() as tmp,patch.object(fixture,'read',side_effect=records):
             self.assertFalse(fixture.study(tmp,'critical')['numerical_circuit_scope_passes'])
+
+    def test_stricter_native_stopping_is_opt_in_and_serialized(self):
+        import tempfile
+        import xml.etree.ElementTree as ET
+        plain,baseline=fixture.build(5,'critical',cap_s=150e-9,cell_map=True)
+        self.assertEqual(plain.end_criteria_db,-70.)
+        for end_db in (-90.,-100.):
+            sim,meta=fixture.build(5,'critical',cap_s=150e-9,cell_map=True,end_db=end_db)
+            self.assertEqual(meta,{**baseline,'end_criteria_db':end_db})
+            with tempfile.TemporaryDirectory() as tmp:
+                path=Path(tmp)/'stop.xml'
+                sim.fdtd.Write2XML(str(path))
+                fdtd=ET.parse(path).getroot().find('FDTD')
+                self.assertAlmostEqual(float(fdtd.get('endCriteria'))/10**(end_db/10),1)
+        for invalid in (-80.,0.,np.nan,True):
+            with self.assertRaises(ValueError):
+                fixture.build(5,'critical',end_db=invalid)
+
+    def test_time_control_rejects_missing_unchanged_and_inconsistent_results(self):
+        import tempfile
+        base=dict(kind='critical',cell_map=True,end_criteria_db=-90.,target_passes=True,
+            measured=dict(f_hz=4.92e9,q_loaded=310.))
+        gamma=fixture.reference('critical')[0]
+        records={f'n{n}':(dict(base,n=n,feed=1,backing=1),gamma) for n in fixture.COHORT}
+        records.update(n5_feed=(dict(base,n=5,feed=2,backing=1),gamma),
+            n5_backing=(dict(base,n=5,feed=1,backing=2),gamma))
+        def read(path):
+            key=Path(path).parent.name
+            if key not in records:
+                raise FileNotFoundError(key)
+            return records[key]
+        def check(required):
+            with tempfile.TemporaryDirectory() as tmp,patch.object(fixture,'read',side_effect=read):
+                return fixture.study(tmp,'critical',fixture.COHORT,True,required)
+        self.assertFalse(check(False)['time_convergence_proven'])
+        with self.assertRaises(FileNotFoundError):
+            check(True)
+        temporal=dict(base,n=5,feed=1,backing=1)
+        records['n5_time']=(temporal,gamma)
+        with self.assertRaisesRegex(ValueError,'strictly tighter'):
+            check(True)
+        temporal['end_criteria_db']=-100.
+        self.assertTrue(check(True)['time_convergence_proven'])
+        self.assertFalse(check(True)['qualified_physical_microstrip_gap'])
+        records['n5_time']=(temporal,gamma*np.exp(.004j))
+        self.assertFalse(check(True)['numerical_circuit_scope_passes'])
+        records['n5_time']=(dict(temporal,target_passes=False),gamma)
+        self.assertFalse(check(True)['time_convergence_proven'])
+        records['n4']=(dict(records['n4'][0],end_criteria_db=-70.),gamma)
+        with self.assertRaisesRegex(ValueError,'stopping criteria differ'):
+            check(False)
 
 
 def main():
@@ -373,6 +425,9 @@ def main():
     p.add_argument('--rate-mcps',type=float,default=20.)
     p.add_argument('--worker',action='store_true',help=argparse.SUPPRESS)
     p.add_argument('--cell-map',action='store_true',help='Opt-in TEM node-density map; physical and native L recorded separately')
+    p.add_argument('--end-db',type=float,choices=fixture.END_CHOICES,default=fixture.END_DB,
+        help='Requested native fast-energy proxy stop; independent of physical stored energy')
+    p.add_argument('--time-control',action='store_true',help='Require a stricter n<mid>_time record for the cohort')
     p.add_argument('--meshes',type=int,nargs=3,help='Three increasing meshes for the comparison cohort')
     a=p.parse_args()
     cap=a.cap_ns/1e9
@@ -381,7 +436,7 @@ def main():
         rows=[]
         for n,feed,backing in [(n,1,1) for n in fixture.MESHES]+[(2,2,1),(2,1,2)]:
             for kind in fixture.KINDS:
-                sim,meta=fixture.build(n,kind,feed,backing,cap,a.cell_map)
+                sim,meta=fixture.build(n,kind,feed,backing,cap,a.cell_map,a.end_db)
                 xml=a.out/f'{kind}_n{n}_f{feed}_b{backing}.xml'
                 sim.fdtd.Write2XML(str(xml))
                 rows.append(dict(**meta,input_sha256=fixture.sha(xml),forecast_seconds=forecast(meta,a.rate_mcps)))
@@ -391,11 +446,11 @@ def main():
     elif a.analyse:
         print(json.dumps(fixture.read(a.out)[0],indent=2))
     elif a.study:
-        print(json.dumps(fixture.study(a.out,a.case,a.meshes or (fixture.COHORT if a.cell_map else (1,2,3)),a.cell_map),indent=2))
+        print(json.dumps(fixture.study(a.out,a.case,a.meshes or (fixture.COHORT if a.cell_map else (1,2,3)),a.cell_map,a.time_control),indent=2))
     elif a.worker:
-        print(json.dumps(fixture.acquire(a.out,a.mesh,a.case,a.feed,a.backing,cap,a.cell_map),indent=2))
+        print(json.dumps(fixture.acquire(a.out,a.mesh,a.case,a.feed,a.backing,cap,a.cell_map,a.end_db),indent=2))
     else:
-        print(json.dumps(serial(a.out,a.mesh,a.case,a.feed,a.backing,cap,a.rate_mcps,a.cell_map),indent=2))
+        print(json.dumps(serial(a.out,a.mesh,a.case,a.feed,a.backing,cap,a.rate_mcps,a.cell_map,a.end_db),indent=2))
 
 
 if __name__=='__main__':

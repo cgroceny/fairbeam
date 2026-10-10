@@ -37,6 +37,7 @@ CAP_CRITICAL = 1/(2*np.pi*F_CRITICAL*(Z0/np.tanh(ALPHA*LENGTH+1j*np.pi*F_CRITICA
 FREQUENCIES = np.linspace(4.7e9, 5.05e9, 401)
 MESHES, COHORT, KINDS = (1, 2, 3, 4, 5, 6), (4, 5, 6), ('bare', 'approx', 'critical')
 DT, THREADS, END_DB = .1e-12, 1, -70.
+END_CHOICES = (-70., -90., -100.)
 GATES = dict(gamma_target=.03, gamma_mesh=.005, gamma_control=.003,
              independent_current=.003, independent_plane=.003,
              f_target=.002, f_mesh=.0005, f_control=.0005,
@@ -149,11 +150,11 @@ class CoupledSimulation(Simulation):
         raise ValueError('research probes and circuit dual have no Designer bundle')
 
 
-def build(n,kind,feed=1,backing=1,cap_s=400e-9,cell_map=False):
+def build(n,kind,feed=1,backing=1,cap_s=400e-9,cell_map=False,end_db=END_DB):
     if (isinstance(n,bool) or n not in MESHES or not isinstance(n,int)
             or kind not in KINDS or isinstance(feed,bool) or feed not in (1,2) or not isinstance(feed,int)
             or isinstance(backing,bool) or backing not in (1,2) or not isinstance(backing,int)
-            or not isinstance(cell_map,bool)):
+            or not isinstance(cell_map,bool) or isinstance(end_db,bool) or end_db not in END_CHOICES):
         raise ValueError('declared integer mesh, case, feed and backing required')
     if not np.isfinite(cap_s) or not 100e-9<=cap_s<=1e-6:
         raise ValueError('cap must be 100 to 1000 ns')
@@ -164,7 +165,7 @@ def build(n,kind,feed=1,backing=1,cap_s=400e-9,cell_map=False):
     x=np.arange(-4*n*feed-1,44*n+1)*dx
     y=np.linspace(0,WIDTH,4*n+1)
     z=np.r_[np.linspace(0,HEIGHT,2*n+1),HEIGHT+np.arange(1,backing+1)*HEIGHT/(2*n)]
-    sim=CoupledSimulation(FREQUENCIES[0],FREQUENCIES[-1],end_criteria_db=END_DB,
+    sim=CoupledSimulation(FREQUENCIES[0],FREQUENCIES[-1],end_criteria_db=end_db,
         max_timesteps=math.ceil(cap_s/DT),boundaries=['PMC','PEC','PMC','PMC','PEC','PEC'])
     for axis,grid in zip('xyz',(x,y,z)):
         sim.mesh.AddLine(axis,grid/sim.unit)
@@ -216,7 +217,7 @@ def build(n,kind,feed=1,backing=1,cap_s=400e-9,cell_map=False):
                 current_indices[name]=[[ix-1+j,a,2*n-1],[ix-1+j,b,2*n]]
     for prop in sim.csx.GetAllProperties():
         prop.SetColor((128,128,128),alpha=prop.GetFillColor()[3])
-    return sim,dict(n=n,kind=kind,feed=feed,backing=backing,cap_s=cap_s,
+    return sim,dict(n=n,kind=kind,feed=feed,backing=backing,cap_s=cap_s,end_criteria_db=end_db,
         declared_dt_s=DT,max_timesteps=math.ceil(cap_s/DT),native_cells=int(np.prod([len(a) for a in (x,y,z)])),
         grid=[len(a) for a in (x,y,z)],dx_m=dx,planes_m=list(planes),threads=THREADS,
         source_plane_m=source_x*sim.unit,mesh_lower_x_m=float(x[0]),
@@ -228,10 +229,10 @@ def build(n,kind,feed=1,backing=1,cap_s=400e-9,cell_map=False):
         scope=SCOPE,frequency_hz=FREQUENCIES.tolist(),gates=GATES)
 
 
-def acquire(out,n,kind,feed,backing,cap_s,cell_map=False):
+def acquire(out,n,kind,feed,backing,cap_s,cell_map=False,end_db=END_DB):
     out=Path(out)
     out.mkdir(parents=True,exist_ok=False)
-    sim,meta=build(n,kind,feed,backing,cap_s,cell_map)
+    sim,meta=build(n,kind,feed,backing,cap_s,cell_map,end_db)
     source,runtime=source_identity(),runtime_identity()
     sim.fdtd.Write2XML(str(out/'input.xml'))
     meta.update(source_sha256=source,runtime=runtime,input_sha256=sha(out/'input.xml'),
@@ -275,7 +276,7 @@ def read(out):
         raise ValueError('source/runtime/acceptance epoch changed')
     if sha(out/'input.xml')!=meta['input_sha256'] or sha(out/'data.npz')!=meta['data_sha256']:
         raise ValueError('input or data changed')
-    _,expected=build(meta['n'],meta['kind'],meta['feed'],meta['backing'],meta['cap_s'],meta['cell_map'])
+    _,expected=build(meta['n'],meta['kind'],meta['feed'],meta['backing'],meta['cap_s'],meta['cell_map'],meta['end_criteria_db'])
     if any(meta[key]!=value for key,value in expected.items()):
         raise ValueError('model identity changed')
     native=meta['native']
@@ -317,6 +318,7 @@ def read(out):
     quality=bool(grid_ok and clock_ok and header_ok and probes_ok and geometry_ok and stopped
         and plane_error<=GATES['independent_plane'] and contour_error<=GATES['independent_current'])
     result=dict(n=meta['n'],kind=meta['kind'],feed=meta['feed'],backing=meta['backing'],cell_map=meta['cell_map'],
+        end_criteria_db=meta['end_criteria_db'],
         grid_ok=grid_ok,clock_ok=clock_ok,header_ok=header_ok,probe_clocks_ok=probes_ok,
         probe_geometry_ok=geometry_ok,stopped=stopped,
         gamma_target_abs=target_error,independent_plane_abs=plane_error,
@@ -332,11 +334,11 @@ def read(out):
     return result,original
 
 
-def study(out,kind,meshes=(1,2,3),cell_map=False):
-    """Two successive mesh differences and two independent physical controls."""
+def study(out,kind,meshes=(1,2,3),cell_map=False,time_control=False):
+    """Spatial controls, with an opt-in stricter native-stop comparison."""
     out=Path(out)
     meshes=tuple(meshes)
-    if len(meshes)!=3 or sorted(set(meshes))!=list(meshes) or any(n not in MESHES for n in meshes) or not isinstance(cell_map,bool):
+    if len(meshes)!=3 or sorted(set(meshes))!=list(meshes) or any(n not in MESHES for n in meshes) or not isinstance(cell_map,bool) or not isinstance(time_control,bool):
         raise ValueError('three increasing supported meshes and a boolean cell map required')
     rows=[read(out/f'n{n}'/kind) for n in meshes]
     middle=meshes[1]
@@ -347,6 +349,9 @@ def study(out,kind,meshes=(1,2,3),cell_map=False):
     for (r,_),fb in zip(controls,((2,1),(1,2))):
         if (r['n'],r['kind'],r['feed'],r['backing'],r['cell_map'])!=(middle,kind,*fb,cell_map):
             raise ValueError('control cohort identity differs')
+    end_db=rows[1][0]['end_criteria_db']
+    if any(r['end_criteria_db']!=end_db for r,_ in rows+controls):
+        raise ValueError('spatial cohort stopping criteria differ')
     def change(a,b):
         value=dict(gamma_abs=float(np.max(abs(a[1]-b[1]))))
         if kind!='bare':
@@ -355,11 +360,21 @@ def study(out,kind,meshes=(1,2,3),cell_map=False):
         return value
     mesh=[change(a,b) for a,b in zip(rows[:-1],rows[1:])]
     independent=[change(rows[1],control) for control in controls]
+    time_changes=[]
+    if time_control:
+        temporal=read(out/f'n{middle}_time'/kind)
+        r=temporal[0]
+        if (r['n'],r['kind'],r['feed'],r['backing'],r['cell_map'])!=(middle,kind,1,1,cell_map) or r['end_criteria_db']>=end_db:
+            raise ValueError('strictly tighter stopping control of the same model required')
+        time_changes=[change(rows[1],temporal)]
+        controls.append(temporal)
     passes=all(r['target_passes'] for r,_ in rows+controls)
-    for values,role in ((mesh,'mesh'),(independent,'control')):
+    for values,role in ((mesh,'mesh'),(independent,'control'),(time_changes,'control')):
         passes &= all(r['gamma_abs']<=GATES['gamma_'+role] and (kind=='bare' or
             r['f_rel']<=GATES['f_'+role] and r['q_rel']<=GATES['q_'+role]) for r in values)
-    result=dict(kind=kind,meshes=list(meshes),cell_map=cell_map,mesh_changes=mesh,independent_changes=independent,
+    result=dict(kind=kind,meshes=list(meshes),cell_map=cell_map,end_criteria_db=end_db,
+        mesh_changes=mesh,independent_changes=independent,time_changes=time_changes,
+        time_control_checked=time_control,time_convergence_proven=bool(time_control and passes),
         numerical_circuit_scope_passes=bool(passes),qualified_physical_microstrip_gap=False,scope=SCOPE)
     save(out/(kind+'-cohort.json'),result)
     return result
