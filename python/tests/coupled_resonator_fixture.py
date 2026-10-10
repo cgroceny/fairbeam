@@ -10,6 +10,7 @@ from datetime import datetime, timezone
 import math
 from pathlib import Path
 import json
+import re
 
 import numpy as np
 from openEMS.physical_constants import C0, EPS0, MUE0
@@ -179,22 +180,31 @@ def build(n,kind,feed=1,backing=1,cap_s=400e-9):
     if inductance is not None:
         sim.lumped_inductor('dual_coupling_L',inductance,[0,0,0],[0,WIDTH/sim.unit,HEIGHT/sim.unit],'z')
     planes=(-3*feed_length/4,-feed_length/4)
+    dual_y=(y[:-1]+y[1:])/2
+    contours={label:dict(lo=float(dual_y[a]),hi=float(dual_y[b]),
+                        weight=float(WIDTH/(dual_y[b]-dual_y[a])))
+              for label,a,b in (('i',0,4*n-1),('j',n,3*n-1))}
+    current_indices={}
     for p,centre in enumerate(planes):
         ix=int(np.argmin(abs(x-centre)))
         for j,plane in enumerate(x[ix-1:ix+2]):
             sim.csx.AddProbe(f'v{p}_{j}',p_type=0).AddBox([plane/sim.unit,WIDTH/(2*sim.unit),HEIGHT/sim.unit],
                 [plane/sim.unit,WIDTH/(2*sim.unit),0])
-        for j,plane in enumerate(((x[ix-1]+centre)/2,(centre+x[ix+1])/2)):
-            for label,lo,hi in (('i',1/8,7/8),('j',3/8,5/8)):
-                sim.csx.AddProbe(f'{label}{p}_{j}',p_type=1,norm_dir=0,weight=1/(hi-lo)).AddBox(
-                    [plane/sim.unit,lo*WIDTH/sim.unit,(z[2*n-1]+HEIGHT)/(2*sim.unit)],
-                    [plane/sim.unit,hi*WIDTH/sim.unit,(HEIGHT+z[2*n+1])/(2*sim.unit)])
+        for j,plane in enumerate(((x[ix-1]+x[ix])/2,(x[ix]+x[ix+1])/2)):
+            for label,a,b in (('i',0,4*n-1),('j',n,3*n-1)):
+                contour=contours[label]
+                name=f'{label}{p}_{j}'
+                sim.csx.AddProbe(name,p_type=1,norm_dir=0,weight=contour['weight']).AddBox(
+                    [plane/sim.unit,contour['lo']/sim.unit,(z[2*n-1]+HEIGHT)/(2*sim.unit)],
+                    [plane/sim.unit,contour['hi']/sim.unit,(HEIGHT+z[2*n+1])/(2*sim.unit)])
+                current_indices[name]=[[ix-1+j,a,2*n-1],[ix-1+j,b,2*n]]
     for prop in sim.csx.GetAllProperties():
         prop.SetColor((128,128,128),alpha=prop.GetFillColor()[3])
     return sim,dict(n=n,kind=kind,feed=feed,backing=backing,cap_s=cap_s,
         declared_dt_s=DT,max_timesteps=math.ceil(cap_s/DT),native_cells=int(np.prod([len(a) for a in (x,y,z)])),
         grid=[len(a) for a in (x,y,z)],dx_m=dx,planes_m=list(planes),threads=THREADS,
         source_plane_m=-feed_length,mesh_lower_x_m=float(x[0]),
+        current_contours=contours,expected_current_indices=current_indices,
         physical_length_m=LENGTH,height_m=HEIGHT,width_m=WIDTH,epsilon_r=ER,kappa_s_m=KAPPA,
         dual_shunt_l_h=inductance,original_series_c_f=None if inductance is None else inductance/Z0**2,
         source_duration_s=dgauss_duration_s(sim.f_max),source_max_hz=sim.f_max,
@@ -223,11 +233,20 @@ def acquire(out,n,kind,feed,backing,cap_s):
             stride_s=float((t[-1]-t[0])/(len(t)-1)),
             uniform_rel=float(np.max(abs(np.diff(t)/((t[-1]-t[0])/(len(t)-1))-1))))
     np.savez_compressed(out/'data.npz',f=FREQUENCIES,v=v,i=i,i_check=check)
+    actual_indices={}
+    for name in meta['expected_current_indices']:
+        header=(out/'raw'/name).read_text(encoding='utf-8').splitlines()[:3]
+        indices=[list(map(int,match)) for line in header
+                 for match in re.findall(r'-> \[(\d+),(\d+),(\d+)\]',line)]
+        if len(indices)!=2:
+            raise ValueError('native current-probe index headers missing')
+        actual_indices[name]=indices
     if source_identity()!=source or runtime_identity()!=runtime:
         raise RuntimeError('source or runtime changed during acquisition')
     meta.update(run=sim.run_stats,native=dict(cells=int(stats[0]),dt_s=float(stats[1]),
         timesteps=int(stats[2]),numerical_time_s=float(stats[3]),iteration_wall_s=float(stats[4])),
-        probe_clocks=clocks,data_sha256=sha(out/'data.npz'),completed_utc=datetime.now(timezone.utc).isoformat())
+        probe_clocks=clocks,actual_current_indices=actual_indices,
+        data_sha256=sha(out/'data.npz'),completed_utc=datetime.now(timezone.utc).isoformat())
     save(out/'report.json',meta)
     return meta
 
@@ -256,6 +275,7 @@ def read(out):
         for name,c in meta['probe_clocks'].items() if name!='et')
     stopped=bool(meta['run'].get('converged') and native['timesteps']<meta['max_timesteps']
         and native['numerical_time_s']>meta['source_duration_s'] and meta['run'].get('threads')==THREADS)
+    geometry_ok=meta.get('actual_current_indices')==meta['expected_current_indices']
     with np.load(out/'data.npz') as data:
         np.testing.assert_array_equal(data['f'],FREQUENCIES)
         v=data['v'][:,1]
@@ -277,10 +297,11 @@ def read(out):
     plane_error=float(np.max(abs(spectra[0][0]-spectra[0][1])))
     contour_error=float(np.max(abs(spectra[0]-spectra[1])))
     target_error=float(np.max(abs(original-target)))
-    quality=bool(grid_ok and clock_ok and header_ok and probes_ok and stopped
+    quality=bool(grid_ok and clock_ok and header_ok and probes_ok and geometry_ok and stopped
         and plane_error<=GATES['independent_plane'] and contour_error<=GATES['independent_current'])
     result=dict(n=meta['n'],kind=meta['kind'],feed=meta['feed'],backing=meta['backing'],
-        grid_ok=grid_ok,clock_ok=clock_ok,header_ok=header_ok,probe_clocks_ok=probes_ok,stopped=stopped,
+        grid_ok=grid_ok,clock_ok=clock_ok,header_ok=header_ok,probe_clocks_ok=probes_ok,
+        probe_geometry_ok=geometry_ok,stopped=stopped,
         gamma_target_abs=target_error,independent_plane_abs=plane_error,
         independent_current_abs=contour_error,quality_ok=quality,
         target_passes=bool(quality and target_error<=GATES['gamma_target']),qualified=False)

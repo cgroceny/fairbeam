@@ -162,6 +162,9 @@ class CoupledResonatorTests(unittest.TestCase):
                 self.assertEqual(sim.boundaries,['PMC','PEC','PMC','PMC','PEC','PEC'])
                 self.assertAlmostEqual(meta['source_plane_m']-meta['mesh_lower_x_m'],meta['dx_m'])
                 self.assertAlmostEqual(meta['source_plane_m'],-feed*fixture.LENGTH/11)
+                for contour in meta['current_contours'].values():
+                    self.assertTrue(0<contour['lo']<contour['hi']<fixture.WIDTH)
+                    self.assertAlmostEqual(contour['weight']*(contour['hi']-contour['lo']),fixture.WIDTH)
                 with self.assertRaisesRegex(ValueError,'no Designer bundle'):
                     sim.to_bundle()
 
@@ -227,6 +230,7 @@ class CoupledResonatorTests(unittest.TestCase):
                 native=dict(cells=meta['native_cells'],dt_s=fixture.DT,
                     timesteps=meta['max_timesteps']-10,numerical_time_s=tend),
                 run=dict(grid=meta['grid'],threads=1,converged=True),
+                actual_current_indices=meta['expected_current_indices'],
                 native_header=dict(version='v0.37.0-rc3',threads=1,
                     nyquist_interval=int(1/(2*meta['source_max_hz']*fixture.DT))),
                 probe_clocks={name:dict(clocks) for name in ('et',*[f'v{p}_{j}' for p in range(2) for j in range(3)],
@@ -262,6 +266,7 @@ class CoupledResonatorTests(unittest.TestCase):
             for key,change in (('run',dict(meta['run'],converged=False)),
                     ('native',dict(meta['native'],dt_s=fixture.DT*2)),
                     ('native_header',{}),
+                    ('actual_current_indices',{}),
                     ('probe_clocks',dict(v0_0=dict(clocks,last_s=tend-1e-9)))):
                 altered=dict(meta,**{key:change})
                 fixture.save(out/'report.json',altered)
