@@ -162,6 +162,7 @@ def record_quality(meta):
     native, run, header = meta["native"], meta["run"], meta.get("native_header", {})
     quality = dict(grid_ok=native["cells"] == meta["native_cells"] and run.get("grid") == meta["native_lines"],
         clock_ok=abs(native["dt_s"]/meta["declared_dt_s"]-1) < 1e-8,
+        native_time_ok=native["timesteps"] > 0 and abs(native["numerical_time_s"]/(native["dt_s"]*native["timesteps"])-1) < 1e-8,
         header_ok=header.get("version") == "v0.37.0-rc3" and header.get("threads") == THREADS
                   and header.get("nyquist_interval") == int(1/(2*FREQUENCIES[-1]*native["dt_s"])),
         source_completed=native["numerical_time_s"] > meta["source_duration_s"], native_stop=stopped(meta))

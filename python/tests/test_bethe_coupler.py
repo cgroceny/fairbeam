@@ -225,12 +225,16 @@ class BetheControls(unittest.TestCase):
 
     def test_record_quality_requires_consistent_native_grid_clock_and_header(self):
         _, meta = f.build(24, 1)
+        steps = int(np.ceil(2*meta["source_duration_s"]/meta["declared_dt_s"]))
         meta["native"] = dict(cells=meta["native_cells"], dt_s=meta["declared_dt_s"],
-                              timesteps=1000, numerical_time_s=2*meta["source_duration_s"])
+                              timesteps=steps, numerical_time_s=steps*meta["declared_dt_s"])
         meta["run"] = dict(grid=meta["native_lines"], converged=True, exact_endcriteria=True, threads=f.THREADS)
         meta["native_header"] = dict(version="v0.37.0-rc3", threads=f.THREADS,
                                      nyquist_interval=int(1/(2*f.FREQUENCIES[-1]*meta["declared_dt_s"])))
         self.assertTrue(all(f.record_quality(meta).values()))
+        meta["native"]["numerical_time_s"] *= 2
+        self.assertFalse(f.record_quality(meta)["native_time_ok"])
+        meta["native"]["numerical_time_s"] /= 2
         meta["native"]["cells"] -= 1
         self.assertFalse(f.record_quality(meta)["grid_ok"])
         meta["native"]["cells"] += 1
