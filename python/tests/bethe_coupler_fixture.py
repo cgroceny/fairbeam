@@ -233,6 +233,9 @@ def read(out):
         v, i = data["v"].copy(), data["i"].copy()
     if v.shape != (4, len(FREQUENCIES)) or v.shape != i.shape or not np.isfinite(v).all() or not np.isfinite(i).all():
         raise ValueError("complete finite native waves required")
+    active = meta["excited_port"]-1
+    if not np.any(abs(v[active])+abs(i[active]) > 0):
+        raise ValueError("native excited port has zero fields; reject the source plane before more runs")
     return meta, v, i, record_quality(meta)
 
 
