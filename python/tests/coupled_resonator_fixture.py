@@ -186,10 +186,18 @@ def build(n,kind,feed=1,backing=1,cap_s=400e-9,cell_map=False):
         sim.lumped_inductor('dual_coupling_L',native_inductance,[0,0,0],[0,WIDTH/sim.unit,HEIGHT/sim.unit],'z')
     planes=(-3*feed_length/4,-feed_length/4)
     dual_y=(y[:-1]+y[1:])/2
+    # Current boxes enclose dual nodes. Exact endpoints can expand after
+    # XML rounding, so request a small interior margin while normalizing
+    # by the actual enclosed dual-node span, never the requested box width.
+    margin=.01*(y[1]-y[0])
     contours={label:dict(lo=float(dual_y[a]),hi=float(dual_y[b]),
+                        requested_lo=float(dual_y[a]+margin),
+                        requested_hi=float(dual_y[b]-margin),
                         weight=float(WIDTH/(dual_y[b]-dual_y[a])))
               for label,a,b in (('i',0,4*n-1),('j',n,3*n-1))}
     current_indices={}
+    zlo=(z[2*n-1]+HEIGHT)/2+.01*(HEIGHT-z[2*n-1])
+    zhi=(HEIGHT+z[2*n+1])/2-.01*(z[2*n+1]-HEIGHT)
     for p,centre in enumerate(planes):
         ix=int(np.argmin(abs(x-centre)))
         for j,plane in enumerate(x[ix-1:ix+2]):
@@ -200,8 +208,8 @@ def build(n,kind,feed=1,backing=1,cap_s=400e-9,cell_map=False):
                 contour=contours[label]
                 name=f'{label}{p}_{j}'
                 sim.csx.AddProbe(name,p_type=1,norm_dir=0,weight=contour['weight']).AddBox(
-                    [plane/sim.unit,contour['lo']/sim.unit,(z[2*n-1]+HEIGHT)/(2*sim.unit)],
-                    [plane/sim.unit,contour['hi']/sim.unit,(HEIGHT+z[2*n+1])/(2*sim.unit)])
+                    [plane/sim.unit,contour['requested_lo']/sim.unit,zlo/sim.unit],
+                    [plane/sim.unit,contour['requested_hi']/sim.unit,zhi/sim.unit])
                 current_indices[name]=[[ix-1+j,a,2*n-1],[ix-1+j,b,2*n]]
     for prop in sim.csx.GetAllProperties():
         prop.SetColor((128,128,128),alpha=prop.GetFillColor()[3])

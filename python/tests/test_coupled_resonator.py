@@ -180,6 +180,36 @@ class CoupledResonatorTests(unittest.TestCase):
             with self.assertRaises(ValueError):
                 fixture.line(f)
 
+    def test_serialized_current_boxes_have_rounding_margin(self):
+        import tempfile
+        import xml.etree.ElementTree as ET
+        for n in fixture.MESHES:
+            for feed,backing in ((1,1),(2,1),(1,2)):
+                sim,meta=fixture.build(n,'critical',feed,backing)
+                with tempfile.TemporaryDirectory() as tmp:
+                    path=Path(tmp)/'probes.xml'
+                    sim.fdtd.Write2XML(str(path))
+                    probes={p.get('Name'):p for p in ET.parse(path).getroot().findall('.//ProbeBox')}
+                for name in meta['expected_current_indices']:
+                    box=probes[name].find('.//Box')
+                    label=name[0]
+                    dy=fixture.WIDTH/(4*n)
+                    actual=meta['current_contours'][label]
+                    lo=float(box.find('P1').get('Y'))*sim.unit
+                    hi=float(box.find('P2').get('Y'))*sim.unit
+                    # Enclosure boundaries must be strictly inside their
+                    # intended end dual nodes after native XML precision.
+                    self.assertGreater(lo-actual['lo'],.005*dy)
+                    self.assertGreater(actual['hi']-hi,.005*dy)
+                    self.assertLess(lo-actual['lo'],.02*dy)
+                    self.assertLess(actual['hi']-hi,.02*dy)
+                    dz=fixture.HEIGHT/(2*n)
+                    zlo=float(box.find('P1').get('Z'))*sim.unit
+                    zhi=float(box.find('P2').get('Z'))*sim.unit
+                    self.assertGreater(zlo-(fixture.HEIGHT-dz/2),.005*dz)
+                    self.assertGreater((fixture.HEIGHT+dz/2)-zhi,.005*dz)
+                    self.assertAlmostEqual(actual['weight']*(actual['hi']-actual['lo']),fixture.WIDTH)
+
     def test_forecast_guard_precedes_directory_and_worker_creation(self):
         import tempfile
         with tempfile.TemporaryDirectory() as tmp:
