@@ -153,10 +153,19 @@ def trace_clock(data, native):
 
 def stopped(meta):
     native, run = meta["native"], meta["run"]
-    header = meta.get("native_header", {})
     return bool(run.get("converged") and run.get("exact_endcriteria") and not run.get("hit_timestep_limit")
                 and run.get("threads") == THREADS and native["timesteps"] < meta["max_timesteps"]
                 and native["numerical_time_s"] > meta["source_duration_s"])
+
+
+def record_quality(meta):
+    native, run, header = meta["native"], meta["run"], meta.get("native_header", {})
+    quality = dict(grid_ok=native["cells"] == meta["native_cells"] and run.get("grid") == meta["native_lines"],
+        clock_ok=abs(native["dt_s"]/meta["declared_dt_s"]-1) < 1e-8,
+        header_ok=header.get("version") == "v0.37.0-rc3" and header.get("threads") == THREADS
+                  and header.get("nyquist_interval") == int(1/(2*FREQUENCIES[-1]*native["dt_s"])),
+        source_completed=native["numerical_time_s"] > meta["source_duration_s"], native_stop=stopped(meta))
+    return {k:bool(value) for k,value in quality.items()}
 
 
 def acquire(out, n, port, **options):
@@ -214,13 +223,7 @@ def read(out):
         v, i = data["v"].copy(), data["i"].copy()
     if v.shape != (4, len(FREQUENCIES)) or v.shape != i.shape or not np.isfinite(v).all() or not np.isfinite(i).all():
         raise ValueError("complete finite native waves required")
-    quality = dict(grid_ok=native["cells"] == meta["native_cells"] and run.get("grid") == meta["native_lines"],
-        clock_ok=abs(native["dt_s"]/meta["declared_dt_s"]-1) < 1e-8,
-        header_ok=header.get("version") == "v0.37.0-rc3" and header.get("threads") == THREADS
-                  and header.get("nyquist_interval") == int(1/(2*FREQUENCIES[-1]*native["dt_s"])),
-        source_completed=native["numerical_time_s"] > meta["source_duration_s"],
-        native_stop=stopped(meta))
-    return meta, v, i, {k:bool(v) for k,v in quality.items()}
+    return meta, v, i, record_quality(meta)
 
 
 def waves_to_s(v, i):

@@ -223,6 +223,22 @@ class BetheControls(unittest.TestCase):
         meta["native"]["numerical_time_s"] = .5e-9
         self.assertFalse(f.stopped(meta))
 
+    def test_record_quality_requires_consistent_native_grid_clock_and_header(self):
+        _, meta = f.build(24, 1)
+        meta["native"] = dict(cells=meta["native_cells"], dt_s=meta["declared_dt_s"],
+                              timesteps=1000, numerical_time_s=2*meta["source_duration_s"])
+        meta["run"] = dict(grid=meta["native_lines"], converged=True, exact_endcriteria=True, threads=f.THREADS)
+        meta["native_header"] = dict(version="v0.37.0-rc3", threads=f.THREADS,
+                                     nyquist_interval=int(1/(2*f.FREQUENCIES[-1]*meta["declared_dt_s"])))
+        self.assertTrue(all(f.record_quality(meta).values()))
+        meta["native"]["cells"] -= 1
+        self.assertFalse(f.record_quality(meta)["grid_ok"])
+        meta["native"]["cells"] += 1
+        meta["native_header"]["threads"] = 1
+        self.assertFalse(f.record_quality(meta)["header_ok"])
+        del meta["native_header"]
+        self.assertFalse(f.record_quality(meta)["header_ok"])
+
     def test_over_budget_refuses_without_starting_worker_or_creating_outputs(self):
         with tempfile.TemporaryDirectory() as temp, patch(__name__+".popen_group") as start:
             out = Path(temp)/"not-started"
