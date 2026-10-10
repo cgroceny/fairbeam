@@ -25,7 +25,7 @@ A, B, F0 = 22.86, 10.16, 9e9  # own WR-90 cross-section, mm
 FREQUENCIES = np.linspace(7e9, 11e9, 201)
 MESHES = (24, 32, 48)
 DISTANCE, FAR_DISTANCE, PML, DEEP_PML = 65., 85., 8, 12
-CAP_S, END_DB, THREADS = 12e-9, -80., 4
+CAP_S, END_DB, THREADS = 60e-9, -80., 4
 PROTOCOL = "parallel-round-aperture-v1"
 LIMITS = dict(coupled_target_abs=.01, isolated_target_abs=.005,
               complex_mesh_abs=.005, complex_control_abs=.003,
