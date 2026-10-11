@@ -160,6 +160,21 @@ class BranchlineControls(unittest.TestCase):
                 np.testing.assert_array_equal(new[(new>=old[0])&(new<=old[-1])],old)
                 self.assertGreaterEqual(b["boundary_extension_actual_mm"][axis],8.)
 
+    def test_longitudinal_mesh_is_symmetric_bounded_and_refines(self):
+        values=[]
+        for n in f.MESHES:
+            _,meta=f.build(n,1)
+            values.append(meta["longitudinal_max_mm"])
+            for axis in "xy":
+                lines=np.array(meta["mesh_mm"][axis])
+                np.testing.assert_allclose(lines,-lines[::-1],atol=1e-13,rtol=0)
+                self.assertGreater(np.min(np.diff(lines)),0)
+            center=f.axis_lines([-10.,10.],f.geometry()["w50_mm"]/n,f.PAD,
+                                meta["longitudinal_max_mm"])
+            inside=center[(center>=-10.)&(center<=10.)]
+            self.assertLessEqual(float(np.max(np.diff(inside))),meta["longitudinal_max_mm"]*(1+1e-12))
+        self.assertTrue(all(a>b for a,b in zip(values,values[1:])))
+
     def test_phase_is_compared_to_band_dependent_reference_and_wraps(self):
         ref=f.reference()
         shifted=ref.copy();shifted[:,1,0]*=np.exp(1j*np.deg2rad(359.8))
@@ -278,7 +293,7 @@ class BranchlineControls(unittest.TestCase):
             kind="line" if "line" in name else "hybrid"
             length=30. if name.endswith("line30") else 20.
             s=ref.copy()
-            if name=="n4":
+            if name=="n3":
                 s[:,0,0]+=.02
             if kind=="line":
                 s=np.zeros((201,2,2),complex)
@@ -305,7 +320,7 @@ def main():
     for name in ("preflight","fdtd","analyse","study"):
         action.add_argument("--"+name,action="store_true")
     parser.add_argument("--out",type=Path,required=True)
-    parser.add_argument("--mesh",type=int,choices=f.MESHES,default=f.MESHES[0])
+    parser.add_argument("--mesh",type=int,choices=f.MESHES+f.DEFERRED_MESHES,default=f.MESHES[0])
     parser.add_argument("--kind",choices=("hybrid","line"),default="hybrid")
     parser.add_argument("--line-mm",type=float,choices=f.LINE_LENGTHS,default=20.)
     parser.add_argument("--feed-mm",type=float,choices=(f.FEED,f.LONG_FEED),default=f.FEED)

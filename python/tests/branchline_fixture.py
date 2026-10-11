@@ -23,10 +23,11 @@ ROOT = Path(__file__).resolve().parents[2]
 C0, Z0, F0 = 299792458., 50., 2.4e9
 ER, H, FEED, LONG_FEED = 3.38, .813, 10., 15.
 FREQUENCIES = np.linspace(.5*F0, 1.5*F0, 201)
-MESHES, LINE_LENGTHS = (4, 6, 8), (20., 30.)
+MESHES, DEFERRED_MESHES, CONTROL_MESH = (3, 4, 6), (8,), 4
+LINE_LENGTHS = (20., 30.)
 PAD, FAR_PAD, PML = 12., 20., 8
-CAP_S, END_DB, THREADS = 8e-9, -80., 4
-PROTOCOL = "nominal-branchline-v1"
+CAP_S, END_DB, THREADS = 16e-9, -80., 4
+PROTOCOL = "nominal-branchline-v2"
 LIMITS = dict(magnitude_target_abs=.05, relative_phase_target_deg=5.,
               complex_mesh_abs=.005, phase_mesh_deg=.5,
               complex_control_abs=.003, phase_control_deg=.2,
@@ -96,10 +97,16 @@ def graded(span, first, maximum):
     return np.asarray(points)
 
 
-def axis_lines(anchors, delta, padding):
+def axis_lines(anchors, delta, padding, longitudinal_max=None):
     anchors=np.unique(anchors)
-    pieces=[np.linspace(a,b,int(np.ceil((b-a)/delta))+1)[:-1]
-            for a,b in zip(anchors,anchors[1:])]
+    pieces=[]
+    for a,b in zip(anchors,anchors[1:]):
+        if longitudinal_max is None or b-a<=4*delta:
+            segment=np.linspace(a,b,int(np.ceil((b-a)/delta))+1)
+        else:
+            half=graded((b-a)/2,delta,longitudinal_max)
+            segment=np.r_[a+half,b-half[-2::-1]]
+        pieces.append(segment[:-1])
     interior=np.r_[np.concatenate(pieces),anchors[-1]]
     outside=graded(padding,delta,C0/FREQUENCIES[-1]/1e-3/20)
     end_step=outside[-1]-outside[-2]
@@ -109,7 +116,7 @@ def axis_lines(anchors, delta, padding):
 
 def build(n, port, *, kind="hybrid", line_mm=20., feed=FEED, padding=PAD,
           end_db=END_DB, cap_s=CAP_S):
-    if (isinstance(n,bool) or not isinstance(n,int) or n not in MESHES
+    if (isinstance(n,bool) or not isinstance(n,int) or n not in MESHES+DEFERRED_MESHES
             or kind not in ("hybrid","line") or line_mm not in LINE_LENGTHS
             or isinstance(port,bool) or not isinstance(port,int)
             or port not in range(1,5 if kind=="hybrid" else 3)
@@ -143,8 +150,13 @@ def build(n, port, *, kind="hybrid", line_mm=20., feed=FEED, padding=PAD,
         trace.AddBox(priority=10,start=[-xedge,-w50/2,H],stop=[xedge,w50/2,H])
         corners=((1,-1,0.),(2,1,0.))
         xanchors=[-xedge,xedge]; yanchors=[-yh,-w50/2,w50/2,yh]
-    axes=dict(x=axis_lines(xanchors,w50/n,PAD),
-              y=axis_lines(yanchors,w50/n,PAD),
+    # Fine transverse cells remain at every strip/port boundary. Along the
+    # longer uniform sections, the maximum spacing is lambda_substrate/(10*n).
+    # This refines propagation with n without meshing empty board regions at
+    # the transverse strip resolution. Physical anchors and lengths are fixed.
+    longitudinal_max=C0/FREQUENCIES[-1]/np.sqrt(ER)/1e-3/(10*n)
+    axes=dict(x=axis_lines(xanchors,w50/n,PAD,longitudinal_max),
+              y=axis_lines(yanchors,w50/n,PAD,longitudinal_max),
               z=axis_lines([0.,H],H/n,PAD))
     extension={a:0. for a in axes}
     if padding==FAR_PAD:
@@ -173,6 +185,7 @@ def build(n, port, *, kind="hybrid", line_mm=20., feed=FEED, padding=PAD,
         padding_mm=float(padding),excited_port=port,geometry=g,ports=sim.ports,
         boundary_extension_actual_mm=extension,
         end_db=float(end_db),cap_s=float(cap_s),threads=THREADS,scope=SCOPE,
+        longitudinal_max_mm=float(longitudinal_max),
         mesh_mm={a:v.tolist() for a,v in axes.items()},native_lines=[len(axes[a]) for a in "xyz"],
         native_cells=int(np.prod([len(axes[a]) for a in "xyz"])),declared_dt_s=float(dt),max_timesteps=steps,
         source_duration_s=excitation.dgauss_duration_s(FREQUENCIES[-1]),
@@ -328,30 +341,31 @@ def study(root):
             raise ValueError("incorrect ordinary cohort identity")
     mesh=[float(abs(b[0]-a[0]).max()) for a,b in zip(ordinary,ordinary[1:])]
     phase=[float(abs(phase_delta(b[0],a[0])).max()) for a,b in zip(ordinary,ordinary[1:])]
+    control=ordinary[MESHES.index(CONTROL_MESH)][0]
     controls={}
     for name,expected in (("pad",(FEED,FAR_PAD,END_DB,CAP_S)),("time",(FEED,PAD,-90.,2*CAP_S))):
-        s,r=matrix(root/f"n6_{name}")
-        if (r["n"],r["kind"])!=(6,"hybrid") or tuple(r[k] for k in ("feed_mm","padding_mm","end_db","cap_s"))!=expected:
+        s,r=matrix(root/f"n{CONTROL_MESH}_{name}")
+        if (r["n"],r["kind"])!=(CONTROL_MESH,"hybrid") or tuple(r[k] for k in ("feed_mm","padding_mm","end_db","cap_s"))!=expected:
             raise ValueError("incorrect independent control identity")
-        change,pchange=float(abs(s-ordinary[1][0]).max()),float(abs(phase_delta(s,ordinary[1][0])).max())
+        change,pchange=float(abs(s-control).max()),float(abs(phase_delta(s,control)).max())
         controls[name]=dict(complex_max_abs=change,relative_phase_max_deg=pchange,native=r,
             passes=change<=LIMITS["complex_control_abs"] and pchange<=LIMITS["phase_control_deg"])
     # No invented split of g1*g2. This removes only the added feed propagation,
     # conditional on the explicitly matched, reciprocal control-line model.
-    short,sr=matrix(root/"n6_line20");long,lr=matrix(root/"n6_line30")
+    short,sr=matrix(root/f"n{CONTROL_MESH}_line20");long,lr=matrix(root/f"n{CONTROL_MESH}_line30")
     for length,r in ((20.,sr),(30.,lr)):
-        if (r["n"],r["kind"],r["line_mm"],r["feed_mm"],r["padding_mm"],r["end_db"],r["cap_s"])!=(6,"line",length,FEED,PAD,END_DB,CAP_S):
+        if (r["n"],r["kind"],r["line_mm"],r["feed_mm"],r["padding_mm"],r["end_db"],r["cap_s"])!=(CONTROL_MESH,"line",length,FEED,PAD,END_DB,CAP_S):
             raise ValueError("incorrect calibration-line identity")
-    extended,er=matrix(root/"n6_feed")
-    if (er["n"],er["kind"],er["feed_mm"],er["padding_mm"],er["end_db"],er["cap_s"])!=(6,"hybrid",LONG_FEED,PAD,END_DB,CAP_S):
+    extended,er=matrix(root/f"n{CONTROL_MESH}_feed")
+    if (er["n"],er["kind"],er["feed_mm"],er["padding_mm"],er["end_db"],er["cap_s"])!=(CONTROL_MESH,"hybrid",LONG_FEED,PAD,END_DB,CAP_S):
         raise ValueError("incorrect extended-feed identity")
     try:
         hint=2*np.pi*FREQUENCIES/C0*np.sqrt(analytic.microstrip_eps_eff(ER,H,geometry()["w50_mm"]))
         cal=network.two_line_calibration(FREQUENCIES,short,long,short_length_m=.020,long_length_m=.030,beta_hint=hint)
         shifted=network.shift_reference_planes(extended,cal["gamma_per_m"],(LONG_FEED-FEED)*1e-3)
-        change,pchange=float(abs(shifted-ordinary[1][0]).max()),float(abs(phase_delta(shifted,ordinary[1][0])).max())
+        change,pchange=float(abs(shifted-control).max()),float(abs(phase_delta(shifted,control)).max())
         controls["feed"]=dict(complex_max_abs=change,relative_phase_max_deg=pchange,
-            raw_complex_change=float(abs(extended-ordinary[1][0]).max()),
+            raw_complex_change=float(abs(extended-control).max()),
             calibration_match_max=cal["match_max"],calibration_reciprocity_max=cal["reciprocity_max"],
             native=er,calibration_native_complete=sr["all_native_complete"] and lr["all_native_complete"],
             passes=change<=LIMITS["complex_control_abs"] and pchange<=LIMITS["phase_control_deg"])
