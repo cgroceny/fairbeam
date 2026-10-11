@@ -1,8 +1,8 @@
 """Pure controls and explicit serial FDTD; outputs must be fresh and outside Git.
 
 From python/, with the bundled runtime:
-python -m tests.test_branchline_fixture --preflight --rate-mcps 79.325356669 --out C:\\study\\hybrid-plan
-python -m tests.test_branchline_fixture --fdtd --mesh 4 --rate-mcps 79.325356669 --out C:\\study\\hybrid\\n4
+python -m tests.test_branchline_fixture --preflight --rate-mcps 40 --out C:\\study\\hybrid-plan
+python -m tests.test_branchline_fixture --fdtd --mesh 4 --rate-mcps 40 --out C:\\study\\hybrid\\n4
 python -m tests.test_branchline_fixture --study --out C:\\study\\hybrid
 """
 import argparse
@@ -145,10 +145,28 @@ class BranchlineControls(unittest.TestCase):
                 self.assertEqual([p["number"] for p in sim.ports if p["excite"]],[port])
                 for p in sim.ports:
                     self.assertIn(p["start"][0],meta["mesh_mm"]["x"])
-                    for y in (p["start"][1],p["stop"][1]):
-                        self.assertIn(y,meta["mesh_mm"]["y"])
+                    self.assertAlmostEqual(p["stop"][1]-p["start"][1],original["w50_mm"],places=13)
                     for z in (p["start"][2],p["stop"][2]):
                         self.assertIn(z,meta["mesh_mm"]["z"])
+
+    def test_thirds_brackets_cover_actual_metal_edges_without_sliver_cells(self):
+        for n in f.MESHES:
+            for kind in ("hybrid","line"):
+                _,meta=f.build(n,1,kind=kind)
+                width=meta["geometry"]["w50_mm"]
+                center=meta["geometry"]["vertical_mm"]/2 if kind=="hybrid" else 0.
+                for edge,sign in ((center-width/2,1),(center+width/2,-1)):
+                    lines=np.array(meta["mesh_mm"]["y"])
+                    inside=(lines-edge)*sign
+                    delta=meta["edge_spacing_mm"]["y"]
+                    self.assertAlmostEqual(inside[inside>0].min(),delta/3,places=12)
+                    self.assertAlmostEqual(-inside[inside<0].max(),2*delta/3,places=12)
+                    self.assertFalse(np.any(abs(lines-edge)<1e-12))
+                for axis in "xyz":
+                    lines=np.array(meta["mesh_mm"][axis])
+                    self.assertGreater(np.diff(lines).min(),.05)
+                    if axis!="z":
+                        np.testing.assert_allclose(lines,-lines[::-1],atol=1e-12)
 
     def test_boundary_control_retains_every_interior_node_and_clock(self):
         for n in f.MESHES:
@@ -244,7 +262,7 @@ class BranchlineControls(unittest.TestCase):
         self.assertFalse(f.record_quality(meta)["source_completed"])
 
     def test_invalid_controls_and_over_budget_are_refused_before_launch(self):
-        for n,p,options in ((True,1,{}),(5,1,{}),(4,True,{}),(4,5,{}),(4,1,dict(kind="other")),
+        for n,p,options in ((True,1,{}),(7,1,{}),(4,True,{}),(4,5,{}),(4,1,dict(kind="other")),
                 (4,1,dict(line_mm=21.)),(4,1,dict(feed=14.)),(4,1,dict(cap_s=1e-9))):
             with self.assertRaises(ValueError):
                 f.build(n,p,**options)

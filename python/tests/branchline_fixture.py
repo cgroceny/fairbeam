@@ -23,11 +23,11 @@ ROOT = Path(__file__).resolve().parents[2]
 C0, Z0, F0 = 299792458., 50., 2.4e9
 ER, H, FEED, LONG_FEED = 3.38, .813, 10., 15.
 FREQUENCIES = np.linspace(.5*F0, 1.5*F0, 201)
-MESHES, DEFERRED_MESHES, CONTROL_MESH = (3, 4, 6), (8,), 4
+MESHES, DEFERRED_MESHES, CONTROL_MESH = (3, 4, 5), (6, 8), 4
 LINE_LENGTHS = (20., 30.)
 PAD, FAR_PAD, PML = 12., 20., 8
 CAP_S, END_DB, THREADS = 16e-9, -80., 4
-PROTOCOL = "nominal-branchline-v2"
+PROTOCOL = "nominal-branchline-v3-thirds"
 LIMITS = dict(magnitude_target_abs=.05, relative_phase_target_deg=5.,
               complex_mesh_abs=.005, phase_mesh_deg=.5,
               complex_control_abs=.003, phase_control_deg=.2,
@@ -40,7 +40,7 @@ def identity():
     names = ("tests/branchline_fixture.py", "tests/test_branchline_fixture.py",
              "tests/coax_resonator_fixture.py", "tests/test_coax_resonator.py", "fairbeam/simulation.py",
              "fairbeam/excitation.py", "fairbeam/analytic.py", "fairbeam/multiport.py",
-             "fairbeam/network.py", "fairbeam/procutil.py")
+             "fairbeam/network.py", "fairbeam/procutil.py", "fairbeam/coax.py")
     return {name: sha(ROOT/"python"/name) for name in names}
 
 
@@ -102,7 +102,7 @@ def axis_lines(anchors, delta, padding, longitudinal_max=None):
     pieces=[]
     for a,b in zip(anchors,anchors[1:]):
         if longitudinal_max is None or b-a<=4*delta:
-            segment=np.linspace(a,b,int(np.ceil((b-a)/delta))+1)
+            segment=np.linspace(a,b,max(1,int(np.ceil((b-a)/delta-1e-12)))+1)
         else:
             half=graded((b-a)/2,delta,longitudinal_max)
             segment=np.r_[a+half,b-half[-2::-1]]
@@ -112,6 +112,15 @@ def axis_lines(anchors, delta, padding, longitudinal_max=None):
     end_step=outside[-1]-outside[-2]
     outside=np.r_[outside,outside[-1]+end_step*np.arange(1,PML+1)]
     return np.r_[anchors[0]-outside[:0:-1],interior,anchors[-1]+outside[1:]]
+
+
+def edge_brackets(lower, upper, delta):
+    """Keep one third of a cell inside each planar strip edge, two thirds out.
+
+    This is a numerical placement, not a change of the physical strip width.
+    Reference: https://wiki.openems.de/index.php/FDTD_Mesh.html
+    """
+    return [lower-2*delta/3, lower+delta/3, upper-delta/3, upper+2*delta/3]
 
 
 def build(n, port, *, kind="hybrid", line_mm=20., feed=FEED, padding=PAD,
@@ -134,6 +143,10 @@ def build(n, port, *, kind="hybrid", line_mm=20., feed=FEED, padding=PAD,
     sim.dielectric("substrate",ER).AddBox(priority=0,start=[-xedge,-yh,0],stop=[xedge,yh,H])
     sim.metal("ground").AddBox(priority=10,start=[-xedge,-yh,0],stop=[xedge,yh,0])
     trace=sim.metal("traces")
+    xdelta, ydelta = w50/n, w50/(n+2)
+    # The two adjacent widths produce edge coordinates only (w35-w50)/2
+    # apart. The smaller transverse step avoids near-colliding bracket lines
+    # on the coarsest mesh; both spacings still shrink at every refinement.
     if kind=="hybrid":
         for sign in (-1,1):
             trace.AddBox(priority=10,start=[-xa-w50/2,sign*ya-w35/2,H],
@@ -144,19 +157,24 @@ def build(n, port, *, kind="hybrid", line_mm=20., feed=FEED, padding=PAD,
             trace.AddBox(priority=10,start=[sx*(xa+w50/2),sy*ya-w50/2,H],
                          stop=[sx*xedge,sy*ya+w50/2,H])
         corners=((1,-1,ya),(2,1,ya),(3,1,-ya),(4,-1,-ya))
-        xanchors=[-xedge,-xa-w50/2,-xa+w50/2,xa-w50/2,xa+w50/2,xedge]
-        yanchors=[-yh,yh]+[sy*ya+sw*w/2 for sy in (-1,1) for sw in (-1,1) for w in (w50,w35)]
+        xanchors=[-xedge,xedge,0.,-xa,xa]
+        yanchors=[-yh,yh,0.,-ya,ya]
+        for sign in (-1,1):
+            xanchors += edge_brackets(sign*xa-w50/2, sign*xa+w50/2, xdelta)
+            for width in (w50,w35):
+                yanchors += edge_brackets(sign*ya-width/2, sign*ya+width/2, ydelta)
     else:
         trace.AddBox(priority=10,start=[-xedge,-w50/2,H],stop=[xedge,w50/2,H])
         corners=((1,-1,0.),(2,1,0.))
-        xanchors=[-xedge,xedge]; yanchors=[-yh,-w50/2,w50/2,yh]
-    # Fine transverse cells remain at every strip/port boundary. Along the
+        xanchors=[-xedge,xedge]; yanchors=[-yh,0.,yh]+edge_brackets(-w50/2,w50/2,ydelta)
+    # Fine transverse cells bracket the strip edges. Along the
     # longer uniform sections, the maximum spacing is lambda_substrate/(10*n).
     # This refines propagation with n without meshing empty board regions at
-    # the transverse strip resolution. Physical anchors and lengths are fixed.
+    # the transverse strip resolution. Source x planes, sheet z planes and
+    # physical lengths are fixed; geometric port y bounds remain continuous.
     longitudinal_max=C0/FREQUENCIES[-1]/np.sqrt(ER)/1e-3/(10*n)
-    axes=dict(x=axis_lines(xanchors,w50/n,PAD,longitudinal_max),
-              y=axis_lines(yanchors,w50/n,PAD,longitudinal_max),
+    axes=dict(x=axis_lines(xanchors,xdelta,PAD,longitudinal_max),
+              y=axis_lines(yanchors,ydelta,PAD,longitudinal_max),
               z=axis_lines([0.,H],H/n,PAD))
     extension={a:0. for a in axes}
     if padding==FAR_PAD:
@@ -186,6 +204,7 @@ def build(n, port, *, kind="hybrid", line_mm=20., feed=FEED, padding=PAD,
         boundary_extension_actual_mm=extension,
         end_db=float(end_db),cap_s=float(cap_s),threads=THREADS,scope=SCOPE,
         longitudinal_max_mm=float(longitudinal_max),
+        edge_rule="thirds",edge_spacing_mm=dict(x=xdelta,y=ydelta),
         mesh_mm={a:v.tolist() for a,v in axes.items()},native_lines=[len(axes[a]) for a in "xyz"],
         native_cells=int(np.prod([len(axes[a]) for a in "xyz"])),declared_dt_s=float(dt),max_timesteps=steps,
         source_duration_s=excitation.dgauss_duration_s(FREQUENCIES[-1]),
