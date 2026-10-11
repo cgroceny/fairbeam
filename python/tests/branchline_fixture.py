@@ -23,17 +23,18 @@ ROOT = Path(__file__).resolve().parents[2]
 C0, Z0, F0 = 299792458., 50., 2.4e9
 ER, H, FEED, LONG_FEED = 3.38, .813, 10., 15.
 FREQUENCIES = np.linspace(.5*F0, 1.5*F0, 201)
-MESHES, DEFERRED_MESHES, CONTROL_MESH = (3, 4, 5), (6, 8), 4
+MESHES, DEFERRED_MESHES, CONTROL_MESH = (3, 4, 6), (8,), 4
 LINE_LENGTHS = (20., 30.)
 PAD, FAR_PAD, PML = 12., 20., 8
 CAP_S, END_DB, THREADS = 16e-9, -80., 4
-PROTOCOL = "nominal-branchline-v3-thirds"
+DT_FACTOR, CONTROL_DT_FACTOR = .9, .5
+PROTOCOL = "nominal-branchline-v4-clock"
 LIMITS = dict(magnitude_target_abs=.05, relative_phase_target_deg=5.,
               complex_mesh_abs=.005, phase_mesh_deg=.5,
               complex_control_abs=.003, phase_control_deg=.2,
               reciprocity_abs=.005, singular_power_max=1.01,
               incident_condition_max=30., incident_floor_rel=.02)
-SCOPE = "Untrimmed finite PEC microstrip hybrid; raw 50-ohm magnitudes and relative output phase, mesh/boundary/time controls; no individual launch or absolute junction-phase certificate"
+SCOPE = "Untrimmed finite PEC microstrip hybrid; raw 50-ohm magnitudes and relative output phase, mesh/boundary/time/clock controls; no individual launch or absolute junction-phase certificate"
 
 
 def identity():
@@ -124,7 +125,7 @@ def edge_brackets(lower, upper, delta):
 
 
 def build(n, port, *, kind="hybrid", line_mm=20., feed=FEED, padding=PAD,
-          end_db=END_DB, cap_s=CAP_S):
+          end_db=END_DB, cap_s=CAP_S, dt_factor=DT_FACTOR):
     if (isinstance(n,bool) or not isinstance(n,int) or n not in MESHES+DEFERRED_MESHES
             or kind not in ("hybrid","line") or line_mm not in LINE_LENGTHS
             or isinstance(port,bool) or not isinstance(port,int)
@@ -132,6 +133,7 @@ def build(n, port, *, kind="hybrid", line_mm=20., feed=FEED, padding=PAD,
             or isinstance(feed,bool) or feed not in (FEED,LONG_FEED)
             or isinstance(padding,bool) or padding not in (PAD,FAR_PAD)
             or end_db not in (-80.,-90.) or not np.isfinite(cap_s)
+            or isinstance(dt_factor,bool) or dt_factor not in (DT_FACTOR,CONTROL_DT_FACTOR)
             or not CAP_S<=cap_s<=2*CAP_S):
         raise ValueError("declared mesh, device, port, geometry and time controls required")
     g=geometry(); w50,w35=g["w50_mm"],g["w35_mm"]
@@ -191,7 +193,7 @@ def build(n, port, *, kind="hybrid", line_mm=20., feed=FEED, padding=PAD,
         x=float(axes["x"][np.flatnonzero(axes["x"]==sx*xedge)[0]])
         sim.lumped_port(number,Z0,[x,y-w50/2,0.],[x,y+w50/2,H],"z",
                         excite=number==port,priority=5)
-    dt=.5/(C0*np.sqrt(sum((np.min(np.diff(v))*sim.unit)**-2 for v in axes.values())))
+    dt=dt_factor/(C0*np.sqrt(sum((np.min(np.diff(v))*sim.unit)**-2 for v in axes.values())))
     steps=int(math.ceil(cap_s/dt))
     sim.max_timesteps=steps
     sim.fdtd.SetTimeStep(float(dt)); sim.fdtd.SetNumberOfTimeSteps(steps)
@@ -203,6 +205,7 @@ def build(n, port, *, kind="hybrid", line_mm=20., feed=FEED, padding=PAD,
         padding_mm=float(padding),excited_port=port,geometry=g,ports=sim.ports,
         boundary_extension_actual_mm=extension,
         end_db=float(end_db),cap_s=float(cap_s),threads=THREADS,scope=SCOPE,
+        dt_factor=float(dt_factor),
         longitudinal_max_mm=float(longitudinal_max),
         edge_rule="thirds",edge_spacing_mm=dict(x=xdelta,y=ydelta),
         mesh_mm={a:v.tolist() for a,v in axes.items()},native_lines=[len(axes[a]) for a in "xyz"],
@@ -272,7 +275,7 @@ def read(out):
     if sha(out/"input.xml")!=meta["input_sha256"] or sha(out/"waves.npz")!=meta["waves_sha256"]:
         raise ValueError("native input or wave data changed")
     _,expected=build(meta["n"],meta["excited_port"],kind=meta["kind"],line_mm=meta["line_mm"],
-        feed=meta["feed_mm"],padding=meta["padding_mm"],end_db=meta["end_db"],cap_s=meta["cap_s"])
+        feed=meta["feed_mm"],padding=meta["padding_mm"],end_db=meta["end_db"],cap_s=meta["cap_s"],dt_factor=meta["dt_factor"])
     if any(meta[k]!=value for k,value in json.loads(json.dumps(expected)).items()):
         raise ValueError("different declared geometry or acquisition settings")
     count=4 if meta["kind"]=="hybrid" else 2
@@ -328,7 +331,7 @@ def matrix(root):
     root=Path(root);first=json.loads((root/"port1/report.json").read_text(encoding="utf-8"))
     count=4 if first["kind"]=="hybrid" else 2
     records=[read(root/f"port{p}") for p in range(1,count+1)]
-    keys=("n","kind","line_mm","feed_mm","padding_mm","end_db","cap_s","geometry","mesh_mm")
+    keys=("n","kind","line_mm","feed_mm","padding_mm","end_db","cap_s","dt_factor","geometry","mesh_mm")
     if any(r[0]["excited_port"]!=p or any(r[0][k]!=first[k] for k in keys) for p,r in enumerate(records,1)):
         raise ValueError("mixed cohort settings")
     s,quality=waves_to_s(np.array([r[1] for r in records]),np.array([r[2] for r in records]))
@@ -356,15 +359,17 @@ def study(root):
     root=Path(root)
     ordinary=[matrix(root/f"n{n}") for n in MESHES]
     for n,(_,r) in zip(MESHES,ordinary):
-        if (r["n"],r["kind"],r["feed_mm"],r["padding_mm"],r["end_db"],r["cap_s"])!=(n,"hybrid",FEED,PAD,END_DB,CAP_S):
+        if (r["n"],r["kind"],r["feed_mm"],r["padding_mm"],r["end_db"],r["cap_s"],r["dt_factor"])!=(n,"hybrid",FEED,PAD,END_DB,CAP_S,DT_FACTOR):
             raise ValueError("incorrect ordinary cohort identity")
     mesh=[float(abs(b[0]-a[0]).max()) for a,b in zip(ordinary,ordinary[1:])]
     phase=[float(abs(phase_delta(b[0],a[0])).max()) for a,b in zip(ordinary,ordinary[1:])]
     control=ordinary[MESHES.index(CONTROL_MESH)][0]
     controls={}
-    for name,expected in (("pad",(FEED,FAR_PAD,END_DB,CAP_S)),("time",(FEED,PAD,-90.,2*CAP_S))):
+    for name,expected in (("pad",(FEED,FAR_PAD,END_DB,CAP_S,DT_FACTOR)),
+                          ("time",(FEED,PAD,-90.,2*CAP_S,DT_FACTOR)),
+                          ("dt",(FEED,PAD,END_DB,CAP_S,CONTROL_DT_FACTOR))):
         s,r=matrix(root/f"n{CONTROL_MESH}_{name}")
-        if (r["n"],r["kind"])!=(CONTROL_MESH,"hybrid") or tuple(r[k] for k in ("feed_mm","padding_mm","end_db","cap_s"))!=expected:
+        if (r["n"],r["kind"])!=(CONTROL_MESH,"hybrid") or tuple(r[k] for k in ("feed_mm","padding_mm","end_db","cap_s","dt_factor"))!=expected:
             raise ValueError("incorrect independent control identity")
         change,pchange=float(abs(s-control).max()),float(abs(phase_delta(s,control)).max())
         controls[name]=dict(complex_max_abs=change,relative_phase_max_deg=pchange,native=r,
@@ -373,10 +378,10 @@ def study(root):
     # conditional on the explicitly matched, reciprocal control-line model.
     short,sr=matrix(root/f"n{CONTROL_MESH}_line20");long,lr=matrix(root/f"n{CONTROL_MESH}_line30")
     for length,r in ((20.,sr),(30.,lr)):
-        if (r["n"],r["kind"],r["line_mm"],r["feed_mm"],r["padding_mm"],r["end_db"],r["cap_s"])!=(CONTROL_MESH,"line",length,FEED,PAD,END_DB,CAP_S):
+        if (r["n"],r["kind"],r["line_mm"],r["feed_mm"],r["padding_mm"],r["end_db"],r["cap_s"],r["dt_factor"])!=(CONTROL_MESH,"line",length,FEED,PAD,END_DB,CAP_S,DT_FACTOR):
             raise ValueError("incorrect calibration-line identity")
     extended,er=matrix(root/f"n{CONTROL_MESH}_feed")
-    if (er["n"],er["kind"],er["feed_mm"],er["padding_mm"],er["end_db"],er["cap_s"])!=(CONTROL_MESH,"hybrid",LONG_FEED,PAD,END_DB,CAP_S):
+    if (er["n"],er["kind"],er["feed_mm"],er["padding_mm"],er["end_db"],er["cap_s"],er["dt_factor"])!=(CONTROL_MESH,"hybrid",LONG_FEED,PAD,END_DB,CAP_S,DT_FACTOR):
         raise ValueError("incorrect extended-feed identity")
     try:
         hint=2*np.pi*FREQUENCIES/C0*np.sqrt(analytic.microstrip_eps_eff(ER,H,geometry()["w50_mm"]))

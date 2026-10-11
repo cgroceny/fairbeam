@@ -72,7 +72,8 @@ def acquire_serial(out,n,rate=10.,**options):
         command=[sys.executable,"-m","tests.test_branchline_fixture","--fdtd","--worker-case",
                  "--mesh",str(n),"--port",str(port),"--out",str(destination)]
         for name,flag in (("kind","--kind"),("line_mm","--line-mm"),("feed","--feed-mm"),
-                          ("padding","--padding-mm"),("end_db","--end-db"),("cap_s","--cap-ns")):
+                          ("padding","--padding-mm"),("end_db","--end-db"),("cap_s","--cap-ns"),
+                          ("dt_factor","--dt-factor")):
             if name in options:
                 value=options[name]*1e9 if name=="cap_s" else options[name]
                 command += [flag,str(value)]
@@ -178,6 +179,16 @@ class BranchlineControls(unittest.TestCase):
                 np.testing.assert_array_equal(new[(new>=old[0])&(new<=old[-1])],old)
                 self.assertGreaterEqual(b["boundary_extension_actual_mm"][axis],8.)
 
+    def test_clock_control_keeps_geometry_mesh_and_source_planes_fixed(self):
+        for n in f.MESHES:
+            _,ordinary=f.build(n,1)
+            _,control=f.build(n,1,dt_factor=f.CONTROL_DT_FACTOR)
+            for key in ("geometry","ports","mesh_mm","native_cells","cap_s","end_db"):
+                self.assertEqual(ordinary[key],control[key])
+            self.assertAlmostEqual(control["declared_dt_s"]/ordinary["declared_dt_s"],
+                                   f.CONTROL_DT_FACTOR/f.DT_FACTOR,places=14)
+            self.assertGreater(control["max_timesteps"],ordinary["max_timesteps"])
+
     def test_longitudinal_mesh_is_symmetric_bounded_and_refines(self):
         values=[]
         for n in f.MESHES:
@@ -263,7 +274,8 @@ class BranchlineControls(unittest.TestCase):
 
     def test_invalid_controls_and_over_budget_are_refused_before_launch(self):
         for n,p,options in ((True,1,{}),(7,1,{}),(4,True,{}),(4,5,{}),(4,1,dict(kind="other")),
-                (4,1,dict(line_mm=21.)),(4,1,dict(feed=14.)),(4,1,dict(cap_s=1e-9))):
+                (4,1,dict(line_mm=21.)),(4,1,dict(feed=14.)),(4,1,dict(cap_s=1e-9)),
+                (4,1,dict(dt_factor=True)),(4,1,dict(dt_factor=1.1))):
             with self.assertRaises(ValueError):
                 f.build(n,p,**options)
         for freq in ([],[0],[np.nan],[4e9]):
@@ -322,6 +334,7 @@ class BranchlineControls(unittest.TestCase):
                 padding_mm=f.FAR_PAD if name.endswith("pad") else f.PAD,
                 end_db=-90. if name.endswith("time") else f.END_DB,
                 cap_s=2*f.CAP_S if name.endswith("time") else f.CAP_S,
+                dt_factor=f.CONTROL_DT_FACTOR if name.endswith("dt") else f.DT_FACTOR,
                 all_native_complete=True,target_passes=True)
             return s,row
         with tempfile.TemporaryDirectory() as temp,patch.object(f,"matrix",side_effect=fake):
@@ -345,12 +358,13 @@ def main():
     parser.add_argument("--padding-mm",type=float,choices=(f.PAD,f.FAR_PAD),default=f.PAD)
     parser.add_argument("--end-db",type=float,choices=(-80.,-90.),default=f.END_DB)
     parser.add_argument("--cap-ns",type=float,default=f.CAP_S*1e9)
+    parser.add_argument("--dt-factor",type=float,choices=(f.CONTROL_DT_FACTOR,f.DT_FACTOR),default=f.DT_FACTOR)
     parser.add_argument("--rate-mcps",type=float,default=10.)
     parser.add_argument("--worker-case",action="store_true",help=argparse.SUPPRESS)
     parser.add_argument("--port",type=int,choices=(1,2,3,4),default=1,help=argparse.SUPPRESS)
     args=parser.parse_args()
     options=dict(kind=args.kind,line_mm=args.line_mm,feed=args.feed_mm,padding=args.padding_mm,
-                 end_db=args.end_db,cap_s=args.cap_ns/1e9)
+                 end_db=args.end_db,cap_s=args.cap_ns/1e9,dt_factor=args.dt_factor)
     if args.preflight:
         args.out.mkdir(parents=True,exist_ok=False);rows=[]
         for n in f.MESHES:
