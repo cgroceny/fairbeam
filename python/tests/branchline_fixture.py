@@ -27,8 +27,10 @@ MESHES, DEFERRED_MESHES, CONTROL_MESH = (3, 4, 6), (8,), 4
 LINE_LENGTHS = (20., 30.)
 PAD, FAR_PAD, PML = 12., 20., 8
 CAP_S, END_DB, THREADS = 16e-9, -80., 4
-DT_FACTOR, CONTROL_DT_FACTOR = .9, .5
-PROTOCOL = "nominal-branchline-v4-clock"
+DT_FACTOR, CONTROL_DT_FACTOR = .7, .5
+NATIVE_STEP_RATIO_MAX = .97
+PROPAGATION_MARKER = "FAIRBEAM-BRANCHLINE-PROPAGATION-BEGIN"
+PROTOCOL = "nominal-branchline-v5-native-bound"
 LIMITS = dict(magnitude_target_abs=.05, relative_phase_target_deg=5.,
               complex_mesh_abs=.005, phase_mesh_deg=.5,
               complex_control_abs=.003, phase_control_deg=.2,
@@ -226,11 +228,51 @@ def trace_clock(data,native):
     return dict(samples=len(data),first_s=float(data[0,0]),last_s=float(data[-1,0]),stride_steps=stride)
 
 
+def native_bound_ok(meta):
+    """Recompute the setup-only admission check rather than trust its flag."""
+    record=meta.get("operator_preflight",{})
+    run=record.get("run",{})
+    bound=run.get("timestep_s",0.)
+    if not isinstance(bound,(int,float)) or not np.isfinite(bound) or bound<=0:
+        return False
+    return bool(record.get("setup_only") is True
+        and record.get("ratio_limit")==NATIVE_STEP_RATIO_MAX
+        and record.get("planned_dt_s")==meta["declared_dt_s"]
+        and record.get("planned_dt_s")/bound<=NATIVE_STEP_RATIO_MAX
+        and run.get("grid")==meta["native_lines"]
+        and run.get("threads")==THREADS and run.get("engine")=="cpu"
+        and run.get("exact_endcriteria") is True
+        and run.get("converged") is False and run.get("energy_trace")==[]
+        and "timesteps" not in run)
+
+
+def operator_preflight(out,n,port,**options):
+    """Ask the identical native operator for its unforced stability bound.
+
+    This creates the operator only. No field propagation or qualified result
+    is produced; a separate Simulation performs the admitted acquisition.
+    """
+    out=Path(out)
+    setup,meta=build(n,port,**options)
+    setup.fdtd.SetTimeStep(0.)
+    setup.fdtd.Write2XML(str(out/"operator-input.xml"))
+    run=setup.run(str(out/"operator"),threads=THREADS,exact=True,echo=True,setup_only=True)
+    record=dict(setup_only=True,planned_dt_s=meta["declared_dt_s"],
+        ratio_limit=NATIVE_STEP_RATIO_MAX,input_sha256=sha(out/"operator-input.xml"),run=run)
+    meta["operator_preflight"]=record
+    record["passes"]=native_bound_ok(meta)
+    save(out/"operator.json",record)
+    if not record["passes"]:
+        raise ValueError("planned timestep exceeds the native setup-only stability admission bound")
+    return record
+
+
 def record_quality(meta):
     native,run,header=meta["native"],meta["run"],meta.get("native_header",{})
     return {k:bool(v) for k,v in dict(
         grid_ok=native["cells"]==meta["native_cells"] and run.get("grid")==meta["native_lines"],
         clock_ok=abs(native["dt_s"]/meta["declared_dt_s"]-1)<1e-8,
+        native_bound_ok=native_bound_ok(meta),
         native_time_ok=native["timesteps"]>0 and abs(native["numerical_time_s"]/(native["timesteps"]*native["dt_s"])-1)<1e-8,
         header_ok=header.get("version")=="v0.37.0-rc3" and header.get("threads")==THREADS
             and header.get("nyquist_interval")==int(1/(2*meta["f_max_hz"]*native["dt_s"]))
@@ -248,6 +290,12 @@ def acquire(out,n,port,**options):
     meta.update(source_sha256=source,runtime=runtime,limits=LIMITS,input_sha256=sha(out/"input.xml"),
                 started_utc=datetime.now(timezone.utc).isoformat())
     save(out/"declared.json",meta)
+    meta["operator_preflight"]=operator_preflight(out,n,port,**options)
+    meta["operator_sha256"]=sha(out/"operator.json")
+    if source!=identity() or runtime!=runtime_identity():
+        raise RuntimeError("source/runtime changed during operator preflight")
+    save(out/"declared.json",meta)
+    print(PROPAGATION_MARKER,flush=True)
     sim.run(str(out/"raw"),threads=THREADS,exact=True,echo=True,dump_statistics=True)
     stats=np.loadtxt(out/"raw/openEMS_stats.txt",comments="%")
     native=dict(cells=int(stats[0]),dt_s=float(stats[1]),timesteps=int(stats[2]),
@@ -274,6 +322,11 @@ def read(out):
         raise ValueError("source/runtime/limits changed; keep acquisition epochs separate")
     if sha(out/"input.xml")!=meta["input_sha256"] or sha(out/"waves.npz")!=meta["waves_sha256"]:
         raise ValueError("native input or wave data changed")
+    if (sha(out/"operator.json")!=meta["operator_sha256"]
+            or json.loads((out/"operator.json").read_text(encoding="utf-8"))!=meta["operator_preflight"]
+            or sha(out/"operator-input.xml")!=meta["operator_preflight"]["input_sha256"]
+            or not native_bound_ok(meta)):
+        raise ValueError("changed or failed native operator stability preflight")
     _,expected=build(meta["n"],meta["excited_port"],kind=meta["kind"],line_mm=meta["line_mm"],
         feed=meta["feed_mm"],padding=meta["padding_mm"],end_db=meta["end_db"],cap_s=meta["cap_s"],dt_factor=meta["dt_factor"])
     if any(meta[k]!=value for k,value in json.loads(json.dumps(expected)).items()):

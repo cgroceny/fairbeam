@@ -32,6 +32,9 @@ def forecast(meta,rate):
 
 
 def audit_header(text,meta):
+    # Setup-only and propagation each print a header, with different clocks.
+    # Audit the latter; the operator's unforced clock has its own saved check.
+    text=text.rsplit(f.PROPAGATION_MARKER,1)[-1]
     if re.search(r"forced timestep:.*larger than calculated timestep",text):
         raise ValueError("native stability bound exceeded")
     grid=re.search(r"FDTD simulation size: (\d+)x(\d+)x(\d+) --> (\d+) FDTD cells",text)
@@ -246,6 +249,8 @@ class BranchlineControls(unittest.TestCase):
             f"Exact-endcriteria: evaluating the end criteria every {interval} timestep\n"
             f"Excitation signal length is: {meta['max_timesteps']} timesteps\n")
         self.assertEqual(audit_header(text,meta)["nyquist_interval"],interval)
+        self.assertEqual(audit_header("FDTD simulation size: 1x1x1 --> 1 FDTD cells\n"
+            +f.PROPAGATION_MARKER+"\n"+text,meta)["nyquist_interval"],interval)
         with self.assertRaisesRegex(ValueError,"custom-source"):
             audit_header(text.replace(f"{meta['max_timesteps']} timesteps","7 timesteps"),meta)
         with self.assertRaisesRegex(ValueError,"stability"):
@@ -266,11 +271,48 @@ class BranchlineControls(unittest.TestCase):
         meta["run"]=dict(grid=meta["native_lines"],converged=True,exact_endcriteria=True,threads=4)
         meta["native_header"]=dict(version="v0.37.0-rc3",threads=4,
             nyquist_interval=int(1/(2*meta["f_max_hz"]*meta["declared_dt_s"])),excitation_timesteps=meta["max_timesteps"])
+        meta["operator_preflight"]=dict(setup_only=True,ratio_limit=f.NATIVE_STEP_RATIO_MAX,
+            planned_dt_s=meta["declared_dt_s"],run=dict(timestep_s=2*meta["declared_dt_s"],
+                grid=meta["native_lines"],threads=4,engine="cpu",exact_endcriteria=True,
+                converged=False,energy_trace=[]))
         self.assertTrue(all(f.record_quality(meta).values()))
+        meta["operator_preflight"]["run"]["timestep_s"]=meta["declared_dt_s"]
+        self.assertFalse(f.record_quality(meta)["native_bound_ok"])
+        del meta["operator_preflight"]
+        self.assertFalse(f.record_quality(meta)["native_bound_ok"])
         meta["run"]["hit_timestep_limit"]=True
         self.assertFalse(f.record_quality(meta)["native_stop"])
         meta["native"]["numerical_time_s"]=.5*meta["source_duration_s"]
         self.assertFalse(f.record_quality(meta)["source_completed"])
+
+    def test_native_operator_refuses_unsafe_step_before_any_propagation(self):
+        _,meta=f.build(4,1,kind="line")
+        native=dict(timestep_s=.95*meta["declared_dt_s"],grid=meta["native_lines"],
+            threads=4,engine="cpu",exact_endcriteria=True,converged=False,energy_trace=[])
+        with tempfile.TemporaryDirectory() as temp,patch.object(f,"runtime_identity",return_value={}), \
+                patch.object(f.Simulation,"run",return_value=native) as run:
+            out=Path(temp)/"unsafe"
+            with self.assertRaisesRegex(ValueError,"native setup-only"):
+                f.acquire(out,4,1,kind="line")
+            self.assertEqual(run.call_count,1)
+            self.assertTrue(run.call_args.kwargs["setup_only"])
+            self.assertFalse((out/"raw").exists())
+            self.assertFalse((out/"waves.npz").exists())
+            self.assertFalse((out/"report.json").exists())
+            self.assertFalse(json.loads((out/"operator.json").read_text())["passes"])
+
+    def test_native_operator_records_bound_without_claiming_convergence(self):
+        _,meta=f.build(4,1,kind="line")
+        native=dict(timestep_s=2*meta["declared_dt_s"],grid=meta["native_lines"],
+            threads=4,engine="cpu",exact_endcriteria=True,converged=False,energy_trace=[])
+        with tempfile.TemporaryDirectory() as temp,patch.object(f.Simulation,"run",return_value=native) as run:
+            record=f.operator_preflight(temp,4,1,kind="line")
+            self.assertTrue(record["passes"])
+            self.assertFalse(record["run"]["converged"])
+            self.assertEqual(run.call_count,1)
+            self.assertTrue(run.call_args.kwargs["setup_only"])
+            self.assertEqual(record["input_sha256"],f.sha(Path(temp)/"operator-input.xml"))
+            self.assertFalse((Path(temp)/"waves.npz").exists())
 
     def test_invalid_controls_and_over_budget_are_refused_before_launch(self):
         for n,p,options in ((True,1,{}),(7,1,{}),(4,True,{}),(4,5,{}),(4,1,dict(kind="other")),
