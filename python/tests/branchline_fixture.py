@@ -23,14 +23,14 @@ ROOT = Path(__file__).resolve().parents[2]
 C0, Z0, F0 = 299792458., 50., 2.4e9
 ER, H, FEED, LONG_FEED = 3.38, .813, 10., 15.
 FREQUENCIES = np.linspace(.5*F0, 1.5*F0, 201)
-MESHES, DEFERRED_MESHES, CONTROL_MESH = (3, 4, 6), (8,), 4
+MESHES, DEFERRED_MESHES, CONTROL_MESH = (3, 4, 5), (6, 8), 4
 LINE_LENGTHS = (20., 30.)
 PAD, FAR_PAD, PML = 12., 20., 8
-CAP_S, END_DB, THREADS = 16e-9, -80., 4
+CAP_S, TIME_CAP_S, END_DB, THREADS = 24e-9, 32e-9, -80., 4
 DT_FACTOR, CONTROL_DT_FACTOR = .7, .5
 NATIVE_STEP_RATIO_MAX = .97
 PROPAGATION_MARKER = "FAIRBEAM-BRANCHLINE-PROPAGATION-BEGIN"
-PROTOCOL = "nominal-branchline-v5-native-bound"
+PROTOCOL = "nominal-branchline-v6-time-window"
 LIMITS = dict(magnitude_target_abs=.05, relative_phase_target_deg=5.,
               complex_mesh_abs=.005, phase_mesh_deg=.5,
               complex_control_abs=.003, phase_control_deg=.2,
@@ -419,7 +419,7 @@ def study(root):
     control=ordinary[MESHES.index(CONTROL_MESH)][0]
     controls={}
     for name,expected in (("pad",(FEED,FAR_PAD,END_DB,CAP_S,DT_FACTOR)),
-                          ("time",(FEED,PAD,-90.,2*CAP_S,DT_FACTOR)),
+                          ("time",(FEED,PAD,-90.,TIME_CAP_S,DT_FACTOR)),
                           ("dt",(FEED,PAD,END_DB,CAP_S,CONTROL_DT_FACTOR))):
         s,r=matrix(root/f"n{CONTROL_MESH}_{name}")
         if (r["n"],r["kind"])!=(CONTROL_MESH,"hybrid") or tuple(r[k] for k in ("feed_mm","padding_mm","end_db","cap_s","dt_factor"))!=expected:

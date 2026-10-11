@@ -192,6 +192,15 @@ class BranchlineControls(unittest.TestCase):
                                    f.CONTROL_DT_FACTOR/f.DT_FACTOR,places=14)
             self.assertGreater(control["max_timesteps"],ordinary["max_timesteps"])
 
+    def test_longer_time_control_keeps_geometry_mesh_and_clock_fixed(self):
+        for n in f.MESHES:
+            _,ordinary=f.build(n,1)
+            _,control=f.build(n,1,cap_s=f.TIME_CAP_S,end_db=-90.)
+            for key in ("geometry","ports","mesh_mm","native_cells","declared_dt_s"):
+                self.assertEqual(ordinary[key],control[key])
+            self.assertGreater(control["max_timesteps"],ordinary["max_timesteps"])
+            self.assertLess(control["end_db"],ordinary["end_db"])
+
     def test_longitudinal_mesh_is_symmetric_bounded_and_refines(self):
         values=[]
         for n in f.MESHES:
@@ -375,7 +384,7 @@ class BranchlineControls(unittest.TestCase):
             row=dict(n=n,kind=kind,line_mm=length,feed_mm=f.LONG_FEED if name.endswith("feed") else f.FEED,
                 padding_mm=f.FAR_PAD if name.endswith("pad") else f.PAD,
                 end_db=-90. if name.endswith("time") else f.END_DB,
-                cap_s=2*f.CAP_S if name.endswith("time") else f.CAP_S,
+                cap_s=f.TIME_CAP_S if name.endswith("time") else f.CAP_S,
                 dt_factor=f.CONTROL_DT_FACTOR if name.endswith("dt") else f.DT_FACTOR,
                 all_native_complete=True,target_passes=True)
             return s,row
