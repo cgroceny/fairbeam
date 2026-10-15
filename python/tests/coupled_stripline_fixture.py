@@ -23,10 +23,10 @@ from tests.coax_resonator_fixture import save, sha, runtime_identity as base_run
 ROOT = Path(__file__).resolve().parents[2]
 C0, B, ER, F0, Z0, COUPLING = 299792458., 3.2, 2.2, 3e9, 50., .1
 FREQUENCIES = np.linspace(1e9, 5e9, 201)
-MESHES, CONTROL_MESH, THREADS = (4, 6, 8), 6, 4
+MESHES, PILOT_MESHES, CONTROL_MESH, THREADS = (6, 8, 10), (4,), 6, 4
 CONTROLS = ("ordinary", "boundary", "sidewall", "guard", "time", "dt")
 CAP_S, END_DB, DT_FACTOR = 6e-9, -80., .5
-PROTOCOL = "coupled-stripline-v1-thin-pec"
+PROTOCOL = "coupled-stripline-v2-refined-thin-pec"
 NATIVE_STEP_RATIO_MAX = .97
 PROPAGATION_MARKER = "FAIRBEAM-COUPLED-STRIPLINE-PROPAGATION-BEGIN"
 LIMITS = dict(s_target_abs=.005, phase_target_deg=.5, beta_target_rel=.005,
@@ -156,7 +156,7 @@ def transverse_mesh(n, g):
 
 
 def build(n, port, *, control="ordinary"):
-    if (isinstance(n,bool) or n not in MESHES or not isinstance(n,int)
+    if (isinstance(n,bool) or n not in MESHES+PILOT_MESHES or not isinstance(n,int)
             or isinstance(port,bool) or not isinstance(port,int) or port not in range(1,5)
             or control not in CONTROLS):
         raise ValueError("declared integer mesh, source and independent control required")

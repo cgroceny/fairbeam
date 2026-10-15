@@ -300,7 +300,7 @@ class CoupledStriplineControls(unittest.TestCase):
             name=path.name;n=int(name[1:].split('_')[0])
             control=name.split('_')[1] if '_' in name else 'ordinary'
             s=ref.copy()
-            if n==4:
+            if n==f.MESHES[0]:
                 s[:,0,0]+=.01
             return s,dict(n=n,control=control,all_native_complete=True,target_passes=True,
                           contour_s_abs=0.,recurrence_residual=0.)
@@ -370,7 +370,7 @@ def main():
     for name in ('preflight','fdtd','analyse','study'):
         modes.add_argument('--'+name,action='store_true')
     parser.add_argument('--out',type=Path,required=True)
-    parser.add_argument('--mesh',type=int,choices=f.MESHES,default=f.MESHES[0])
+    parser.add_argument('--mesh',type=int,choices=f.MESHES+f.PILOT_MESHES,default=f.MESHES[0])
     parser.add_argument('--control',choices=f.CONTROLS,default='ordinary')
     parser.add_argument('--rate-mcps',type=float,default=40.)
     parser.add_argument('--worker-case',action='store_true',help=argparse.SUPPRESS)
