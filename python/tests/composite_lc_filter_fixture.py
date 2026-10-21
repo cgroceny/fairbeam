@@ -31,7 +31,7 @@ CONTROLS=('ordinary','time','dt','enclosure','scale')
 THREAD_CHOICES=(1,4)
 CAP_S, END_DB, OVERSAMPLING = 65e-6,-100.,16
 OPERATOR_STEPS=1024
-PROTOCOL='composite-lc-filter-v1'
+PROTOCOL='composite-lc-filter-v2'
 PROPAGATION_MARKER='FAIRBEAM-COMPOSITE-LC-PROPAGATION-BEGIN'
 SCOPE=('Own positive-L/C image-filter circuit in a finite PEC enclosure, '
        'two native 75-ohm terminal ports. Intrinsic finite-geometry parasitics '
@@ -138,7 +138,8 @@ def build(n,port,kind='filter',control='ordinary',threads=1):
         boundaries=['PEC']*6,end_criteria_db=end,max_timesteps=steps)
     for axis,values in zip('xyz',coords):sim.mesh.AddLine(axis,values/sim.unit)
     sim.fdtd.SetTimeStep(float(dt));sim.fdtd.SetOverSampling(OVERSAMPLING)
-    if control=='time':sim.fdtd.SetEndCriteria(0.)  # An actual extended trace, not another early-stop threshold.
+    fixed_window=kind=='through' or control=='time'
+    if fixed_window:sim.fdtd.SetEndCriteria(0.)  # Complete the source and an actual extended trace.
     solids=[];boxes={};probe_boxes={}
     def metal(name,a,b):
         p=sim.metal(name);p.AddBox(np.asarray(a)*cell/sim.unit,np.asarray(b)*cell/sim.unit,priority=10)
@@ -185,8 +186,8 @@ def build(n,port,kind='filter',control='ordinary',threads=1):
     meta=dict(protocol=PROTOCOL,n=n,kind=kind,control=control,excited_port=port,threads=threads,
         cell_m=cell,grid=[len(v) for v in coords],native_cells=int(np.prod([len(v) for v in coords])),
         mesh_mm={a:sim.mesh.GetLines(a).tolist() for a in 'xyz'},declared_dt_s=float(dt),
-        max_timesteps=steps,cap_s=cap,requested_end_db=end,native_end_ratio=0. if control=='time' else 10**(end/10),
-        forced_time_control=control=='time',operator_steps=OPERATOR_STEPS,source_duration_s=excitation.dgauss_duration_s(FREQUENCIES[-1]),
+        max_timesteps=steps,cap_s=cap,requested_end_db=end,native_end_ratio=0. if fixed_window else 10**(end/10),
+        forced_time_control=control=='time',fixed_window=fixed_window,operator_steps=OPERATOR_STEPS,source_duration_s=excitation.dgauss_duration_s(FREQUENCIES[-1]),
         reference_ohm=R0,elements=records,element_boxes=boxes,solids=solids,port_names=port_names,
         probe_boxes=probe_boxes,oversampling=OVERSAMPLING,scope=SCOPE)
     return sim,meta
@@ -310,21 +311,26 @@ def direct_spectra(traces,meta):
 
 def terminal_energy(traces,meta):
     """LC-terminal indicator, not a volume integral of electromagnetic energy."""
-    if not meta['elements']:return dict(available=False,end_db=None,tail_window_s=1e-6)
     clock=next(iter(traces.values()))[:,0];energy=np.zeros(len(clock)-1);clock=clock[:-1]
     for e in meta['elements']:
         row=traces[('lc_v_' if e['kind']=='C' else 'lc_i_')+e['name']]
         value=np.interp(clock,row[:,0],row[:,1])
         energy+=.5*e['value_si']*value**2
+    if not meta['elements']:
+        # A through has no L/C stored-energy probes. Check late terminal power
+        # instead; do not call a fixed-window stop energy convergence.
+        for port in meta['port_names']:
+            for key,weight in (('voltage',1/R0),('current',R0)):
+                row=traces[port[key][0]];energy+=weight*np.interp(clock,row[:,0],row[:,1])**2
     tail=energy[clock>=clock[-1]-1e-6];peak=float(energy.max())
     if peak<=0 or clock[-1]<meta['source_duration_s']+1e-6:raise ValueError('unexcited or truncated LC terminal energy trace')
     return dict(available=True,end_db=float(10*np.log10(max(float(tail.max())/peak,np.finfo(float).tiny))),
-        tail_window_s=1e-6,peak_j=peak,scope='LC-terminal indicator only; geometric displacement currents remain')
+        tail_window_s=1e-6,peak=peak,scope='LC-terminal energy indicator; geometric displacement currents remain' if meta['elements'] else 'terminal power indicator; not stored energy')
 
 
 def quality(meta):
     native,run=meta['native'],meta['run'];dt=meta['declared_dt_s'];op=meta['operator_preflight'];h=meta.get('native_header',{})
-    forced=meta['forced_time_control'];energy=meta['terminal_energy']
+    forced=meta['fixed_window'];energy=meta['terminal_energy']
     stopped=(not run.get('converged') and native['timesteps']==meta['max_timesteps']) if forced else (
         run.get('converged') is True and 0<native['timesteps']<meta['max_timesteps'])
     return {k:bool(v) for k,v in dict(grid=native['cells']==meta['native_cells'] and run.get('grid')==meta['grid'],
@@ -332,7 +338,7 @@ def quality(meta):
         operator=native_bound_ok(meta,op),geometry=meta['required_usage']==op['required_usage'],
         header=h.get('version')=='v0.37.0-rc3' and h.get('threads')==meta['threads'] and h.get('nyquist_interval')==int(1/(2*FREQUENCIES[-1]*dt)),
         source=native['numerical_time_s']>meta['source_duration_s'],stopping=stopped,
-        terminal_energy=not meta['elements'] or energy['available'] and energy['end_db']<=LIMITS['terminal_energy_end_db']).items()}
+        terminal_energy=energy['available'] and energy['end_db']<=LIMITS['terminal_energy_end_db']).items()}
 
 
 def native_statistics(raw):

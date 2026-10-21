@@ -203,6 +203,14 @@ class CompositeGeometryTests(unittest.TestCase):
             path=Path(tmp)/'input.xml';sim.fdtd.Write2XML(str(path))
             self.assertEqual(float(ET.parse(path).find('FDTD').attrib['endCriteria']),0.)
 
+    def test_through_uses_a_complete_fixed_window_without_energy_convergence_claim(self):
+        sim,meta=f.build(1,1,kind='through')
+        self.assertTrue(meta['fixed_window']);self.assertFalse(meta['forced_time_control'])
+        self.assertGreater(meta['cap_s'],meta['source_duration_s']+1e-6)
+        with tempfile.TemporaryDirectory() as tmp:
+            path=Path(tmp)/'input.xml';sim.fdtd.Write2XML(str(path))
+            self.assertEqual(float(ET.parse(path).find('FDTD').attrib['endCriteria']),0.)
+
     def test_geometry_changes_are_explicit_model_diagnostics(self):
         _,base=f.build(1,1)
         for control in ('scale','enclosure'):
