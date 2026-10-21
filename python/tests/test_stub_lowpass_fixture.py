@@ -170,6 +170,23 @@ class StubReferenceTests(unittest.TestCase):
 
 
 class StubGeometryTests(unittest.TestCase):
+    def test_neighbour_growth_and_pml_normal_cells_are_bounded(self):
+        for n in f.MESHES:
+            for control in ('ordinary','boundary'):
+                axes=f.mesh_lines(n,control)
+                for axis,values in enumerate(axes):
+                    h=np.diff(values);growth=np.maximum(h[1:]/h[:-1],h[:-1]/h[1:])
+                    self.assertLessEqual(growth.max(),2.+1e-10)
+                    if axis!=2:np.testing.assert_allclose(h[:8],h[0],atol=1e-12,rtol=0)
+                    np.testing.assert_allclose(h[-8:],h[-1],atol=1e-12,rtol=0)
+
+    def test_balancing_preserves_anchors_and_does_not_create_a_smaller_cell(self):
+        anchors=np.array([0.,.01,.02,1.,2.]);result=f._balanced_axis(anchors,.5)
+        self.assertTrue(set(anchors)<=set(result));self.assertGreaterEqual(np.diff(result).min(),.01-1e-12)
+        self.assertLessEqual(np.diff(result).max(),.5)
+        for bad in ([0.],[0.,np.nan]):
+            with self.assertRaises(ValueError):f._balanced_axis(bad,.5)
+
     def test_all_grids_increase_and_native_cells_are_allocation_not_intervals(self):
         sizes=[]
         for n in f.MESHES:

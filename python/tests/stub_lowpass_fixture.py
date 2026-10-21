@@ -121,6 +121,24 @@ def _axis(anchors,first,maximum):
     return np.unique(pieces)
 
 
+def _balanced_axis(anchors,maximum,ratio=2.):
+    """Retain every physical anchor and split only oversized neighbouring cells."""
+    anchors=np.unique(np.asarray(anchors,float))
+    if len(anchors)<2 or not np.isfinite(anchors).all() or not np.isfinite(maximum) or maximum<=0 or not 1<ratio<=2:
+        raise ValueError('finite distinct anchors, positive spacing and bounded growth required')
+    pieces=[]
+    for lo,hi in zip(anchors[:-1],anchors[1:]):
+        pieces.extend(np.linspace(lo,hi,int(np.ceil((hi-lo)/maximum))+1))
+    values=np.unique(pieces)
+    for _ in range(10000):
+        h=np.diff(values);growth=np.maximum(h[1:]/h[:-1],h[:-1]/h[1:])
+        if not len(growth) or growth.max()<=ratio*(1+1e-12):return values
+        j=int(growth.argmax());large=j if h[j]>h[j+1] else j+1
+        count=int(np.ceil(h[large]/(ratio*min(h[j],h[j+1]))))
+        values=np.sort(np.r_[values,np.linspace(values[large],values[large+1],count+1)[1:-1]])
+    raise ValueError('mesh growth could not be bounded')
+
+
 def mesh_lines(n,control='ordinary'):
     if isinstance(n,bool) or n not in MESHES or not isinstance(n,int) or control not in CONTROLS:
         raise ValueError('declared integer mesh/control required')
@@ -134,21 +152,20 @@ def mesh_lines(n,control='ordinary'):
         edge=stub['width_mm']/2
         xanchors.extend((centre-edge-2*delta/3,centre-edge+delta/3,
                          centre+edge-delta/3,centre+edge+2*delta/3))
-    x=_axis(xanchors,delta,maximum)
+    # Keep eight equidistant normal cells for each PML. The physical box,
+    # source/measurement planes and conductor anchors retain their positions.
+    xbody=_axis([a for a in xanchors if -12*HEIGHT<=a<=2*length+12*HEIGHT],delta,maximum)
+    x=np.r_[xbody[0]-maximum*np.arange(8,0,-1),xbody,xbody[-1]+maximum*np.arange(1,9)]
     yanchors=[-air-8*maximum,-air,0.,air,air+8*maximum]
     for width in [d['feed']['width_mm'],d['unit']['width_mm']]:
         edge=width/2;small=min(delta,width/n)
         for sign in (-1,1):yanchors.extend((sign*(edge-small/3),sign*(edge+2*small/3)))
     yanchors.extend(s['length_mm'] for s in d['stubs'])
     ymax=max(yanchors)+air+8*maximum
-    # Resolve the narrow unit strip locally; do not repeat its tiny spacing
-    # throughout remote air intervals. Physical anchors/dimensions stay fixed.
-    yparts=[];ya=np.unique(yanchors+[ymax])
-    for lo,hi in zip(ya[:-1],ya[1:]):
-        distance=0. if lo<=0<=hi else min(abs(lo),abs(hi))
-        first=min(delta,max(d['unit']['width_mm']/n,distance/3))
-        yparts.extend(_axis([lo,hi],first,maximum))
-    y=np.unique(yparts)
+    inner_top=ymax-8*maximum
+    ya=[a for a in yanchors if -air<=a<=inner_top]+[-air,inner_top]
+    ybody=_balanced_axis(ya,maximum)
+    y=np.r_[ybody[0]-maximum*np.arange(8,0,-1),ybody,ybody[-1]+maximum*np.arange(1,9)]
     z=np.r_[np.linspace(0.,HEIGHT,n+1),HEIGHT+graded(air,delta,maximum)[1:],
             HEIGHT+air+maximum*np.arange(1,9)]
     return x,y,z
