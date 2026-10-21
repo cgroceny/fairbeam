@@ -96,12 +96,16 @@ def matrix(root):
     target=f.reference(kind=metas[0]['kind'],plane_mm=metas[0]['plane_mm']);difference=f.difference(actual,target)
     result=dict(n=metas[0]['n'],kind=metas[0]['kind'],control=metas[0]['control'],**difference,
         native_quality=checks,native_complete=all(all(q.values()) for q in checks),qualified=False,
+        point_target_passes=difference['s_abs']<=f.LIMITS['s_target_abs'] and difference['phase_deg']<=f.LIMITS['phase_target_deg'],
         numerical_source=f.identity(),analysis_source_sha256=f.sha(Path(__file__)),
         contour_s_abs=diag['contour_s_abs'],recurrence_rel=diag['recurrence_rel'],
         reciprocity_abs=float(abs(actual-actual.transpose(0,2,1)).max()),
         singular_power_max=float((np.linalg.svd(actual,compute_uv=False)[:,0]**2).max()),
         application_errors=f.application_errors(actual,target) if metas[0]['kind']=='filter' else None,
         note='Explicit complete-window diagnostic only. Native stopping deviations remain false, and no mesh/time/dynamic-range validation is inferred.')
+    result['measurement_passes']=(result['contour_s_abs']<=f.LIMITS['contour_s_abs']
+        and result['recurrence_rel']<=f.LIMITS['recurrence_rel'] and result['reciprocity_abs']<=f.LIMITS['reciprocity_abs']
+        and result['singular_power_max']<=f.LIMITS['singular_power_max'])
     values=dict(frequency_hz=f.FREQUENCIES,s=actual,reference=target,**diag)
     record=root/'cap-diagnostic-comparison.json';arrays=root/'cap-diagnostic-matrix.npz'
     if record.exists() or arrays.exists():
@@ -198,6 +202,7 @@ class KnownCapTests(unittest.TestCase):
             return meta,dict(v=vv[port-1],i=ii[port-1]),dict(stopping=False,source=True,tail=True)
         with tempfile.TemporaryDirectory() as tmp,patch(__name__+'.read',side_effect=source):
             root=Path(tmp);_,result=matrix(root)
+            self.assertTrue(result['point_target_passes']);self.assertTrue(result['measurement_passes'])
             self.assertFalse(result['native_complete']);self.assertFalse(result['qualified'])
             self.assertFalse(result['native_quality'][0]['stopping'])
             self.assertTrue((root/'cap-diagnostic-matrix.npz').exists());self.assertFalse((root/'matrix.npz').exists())
