@@ -4,9 +4,12 @@ The ideal positive-element circuit and the finite PEC geometry are separate
 references. No component or layout is fitted to a measured response. Native
 runs are opt-in; a physical enclosure is not an ideal circuit certificate.
 """
+from datetime import datetime, timezone
+from itertools import islice
 import json
 import math
 from pathlib import Path
+import re
 import sys
 
 import numpy as np
@@ -15,6 +18,7 @@ from openEMS import ports as native_ports
 
 from fairbeam import Simulation, excitation, multiport
 from fairbeam.network import network_s
+from fairbeam.simulation import _parse_log
 from tests.coax_resonator_fixture import save,sha,runtime_identity as base_runtime
 
 ROOT=Path(__file__).resolve().parents[2]
@@ -186,3 +190,257 @@ def build(n,port,kind='filter',control='ordinary',threads=1):
         reference_ohm=R0,elements=records,element_boxes=boxes,solids=solids,port_names=port_names,
         probe_boxes=probe_boxes,oversampling=OVERSAMPLING,scope=SCOPE)
     return sim,meta
+
+
+def probe_layout(meta):
+    layout=dict(meta['probe_boxes']);cell=meta['cell_m']
+    for p,node in zip(meta['port_names'],(0,6)):
+        x=4*(node-3)
+        for key,kind,a,b in (
+            ('voltage','voltage',[x,1,0],[x,1,2]),
+            ('current','current',[x-1,1,1],[x+1,2,1])):
+            if len(p[key])!=1:raise ValueError('one native terminal probe per kind required')
+            layout[p[key][0]]=dict(kind=kind,axis=2,start_m=(np.array(a)*cell).tolist(),stop_m=(np.array(b)*cell).tolist())
+    return layout
+
+
+def expected_indices(meta,box):
+    """Declared uniform-grid E nodes / lower H dual indices, before fields."""
+    result=[[],[]]
+    for axis,label in enumerate('xyz'):
+        grid=np.array(meta['mesh_mm'][label])*1e-3;a,b=box['start_m'][axis],box['stop_m'][axis]
+        # Remove floating roundoff when choosing the lower of equal-distance nodes.
+        nearest=lambda value:int(np.flatnonzero(abs(grid-value)<=abs(grid-value).min()+1e-12)[0])
+        if box['kind']=='current':
+            if axis==box['axis']:
+                low=high=int(np.searchsorted(grid,a-1e-12))-1
+            else:low,high=nearest(a)-1,nearest(b)
+        else:low,high=nearest(a),nearest(b)
+        if not 0<=low<=high<len(grid):raise ValueError('probe escapes declared native grid')
+        result[0].append(low);result[1].append(high)
+    return result
+
+
+def trace_clock(data,meta,magnetic=False):
+    data=np.asarray(data,float);native=meta['native'];dt=native['dt_s']
+    stride=int(1/(2*FREQUENCIES[-1]*dt))//OVERSAMPLING;offset=.5 if magnetic else 0.
+    if (data.ndim!=2 or data.shape[1]!=2 or len(data)<3 or not np.isfinite(data).all() or stride<1
+        or len(data)!=round(native['numerical_time_s']/dt)//stride+1
+        or not np.allclose(data[:,0],(np.arange(len(data))*stride+offset)*dt,rtol=2e-10,atol=dt*1e-5)):
+        raise ValueError('finite complete staggered native probe trace required')
+    return dict(samples=len(data),stride_steps=stride,offset_steps=offset)
+
+
+def source_trace_info(path,meta):
+    """Check every allocated source row in bounded chunks, including unused tail."""
+    count=0;peak=0.;error=0.;dt=meta['native']['dt_s']
+    tau=1/(np.sqrt(2)*np.pi*FREQUENCIES[-1]/2.76)
+    t0,tau=float(f'{5*tau:.6e}'),float(f'{tau:.6e}');scale=float(f'{np.sqrt(2*np.e):.8f}')
+    with Path(path).open() as stream:
+        while block:=list(islice(stream,65536)):
+            data=np.loadtxt(block,comments='%',ndmin=2)
+            if data.shape[1]!=2 or not len(data) or not np.isfinite(data).all():raise ValueError('invalid allocated source rows')
+            t=np.arange(count,count+len(data))*dt
+            if not np.allclose(data[:,0],t,rtol=6e-6,atol=dt*1e-6):raise ValueError('wrong native source clock')
+            x=(t-t0)/tau;expected=-scale*x*np.exp(-x*x)
+            peak=max(peak,float(abs(expected).max()));error=max(error,float(abs(data[:,1]-expected).max()));count+=len(data)
+    if count not in (meta['max_timesteps'],meta['max_timesteps']+1) or peak==0 or error/peak>6e-6:
+        raise ValueError('incomplete or incorrect allocated source waveform')
+    return dict(sha256=sha(path),samples=count,waveform_error_rel=error/peak)
+
+
+def required_usage(sim,meta):
+    names=set(meta['solids'])|{e['name'] for e in meta['elements']}|{
+        p.port_props[0].GetName() for p in sim._port_objs}|{f"port_excite_{meta['excited_port']}"}
+    usage={p.GetName():[bool(x.GetPrimitiveUsed()) for x in p.GetAllPrimitives()]
+        for p in sim.csx.GetAllProperties() if p.GetName() in names}
+    if set(usage)!=names:raise ValueError('missing declared operator primitive')
+    return usage
+
+
+def operator_preflight(out,n,port,kind,control,threads):
+    out=Path(out);sim,meta=build(n,port,kind,control,threads)
+    sim.fdtd.SetTimeStep(0.);sim.fdtd.SetNumberOfTimeSteps(OPERATOR_STEPS)
+    sim.fdtd.Write2XML(str(out/'operator-input.xml'))
+    run=sim.run(str(out/'operator'),threads=threads,exact=True,echo=True,setup_only=True)
+    record=dict(setup_only=True,run=run,planned_dt_s=meta['declared_dt_s'],
+        input_sha256=sha(out/'operator-input.xml'),required_usage=required_usage(sim,meta))
+    save(out/'operator.json',record)
+    if not native_bound_ok(meta,record):raise ValueError('native stability/primitive admission failed')
+    return record
+
+
+def native_bound_ok(meta,record):
+    run=record.get('run',{});bound=run.get('timestep_s',0.)
+    expected=set(meta['solids'])|{e['name'] for e in meta['elements']}|{'port_resist_1','port_resist_2',f"port_excite_{meta['excited_port']}"}
+    usage=record.get('required_usage',{})
+    return bool(record.get('setup_only') is True and record.get('planned_dt_s')==meta['declared_dt_s']
+        and isinstance(bound,(int,float)) and not isinstance(bound,bool) and np.isfinite(bound) and bound>0
+        and meta['declared_dt_s']/bound<=.97 and run.get('grid')==meta['grid'] and run.get('threads')==meta['threads']
+        and set(usage)==expected and all(x==[True] for x in usage.values()))
+
+
+def raw_probes(raw,meta):
+    raw=Path(raw);traces={};records={}
+    for name,box in probe_layout(meta).items():
+        path=raw/name;data=np.loadtxt(path,comments='%',ndmin=2)
+        clock=trace_clock(data,meta,box['kind']=='current')
+        with path.open() as stream:header=''.join(islice(stream,3))
+        indices=[list(map(int,x)) for x in re.findall(r'-> \[(\d+),(\d+),(\d+)\]',header)]
+        if indices!=expected_indices(meta,box):raise ValueError(f'changed native probe placement: {name}: {indices}')
+        traces[name]=data;records[name]=dict(sha256=sha(path),indices=indices,**clock)
+    return traces,records
+
+
+def spectra(raw,meta):
+    """Native port postprocessing, cross-checked against direct raw-trace DFT."""
+    sim,_=build(meta['n'],meta['excited_port'],meta['kind'],meta['control'],meta['threads'])
+    v=[];i=[]
+    for p in sim._port_objs:
+        p.CalcPort(str(raw),FREQUENCIES,ref_impedance=R0);v.append(p.uf_tot);i.append(p.if_tot)
+    return np.array(v),np.array(i)
+
+
+def direct_spectra(traces,meta):
+    def transform(name):
+        data=traces[name];t,value=data[:,0],data[:,1]
+        return np.array([2*(t[1]-t[0])*np.sum(value*np.exp(-2j*np.pi*f*t)) for f in FREQUENCIES])
+    return tuple(np.array([sum(transform(name) for name in p[k]) for p in meta['port_names']]) for k in ('voltage','current'))
+
+
+def terminal_energy(traces,meta):
+    """LC-terminal indicator, not a volume integral of electromagnetic energy."""
+    if not meta['elements']:return dict(available=False,end_db=None,tail_window_s=1e-6)
+    clock=next(iter(traces.values()))[:,0];energy=np.zeros(len(clock)-1);clock=clock[:-1]
+    for e in meta['elements']:
+        row=traces[('lc_v_' if e['kind']=='C' else 'lc_i_')+e['name']]
+        value=np.interp(clock,row[:,0],row[:,1])
+        energy+=.5*e['value_si']*value**2
+    tail=energy[clock>=clock[-1]-1e-6];peak=float(energy.max())
+    if peak<=0 or clock[-1]<meta['source_duration_s']+1e-6:raise ValueError('unexcited or truncated LC terminal energy trace')
+    return dict(available=True,end_db=float(10*np.log10(max(float(tail.max())/peak,np.finfo(float).tiny))),
+        tail_window_s=1e-6,peak_j=peak,scope='LC-terminal indicator only; geometric displacement currents remain')
+
+
+def quality(meta):
+    native,run=meta['native'],meta['run'];dt=meta['declared_dt_s'];op=meta['operator_preflight'];h=meta.get('native_header',{})
+    forced=meta['forced_time_control'];energy=meta['terminal_energy']
+    stopped=(not run.get('converged') and native['timesteps']==meta['max_timesteps']) if forced else (
+        run.get('converged') is True and 0<native['timesteps']<meta['max_timesteps'])
+    return {k:bool(v) for k,v in dict(grid=native['cells']==meta['native_cells'] and run.get('grid')==meta['grid'],
+        clock=abs(native['dt_s']/dt-1)<1e-8 and abs(native['numerical_time_s']/(native['timesteps']*dt)-1)<1e-8,
+        operator=native_bound_ok(meta,op),geometry=meta['required_usage']==op['required_usage'],
+        header=h.get('version')=='v0.37.0-rc3' and h.get('threads')==meta['threads'] and h.get('nyquist_interval')==int(1/(2*FREQUENCIES[-1]*dt)),
+        source=native['numerical_time_s']>meta['source_duration_s'],stopping=stopped,
+        terminal_energy=not meta['elements'] or energy['available'] and energy['end_db']<=LIMITS['terminal_energy_end_db']).items()}
+
+
+def native_statistics(raw):
+    stats=np.loadtxt(Path(raw)/'openEMS_stats.txt',comments='%')
+    return dict(cells=int(stats[0]),dt_s=float(stats[1]),timesteps=int(stats[2]),
+        numerical_time_s=float(stats[3]),iteration_wall_s=float(stats[4]))
+
+
+def audit_header(text,meta):
+    if text.count(PROPAGATION_MARKER)!=1:raise ValueError('one marked native propagation required')
+    text=text.split(PROPAGATION_MARKER,1)[1]
+    version=re.search(r'openEMS 64bit -- version (\S+)',text)
+    grid=re.search(r'FDTD simulation size: (\d+)x(\d+)x(\d+) --> (\S+) FDTD cells',text)
+    interval=re.search(r'Exact-endcriteria: evaluating the end criteria every (\d+) timestep',text)
+    if (not version or not grid or not interval or version[1]!='v0.37.0-rc3'
+        or f"fixed number of threads: {meta['threads']}" not in text
+        or list(map(int,grid.groups()[:3]))!=meta['grid'] or float(grid[4])!=float(f"{meta['native_cells']:.6g}")
+        or int(interval[1])!=int(1/(2*FREQUENCIES[-1]*meta['native']['dt_s']))):
+        raise ValueError('native version/grid/threads/end-criterion schedule mismatch')
+    return dict(version=version[1],threads=meta['threads'],nyquist_interval=int(interval[1]))
+
+
+def acquire(out,n,port,kind='filter',control='ordinary',threads=1):
+    out=Path(out);out.mkdir(parents=True,exist_ok=False);sim,meta=build(n,port,kind,control,threads)
+    source,runtime=identity(),runtime_identity();sim.fdtd.Write2XML(str(out/'input.xml'))
+    meta.update(source_sha256=source,runtime=runtime,input_sha256=sha(out/'input.xml'),limits=LIMITS,
+        started_utc=datetime.now(timezone.utc).isoformat())
+    save(out/'declared.json',meta)
+    meta['operator_preflight']=operator_preflight(out,n,port,kind,control,threads)
+    meta['operator_sha256']=sha(out/'operator.json');save(out/'declared.json',meta)
+    if identity()!=source or runtime_identity()!=runtime:raise RuntimeError('source/runtime changed during setup')
+    print(PROPAGATION_MARKER,flush=True);sim.run(str(out/'raw'),threads=threads,exact=True,echo=True,dump_statistics=True)
+    meta.update(native=native_statistics(out/'raw'),native_stats_sha256=sha(out/'raw/openEMS_stats.txt'),
+        run=sim.run_stats,required_usage=required_usage(sim,meta))
+    traces,meta['raw_traces']=raw_probes(out/'raw',meta);v,i=spectra(out/'raw',meta)
+    dv,di=direct_spectra(traces,meta)
+    np.testing.assert_allclose(v,dv,rtol=2e-13,atol=1e-25);np.testing.assert_allclose(i,di,rtol=2e-13,atol=1e-27)
+    np.savez_compressed(out/'waves.npz',frequency_hz=FREQUENCIES,v=v,i=i)
+    meta.update(waves_sha256=sha(out/'waves.npz'),source_trace=source_trace_info(out/'raw/et',meta),
+        terminal_energy=terminal_energy(traces,meta),completed_utc=datetime.now(timezone.utc).isoformat())
+    if identity()!=source or runtime_identity()!=runtime:raise RuntimeError('source/runtime changed during fields')
+    save(out/'report.json',meta);return meta
+
+
+def read(out):
+    out=Path(out);meta=json.loads((out/'report.json').read_text())
+    if meta['source_sha256']!=identity() or meta['runtime']!=runtime_identity() or meta['limits']!=LIMITS:
+        raise ValueError('source/runtime/limits changed; retain separate data epochs')
+    for name,key in (('input.xml','input_sha256'),('operator.json','operator_sha256'),('waves.npz','waves_sha256')):
+        if sha(out/name)!=meta[key]:raise ValueError('changed native input/operator/waves')
+    if sha(out/'raw/openEMS_stats.txt')!=meta['native_stats_sha256'] or native_statistics(out/'raw')!=meta['native']:
+        raise ValueError('changed native statistics')
+    log_path=out.parent/(out.name+'.log');text=log_path.read_text()
+    if sha(log_path)!=meta['native_log_sha256'] or audit_header(text,meta)!=meta['native_header']:raise ValueError('changed native header/log')
+    parsed=_parse_log(text.split(PROPAGATION_MARKER,1)[1],meta['requested_end_db'],meta['max_timesteps'])
+    if any(meta['run'].get(k)!=v for k,v in parsed.items() if k!='log_tail'):raise ValueError('native stopping record differs from raw log')
+    op=json.loads((out/'operator.json').read_text())
+    if op!=meta['operator_preflight'] or sha(out/'operator-input.xml')!=op['input_sha256']:raise ValueError('changed operator admission')
+    _,declared=build(meta['n'],meta['excited_port'],meta['kind'],meta['control'],meta['threads'])
+    if any(meta[k]!=v for k,v in declared.items()):raise ValueError('changed physical geometry')
+    traces,records=raw_probes(out/'raw',meta)
+    if records!=meta['raw_traces'] or source_trace_info(out/'raw/et',meta)!=meta['source_trace'] or terminal_energy(traces,meta)!=meta['terminal_energy']:
+        raise ValueError('changed raw source/probes/energy indicator')
+    with np.load(out/'waves.npz') as data:
+        np.testing.assert_array_equal(data['frequency_hz'],FREQUENCIES);v,i=data['v'].copy(),data['i'].copy()
+    dv,di=direct_spectra(traces,meta)
+    np.testing.assert_allclose(v,dv,rtol=2e-13,atol=1e-25);np.testing.assert_allclose(i,di,rtol=2e-13,atol=1e-27)
+    return meta,v,i,quality(meta)
+
+
+def assemble(v,i):
+    v,i=np.asarray(v,complex),np.asarray(i,complex)
+    if v.shape!=(2,2,len(FREQUENCIES)) or i.shape!=v.shape or not np.isfinite(v).all() or not np.isfinite(i).all():
+        raise ValueError('complete finite two-source terminal waves required')
+    a,b=(v+R0*i)/(2*np.sqrt(R0)),(v-R0*i)/(2*np.sqrt(R0))
+    sv=np.linalg.svd(a.transpose(2,1,0),compute_uv=False)
+    condition=float(np.max(sv[:,0]/np.maximum(sv[:,-1],np.finfo(float).tiny)))
+    floor=float(sv[:,-1].min()/max(sv[:,0].max(),np.finfo(float).tiny))
+    if condition>LIMITS['incident_condition'] or floor<LIMITS['incident_floor']:raise ValueError('unexcited or singular terminal waves')
+    return multiport.assemble_s(a,b,[1,2],2),dict(incident_condition=condition,incident_floor=floor)
+
+
+def response_difference(a,b,mask):
+    if not np.isfinite(a).all() or not np.isfinite(b).all():raise ValueError('finite matrices required')
+    return dict(s_abs=float(abs(a-b).max()),phase_deg=float(abs(np.angle(a[mask,1,0]*b[mask,1,0].conj(),deg=True)).max()) if np.any(mask) else None)
+
+
+def matrix(root):
+    root=Path(root);rows=[read(root/f'port{p}') for p in (1,2)];meta=rows[0][0]
+    keys=('n','kind','control','mesh_mm','declared_dt_s','cap_s','threads','elements')
+    if any(row[0]['excited_port']!=p or any(row[0][k]!=meta[k] for k in keys) for p,row in enumerate(rows,1)):
+        raise ValueError('mixed or reordered source columns')
+    if not all(all(row[3].values()) for row in rows):raise ValueError('refuse S matrix from rejected native sources')
+    s,diag=assemble(np.array([r[1] for r in rows]),np.array([r[2] for r in rows]));target=reference(kind=meta['kind'])
+    mask=abs(target[:,1,0])>=.01;difference=response_difference(s,target,mask)
+    metrics=dict(s_target_abs=difference['s_abs'],**diag,
+        reciprocity_abs=float(abs(s-s.transpose(0,2,1)).max()),singular_power_max=float((np.linalg.svd(s,compute_uv=False)[:,0]**2).max()))
+    if difference['phase_deg'] is not None:metrics['phase_target_deg']=difference['phase_deg']
+    result=dict(n=meta['n'],kind=meta['kind'],control=meta['control'],native_quality=[r[3] for r in rows],**metrics,
+        phase_domain_points=int(mask.sum()),
+        target_passes=all(v>=LIMITS[k] if k=='incident_floor' else v<=LIMITS[k] for k,v in metrics.items()),qualified=False)
+    values=dict(frequency_hz=FREQUENCIES,s=s,reference=target)
+    mp,cp=root/'matrix.npz',root/'comparison.json'
+    if mp.exists() or cp.exists():
+        if not mp.exists() or not cp.exists():raise ValueError('incomplete previous matrix analysis')
+        with np.load(mp) as prior:
+            if set(prior)!=set(values):raise ValueError('changed stored matrix keys')
+            for k,v in values.items():np.testing.assert_array_equal(prior[k],v)
+        if json.loads(cp.read_text())!=result:raise ValueError('changed stored comparison')
+    else:np.savez_compressed(mp,**values);save(cp,result)
+    return s,result
