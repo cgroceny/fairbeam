@@ -248,9 +248,9 @@ class StubMeasurementTests(unittest.TestCase):
 
     def test_native_header_is_checked_after_marker(self):
         _,_,m=f.build(2,1);x,y,z=m['grid']
-        text=f'{f.PROPAGATION_MARKER}\nopenEMS 64bit -- version v0.37.0-rc3\nfixed number of threads: 4\nFDTD simulation size: {x}x{y}x{z} --> {m["native_cells"]} FDTD cells'
-        self.assertEqual(f.audit_header(text,m)['threads'],4)
-        for bad in (text.replace('threads: 4','threads: 8'),text+f.PROPAGATION_MARKER,text.replace('v0.37.0-rc3','unknown')):
+        text=f'{f.PROPAGATION_MARKER}\nopenEMS 64bit -- version v0.37.0-rc3\nfixed number of threads: {f.THREADS}\nFDTD simulation size: {x}x{y}x{z} --> {m["native_cells"]} FDTD cells'
+        self.assertEqual(f.audit_header(text,m)['threads'],f.THREADS)
+        for bad in (text.replace(f'threads: {f.THREADS}','threads: 8'),text+f.PROPAGATION_MARKER,text.replace('v0.37.0-rc3','unknown')):
             with self.assertRaises(ValueError):f.audit_header(bad,m)
 
 
