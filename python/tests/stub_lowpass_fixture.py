@@ -158,7 +158,10 @@ def mesh_lines(n,control='ordinary'):
     x=np.r_[xbody[0]-maximum*np.arange(8,0,-1),xbody,xbody[-1]+maximum*np.arange(1,9)]
     yanchors=[-air-8*maximum,-air,0.,air,air+8*maximum]
     for width in [d['feed']['width_mm'],d['unit']['width_mm']]:
-        edge=width/2;small=min(delta,width/n)
+        # A wide feed's coarse bracket can be split by the neighbouring-cell
+        # balancer and invert the requested thirds offset. Use the same fine
+        # edge spacing at both strip widths; these brackets then survive it.
+        edge=width/2;small=min(delta,d['unit']['width_mm']/n)
         for sign in (-1,1):yanchors.extend((sign*(edge-small/3),sign*(edge+2*small/3)))
     yanchors.extend(s['length_mm'] for s in d['stubs'])
     ymax=max(yanchors)+air+8*maximum

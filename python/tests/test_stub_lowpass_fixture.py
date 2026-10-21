@@ -170,6 +170,19 @@ class StubReferenceTests(unittest.TestCase):
 
 
 class StubGeometryTests(unittest.TestCase):
+    def test_balancing_preserves_each_positive_and_negative_metal_edge_thirds(self):
+        dims=f.dimensions()
+        for n in f.MESHES:
+            for control in ('ordinary','boundary'):
+                y=f.mesh_lines(n,control)[1]
+                for width in (dims['feed']['width_mm'],dims['unit']['width_mm']):
+                    for sign in (-1,1):
+                        edge=sign*width/2
+                        self.assertFalse(np.any(abs(y-edge)<1e-12))
+                        lo,hi=y[y<edge][-1],y[y>edge][0]
+                        inside_fraction=(edge-lo)/(hi-lo) if sign>0 else (hi-edge)/(hi-lo)
+                        self.assertAlmostEqual(inside_fraction,1/3,places=11)
+
     def test_neighbour_growth_and_pml_normal_cells_are_bounded(self):
         for n in f.MESHES:
             for control in ('ordinary','boundary'):

@@ -171,7 +171,8 @@ def acquire(out,n=2,kind='filter',control='ordinary',rate=20.,resume_rejected=Fa
             report.update(native_header=f.audit_header((out/f'port{port}.log').read_text(),report),native_log_sha256=f.sha(out/f'port{port}.log'))
             f.save(folder/'report.json',report);read(folder)
         if f.sha(Path(__file__))!=state['analysis_source_sha256']:raise ValueError('analysis driver changed during acquisition')
-        _,result=matrix(out);state.update(status='complete_with_known_deviation' if not result['native_complete'] else 'complete',result=result)
+        _,result=matrix(out);state.update(status='complete_with_known_deviation' if not result['native_complete'] else 'complete',
+                                        native_complete=result['native_complete'],result=result)
     except BaseException as error:state.update(status='rejected',reason=repr(error));raise
     finally:
         unchanged=all(f.sha(out/name)==value for name,value in original.items())
