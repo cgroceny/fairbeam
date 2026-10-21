@@ -31,7 +31,7 @@ CONTROLS=('ordinary','time','dt','enclosure','scale')
 THREAD_CHOICES=(1,4)
 CAP_S, END_DB, OVERSAMPLING = 65e-6,-100.,16
 OPERATOR_STEPS=1024
-PROTOCOL='composite-lc-filter-v2'
+PROTOCOL='composite-lc-filter-v3'
 PROPAGATION_MARKER='FAIRBEAM-COMPOSITE-LC-PROPAGATION-BEGIN'
 SCOPE=('Own positive-L/C image-filter circuit in a finite PEC enclosure, '
        'two native 75-ohm terminal ports. Intrinsic finite-geometry parasitics '
@@ -426,12 +426,19 @@ def response_difference(a,b,mask):
     return dict(s_abs=float(abs(a-b).max()),phase_deg=float(abs(np.angle(a[mask,1,0]*b[mask,1,0].conj(),deg=True)).max()) if np.any(mask) else None)
 
 
-def matrix(root):
+def admissible_source(meta,quality,allow_cap_diagnostic=False):
+    if all(quality.values()):return True
+    return bool(allow_cap_diagnostic and {k for k,v in quality.items() if not v}=={'stopping'}
+        and not meta['fixed_window'] and meta['native']['timesteps']==meta['max_timesteps']
+        and meta['run'].get('converged') is False)
+
+
+def matrix(root,allow_cap_diagnostic=False):
     root=Path(root);rows=[read(root/f'port{p}') for p in (1,2)];meta=rows[0][0]
     keys=('n','kind','control','mesh_mm','declared_dt_s','cap_s','threads','elements')
     if any(row[0]['excited_port']!=p or any(row[0][k]!=meta[k] for k in keys) for p,row in enumerate(rows,1)):
         raise ValueError('mixed or reordered source columns')
-    if not all(all(row[3].values()) for row in rows):raise ValueError('refuse S matrix from rejected native sources')
+    if not all(admissible_source(row[0],row[3],allow_cap_diagnostic) for row in rows):raise ValueError('refuse S matrix from rejected native sources')
     s,diag=assemble(np.array([r[1] for r in rows]),np.array([r[2] for r in rows]));target=reference(kind=meta['kind'])
     mask=abs(target[:,1,0])>=.01;difference=response_difference(s,target,mask)
     metrics=dict(s_target_abs=difference['s_abs'],**diag,
@@ -439,9 +446,11 @@ def matrix(root):
     if difference['phase_deg'] is not None:metrics['phase_target_deg']=difference['phase_deg']
     result=dict(n=meta['n'],kind=meta['kind'],control=meta['control'],native_quality=[r[3] for r in rows],**metrics,
         phase_domain_points=int(mask.sum()),
-        target_passes=all(v>=LIMITS[k] if k=='incident_floor' else v<=LIMITS[k] for k,v in metrics.items()),qualified=False)
+        target_passes=all(v>=LIMITS[k] if k=='incident_floor' else v<=LIMITS[k] for k,v in metrics.items()),
+        native_complete=all(all(row[3].values()) for row in rows),allow_cap_diagnostic=allow_cap_diagnostic,qualified=False)
     values=dict(frequency_hz=FREQUENCIES,s=s,reference=target)
-    mp,cp=root/'matrix.npz',root/'comparison.json'
+    prefix='cap-diagnostic-' if allow_cap_diagnostic else ''
+    mp,cp=root/(prefix+'matrix.npz'),root/(prefix+'comparison.json')
     if mp.exists() or cp.exists():
         if not mp.exists() or not cp.exists():raise ValueError('incomplete previous matrix analysis')
         with np.load(mp) as prior:

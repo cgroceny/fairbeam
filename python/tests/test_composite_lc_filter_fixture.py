@@ -5,6 +5,7 @@ python -m unittest tests.test_composite_lc_filter_fixture -q
 python -m tests.test_composite_lc_filter_fixture --preflight --out C:/study/lc-plan-fresh
 python -m tests.test_composite_lc_filter_fixture --fdtd --mesh 1 --kind through --out C:/study/lc-fresh/n1_through
 python -m tests.test_composite_lc_filter_fixture --fdtd --mesh 1 --out C:/study/lc-fresh/n1_filter
+python -m tests.test_composite_lc_filter_fixture --fdtd --allow-cap-diagnostic --out C:/study/lc-diagnostic-fresh/n1_filter
 python -m tests.test_composite_lc_filter_fixture --study --out C:/study/lc-fresh
 
 Rate and I/O forecasts do not override the 30-minute owned worker deadline.
@@ -18,7 +19,6 @@ import sys
 import tempfile
 import time
 from pathlib import Path
-import re
 import subprocess
 import unittest
 from unittest.mock import Mock,patch
@@ -59,14 +59,14 @@ def audit_header(text,meta):
     return f.audit_header(text,meta)
 
 
-def acquire_serial(out,n=1,kind='filter',control='ordinary',threads=1,rate=85.,io=40.):
+def acquire_serial(out,n=1,kind='filter',control='ordinary',threads=1,rate=85.,io=40.,allow_cap_diagnostic=False):
     out=Path(out).resolve()
     if out.exists():raise ValueError('fresh cohort directory required')
     _,meta=f.build(n,1,kind,control,threads);estimate=forecast(meta,rate,io)
     if estimate>1800:raise ValueError(f'forecast {estimate/60:.2f} min exceeds 30; defer this case')
     out.mkdir(parents=True,exist_ok=False)
     progress=dict(status='prepared',source=f.identity(),runtime=f.runtime_identity(),ports=[],qualified=False,
-        estimated_seconds_per_source=estimate,rate_mcps=rate,io_s_per_mstep=io,active_launcher_pid=None)
+        estimated_seconds_per_source=estimate,rate_mcps=rate,io_s_per_mstep=io,active_launcher_pid=None,allow_cap_diagnostic=allow_cap_diagnostic)
     f.save(out/'progress.json',progress)
     try:
         for port in (1,2):
@@ -90,8 +90,8 @@ def acquire_serial(out,n=1,kind='filter',control='ordinary',threads=1,rate=85.,i
             report.update(native_header=audit_header((out/f'port{port}.log').read_text(),report),
                 native_log_sha256=f.sha(out/f'port{port}.log'));f.save(folder/'report.json',report)
             meta,_,_,quality=f.read(folder);progress['ports'].append(dict(port=port,quality=quality))
-            if not all(quality.values()):raise ValueError(f'rejected native source: {quality}')
-        _,result=f.matrix(out);progress.update(status='complete',result=result)
+            if not f.admissible_source(meta,quality,allow_cap_diagnostic):raise ValueError(f'rejected native source: {quality}')
+        _,result=f.matrix(out,allow_cap_diagnostic);progress.update(status='complete' if result['native_complete'] else 'complete_with_known_deviation',result=result)
     except BaseException as error:
         progress.update(status='rejected',reason=repr(error));raise
     finally:
@@ -99,12 +99,12 @@ def acquire_serial(out,n=1,kind='filter',control='ordinary',threads=1,rate=85.,i
     return result
 
 
-def study(root):
+def study(root,allow_cap_diagnostic=False):
     root=Path(root);cohorts=[];data={};missing=[];rejected=[]
     for name,n,kind,control in configurations():
         folder=root/name
         if not all((folder/f'port{p}/report.json').is_file() for p in (1,2)):missing.append(name);continue
-        try:s,result=f.matrix(folder)
+        try:s,result=f.matrix(folder,allow_cap_diagnostic)
         except (ValueError,AssertionError,FileNotFoundError) as error:rejected.append(dict(name=name,reason=repr(error)));continue
         data[name]=s;cohorts.append(dict(name=name,**result))
     meshes=[];controls={};mask=abs(f.reference()[:,1,0])>=.01
@@ -126,7 +126,7 @@ def study(root):
     # just a complex-S tolerance. Those application gates are deliberately not
     # certified by this first research fixture.
     return dict(scope=f.SCOPE,limits=f.LIMITS,cohorts=cohorts,missing=missing,rejected=rejected,
-        mesh_changes=meshes,controls=controls,application_resolution_qualified=False,qualified=False)
+        mesh_changes=meshes,controls=controls,allow_cap_diagnostic=allow_cap_diagnostic,application_resolution_qualified=False,qualified=False)
 
 
 class CompositeReferenceTests(unittest.TestCase):
@@ -308,6 +308,41 @@ class CompositeAdmissionTests(unittest.TestCase):
         changed=deepcopy(ordinary);changed['operator_preflight']['run']['timestep_s']=ordinary['declared_dt_s']*.9
         self.assertFalse(f.quality(changed)['operator'])
 
+    def test_cap_diagnostic_is_explicit_and_preserves_the_failed_gate(self):
+        meta=self.valid();meta['native'].update(timesteps=meta['max_timesteps'],numerical_time_s=meta['max_timesteps']*meta['declared_dt_s'])
+        meta['run']['converged']=False;q=f.quality(meta)
+        self.assertFalse(q['stopping']);self.assertFalse(f.admissible_source(meta,q))
+        self.assertTrue(f.admissible_source(meta,q,True));self.assertFalse(q['stopping'])
+        for key in ('source','operator','terminal_energy','clock','geometry','header'):
+            bad=dict(q);bad[key]=False;self.assertFalse(f.admissible_source(meta,bad,True))
+        meta['native']['timesteps']-=1;self.assertFalse(f.admissible_source(meta,q,True))
+
+    def test_cap_diagnostic_does_not_accept_an_incomplete_forced_window(self):
+        meta=self.valid('time');meta['native']['timesteps']-=1
+        q=f.quality(meta);self.assertFalse(f.admissible_source(meta,q,True))
+
+    def test_diagnostic_matrix_stays_separate_and_cannot_be_qualified(self):
+        s=f.reference();incoming=np.broadcast_to(np.eye(2),(len(f.FREQUENCIES),2,2));outgoing=s@incoming
+        v=(np.sqrt(f.R0)*(incoming+outgoing)).transpose(2,1,0);i=((incoming-outgoing)/np.sqrt(f.R0)).transpose(2,1,0)
+        def source(folder):
+            index=int(folder.name[-1])-1;meta=self.valid();meta['excited_port']=index+1
+            if index:
+                for usage in (meta['required_usage'],meta['operator_preflight']['required_usage']):
+                    usage['port_excite_2']=usage.pop('port_excite_1')
+            meta['native'].update(timesteps=meta['max_timesteps'],numerical_time_s=meta['max_timesteps']*meta['declared_dt_s'])
+            meta['run']['converged']=False
+            return meta,v[index],i[index],f.quality(meta)
+        with tempfile.TemporaryDirectory() as tmp,patch.object(f,'read',side_effect=source):
+            root=Path(tmp)
+            with self.assertRaises(ValueError):f.matrix(root)
+            _,result=f.matrix(root,True)
+            self.assertTrue(result['target_passes']);self.assertFalse(result['native_complete']);self.assertFalse(result['qualified'])
+            self.assertTrue((root/'cap-diagnostic-matrix.npz').exists());self.assertFalse((root/'matrix.npz').exists())
+            f.matrix(root,True)  # Exact idempotent replay of the stored diagnostic.
+            saved=json.loads((root/'cap-diagnostic-comparison.json').read_text());saved['qualified']=True
+            f.save(root/'cap-diagnostic-comparison.json',saved)
+            with self.assertRaises(ValueError):f.matrix(root,True)
+
     def test_native_header_requires_correct_threads_and_schedule(self):
         meta=self.valid();text=f.PROPAGATION_MARKER+'\nopenEMS 64bit -- version v0.37.0-rc3\nfixed number of threads: 1\nFDTD simulation size: 33x9x7 --> 2079 FDTD cells\nExact-endcriteria: evaluating the end criteria every '+str(meta['native_header']['nyquist_interval'])+' timestep(s)'
         self.assertEqual(audit_header(text,meta),meta['native_header'])
@@ -343,11 +378,12 @@ def main():
     p.add_argument('--kind',choices=f.KINDS,default='filter');p.add_argument('--control',choices=f.CONTROLS,default='ordinary')
     p.add_argument('--port',type=int,choices=(1,2),default=1);p.add_argument('--threads',type=int,choices=f.THREAD_CHOICES,default=1)
     p.add_argument('--rate-mcps',type=float,default=85.);p.add_argument('--io-s-per-mstep',type=float,default=40.)
+    p.add_argument('--allow-cap-diagnostic',action='store_true',help='retain only complete-source timestep-cap deviations in separate files; never qualifies them')
     a=p.parse_args()
     if a.worker:f.acquire(a.out,a.mesh,a.port,a.kind,a.control,a.threads);return
     if a.preflight:result=preflight(a.out,a.rate_mcps,a.io_s_per_mstep,a.threads)
-    elif a.fdtd:result=acquire_serial(a.out,a.mesh,a.kind,a.control,a.threads,a.rate_mcps,a.io_s_per_mstep)
-    else:result=study(a.out);f.save(a.out/'study.json',result)
+    elif a.fdtd:result=acquire_serial(a.out,a.mesh,a.kind,a.control,a.threads,a.rate_mcps,a.io_s_per_mstep,a.allow_cap_diagnostic)
+    else:result=study(a.out,a.allow_cap_diagnostic);f.save(a.out/('cap-diagnostic-study.json' if a.allow_cap_diagnostic else 'study.json'),result)
     print(json.dumps(result,indent=2,allow_nan=False))
 
 
