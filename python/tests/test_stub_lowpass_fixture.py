@@ -161,6 +161,13 @@ class StubReferenceTests(unittest.TestCase):
             with self.assertRaises(ValueError):f.reference(values)
         with self.assertRaises(ValueError):f.reference(kind='invented')
 
+    def test_application_metrics_do_not_infer_resolution_from_point_agreement(self):
+        target=f.reference();row=f.application_errors(target,target)
+        self.assertEqual(row['attenuation_db'],0.);self.assertEqual(row['group_delay_rel'],0.)
+        self.assertFalse(row['independent_resolution_confirmed']);self.assertAlmostEqual(row['edge_rel'],0.)
+        changed=target.copy();changed[:,1,0]*=.9;bad=f.application_errors(changed,target)
+        self.assertGreater(bad['attenuation_db'],f.LIMITS['attenuation_db'])
+
 
 class StubGeometryTests(unittest.TestCase):
     def test_all_grids_increase_and_native_cells_are_allocation_not_intervals(self):

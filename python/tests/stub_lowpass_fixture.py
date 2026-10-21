@@ -28,7 +28,7 @@ FREQUENCIES=np.linspace(1e9,6e9,501)
 MESHES=(2,3,4)
 CONTROLS=('ordinary','time','dt','boundary','plane')
 KINDS=('through','filter')
-CAP_S,END_DB,OVERSAMPLING,THREADS=8e-9,-90.,4,1
+CAP_S,END_DB,OVERSAMPLING,THREADS=6e-9,-90.,4,4
 OPERATOR_STEPS=1024
 PROTOCOL='microstrip-stub-lowpass-v1'
 PROPAGATION_MARKER='FAIRBEAM-STUB-LOWPASS-PROPAGATION-BEGIN'
@@ -141,7 +141,14 @@ def mesh_lines(n,control='ordinary'):
         for sign in (-1,1):yanchors.extend((sign*(edge-small/3),sign*(edge+2*small/3)))
     yanchors.extend(s['length_mm'] for s in d['stubs'])
     ymax=max(yanchors)+air+8*maximum
-    y=_axis(yanchors+[ymax],min(delta,d['unit']['width_mm']/n),maximum)
+    # Resolve the narrow unit strip locally; do not repeat its tiny spacing
+    # throughout remote air intervals. Physical anchors/dimensions stay fixed.
+    yparts=[];ya=np.unique(yanchors+[ymax])
+    for lo,hi in zip(ya[:-1],ya[1:]):
+        distance=0. if lo<=0<=hi else min(abs(lo),abs(hi))
+        first=min(delta,max(d['unit']['width_mm']/n,distance/3))
+        yparts.extend(_axis([lo,hi],first,maximum))
+    y=np.unique(yparts)
     z=np.r_[np.linspace(0.,HEIGHT,n+1),HEIGHT+graded(air,delta,maximum)[1:],
             HEIGHT+air+maximum*np.arange(1,9)]
     return x,y,z
@@ -392,16 +399,47 @@ def difference(a,b):
     return dict(s_abs=float(abs(a-b).max()),phase_deg=float(np.max(abs(np.angle(a[mask,1,0]/b[mask,1,0],deg=True)))))
 
 
+def application_errors(actual,target):
+    """Prospective point/derivative metrics; no dynamic-range certificate."""
+    a,b=np.asarray(actual),np.asarray(target)
+    shape=(len(FREQUENCIES),2,2)
+    if a.shape!=shape or b.shape!=shape or not np.isfinite(a).all() or not np.isfinite(b).all():
+        raise ValueError('complete finite sampled matrices required')
+    magnitude_a,magnitude_b=abs(a[:,1,0]),abs(b[:,1,0]);domain=magnitude_b>=.01
+    if not domain.any() or np.any(magnitude_a[domain]<=0):raise ValueError('finite nonzero transmission domain required')
+    loss_a=-20*np.log10(np.maximum(magnitude_a,np.finfo(float).tiny));loss_b=-20*np.log10(np.maximum(magnitude_b,np.finfo(float).tiny))
+    band=FREQUENCIES<=FC
+    ripple=float(abs(np.ptp(loss_a[band])-np.ptp(loss_b[band])))
+    def edge(loss):
+        candidates=[]
+        for j in range(len(loss)-1):
+            if .9*FC<=FREQUENCIES[j] and FREQUENCIES[j+1]<=1.1*FC and loss[j]<=RIPPLE<loss[j+1]:
+                fraction=(RIPPLE-loss[j])/(loss[j+1]-loss[j])
+                candidates.append(float(FREQUENCIES[j]+fraction*(FREQUENCIES[j+1]-FREQUENCIES[j])))
+        return candidates[-1] if candidates else None
+    ea,eb=edge(loss_a),edge(loss_b)
+    gd_a=-np.gradient(np.unwrap(np.angle(a[:,1,0])),FREQUENCIES)/(2*np.pi)
+    gd_b=-np.gradient(np.unwrap(np.angle(b[:,1,0])),FREQUENCIES)/(2*np.pi)
+    gd_domain=domain.copy();gd_domain[[0,-1]]=False;gd_domain&=abs(gd_b)>1e-12
+    gd=float(np.max(abs(gd_a[gd_domain]-gd_b[gd_domain])/abs(gd_b[gd_domain]))) if gd_domain.any() else None
+    return dict(attenuation_db=float(np.max(abs(loss_a[domain]-loss_b[domain]))),ripple_db=ripple,
+        edge_rel=float(abs(ea-eb)/eb) if ea is not None and eb is not None else None,
+        native_edge_hz=ea,reference_edge_hz=eb,group_delay_rel=gd,finite_db_domain_points=int(domain.sum()),
+        independent_resolution_confirmed=False)
+
+
 def matrix(root):
     root=Path(root);records=[read(root/f'port{p}') for p in (1,2)];metas=[m for m,_ in records]
     if any(m['excited_port']!=p or m['n']!=metas[0]['n'] or m['kind']!=metas[0]['kind'] or m['control']!=metas[0]['control'] for p,m in enumerate(metas,1)):
         raise ValueError('same mesh/model/control and distinct source columns required')
     data=[d for _,d in records];s,diag=extract(np.array([d['v'] for d in data]),np.array([d['i'] for d in data]))
     target=reference(kind=metas[0]['kind'],plane_mm=metas[0]['plane_mm']);err=difference(s,target)
+    apps=application_errors(s,target) if metas[0]['kind']=='filter' else None
     reciprocity=float(abs(s-s.transpose(0,2,1)).max());power=float((np.linalg.svd(s,compute_uv=False)[:,0]**2).max())
     result=dict(n=metas[0]['n'],kind=metas[0]['kind'],control=metas[0]['control'],**err,
         contour_s_abs=diag['contour_s_abs'],recurrence_rel=diag['recurrence_rel'],reciprocity_abs=reciprocity,singular_power_max=power,
         incident_condition=diag['incident_condition'],incident_floor=diag['incident_floor'],qualified=False,
+        application_errors=apps,
         target_passes=err['s_abs']<=LIMITS['s_target_abs'] and err['phase_deg']<=LIMITS['phase_target_deg'],
         measurement_passes=diag['contour_s_abs']<=LIMITS['contour_s_abs'] and diag['recurrence_rel']<=LIMITS['recurrence_rel'] and reciprocity<=LIMITS['reciprocity_abs'] and power<=LIMITS['singular_power_max'])
     values=dict(frequency_hz=FREQUENCIES,s=s,reference=target,**diag)
