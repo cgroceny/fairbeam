@@ -135,7 +135,13 @@ def reference(freq=FREQUENCIES, kind='filter', plane_mm=6., loss='pec'):
     den = a+b/Z0+c*Z0+d
     s = np.empty_like(t)
     s[:, 0, 0], s[:, 1, 1] = (a+b/Z0-c*Z0-d)/den, (-a+b/Z0-c*Z0+d)/den
-    s[:, 1, 0], s[:, 0, 1] = 2/den, 2*(a*d-b*c)/den
+    # Every declared ideal reciprocal section has determinant one:
+    # (diagonal/cross)^2 - ((diagonal^2-cross^2)/cross)/cross = 1,
+    # and each matched feed has cos(theta)^2 + sin(theta)^2 = 1.
+    # Their cascade therefore has S12 = S21 = 2/den. Recomputing a*d-b*c
+    # subtracts large near-equal products in the stopband and loses digits.
+    # This is an analytic reference identity, never a correction to measured S.
+    s[:, 1, 0] = s[:, 0, 1] = 2/den
     return s
 
 
