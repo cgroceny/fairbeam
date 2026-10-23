@@ -151,6 +151,21 @@ try {
     assert.equal(await copy(), copied, 'returning to the same loaded object retains its applied settings');
     const visual = await page.evaluate(auditInPage, panel); assert.deepEqual(visual, []);
     await page.screenshot({ path: join(out, `processed-${lang}.png`) });
+    const ownScroll = await page.$eval('.dw-result .port-result-body', async body => {
+      body.scrollTop = body.scrollHeight;
+      await new Promise(resolve => requestAnimationFrame(resolve));
+      const bounds = body.getBoundingClientRect(), svg = body.querySelector('.chart-stack .chart > svg');
+      const plot = svg.getBoundingClientRect();
+      return { scrollTop: body.scrollTop, scrollHeight: body.scrollHeight, clientHeight: body.clientHeight,
+        plotVisible: plot.top >= bounds.top - 1 && plot.bottom <= bounds.bottom + 1 && plot.left >= bounds.left - 1 && plot.right <= bounds.right + 1,
+        paths: [...svg.querySelectorAll('path.c-line')].map(p => ({ d: p.getAttribute('d'), width: p.getBoundingClientRect().width })) };
+    });
+    assert.ok(ownScroll.scrollTop > 0 && ownScroll.scrollHeight > ownScroll.clientHeight, 'expanded port settings leave an independently scrollable result area');
+    assert.ok(ownScroll.plotVisible, 'entire processed plot is reachable above the dock');
+    assert.equal(ownScroll.paths.length, 6, 'all three selected Re/Im pairs remain plotted');
+    assert.ok(ownScroll.paths.every(p => p.width > 20 && p.d.includes('L') && !/NaN|Infinity/.test(p.d)), 'reachable processed traces have finite visible paths');
+    await page.screenshot({ path: join(out, `processed-scrolled-${lang}.png`) });
+    await page.$eval('.dw-result .port-result-body', body => { body.scrollTop = 0; });
     // Same actual panel, real mixed-mode basis. Physical IDs 7,19 map to original
     // canonical indices 1,3; D1's expected value is an explicit independent sum.
     await fillNamed('port-mixed-pairs','7,19');
@@ -198,7 +213,7 @@ try {
     outcomes.push({ lang, physicalPorts: circuit.physical_ports, targetOhm: 75, delayPs: delays, copied,
       csv: csv.name, touchstone: ts.name, mixedTouchstone:modalFile.name, complexExportRefused:true,
       mixedPhysicalMapping:true, overlappingPairsRefused:true, complexSmithVswrUnavailable:true,
-      invalidRefused: true, incompleteRefused: true, identityIsolated: true, rawUnchanged: true, visual });
+      invalidRefused: true, incompleteRefused: true, identityIsolated: true, rawUnchanged: true, visual, ownScroll });
     await context.close();
   }
   await writeFile(join(out, 'result.json'), JSON.stringify({ outcomes, forbidden, syntheticOnly: true, speechTested: false }, null, 2));
