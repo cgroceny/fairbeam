@@ -35,6 +35,25 @@ const stack = await startStack({ log: console.log });
 let browser;
 let failed = false;
 const outcomes = [];
+async function visibleDelayPlot(page, scope, count) {
+  const measured = await page.$eval(scope, node => {
+    const svg = node.querySelector('svg'), frame = svg?.getBoundingClientRect();
+    const paths = [...node.querySelectorAll('path.c-line')].map(path => {
+      const d = path.getAttribute('d') ?? '', box = path.getBoundingClientRect();
+      return { d, width: box.width, length: path.getTotalLength(),
+        visible: !!frame && box.left >= frame.left - 1 && box.right <= frame.right + 1 && box.top >= frame.top - 1 && box.bottom <= frame.bottom + 1 };
+    });
+    const ticks = [...node.querySelectorAll('text.c-tick[text-anchor="end"]')].map(tick => ({ text: tick.textContent, y: Number(tick.getAttribute('y')) }));
+    return { paths, ticks };
+  });
+  assert.equal(measured.paths.length, count, `${scope}: all expected delay traces are plotted`);
+  for (const p of measured.paths) {
+    assert.ok(p.d.includes('L') && !/NaN|Infinity/.test(p.d), `${scope}: finite connected SVG path`);
+    assert.ok(p.width > 20 && Number.isFinite(p.length) && p.length > 20 && p.visible, `${scope}: trace is visible inside the chart`);
+  }
+  assert.ok(measured.ticks.length >= 2 && measured.ticks.every(t => Number.isFinite(t.y) && !/NaN|Infinity/.test(t.text)), `${scope}: visible finite y-axis ticks`);
+  return measured;
+}
 try {
   browser = await puppeteer.launch({ headless: true, executablePath: await chromePath(), args: ['--no-sandbox', '--enable-unsafe-swiftshader', '--use-angle=swiftshader'] });
   for (const lang of ['en', 'tr']) {
@@ -95,6 +114,7 @@ try {
     await page.waitForFunction(async () => (await navigator.clipboard.readText()).includes('Reference 0.6 ns'));
     rows = await readRows(); assert.equal(rows[0].length, 3); assert.equal(rows[1][2], '');
     for (const row of rows.slice(1)) for (const value of row.slice(1)) if (value !== '') assert.ok(Math.abs(Number(value) - .6) < 1e-10);
+    const examplesPlot = await visibleDelayPlot(page, '.dock .chart-stack', 2);
     await page.screenshot({ path: join(out, `examples-group-delay-${lang}.png`) });
     assert.deepEqual(await page.evaluate(auditInPage, '.dock .chart-stack'), []);
     await s.ev((_, m) => m.c.setPinned([]), null, { c: '/src/compare/store.ts' });
@@ -118,10 +138,11 @@ try {
     await s.click('results.toolbar.copyData', { within: '.dw-result' });
     await page.waitForFunction(async () => (await navigator.clipboard.readText()).includes('τg S11'));
     rows = await readRows(); rows.slice(1).forEach(row => assert.ok(Math.abs(Number(row[1]) - .6) < 1e-10));
+    const designerPlot = await visibleDelayPlot(page, '.dw-result .chart-stack', 1);
     await page.screenshot({ path: join(out, `designer-group-delay-${lang}.png`) });
     assert.deepEqual(await page.evaluate(auditInPage, '.dw-result .chart-stack'), []);
     assert.deepEqual(blockedStarts, [], 'post-processing never starts solver, study or render work');
-    outcomes.push({ lang, examples: true, designer: true, comparison: true, table: true, clipboard: true, aperture: true, attemptedStarts: blockedStarts });
+    outcomes.push({ lang, examples: true, designer: true, comparison: true, table: true, clipboard: true, aperture: true, examplesPlot, designerPlot, attemptedStarts: blockedStarts });
     await context.close();
   }
   await writeFile(join(out, 'result.json'), JSON.stringify(outcomes, null, 2));

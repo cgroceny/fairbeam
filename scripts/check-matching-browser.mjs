@@ -74,13 +74,27 @@ try {
     assert.equal(await page.$eval('.matching-enable input', e => e.checked), false, 'view changes reset what-if state');
     await page.locator('.matching-enable input').click(); await s.wait('.matching-chart');
     assert.equal(await page.$$eval('.rdk-split > .chart path.c-line', es => es.filter(e => e.getAttribute('d')).length), 2, 'Smith contains original and ideal traces');
+    const ownScroll = await page.$eval('.matching-panel', async panel => {
+      const side = panel.closest('.rdk-side'); side.scrollTop = side.scrollHeight;
+      await new Promise(resolve => requestAnimationFrame(resolve));
+      const bounds = side.getBoundingClientRect(), chart = panel.querySelector('.matching-chart').getBoundingClientRect();
+      const note = panel.lastElementChild.getBoundingClientRect();
+      return { scrollTop: side.scrollTop, scrollHeight: side.scrollHeight, clientHeight: side.clientHeight,
+        chartVisible: chart.top >= bounds.top - 1 && chart.bottom <= bounds.bottom + 1,
+        finalNoteVisible: note.top >= bounds.top - 1 && note.bottom <= bounds.bottom + 1,
+        paths: [...panel.querySelectorAll('.matching-chart path.c-line')].map(p => ({ d: p.getAttribute('d'), width: p.getBoundingClientRect().width })) };
+    });
+    assert.ok(ownScroll.scrollTop > 0 && ownScroll.scrollHeight > ownScroll.clientHeight, 'matching panel scrolls inside its own result area');
+    assert.ok(ownScroll.chartVisible && ownScroll.finalNoteVisible, 'entire matching chart and reference-plane note are reachable without dock overlap');
+    assert.equal(ownScroll.paths.length, 2);
+    assert.ok(ownScroll.paths.every(p => p.width > 20 && p.d.includes('L') && !/NaN|Infinity/.test(p.d)), 'reachable overlay contains two finite visible traces');
     await page.screenshot({ path: join(out, `matching-smith-${lang}.png`) });
     const noPhase = fixture(); noPhase.model.id = b.model.id; noPhase.reference = { label: 'Magnitude only', phaseKnown: false };
     await show('impedance', noPhase); await s.wait('[data-matching-unavailable]'); await s.gone('.matching-enable');
     await show('impedance'); await s.wait('.matching-enable input');
     assert.equal(await page.$eval('.matching-enable input', e => e.checked), false, 'new result does not inherit prior circuit');
     assert.deepEqual(starts, []);
-    results.push({ lang, impedance: true, smith: true, line: true, magnitudeOnlyRefused: true, reset: true, attemptedStarts: starts });
+    results.push({ lang, impedance: true, smith: true, line: true, magnitudeOnlyRefused: true, reset: true, ownScroll, attemptedStarts: starts });
     await context.close(); activePage = undefined;
   }
   await writeFile(join(out, 'matching-result.json'), JSON.stringify(results, null, 2));
