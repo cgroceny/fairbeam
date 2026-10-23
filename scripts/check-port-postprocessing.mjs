@@ -11,6 +11,9 @@ import { mismatchAt } from '../src/lib/farfieldQuantity.ts';
 import { activeResultDataTable, resultDataTable } from '../src/designer/resultData.ts';
 import { parseTouchstoneNPort, touchstoneNPort, touchstoneS1p } from '../src/export/touchstone.ts';
 import { exportResultTouchstone } from '../src/designer/resultTouchstone.ts';
+import { validateBundle } from '../src/lib/validate.ts';
+import { matchesResultIndex } from '../src/lib/resultIdentity.ts';
+import { portProcessingBrowserFixture } from './fixtures/port-postprocessing-browser.mjs';
 
 let checks = 0;
 function near(a, b, eps = 2e-12) { checks++; assert.ok(Math.abs(a - b) <= eps, `${a} != ${b}`); }
@@ -27,6 +30,26 @@ function matrixBundle(f, refs, matrices, ids = refs.map((_, i) => i + 1)) {
 const options = (b, referenceOhm, delays = {}) => ({ referenceOhm, delayPs: Object.fromEntries(b.ports.map(p => [p.number, delays[p.number] ?? 0])) });
 const transform = (b, settings) => { const result = postprocessPorts(b, settings); assert.equal(result.error, null); assert.ok(result.bundle); return result.bundle; };
 const c = JSON.parse(readFileSync(new URL('./fixtures/port-postprocess-circuit.json', import.meta.url)));
+// Admit the exact browser fixture before a browser is ever launched. An analytic
+// circuit with run:null has no CPU/GPU run provenance for the index to assert.
+const geometry = JSON.parse(readFileSync(new URL('../public/projects/branchline-coupler.json', import.meta.url)));
+const browserFixture = portProcessingBrowserFixture(geometry, c);
+const admitted = validateBundle(browserFixture);
+assert.ok(admitted.bundle, JSON.stringify(admitted.errors));
+assert.equal(admitted.bundle.run, null);
+const browserIndex = { file: 'synthetic-ports.json', model: admitted.bundle.model.id, created: admitted.bundle.created };
+assert.ok(matchesResultIndex(browserIndex, admitted.bundle), 'actual validated synthetic fixture is admitted without invented run engine');
+assert.equal(matchesResultIndex({ ...browserIndex, engine: 'CPU' }, admitted.bundle), false, 'invented CPU provenance rejects this no-run fixture');
+assert.equal(matchesResultIndex({ ...browserIndex, created: 'different-result-date' }, admitted.bundle), false, 'known artifact timestamp remains part of identity');
+assert.equal(matchesResultIndex({ ...browserIndex, model: 'different-design' }, admitted.bundle), false, 'physical source design identity remains required');
+const browserMatrix = sMatrix(admitted.bundle);
+assert.deepEqual(browserMatrix.ports.map(p => physicalPortNumber(browserMatrix, p)), c.physical_ports, 'validation preserves physical ports 7,2,19');
+assert.equal(portProcessingEligibility(admitted.bundle).error, null, 'exact admitted fixture retains its complete physical matrix');
+const incompleteBrowser = portProcessingBrowserFixture(geometry, c);
+delete incompleteBrowser.results.sparams.s['1,2'];
+const admittedIncomplete = validateBundle(incompleteBrowser).bundle;
+assert.ok(admittedIncomplete, 'incomplete browser control is viewable');
+assert.equal(portProcessingEligibility(admittedIncomplete).error, 'matrix', 'incomplete browser control remains ineligible for transformation');
 const circuit = matrixBundle(c.frequency_hz, c.source_references_ohm, c.source, c.physical_ports);
 const untouched = structuredClone(circuit);
 function freeze(value) { if (value && typeof value === 'object') { for (const child of Object.values(value)) freeze(child); Object.freeze(value); } return value; }

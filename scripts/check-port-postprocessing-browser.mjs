@@ -8,6 +8,7 @@ import puppeteer from 'puppeteer-core';
 import { root, startStack, chromePath } from './scenarios/stack.mjs';
 import { Session, auditInPage } from './scenarios/harness.mjs';
 import { safeDiagnosticText } from './scenarios/startup-diagnostics.mjs';
+import { PORT_CONTROL_DELAYS, portProcessingBrowserFixture } from './fixtures/port-postprocessing-browser.mjs';
 import { parseCsv } from '../src/export/csv.ts';
 import { parseTouchstoneNPort } from '../src/export/touchstone.ts';
 
@@ -17,30 +18,8 @@ const out = resolve(process.env.FAIRBEAM_TEST_ARTIFACTS || join(tmpdir(), `fairb
 await mkdir(out, { recursive: true });
 const circuit = JSON.parse(await readFile(join(root, 'scripts/fixtures/port-postprocess-circuit.json'), 'utf8'));
 const geometry = JSON.parse(await readFile(join(root, 'public/projects/branchline-coupler.json'), 'utf8'));
-const delays = [31, 77, -18];
-function fixture() {
-  const b = structuredClone(geometry), f = circuit.frequency_hz, s = {};
-  b.name = b.model.name = 'Synthetic ideal circuit control, not an EM run';
-  b.created = '2026-10-24T00:00:00Z'; b.run = null;
-  b.model.params = b.model.params.filter(p => p.name !== 'reference_impedance');
-  b.ports = circuit.physical_ports.map((number, i) => ({ ...b.ports[i], number, excite: i === 0, type: 'lumped', R: circuit.source_references_ohm[i] }));
-  for (let i = 0; i < 3; i++) for (let j = 0; j < 3; j++) {
-    const v = { re: [], im: [] };
-    f.forEach((frequency, k) => {
-      const [re, im] = circuit.source[k][i][j], phase = -2 * Math.PI * frequency * (delays[i] + delays[j]) * 1e-12;
-      v.re.push(re * Math.cos(phase) - im * Math.sin(phase));
-      v.im.push(re * Math.sin(phase) + im * Math.cos(phase));
-    }); s[`${i + 1},${j + 1}`] = v;
-  }
-  // No measured/historical scalar, power or radiation array is borrowed from the geometry.
-  b.results = { frequency: f, farfield: [], bands: [], signals: {},
-    ports: Object.fromEntries(circuit.physical_ports.map((id, i) => [id, {
-      z_ref: circuit.source_references_ohm[i], s11_re: s[`${i + 1},${i + 1}`].re, s11_im: s[`${i + 1},${i + 1}`].im,
-      zin_re: f.map(() => 0), zin_im: f.map(() => 0),
-    }])), sparams: { ports: [1, 2, 3], port_numbers: circuit.physical_ports, z_ref: circuit.source_references_ohm,
-      excited: [1, 2, 3], complete: true, method: 'synthetic independent nodal circuit control', s, qa: {} } };
-  return b;
-}
+const delays = PORT_CONTROL_DELAYS;
+const fixture = () => portProcessingBrowserFixture(geometry, circuit);
 const near = (a, b) => assert.ok(Math.abs(Number(a) - b) < 2e-10, `${a} != ${b}`);
 function checkTable(rows) {
   const header = rows[0], ri = header.findIndex(x => x.startsWith('Re S11')), ii = header.findIndex(x => x.startsWith('Im S11'));
@@ -106,11 +85,19 @@ try {
         return { file: r.file, bundle: v.bundle };
       });
       window.__portRawSnapshots = window.__portControls.map(r => JSON.stringify(r.bundle));
-      m.st.setIndex([...m.st.index(), ...window.__portControls.map(r => ({ file: r.file, model: r.bundle.model.id,
-        name: r.bundle.name, created: r.bundle.created, engine: 'CPU', simulated: true, bands: [], params: [] }))]);
+      const entries = window.__portControls.map(r => ({ file: r.file, model: r.bundle.model.id,
+        name: r.bundle.name, created: r.bundle.created, simulated: true, bands: [], params: [] }));
+      entries.forEach((entry, i) => {
+        const bundle = window.__portControls[i].bundle;
+        if (!m.identity.matchesResultIndex(entry, bundle)) throw new Error('Synthetic fixture failed result identity admission');
+        const matrix = m.sp.sMatrix(bundle);
+        if (!matrix || JSON.stringify(matrix.ports.map(p => m.sp.physicalPortNumber(matrix, p))) !== JSON.stringify(bundle.ports.map(p => p.number)))
+          throw new Error('Synthetic fixture physical-port identity changed on validation');
+      });
+      m.st.setIndex([...m.st.index(), ...entries]);
       m.dr.setDesignResult(window.__portControls[0]); m.rr.ensureDesignRunBundles();
       m.rf.focusResult({ file: records[0].file, view: 'sparams' }, 'main');
-    }, records, { st: '/src/state.ts', v: '/src/lib/validate.ts', dr: '/src/runner/designRun.ts', rr: '/src/designer/runResults.ts', rf: '/src/designer/resultFocus.ts' });
+    }, records, { st: '/src/state.ts', v: '/src/lib/validate.ts', dr: '/src/runner/designRun.ts', rr: '/src/designer/runResults.ts', rf: '/src/designer/resultFocus.ts', identity: '/src/lib/resultIdentity.ts', sp: '/src/lib/sparams.ts' });
     const panel = '.dw-result .port-processing-panel';
     const open = async () => { await s.wait(`${panel} summary`); if (!(await page.$eval(panel, e => e.open))) await page.locator(`${panel} summary`).click(); };
     const select = async index => {
