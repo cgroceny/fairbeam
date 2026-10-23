@@ -44,11 +44,17 @@ try {
     const own = await s.store((_, m) => JSON.parse(JSON.stringify(m.s.file())));
     const b = fixture(); b.model.id = own.design.model.id;
     const file = `${own.id}--SYNTHETIC-pattern-cuts.json`;
-    const showDesign = async next => s.ev(({b,file}, m) => {
-      const validated = m.v.validateBundle(b); if (!validated.bundle) throw new Error(JSON.stringify(validated.errors));
-      m.st.setIndex([...m.st.index().filter(r => r.file !== file), {file,model:b.model.id,name:b.name,created:b.created,simulated:false,engine:'CPU',bands:[],params:b.model.params}]);
-      m.dr.setDesignResult({file,bundle:validated.bundle}); m.rf.focusResult({file,view:'pattern'}, 'main');
-    }, {b:next,file}, {st:'/src/state.ts',dr:'/src/runner/designRun.ts',rf:'/src/designer/resultFocus.ts',v:'/src/lib/validate.ts'});
+    const showDesign = async next => {
+      // Focus resolves a saved run through the normal loader. Persist the explicit
+      // synthetic fixture and give each replacement its own index generation.
+      const saved = {...next, created:new Date().toISOString()};
+      await writeFile(join(stack.projects,file),JSON.stringify(saved));
+      await s.ev(({b,file}, m) => {
+        const validated = m.v.validateBundle(b); if (!validated.bundle) throw new Error(JSON.stringify(validated.errors));
+        m.st.setIndex([...m.st.index().filter(r => r.file !== file), {file,model:b.model.id,name:b.name,created:b.created,simulated:true,bands:[],params:[]}]);
+        m.dr.setDesignResult({file,bundle:validated.bundle}); m.rf.focusResult({file,view:'pattern'}, 'main');
+      }, {b:saved,file}, {st:'/src/state.ts',dr:'/src/runner/designRun.ts',rf:'/src/designer/resultFocus.ts',v:'/src/lib/validate.ts'});
+    };
     await showDesign(b); await s.wait('.dw-result .pattern-analyzer');
     const checkControls = async scope => {
       const kind = `${scope} [data-pattern-cut="kind"]`, angle = `${scope} [data-pattern-cut="angle"]`, projection = `${scope} [data-pattern-cut="projection"]`;
