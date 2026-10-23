@@ -8,6 +8,7 @@ import { tmpdir } from 'node:os';
 import puppeteer from 'puppeteer-core';
 import { startStack, chromePath, root } from './scenarios/stack.mjs';
 import { Session, auditInPage } from './scenarios/harness.mjs';
+import { cleanupBrowserScenario } from './scenarios/cleanup-browser.mjs';
 
 if (process.env.CI !== 'true' && process.env.FAIRBEAM_ALLOW_LOCAL_BROWSER !== '1') {
   throw new Error('Browser acceptance runs in CI; local use requires explicit user permission.');
@@ -32,6 +33,7 @@ const makeFixture = (name, shift = 0) => {
 };
 const stack = await startStack({ log: console.log });
 let browser;
+let failed = false;
 const outcomes = [];
 try {
   browser = await puppeteer.launch({ headless: true, executablePath: await chromePath(), args: ['--no-sandbox', '--enable-unsafe-swiftshader', '--use-angle=swiftshader'] });
@@ -124,4 +126,7 @@ try {
   }
   await writeFile(join(out, 'result.json'), JSON.stringify(outcomes, null, 2));
   console.log(JSON.stringify({ out, outcomes }, null, 2));
-} finally { await browser?.close(); await stack.stop(); }
+} catch (error) {
+  failed = true;
+  throw error;
+} finally { await cleanupBrowserScenario(browser, stack, failed); }

@@ -8,6 +8,7 @@ import puppeteer from 'puppeteer-core';
 import { root, startStack, chromePath } from './scenarios/stack.mjs';
 import { Session, auditInPage } from './scenarios/harness.mjs';
 import { safeDiagnosticText } from './scenarios/startup-diagnostics.mjs';
+import { cleanupBrowserScenario } from './scenarios/cleanup-browser.mjs';
 import { PORT_CONTROL_DELAYS, portProcessingBrowserFixture } from './fixtures/port-postprocessing-browser.mjs';
 import { parseCsv } from '../src/export/csv.ts';
 import { parseTouchstoneNPort } from '../src/export/touchstone.ts';
@@ -44,6 +45,7 @@ async function download(directory, extension) {
   throw new Error(`${extension} download did not complete within 5000 ms`);
 }
 let stack, browser, page, session, activeLang;
+let failed = false;
 const outcomes = [], forbidden = [];
 try {
   stack = await startStack({ log: console.log });
@@ -202,9 +204,10 @@ try {
   await writeFile(join(out, 'result.json'), JSON.stringify({ outcomes, forbidden, syntheticOnly: true, speechTested: false }, null, 2));
   console.log(JSON.stringify({ out, languages: outcomes.map(r => r.lang), syntheticOnly: true, forbidden }, null, 2));
 } catch (error) {
+  failed = true;
   let screenshotError; await page?.screenshot({ path: join(out, 'failure.png') }).catch(e => { screenshotError = String(e); });
   await writeFile(join(out, 'failure.json'), JSON.stringify({ error: String(error?.stack || error), lang: activeLang, screenshotError,
     console: session?.consoleIssues, forbidden, completed: outcomes, children: stack?.diagnostics() },
   (_key, value) => typeof value === 'string' ? safeDiagnosticText(value) : value, 2));
   throw error;
-} finally { try { await browser?.close(); } finally { await stack?.stop(); } }
+} finally { await cleanupBrowserScenario(browser, stack, failed); }

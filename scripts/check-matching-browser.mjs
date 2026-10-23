@@ -6,6 +6,7 @@ import { tmpdir } from 'node:os';
 import puppeteer from 'puppeteer-core';
 import { startStack, chromePath, root } from './scenarios/stack.mjs';
 import { Session, auditInPage } from './scenarios/harness.mjs';
+import { cleanupBrowserScenario } from './scenarios/cleanup-browser.mjs';
 if (process.env.CI !== 'true' && process.env.FAIRBEAM_ALLOW_LOCAL_BROWSER !== '1') throw new Error('Local browser requires explicit user permission.');
 const out = resolve(process.env.FAIRBEAM_TEST_ARTIFACTS || join(tmpdir(), `fairbeam-matching-${Date.now()}`));
 await mkdir(out, { recursive: true });
@@ -22,6 +23,7 @@ const fixture = () => {
   return b;
 };
 let stack, browser, activePage;
+let failed = false;
 const results = [];
 try {
   stack = await startStack({ log: console.log });
@@ -84,7 +86,8 @@ try {
   await writeFile(join(out, 'matching-result.json'), JSON.stringify(results, null, 2));
   console.log(JSON.stringify({ out, results }));
 } catch (error) {
+  failed = true;
   await activePage?.screenshot({ path: join(out, 'matching-failure.png') }).catch(() => {});
   await writeFile(join(out, 'matching-failure.json'), JSON.stringify({ message: String(error), results }, null, 2));
   throw error;
-} finally { try { await browser?.close(); } finally { await stack?.stop(); } }
+} finally { await cleanupBrowserScenario(browser, stack, failed); }
