@@ -445,6 +445,11 @@ class RenderManager:
     def list(self) -> list[dict]:
         return [self.jobs[i].to_dict() for i in reversed(self.order) if i in self.jobs]
 
+    def active_jobs(self) -> list[dict]:
+        """Fresh server-wide exit activity, without render paths, images or logs."""
+        with self.lock:
+            return [{"id": job.id, "status": job.status} for job in self.jobs.values() if not job.terminal]
+
     def shutdown(self) -> None:
         for job_id in list(self.jobs):
             self.cancel(job_id)
