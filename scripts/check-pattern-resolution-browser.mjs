@@ -8,6 +8,10 @@ import puppeteer from 'puppeteer-core';
 import { startStack, chromePath, root } from './scenarios/stack.mjs';
 import { Session, auditInPage } from './scenarios/harness.mjs';
 
+if (process.env.GITHUB_ACTIONS !== 'true' && process.env.FAIRBEAM_ALLOW_BROWSER_TEST !== '1') {
+  throw new Error('Browser test requires remote CI or explicit user permission (FAIRBEAM_ALLOW_BROWSER_TEST=1).');
+}
+
 const out = resolve(process.env.FAIRBEAM_TEST_ARTIFACTS || join(tmpdir(), 'fairbeam-scenario-failures'), 'pattern-resolution');
 await mkdir(out, { recursive: true });
 const original = JSON.parse(await readFile(join(root, 'examples/synthetic/array2x1.json'), 'utf8'));
@@ -54,9 +58,10 @@ try {
     page.on('request', request => {
       const path = new URL(request.url()).pathname;
       if (path === `/api/designs/${id}` && request.method() === 'GET') designReads++;
-      if (path === '/api/runs' && request.method() === 'POST') {
+      if (/^\/api\/(?:runs|sweeps|convergence|optimizations|research\/runs|render-jobs)(?:\/|$)/.test(path)
+          && request.method() === 'POST') {
         runPosts++;
-        void request.abort(); // test guard: this regression must never start a solver
+        void request.abort(); // this regression must never start any solver or render worker
       } else void request.continue();
     });
     const s = new Session(page, { lang, scenario: 'pattern-resolution', url: stack.url, artifactDirectory: out });
@@ -157,7 +162,7 @@ try {
     assert.equal(grids.lastTheta, 180);
     assert.deepEqual(await page.evaluate(auditInPage, '.array-panel'), []);
     await page.screenshot({ path: join(out, `synthetic-decimation-${lang}.png`) });
-    assert.equal(runPosts, 0, 'no simulation submission occurred');
+    assert.equal(runPosts, 0, 'no simulation, study, research or render submission occurred');
     assert.deepEqual(s.consoleIssues, [], 'no unexpected console or page errors');
     outcomes.push({ lang, defaults: [3, 5], discard: true, localizedErrorBlocksRun: true,
       saved: ['f0 / 2', 11], serverReopened: true, runPosts, syntheticDecimationNotice: true,
