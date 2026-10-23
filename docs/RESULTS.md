@@ -8,6 +8,38 @@
 - **Radiation efficiency** = Prad / P_acc. P_acc = ½·Re(u·i*) is the power accepted at the port. It is stored at the far-field frequencies and, with `--efficiency [N]` (a design's `monitors.efficiency`), at N frequencies across the band, with a reliability flag per frequency ([BUNDLE.md](BUNDLE.md#efficiency)). A model declared lossless (`sim.lossless = True`) reports 1 while Prad / P_acc is within 5 % of 1 ([BUNDLE.md](BUNDLE.md#results)).
 - **Gain** = efficiency · Dmax. **Realized gain** = gain · (1 − |S11|²).
 
+## Unwrapped phase and group delay
+
+In the S-parameters result view or the Examples reflection view, choose **Unwrapped phase**
+or **Group delay** from the data-format selector. Both use the selected complex S-parameters;
+magnitude-only reference imports cannot supply phase. Group delay is
+`τg = −dφ/df / 360` in ns when phase is in degrees and frequency is in GHz.
+The **Aperture** control selects a local least-squares linear phase fit over 3, 5, 11 or 21
+samples. Wider apertures suppress noise but also smooth narrow dispersive features. At an
+endpoint the fit uses a one-sided window; a short valid segment uses all its available samples
+(at least two). Changing the aperture does not alter the unwrapped phase or stored results.
+
+Each original frequency grid must be finite, nonnegative and strictly increasing; invalid
+grids are rejected rather than sorted or deduplicated. Zero complex amplitude, nonfinite
+samples and an exactly ambiguous 180° step leave gaps. Neither interpolation nor the
+derivative crosses a gap. Unwrapping starts independently after each gap, so the absolute
+phase branch is arbitrary by whole turns. The warning for an observed phase wrap or 180°
+step is not proof of aliasing: recovering the true delay assumes adjacent true phase
+increments below 180°. Extra complete turns are indistinguishable from the sampled complex
+data. Refine the frequency sampling when this assumption is uncertain. Delay near deep
+reflection nulls may be noisy even when the complex amplitude is nonzero.
+
+Comparisons unwrap each run on its original grid, interpolate continuous phase onto the
+shared frequency grid, then fit the derivative there. The aperture therefore counts samples
+on the displayed comparison grid, not on each original grid; adding a valid comparison can
+change the smoothing bandwidth. No values are extrapolated beyond a run's range, and
+invalid or magnitude-only runs do not contribute grid points. Copy data and CSV use the
+same grid, units, aperture and unsampled numeric values as the plot; missing values are empty
+cells. The Examples data table uses those values too (long tables may be visually sampled).
+Exports that request phase from a magnitude-only reference are explicitly rejected.
+The existing **All** format remains the magnitude, wrapped phase and real/imaginary views.
+These formats are display analysis only; they do not add TDR/time-domain results.
+
 ## Accuracy notes
 
 - openEMS uses a staircase (Yee) FDTD mesh. Slanted and curved edges snap to mesh lines, and zero-thickness sheets sit on grid planes. Expect resonances to shift by a few percent unless the openEMS mesh is fine on the metal edges.

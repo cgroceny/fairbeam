@@ -2,7 +2,8 @@
 // different frequency grids: every trace is interpolated onto the union of all grids (NaN outside
 // a project's own range), so the chart's crosshair lists every project's value at the hovered x.
 import type { Series } from "../charts/LineChart";
-import { plotQuantities, type PlotFormat, type PlotQuantity } from "../charts/plotQuantities.ts";
+import { plotQuantities, type PhasePlotOptions, type PlotFormat, type PlotQuantity } from "../charts/plotQuantities.ts";
+import { unwrapDeg } from "../lib/sparamPhase.ts";
 import type { PolarSeries } from "../charts/PolarChart";
 import { nearestIndex, patternCut, sweep, type Sweep } from "../lib/rf.ts";
 import { hasSParameterPhase, magDb, mappedPairLabel, pairLabel, phaseDeg, sMatrix } from "../lib/sparams.ts";
@@ -70,6 +71,14 @@ export function unionGrid(grids: number[][]): number[] {
   return out;
 }
 
+/** Invalid or magnitude-only runs must not change a valid run's phase-fit sampling aperture. */
+export function phaseComparisonGrid(bundles: Bundle[]): number[] {
+  const grids = bundles.filter(hasSParameterPhase).map(b => (sMatrix(b)?.f ?? []).map(f => f / 1e9))
+    .filter(grid => Array.from(grid).every((f, i) => Number.isFinite(f) && f >= 0 && (i === 0 || f > grid[i - 1])));
+  // Every distinct sample matters to a derivative, even when separated by less than a chart pixel.
+  return [...new Set(grids.flat())].sort((a, b) => a - b);
+}
+
 /** Linear interpolation of (x, y) at xq; NaN outside [x0, xn]. x must be ascending. */
 export function interp(x: number[], y: number[], xq: number[]): number[] {
   const n = x.length;
@@ -115,21 +124,6 @@ export function compareLines(ts: Trace[], pick: (s: Sweep) => number[]): Compare
 export const PAIR_DASHES = [undefined, "6 4", "2 3"] as const;
 
 const wrapDeg = (v: number) => ((((v + 180) % 360) + 360) % 360) - 180;
-/** Phase in degrees made continuous, so interpolating across the ±180° wrap stays on the curve. */
-function unwrapDeg(p: number[]): number[] {
-  const out: number[] = [];
-  let offset = 0;
-  p.forEach((v, i) => {
-    if (i > 0 && Number.isFinite(v) && Number.isFinite(p[i - 1])) {
-      const d = v - p[i - 1];
-      if (d > 180) offset -= 360;
-      else if (d < -180) offset += 360;
-    }
-    out.push(v + offset);
-  });
-  return out;
-}
-
 /** The label of a picked S_ij in a comparison: |S21| (magnitude) or ∠S21 (phase). */
 export const pairQuantity = (p: [number, number], mode: "db" | "phase") => (mode === "db" ? `|${pairLabel(p)}|` : `∠${pairLabel(p)}`);
 
@@ -147,7 +141,11 @@ export function compareSParams(ts: Trace[], pairs: [number, number][], mode: "db
     pairs.forEach((p, k) => {
       const c = m.get(p[0], p[1]);
       if (!c) return;
-      const y = mode === "db" ? interp(grids[i], magDb(c), x) : interp(grids[i], unwrapDeg(phaseDeg(c)), x).map((v) => (Number.isFinite(v) ? wrapDeg(v) : NaN));
+      const wrapped = mode === "phase" ? phaseDeg(c) : [];
+      const exactPhase = new Map(grids[i].map((f, k) => [f, wrapped[k]]));
+      // Unwrapping may reject a half-turn's direction, but its measured wrapped sample is known.
+      const y = mode === "db" ? interp(grids[i], magDb(c), x) : interp(grids[i], unwrapDeg(wrapped), x)
+        .map((v, k) => { const measured = exactPhase.get(x[k]); return Number.isFinite(measured) ? wrapDeg(measured!) : Number.isFinite(v) ? wrapDeg(v) : NaN; });
       series.push({ id: `cmp-${i}-${p[0]},${p[1]}`, label: `${mode === "db" ? `|${mappedPairLabel(m, p)}|` : `∠${mappedPairLabel(m, p)}`} · ${t.label}`, color: SERIES_COLORS[i], dash: PAIR_DASHES[k], x, y });
     });
   });
@@ -155,10 +153,10 @@ export function compareSParams(ts: Trace[], pairs: [number, number][], mode: "db
 }
 
 /** Complex S-parameter quantities for each run on the shared comparison frequency grid. */
-export function compareSParamQuantities(ts: Trace[], pairs: [number, number][], format: PlotFormat, mode: "db" | "phase" = "db"): PlotQuantity[] {
+export function compareSParamQuantities(ts: Trace[], pairs: [number, number][], format: PlotFormat, mode: "db" | "phase" = "db", options: PhasePlotOptions = {}): PlotQuantity[] {
   const mats = ts.map((t) => sMatrix(t.bundle));
   const grids = mats.map((m) => (m ? m.f.map((f) => f / 1e9) : []));
-  const x = unionGrid(grids.filter((g) => g.length));
+  const x = format === "gd" || format === "phase_unwrapped" ? phaseComparisonGrid(ts.map(t => t.bundle)) : unionGrid(grids.filter((g) => g.length));
   const inputs = ts.flatMap((t, i) => {
     const m = mats[i];
     if (!m) return [];
@@ -167,10 +165,11 @@ export function compareSParamQuantities(ts: Trace[], pairs: [number, number][], 
       if (!c) return [];
       return [{ id: `cmp-${i}-${p[0]},${p[1]}`, label: mappedPairLabel(m, p), suffix: t.label, color: SERIES_COLORS[i], dash: PAIR_DASHES[k] ?? "", x,
         phaseKnown: hasSParameterPhase(t.bundle),
+        phaseSource: { x: grids[i], re: c.re, im: c.im },
         re: interp(grids[i], c.re, x), im: interp(grids[i], c.im, x) }];
     });
   });
-  return plotQuantities(inputs, format, mode);
+  return plotQuantities(inputs, format, mode, options);
 }
 
 /** The far field of a project closest to a frequency (Hz). */

@@ -23,7 +23,7 @@ import { radioGroupKeys } from "../lib/a11y";
 import { bandTexts } from "../lib/bands";
 import { freqText, ghzText, num, withUnit } from "../lib/format";
 import { nearestIndex, patternCut, sweep } from "../lib/rf";
-import { mappedPairLabel, pairLabel, sMatrix } from "../lib/sparams";
+import { hasSParameterPhase, mappedPairLabel, pairLabel, sMatrix } from "../lib/sparams";
 import { efficiencyIssue, efficiencyWarningUi } from "../lib/runText";
 import { efficiencyData, effectiveQuantity, farfieldSummary, QUANTITY_LABEL, quantityGrid, quantityMax, toDb, type PortEfficiency } from "../lib/farfieldQuantity";
 import { efficiencyUnit, patternQuantity, setEfficiencyUnit } from "../lib/patternQuantityStore";
@@ -39,7 +39,7 @@ import { comparedLoadState, comparisonReady, retryComparedRuns, comparedRuns, de
 import { MAIN_TAB_LABELS, type MainResultView } from "./resultTabs";
 import { copyResultData, exportResultCsv, resultDataTable, type ResultDataOptions } from "./resultData";
 import { summaryMode, summaryReference } from "./summaryMode";
-import { resultDataFormat, tableFormat, writeResultDataFormat, type ResultDataFormat } from "./resultDataPreference";
+import { formatForView, groupDelayAperture, resultDataFormat, tableFormat, writeResultDataFormat, type ResultDataFormat } from "./resultDataPreference";
 import { exportResultTouchstone } from "./resultTouchstone";
 import { exportNotice, registerSurfaceExports } from "../components/exportContext";
 import { saveVisibleFigure, visibleFigureSvgs } from "../components/visibleFigure";
@@ -88,17 +88,17 @@ function ResultSParams(props: { b: Bundle; format: ResultDataFormat }) {
   const mp = () => (S()?.pairs.length ?? 0) >= 1;
   const groups = createMemo(() => {
     const c = cmp();
-    if (c && (mp() || c.some((t) => sMatrix(t.bundle)?.get(1, 1)))) return compareSParamQuantities(c, mp() ? designSParams.selectedPairs() : [[1, 1]], props.format, designSParams.mode());
+    if (c && (mp() || c.some((t) => sMatrix(t.bundle)?.get(1, 1)))) return compareSParamQuantities(c, mp() ? designSParams.selectedPairs() : [[1, 1]], props.format, designSParams.mode(), { aperturePoints: groupDelayAperture() });
     if (c) {
-      const inputs = c.flatMap((t, i) => { const m = sMatrix(t.bundle), v = m?.get(1, 1); return m && v ? [{ id: `cmp-${i}-1,1`, label: "S11", suffix: t.label, color: SERIES_COLORS[i], x: m.f.map(f => f / 1e9), re: v.re, im: v.im }] : []; });
-      return plotQuantities(inputs, props.format, designSParams.mode());
+      const inputs = c.flatMap((t, i) => { const m = sMatrix(t.bundle), v = m?.get(1, 1); return m && v ? [{ id: `cmp-${i}-1,1`, label: "S11", suffix: t.label, color: SERIES_COLORS[i], x: m.f.map(f => f / 1e9), re: v.re, im: v.im, phaseKnown: hasSParameterPhase(t.bundle) }] : []; });
+      return plotQuantities(inputs, props.format, designSParams.mode(), { aperturePoints: groupDelayAperture() });
     }
     const m = S();
     const inputs = mp() && m ? designSParams.selectedPairs().flatMap((p, k) => {
         const v = m.get(p[0], p[1]);
-        return v ? [{ id: pairLabel(p), label: mappedPairLabel(m, p), color: COLORS[k], x: m.f.map((f) => f / 1e9), re: v.re, im: v.im }] : [];
+        return v ? [{ id: pairLabel(p), label: mappedPairLabel(m, p), color: COLORS[k], x: m.f.map((f) => f / 1e9), re: v.re, im: v.im, phaseKnown: hasSParameterPhase(props.b) }] : [];
       }) : [];
-    if (inputs.length) return plotQuantities(inputs, props.format, designSParams.mode());
+    if (inputs.length) return plotQuantities(inputs, props.format, designSParams.mode(), { aperturePoints: groupDelayAperture() });
     const s = sw();
     return s && (props.format === "plot" || props.format === "db") ? [{ key: "db", title: t("chart.q.magnitudeDb"), yLabel: "|S11| (dB)", kind: "reflection" as const, series: [{ id: "s11", label: "|S11|", color: COLORS[0], x: s.f.map((f) => f / 1e9), y: s.s11Db }] }] : [];
   });
@@ -557,8 +557,8 @@ export function ResultToolbar(props: { view: MainResultView }) {
   // Copy data and CSV follow the plot (the picked S_ij, dB or phase, the Smith port) and name
   // compared runs by their full run labels
   const dataOptions = (runs?: { file: string }[]): ResultDataOptions => ({
-    format: tableFormat(resultDataFormat()),
-    ...((designSParams.S()?.ports.length ?? 0) >= 2
+    format: tableFormat(formatForView(resultDataFormat(), props.view === "sparams")), aperturePoints: groupDelayAperture(),
+    ...((designSParams.S()?.pairs.length ?? 0) >= 1
       ? { pairs: designSParams.selectedPairs(), sparamMode: designSParams.mode(), smithPort: designSParams.smithPort() }
       : {}),
     runNames: runs?.map((r) => runLabel(r.file)),
@@ -712,8 +712,9 @@ export function ResultToolbar(props: { view: MainResultView }) {
         </button>
       </Show>
       <Show when={props.view !== "summary" && props.view !== "fieldmap"}>
-      <select class="btn btn-ghost btn-sm result-format" aria-label={t("results.toolbar.formatAria")} value={resultDataFormat()} onChange={(event) => writeResultDataFormat(event.currentTarget.value as ResultDataFormat)}>
+      <select class="btn btn-ghost btn-sm result-format" aria-label={t("results.toolbar.formatAria")} value={formatForView(resultDataFormat(), props.view === "sparams")} onChange={(event) => writeResultDataFormat(event.currentTarget.value as ResultDataFormat)}>
         <option value="plot">{t("results.format.plot")}</option><option value="db">dB</option><option value="db_phase">{t("results.format.dbPhase")}</option><option value="re_im">Re/Im</option><option value="mag_phase">{t("results.format.magPhase")}</option><option value="all">{t("results.format.all")}</option>
+        <Show when={props.view === "sparams"}><option value="phase_unwrapped">{t("chart.q.unwrappedPhase")}</option><option value="gd">{t("chart.q.groupDelay")}</option></Show>
       </select>
       </Show>
       <button class="btn btn-ghost btn-sm rdk-copy" classList={{ copied: copied() }} onClick={() => void copyData()} title={t("results.toolbar.copyDataTitle")} aria-live="polite">
