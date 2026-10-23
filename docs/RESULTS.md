@@ -40,6 +40,32 @@ Exports that request phase from a magnitude-only reference are explicitly reject
 The existing **All** format remains the magnitude, wrapped phase and real/imaginary views.
 These formats are display analysis only; they do not add TDR/time-domain results.
 
+## Ideal matching estimate
+
+The Designer's single-run **Impedance** and **Smith** views offer an opt-in ideal
+matching circuit. Pick an existing frequency sample and one of the admissible
+L-sections (series or shunt at the source, with either algebraic sign). Reactive
+loads can admit four solutions. Values are positive inductances in nH or
+capacitances in pF; zero elements are omitted. The displayed order is from source
+to load. A purely resistive load also admits a lossless 90-degree transformer,
+with `Zt = sqrt(Rload * Zref)`. Its electrical length varies linearly with frequency;
+no substrate, dispersion or physical line length is inferred.
+
+The original and ideal matched |S11| curves use the stored load impedance at every
+frequency, with constant ideal component values. Smith also overlays the ideal
+reflection locus. This is a circuit what-if, **not** a re-simulated or measured
+matched antenna: losses, parasitics and layout are absent. The original bundle,
+model and exported CSV/Touchstone data are unchanged. The estimate resets when
+changing result or view. Matching uses the existing stored reference plane; it
+does not de-embed a feed or insert elements into the Design.
+
+Only one-port complex data with a constant positive real reference is supported.
+Magnitude-only references, complex or frequency-varying references and multiport
+or run-comparison matching are unavailable. Missing/nonpassive load samples stay
+gaps. Synthesis uses the selected stored sample without interpolating an unknown
+load or extrapolating outside the recorded band. Analytic circuit controls check
+the equations; they do not establish electromagnetic or manufacturing accuracy.
+
 ## Accuracy notes
 
 - openEMS uses a staircase (Yee) FDTD mesh. Slanted and curved edges snap to mesh lines, and zero-thickness sheets sit on grid planes. Expect resonances to shift by a few percent unless the openEMS mesh is fine on the metal edges.

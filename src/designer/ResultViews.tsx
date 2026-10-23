@@ -44,6 +44,7 @@ import { exportResultTouchstone } from "./resultTouchstone";
 import { exportNotice, registerSurfaceExports } from "../components/exportContext";
 import { saveVisibleFigure, visibleFigureSvgs } from "../components/visibleFigure";
 import ResultFigureMenu from "../components/ResultFigureMenu";
+import MatchingPanel, { createMatching } from "../components/MatchingPanel";
 import { resultExportStem, resultFrequencyTag } from "../lib/resultExportNames";
 import FieldMapView from "./FieldMapView";
 import { ResultSummary } from "./RunSummaryView";
@@ -152,6 +153,7 @@ function SpTools(props: { show: boolean; smith?: boolean; format?: ResultDataFor
 
 
 function ResultImpedance(props: { b: Bundle }) {
+  const ideal = createMatching(() => props.b);
   const reference = () => (props.b.ports.find((p) => p.excite) ?? props.b.ports[0])?.reference_impedance;
   const matching = createMemo(() => {
     const ref = reference(), s = sweep(props.b);
@@ -177,7 +179,7 @@ function ResultImpedance(props: { b: Bundle }) {
           inspection={{ key: `designer:${designResult()?.file ?? ""}:impedance:${zPart()}`, chart: `designer:${designResult()?.file ?? ""}:impedance`, kind: "other" }}
           series={series()} {...ghzAxis} yLabel={cmp() ? `${zPart() === "re" ? "Re" : "Im"} Zin (Ω)` : "Zin (Ω)"} yFormat={(v) => v.toFixed(1)}
           hlines={cmp() && zPart() === "im" ? [{ y: 0, label: "" }] : [{ y: sw()!.zRef, label: t("results.impedance.referenceLine", { z: num(sw()!.zRef, sw()!.zRef >= 100 ? 0 : 1) }) }, { y: 0, label: "" }]} />
-        <Show when={cmp()} fallback={<div class="rdk-side"><dl class="kv"><dt>{t("results.impedance.reference")}</dt><dd class="mono">{num(sw()!.zRef, 1)} Ω</dd></dl><Show when={matching()}>{(m) => <><h3>{t("feed.complexReference")}</h3><dl class="kv"><dt>Zref</dt><dd class="mono">{m().ref.real} + j({m().ref.imag}) Ω</dd><dt>f</dt><dd class="mono">{num(m().f / 1e9, 4)} GHz</dd><dt>|Γ|</dt><dd class="mono">{num(m().magnitude, 4)}</dd><dt>{t("feed.transfer")}</dt><dd class="mono">{num(m().transfer * 100, 2)} %</dd></dl><p class="note">{t("feed.referenceNote")}</p></>}</Show></div>}>
+        <Show when={cmp()} fallback={<div class="rdk-side"><dl class="kv"><dt>{t("results.impedance.reference")}</dt><dd class="mono">{num(sw()!.zRef, 1)} Ω</dd></dl><Show when={matching()}>{(m) => <><h3>{t("feed.complexReference")}</h3><dl class="kv"><dt>Zref</dt><dd class="mono">{m().ref.real} + j({m().ref.imag}) Ω</dd><dt>f</dt><dd class="mono">{num(m().f / 1e9, 4)} GHz</dd><dt>|Γ|</dt><dd class="mono">{num(m().magnitude, 4)}</dd><dt>{t("feed.transfer")}</dt><dd class="mono">{num(m().transfer * 100, 2)} %</dd></dl><p class="note">{t("feed.referenceNote")}</p></>}</Show><MatchingPanel state={ideal} /></div>}>
           <div class="rdk-side">
             <div class="seg seg-sm" role="radiogroup" aria-label={t("results.impedance.part")} onKeyDown={radioGroupKeys}>
               <button class="seg-btn" role="radio" aria-checked={zPart() === "re"} onClick={() => setZPart("re")}>Re</button>
@@ -226,15 +228,19 @@ function ResultVswr(props: { b: Bundle }) {
 }
 
 function ResultSmith(props: { b: Bundle }) {
+  const ideal = createMatching(() => props.b);
   const sw = createMemo(() => sweep(props.b));
   const cmp = useCompare(() => props.b);
   // two or more ports: the port picked beside the chart (S_pp of every compared run)
   const mp = () => (sMatrix(props.b)?.ports.length ?? 0) >= 2;
   const marks = () => (props.b.results?.farfield ?? []).map((f) => ({ f: f.f, label: freqText(f.f) }));
-  const overlays = () => (cmp() ?? []).slice(1).map((t, i) => ({ label: t.label, color: COLORS[i + 1], re: t.sweep.s11Re, im: t.sweep.s11Im }));
+  const overlays = () => [
+    ...(cmp() ?? []).slice(1).map((t, i) => ({ label: t.label, color: COLORS[i + 1], re: t.sweep.s11Re, im: t.sweep.s11Im })),
+    ...(!cmp() && ideal.trace() ? [{ label: `${t("matching.matched")} [P${ideal.port()}]`, color: COLORS[1], re: ideal.trace()!.re, im: ideal.trace()!.im }] : []),
+  ];
   return (
     <Show when={sw()} fallback={<div class="panel-empty">{t("results.noPortResult")}</div>}>
-      <div class={mp() ? "rdk-split" : "rdk-fill"}>
+      <div class={mp() || !cmp() ? "rdk-split" : "rdk-fill"}>
         <Show when={mp()} fallback={
           <SmithChart ariaLabel={t("results.aria.smith")} f={sw()!.f} re={sw()!.s11Re} im={sw()!.s11Im} zRe={sw()!.zRe} zIm={sw()!.zIm}
             zRef={sw()!.zRef} zRefF={sw()!.zRefF} markers={marks()} label={cmp()?.[0]?.label} overlays={overlays()} />
@@ -242,6 +248,7 @@ function ResultSmith(props: { b: Bundle }) {
           <SParamSmithCompare store={designSParams} traces={cmp() ?? [{ label: runLabel(designResult()?.file ?? ""), bundle: props.b, sweep: sw()! }]} markers={marks()} />
         </Show>
         <Show when={mp()}><div class="rdk-side"><SpTools show smith /></div></Show>
+        <Show when={!mp() && !cmp()}><div class="rdk-side"><MatchingPanel state={ideal} /></div></Show>
       </div>
     </Show>
   );

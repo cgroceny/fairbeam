@@ -768,6 +768,7 @@ for (const prim of [tube, ball, side, cone, ring]) {
   check(!JSON.stringify(fx).includes("Snap the end"), w, "no stale 'Snap the end' label in the shared cases");
 }
 
+await import('./check-matching.mjs');
 console.log(`check-designer: ${checks} checks, ${failures} failed (${fx.expressions.length} expressions, ${fx.cases.length} cases)`);
 // This script is part of both CI's check:designer and check:exports aggregations.
 await import('./check-result-session-state.mjs');

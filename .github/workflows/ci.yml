@@ -192,6 +192,8 @@ jobs:
           node scripts/check-quit-activity-browser.mjs
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           node scripts/check-group-delay-browser.mjs
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          node scripts/check-matching-browser.mjs
 
       - name: Keep browser failure evidence (including recovered attempts)
         if: always()
