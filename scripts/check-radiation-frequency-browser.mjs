@@ -17,6 +17,7 @@ const records=JSON.parse(execFileSync(pythonPath(),[join(root,'python/tests/test
 const original=JSON.parse(await readFile(join(root,'public/projects/helix-axial.json'),'utf8'));
 const fixture=()=>{
   const b=structuredClone(original);b.name=b.model.name='Synthetic radiation scalar control';b.model.id='synthetic-radiation';b.results.farfield=[];
+  b.run=null; // Synthetic scalars must not inherit the source example's historical Metal run.
   const a=structuredClone(records.find(r=>r.name==='baseline'));a.reliable=[true,false,true];a.pacc_error=[.02,.2,.04];
   const p=structuredClone(a);p.port=19;p.radiation.realized_peak_dbi=[-31,-32,-33];p.radiation.ar_boresight_db=[2,null,4];
   b.results.efficiency=[a,p];return b;
@@ -81,7 +82,7 @@ try{
     const runFile=`${own.id}--synthetic-radiation.json`;await writeFile(join(stack.projects,runFile),JSON.stringify(b));
     // Register the saved synthetic result as existing data; no run/solver endpoint is called.
     await s.ev(({b,file},m)=>{
-      m.st.setIndex([...m.st.index().filter(r=>r.file!==file),{file,model:b.model.id,name:b.name,created:b.created,engine:'CPU',simulated:true,bands:[],params:[]}]);
+      m.st.setIndex([...m.st.index().filter(r=>r.file!==file),{file,model:b.model.id,name:b.name,created:b.created,simulated:true,bands:[],params:[]}]);
       m.dr.setDesignResult({file,bundle:b});m.rr.ensureDesignRunBundles();m.rf.focusResult({file,view:'efficiency'},'main');
     },{b,file:runFile},{st:'/src/state.ts',dr:'/src/runner/designRun.ts',rr:'/src/designer/runResults.ts',rf:'/src/designer/resultFocus.ts'});
     await s.wait('.dw-result .radiation-select');await verify('.dw-result');

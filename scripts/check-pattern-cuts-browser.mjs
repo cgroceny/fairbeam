@@ -114,6 +114,11 @@ try {
     assert.ok(exported.header.includes('Peak / 3D antipode (dB)'));
     assert.ok(exported.rows.every(row=>row[exported.header.indexOf('theta (deg)')]===60));
     await page.setViewport({width:700,height:900});
+    // The narrow layout is a scrolling page. Bring its result chart into view before
+    // claiming visible chart coverage; a screenshot of only its toolbar is insufficient.
+    await s.waitFor(()=>document.querySelector('.dock .pattern-analyzer-chart')?.getBoundingClientRect().width>600);
+    await page.$eval('.dock .pattern-analyzer-chart',e=>e.scrollIntoView({block:'center'}));
+    await s.waitFor(()=>{const r=document.querySelector('.dock .pattern-analyzer-chart')?.getBoundingClientRect();return r&&r.top>=0&&r.bottom<=innerHeight&&r.height>=180;});
     assert.deepEqual(await page.evaluate(auditInPage,'.dock .pattern-analyzer'),[]);
     await page.screenshot({path:join(out,`cuts-narrow-${lang}.png`)});
     assert.deepEqual(starts,[],'no solver or render submission attempted');

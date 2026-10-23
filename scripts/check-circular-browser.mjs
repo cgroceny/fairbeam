@@ -67,7 +67,7 @@ try {
     for(const name of ['rhcp','linear','elliptical','null-boresight','off-boresight','low-directivity','zero','missing']){
       const ff=structuredClone(fixtureFields.find(f=>f.name===(name==='missing'?'rhcp':name)));
       if(name==='missing')delete ff.cp;
-      const b=structuredClone(original);b.model.id=`synthetic-cp-${name}`;b.model.name=`Synthetic CP ${name}`;b.results.farfield=[ff];
+      const b=structuredClone(original);b.run=null;b.model.id=`synthetic-cp-${name}`;b.model.name=`Synthetic CP ${name}`;b.results.farfield=[ff];
       const file=join(out,`${name}-${lang}.json`);await writeFile(file,JSON.stringify(b));
       await (await page.$('.app-header input[type=file]')).uploadFile(file);
       await s.waitFor(async id=>(await import('/src/state.ts')).bundle()?.model.id===id,b.model.id);
