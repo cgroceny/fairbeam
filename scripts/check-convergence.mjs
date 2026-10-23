@@ -180,3 +180,6 @@ ok(server.includes('r"/api/convergence"') && server.includes('r"/api/convergence
   ok(verdictDetail(planar).includes(t("conv.why.planarUnavailable",{from:String(step.from),to:String(step.to)})),"missing response evidence has an explicit verdict");
 }
 console.log(`convergence: ${checks} checks passed`);
+// Keep the opt-in request/report regression checks in both this gate and check:designer.
+// This module is pure Node; browser coverage remains a separate, explicitly scheduled script.
+await import("./check-network-convergence.mjs");

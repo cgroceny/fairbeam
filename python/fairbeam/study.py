@@ -138,6 +138,30 @@ def parse_network_criteria(items, frequency_ghz) -> dict | None:
     return {"frequency_hz": frequency, "criteria": specs}
 
 
+def network_criteria_request(value, port_numbers) -> dict:
+    """Validate the Designer's opt-in request using the same metric grammar as the CLI.
+
+    The request uses GHz; the persisted study keeps the canonical Hz configuration.
+    This is study metadata, not a change to the saved Design format.
+    """
+    if not isinstance(value, dict) or set(value) != {"frequency_ghz", "metrics"}:
+        raise ValueError("network criteria need frequency_ghz and metrics")
+    frequency, items = value["frequency_ghz"], value["metrics"]
+    if isinstance(frequency, bool) or not isinstance(frequency, (int, float)):
+        raise ValueError("network frequency must be a finite positive number in GHz")
+    try:
+        frequency = float(frequency)
+    except OverflowError:
+        raise ValueError("network frequency must be a finite positive number in GHz") from None
+    if (not isinstance(items, list) or not 1 <= len(items) <= 12
+            or any(not isinstance(item, str) or len(item) > 160 for item in items)):
+        raise ValueError("network metrics must contain 1 to 12 metric strings")
+    config = parse_network_criteria(items, frequency)
+    if any(p not in port_numbers for spec in config["criteria"] for p in spec["ports"]):
+        raise ValueError("network criteria must use port numbers present in the design")
+    return config
+
+
 def network_metrics(bundle: dict, config: dict) -> dict:
     """Selected complex S-parameters interpolated at the fixed frequency, without extrapolation.
 

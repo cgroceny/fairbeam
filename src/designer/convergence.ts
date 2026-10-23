@@ -5,6 +5,7 @@
 import type { Design } from "./types";
 import { fmt, t } from "../i18n/index.ts";
 import { durationText } from "./meshStats.ts";
+import { networkLabel, networkReason, type NetworkConfig, type NetworkMeasurement, type NetworkStep } from "./networkConvergence.ts";
 
 export const DENSITY_KEY = "mesh.cells_per_wavelength";
 export const DEFAULT_DENSITIES = [15, 20, 30, 40];
@@ -95,6 +96,7 @@ export function longStudyWarning(total: [number, number] | null): string | null 
 // ------------------------------------------------------------------ the study (GET /api/convergence/{id})
 
 export interface ConvergenceMetrics {
+  network?: NetworkMeasurement;
   f_res: number | null;
   /** nothing is matched and the |S11| minimum is at a band edge: f_res is where the curve ends, not a
    * resonance (a study file written before this field has none: a resonance is assumed) */
@@ -109,6 +111,7 @@ export interface ConvergenceMetrics {
   fine_features_resolved?: boolean | null;
 }
 export interface ConvergenceStep {
+  network?: NetworkStep;
   from: number;
   to: number;
   df_pct: number | null;
@@ -125,6 +128,8 @@ export interface ConvergenceStep {
   converged: boolean;
 }
 export interface ConvergenceStudy {
+  network_criteria?: NetworkConfig;
+  excite?: "all";
   id: string;
   name: string;
   kind: "mesh-convergence";
@@ -216,6 +221,7 @@ export function verdictText(verdict: string): string {
   if ((m = verdict.match(/^converged at (.+) cells\/λ$/))) return t("conv.verdict.converged", { density: m[1] });
   if (verdict === "not converged: refine further or check the model") return t("conv.verdict.notConverged");
   if (verdict === "not converged: energy decay or local mesh resolution is unverified") return t("conv.verdict.notVerified");
+  if (verdict === "not converged: requested network measurements are unverified") return t("conv.net.reason.missing");
   if (verdict === "not comparable: no resonance in the band (the minimum is at the band edge)") return t("conv.verdict.notComparable");
   if ((m = verdict.match(/^stopped: the run at (.+) cells\/λ failed$/))) return t("conv.verdict.runFailed", { density: m[1] });
   if (verdict === "stopped before it converged") return t("conv.verdict.cancelled");
@@ -235,6 +241,15 @@ export function verdictDetail(study: ConvergenceStudy): string {
   if (step.comparable === false) return t("conv.verdict.notComparableLast", { from: fmt.num(step.from, 3), to: fmt.num(step.to, 3) });
   const at = { from: fmt.num(step.from, 3), to: fmt.num(step.to, 3) };
   const why: string[] = [];
+  if (study.network_criteria) {
+    if (!step.network?.checks.length) why.push(networkReason(step.network?.reason ?? "network measurements missing or inconsistent"));
+    else for (const check of step.network.checks) {
+      if (!check.ok) why.push(check.reason ? `${networkLabel(check)}: ${networkReason(check.reason)}` : t("conv.net.why", {
+        metric: networkLabel(check), value: check.delta == null ? "—" : fmt.num(Math.abs(check.delta), 3),
+        limit: fmt.num(check.tolerance, 4), unit: check.unit,
+      }));
+    }
+  }
   if (step.planar_response && study.members.length < 3) why.push(t("conv.why.planarLevels"));
   if (step.planar_response?.passed === false) {
     const p = step.planar_response;

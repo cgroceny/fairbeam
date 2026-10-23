@@ -274,7 +274,8 @@ def compare(a: dict, b: dict, tol: dict) -> dict:
     return step
 
 
-def evaluate(members: list[dict], planned: list[float], tol: dict | None = None) -> dict:
+def evaluate(members: list[dict], planned: list[float], tol: dict | None = None,
+             network_criteria: dict | None = None) -> dict:
     """The study's state after these members (``{density, status, metrics}``, in run order).
 
     ``done`` says whether to stop; ``next`` is the density to run next otherwise. ``reason`` is
@@ -289,6 +290,15 @@ def evaluate(members: list[dict], planned: list[float], tol: dict | None = None)
         if a.get("status", "done") != "done" or b.get("status", "done") != "done":
             break
         st = {"from": a["density"], "to": b["density"], **compare(a["metrics"], b["metrics"], tol)}
+        if network_criteria:
+            from .study import compare_network
+            ma, mb = a["metrics"].get("network"), b["metrics"].get("network")
+            # A declared criterion cannot disappear from an old/incomplete study and
+            # silently leave only the legacy resonance checks governing the verdict.
+            if any(not m or any(m.get(k) != network_criteria[k] for k in ("frequency_hz", "criteria"))
+                   for m in (ma, mb)):
+                st["network"] = compare_network(None, None)
+                st["converged"] = False
         steps.append(st)
         planar = "planar_response" in a["metrics"] or "planar_response" in b["metrics"]
         if st["converged"] and (not planar or i >= 2):
@@ -366,7 +376,8 @@ def add_member(study: dict, member: dict) -> dict:
     study["members"].append(member)
     study["axes"][0]["values"] = [m["density"] for m in study["members"]]
     conv = study["convergence"]
-    study["convergence"] = evaluate(study["members"], conv["densities"], conv["tolerances"])
+    study["convergence"] = evaluate(study["members"], conv["densities"], conv["tolerances"],
+                                    study.get("network_criteria"))
     return study["convergence"]
 
 
@@ -491,9 +502,12 @@ class ServerStudies:
         return study
 
     def start(self, *, study_id: str, name: str, model: dict, job_kw: dict, planned: list[float],
-              tol: dict, settings: dict):
+              tol: dict, settings: dict, network_criteria: dict | None = None):
         study = new_study(name=name, model=model, planned=planned, tol=tol, study_id=study_id,
                           settings=settings)
+        if network_criteria:
+            study["network_criteria"] = network_criteria
+            study["excite"] = "all"
         study["job_kw"] = job_kw  # how to queue the next density (removed from API answers)
         with self.lock:  # on_finished of a fast-failing first job waits for the file
             job = self._submit(study, job_kw, 0)
@@ -580,7 +594,7 @@ class ServerStudies:
                     from .study import summarize
 
                     bundle = json.loads((Path(self.manager.projects_dir) / job.bundle).read_text(encoding="utf-8"))
-                    member["metrics"] = metrics(bundle)
+                    member["metrics"] = metrics(bundle, network_criteria=study.get("network_criteria"))
                     member["summary"] = summarize(bundle)
                 except (OSError, ValueError, KeyError) as e:
                     member.update(status="failed", error=f"could not read the result: {e}")
@@ -624,15 +638,41 @@ class ServerStudies:
         conv = study["convergence"]
         if conv.get("converged"):
             accepted = [step for step in conv.get("steps", []) if step.get("converged")]
+            if study.get("network_criteria"):
+                from .study import compare_network
+                expected = study["network_criteria"]
+                members = {member["density"]: member for member in study["members"]}
+                for step in accepted:
+                    pair = [(members.get(step.get(key), {}).get("metrics") or {}).get("network")
+                            for key in ("from", "to")]
+                    # Reopen from measured values, not an old cached pass for a
+                    # different frequency/criterion list. This does not rewrite history.
+                    try:
+                        matches = all(isinstance(m, dict)
+                                      and all(m.get(k) == expected[k] for k in ("frequency_hz", "criteria"))
+                                      and isinstance(m.get("values"), list)
+                                      and len(m["values"]) == len(expected["criteria"])
+                                      and all(isinstance(v, dict) and (v.get("value") is None or
+                                              type(v["value"]) in (int, float) and np.isfinite(v["value"]))
+                                              for v in m["values"]) for m in pair)
+                        step["network"] = compare_network(*pair) if matches else compare_network(None, None)
+                    except (AttributeError, KeyError, TypeError, ValueError, OverflowError):
+                        # Malformed saved evidence is unavailable, never a GET 500
+                        # or a reason to trust the previously cached success.
+                        step["network"] = compare_network(None, None)
             def verified(step):
                 quality = step.get("quality") or {}
-                return all(quality.get(key) is True for key in ("energy", "local_mesh"))
+                network_ok = not study.get("network_criteria") or (step.get("network") or {}).get("converged") is True
+                return all(quality.get(key) is True for key in ("energy", "local_mesh")) and network_ok
             if not accepted or not all(verified(step) for step in accepted):
                 # Old reports predate the quality checks. Preserve the on-disk
                 # result, but do not recommend its density from a cached verdict.
+                network_missing = study.get("network_criteria") and (not accepted or any(
+                    (step.get("network") or {}).get("converged") is not True for step in accepted))
                 conv.update(recorded_verdict=conv.get("verdict"), converged=False,
                             converged_at=None, done=True, reason="unverified",
-                            verdict=NOT_VERIFIED, next=None)
+                            verdict="not converged: requested network measurements are unverified" if network_missing else NOT_VERIFIED,
+                            next=None)
                 for step in accepted:
                     if not verified(step):
                         step["converged"] = False
