@@ -273,6 +273,50 @@ function Invoke-Tool([string]$what, [string]$exe, [string[]]$arguments) {
     return $out
 }
 
+function Get-PhysicalDirectory([string]$path) {
+    # GetFullPath/Resolve-Path retain the logical AppData path under MSIX virtualization.
+    # uv's CPython minor-version junction needs the directory actually opened by Windows.
+    if (-not ([System.IO.File]::GetAttributes($path) -band [System.IO.FileAttributes]::Directory)) {
+        throw "not a directory: $path"
+    }
+    if (-not ('Fairbeam.RuntimeDirectory' -as [type])) {
+        Add-Type -TypeDefinition @'
+using System;
+using System.ComponentModel;
+using System.IO;
+using System.Runtime.InteropServices;
+using System.Text;
+using Microsoft.Win32.SafeHandles;
+namespace Fairbeam {
+    public static class RuntimeDirectory {
+        [DllImport("kernel32.dll", CharSet = CharSet.Unicode, ExactSpelling = true, SetLastError = true)]
+        private static extern SafeFileHandle CreateFileW(string path, uint access, uint share,
+            IntPtr security, uint disposition, uint flags, IntPtr template);
+        [DllImport("kernel32.dll", CharSet = CharSet.Unicode, ExactSpelling = true, SetLastError = true)]
+        private static extern uint GetFinalPathNameByHandleW(SafeFileHandle file,
+            StringBuilder path, uint size, uint flags);
+        public static string Resolve(string path) {
+            // OPEN_EXISTING + FILE_FLAG_BACKUP_SEMANTICS opens a directory, without changing it.
+            using (var handle = CreateFileW(path, 0, 7, IntPtr.Zero, 3, 0x02000000, IntPtr.Zero)) {
+                if (handle.IsInvalid) throw new Win32Exception(Marshal.GetLastWin32Error());
+                var buffer = new StringBuilder(32768);
+                uint length = GetFinalPathNameByHandleW(handle, buffer, (uint)buffer.Capacity, 0);
+                if (length == 0) throw new Win32Exception(Marshal.GetLastWin32Error());
+                if (length >= buffer.Capacity) throw new IOException("resolved directory path is too long");
+                string result = buffer.ToString();
+                if (result.StartsWith(@"\\?\UNC\", StringComparison.OrdinalIgnoreCase))
+                    return @"\\" + result.Substring(8);
+                if (result.StartsWith(@"\\?\", StringComparison.Ordinal)) return result.Substring(4);
+                return result;
+            }
+        }
+    }
+}
+'@
+    }
+    return [Fairbeam.RuntimeDirectory]::Resolve($path)
+}
+
 function Join-CommandLine([string[]]$argv) {
     # Windows command-line quoting (CommandLineToArgvW rules, like subprocess.list2cmdline)
     $parts = foreach ($a in $argv) {
@@ -381,6 +425,14 @@ if ($haveUv) {
 
 # ---------------------------------------------------------------- 2. CPython, 3. venv
 
+# Resolve only uv's managed Python directory after any Repair removal. Keep RuntimeRoot as
+# supplied, including its links, for stage 2's conservative download-cache cleanup checks.
+# No MSIX package name or user-profile layout is assumed, and resolution errors must stop setup.
+try {
+    $pythonDirectory = Join-Path $RuntimeRoot "python"
+    New-Item -ItemType Directory -Force -Path $pythonDirectory | Out-Null
+    $env:UV_PYTHON_INSTALL_DIR = Get-PhysicalDirectory $pythonDirectory
+} catch { Fail "could not resolve the managed Python directory: $($_.Exception.Message)" }
 Progress "install-python" "CPython $pyVer"
 # --no-bin: no python3.x.exe in ~\.local\bin; --no-registry: no PEP 514 entry (py.exe would list it)
 Invoke-Tool "uv python install $pyVer" $uv @("python", "install", $pyVer, "--no-bin", "--no-registry") | Out-Null
