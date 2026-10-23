@@ -21,7 +21,7 @@ from fairbeam.preview import build_preview  # noqa: E402
 from fairbeam.server import App, make_server  # noqa: E402
 
 REPO = Path(__file__).resolve().parents[2]
-STARTERS = ("dipole", "monopole", "open-waveguide", "sleeve-dipole", "microstrip")
+STARTERS = ("dipole", "monopole", "open-waveguide", "sleeve-dipole", "microstrip", "inset-patch")
 
 
 def problems(d, values=None, bundle=None):

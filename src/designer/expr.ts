@@ -16,9 +16,12 @@
 // same bits on both sides; sqrt is exact too, while sin, log, exp, ** ... come from each runtime's
 // maths library and may differ in the last bit (the fixture compares those to 1e-9 relative).
 //
-// Names: a parameter key is an ASCII identifier ([A-Za-z_][A-Za-z0-9_]*) that is not a function,
-// a constant or a Python keyword (paramKeyError). Keys such as __proto__, constructor or toString
+// Names: a parameter key is an ASCII identifier ([A-Za-z_][A-Za-z0-9_]*) outside the historical
+// reserved set and Python keywords (paramKeyError). New synthesis call spellings remain legal
+// bare parameter names for compatibility. Keys such as __proto__, constructor or toString
 // are ordinary names: the lookups below use own properties only and the maps are prototype-free.
+
+import { microstripWidth, patchInset } from "./patchSeed.ts";
 
 const C0 = 299_792_458;
 
@@ -99,6 +102,10 @@ const FUNCS = bare<Record<string, Func>>({
 });
 const CONSTANTS = bare<Record<string, number>>({ pi: Math.PI, c0: C0, eps0: 8.8541878128e-12, mu0: 1.25663706212e-6 });
 export const RESERVED = new Set([...Object.keys(FUNCS), ...Object.keys(CONSTANTS)]);
+// Added call spellings remain legal legacy parameter names; bare names and
+// calls are parsed separately. Keep this after the historical reserved set.
+FUNCS.microstrip_width = { fn: microstripWidth, args: [3, 3] };
+FUNCS.patch_inset = { fn: patchInset, args: [4, 4] };
 /** Python's keywords (keyword.kwlist, compared by scripts/check-designer.mjs): Python cannot
  * parse them as names, so they are not parameter keys. */
 export const PY_KEYWORDS = new Set(["False", "None", "True", "and", "as", "assert", "async", "await", "break", "class",

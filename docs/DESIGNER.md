@@ -127,8 +127,9 @@ inner control handles it first.
 Every starter has a design frequency `f0`, PML boundaries (8 cells, except the patch: MUR), the
 automatic mesh at 20 cells per wavelength, end criterion −60 dB, the far field at f0 for the
 antennas, and every loss tangent given at f0 (openEMS applies tan δ as a constant conductivity, so
-it is exact at one frequency only). Each one simulates in seconds and has no check errors or
-warnings. The numbers below are from one run of each at its defaults (GPU engine):
+it is exact at one frequency only). The measured numbers below belong to the older starters at
+their defaults (one GPU run each). The new f0-driven inset patch has analytical and geometry
+checks only; its runtime, resonance, matching and radiation have not been simulated or validated:
 
 | Starter | What it is | Result at the defaults |
 | --- | --- | --- |
@@ -136,8 +137,35 @@ warnings. The numbers below are from one run of each at its defaults (GPU engine
 | Quarter-wave monopole | A 1 mm strip `k` = 0.233 wavelengths tall on a finite square ground plane (0.8 λ), probe-fed at its base by a 50 Ω port; 2.4 GHz | S11 −17.7 dB at 2.393 GHz, Dmax 3.12 dBi (the small ground tilts the beam up) |
 | Open-ended waveguide | A WR-90 guide (22.86 × 10.16 mm, 50 mm long) radiating from its open end, fed by a TE10 waveguide port a quarter guide wavelength in front of a back short; 10 GHz, band 8-12 GHz | S11 −9.9 dB at 10 GHz, −11.5 dB at 12 GHz, Dmax 6.60 dBi |
 | Patch antenna starter | A probe-fed patch on RO4003C-like substrate (tan δ 0.0027) over a 60 mm ground plane, 2.45 GHz | −41 dB S11 and about 88 % radiation efficiency at 2.45 GHz (the patch example's 96.5 % comes from its lower tan δ, 0.001) |
+| Inset-fed patch from f0 | Set `f0` (1–3 GHz), `eps_r` (2–6) and `h` (0.4–1.6 mm). Derived patch dimensions, quasi-static 50 Ω feed width and slot-model inset; default 2.4 GHz / 4.4 / 1.6 mm | Analytical starting point only. Run mesh and domain convergence; no full-wave result or accuracy percentage is claimed. |
 | Printed sleeve dipole | [examples/designs/sleeve_dipole_867.design.json](../examples/designs/sleeve_dipole_867.design.json), parametrized as in that file: a coax-fed sleeve dipole on a slim FR-4 strip, no ground plane, for a UAV; 30 cells per wavelength as tuned, efficiency over the band | S11 −19.6 dB at 0.877 GHz (1.1 % high, for a radome), Dmax 2.10 dBi, radiation efficiency 0.977-0.990 over the band |
 | Microstrip line (two-port) | A 3.1 mm, 40 mm line on 1.6 mm FR-4 (εr 4.3, tan δ 0.02) with a 50 Ω port at each end; the parameters show the Hammerstad Z0 (50.4 Ω) and ε_eff. Both ports are excited, one run each, for the full S-matrix; no far field | S11 −29.7 dB and S21 −0.3 dB at 2.4 GHz |
+
+The inset starter leaves the older **Patch antenna starter** and saved projects unchanged.
+Its visible `W`, `eps_eff`, `delta_l` and `L` expressions follow the transmission-line equations
+in `fairbeam.analytic.patch_design` (Balanis, *Antenna Theory*, section 14.2; Hammerstad's
+quasi-static line/fringing model). `microstrip_width(50, eps_r, h)` numerically inverts that
+line model. `patch_inset(50, L, W, f0)` uses the two-slot self/mutual conductance estimate and
+`R(y) = R_edge cos²(πy/L)`. Both expression helpers use mm and Ω; `patch_inset` takes GHz.
+Python and TypeScript use the same fixed quadrature and a bounded Bessel series, checked
+against the independent, slower reference in `fairbeam.analytic`. These formula checks do
+not establish electromagnetic equivalence or a 50 Ω match for the finished finite board.
+
+`gap = h/2`, `feed_len = max(6h, 0.1λ₀)` and `margin = max(6h, 0.08λ₀)` are explicit layout
+choices, not matching corrections. The port is at the board edge and includes the feed line
+in its reference plane. The model omits finite-board, inset-loading, conductor-loss and
+dispersion corrections (the metal is PEC); the chosen loss tangent holds at f0 only.
+The suggested independent ranges keep the substrate electrically thin. Arbitrary edits
+outside them are not certified by the formulas; the synthesis helpers refuse nonphysical
+or unsupported inputs rather than silently clipping them. Run mesh/domain convergence,
+check energy decay and inspect S11 and radiation before using the design. The historical
+2.4 GHz inset example has different geometry and supplies no validation for this starter.
+
+Design JSON and the Python model export retain the synthesis expressions. The CST-compatible VBA macro
+export has no native equivalent for `microstrip_width` or `patch_inset`: those two derived values are
+exported as numbers with explicit fallback notes. Re-export after changing `f0`, `eps_r` or `h` in
+Fairbeam; editing only those parameters after macro import does not resynthesize the feed and inset. Gerber/DXF
+exports describe the current geometry and do not establish fabrication or RF performance.
 
 A pyramidal horn is not among them: its flared walls are plates in planes that are not normal to
 an axis, which the design format cannot hold (polygons lie in axis planes, and a zero-thickness
@@ -330,7 +358,11 @@ expression that does not evaluate.
 - Operators: `+ - * / // % **` and parentheses. Constants: `pi`, `c0`, `eps0`, `mu0`. Functions:
   `sqrt`, `sin`, `cos`, `tan`, `asin`, `acos`, `atan`, `atan2`, `exp`, `log`, `log10`, `abs`,
   `min`, `max`, `round`, `floor`, `ceil`, `radians`, `degrees` and `wavelength(f_GHz)` (free-space
-  wavelength in mm). The rules are Python's, and the run server's evaluator stays the authority.
+  wavelength in mm). The synthesis helpers `microstrip_width(Z0, eps_r, h)` and
+  `patch_inset(R, L, W, f_GHz)` are documented under [Starters](#starters); they return mm.
+  They reject inputs outside their model domain. Their spellings remain legal as bare
+  parameter names for older files; a function call is distinguished by its parentheses.
+  The rules are Python's, and the run server's evaluator stays the authority.
 - Numbers are doubles (IEEE-754 binary64) on both sides: a number is read as the nearest double, as
   JSON reads it, and every step of an expression is a double, so the browser and the server give the
   same value (`9007199254740993 - 9007199254740992` is `0`; Python's exact whole numbers are not

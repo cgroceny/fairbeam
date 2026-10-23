@@ -206,6 +206,7 @@ from .materials import design_material
 from .boolean_curved import (FACETS, INTERSECT_MESSAGE, INTERSECT_WHY, B_HAS_CUT, FLAT_CARVER, HAS_CUT, SHEET_VOLUME, coaxial_rects, cylinder_cell,
                              design_bounds, facet_ring, flat_axis, is_p, is_tube, is_void, kind_name, same_ring, snap_to_sheet, unresolve)
 from .polyclip import clip_polygons, clip_tolerance
+from .patch_seed import microstrip_width, patch_inset
 
 DESIGN_SCHEMA = "fairbeam.design/1"
 DESIGN_SUFFIX = ".design.json"
@@ -286,7 +287,10 @@ FUNCS = {
 }
 CONSTANTS = {"pi": math.pi, "c0": C0, "eps0": 8.8541878128e-12, "mu0": 1.25663706212e-6}
 RESERVED = set(FUNCS) | set(CONSTANTS)
-# A parameter key: an ASCII identifier that is not a function, a constant or a Python keyword
+# New call spellings do not reserve old legal parameter names. A call and a bare
+# name remain distinct, including when both occur in the same expression.
+FUNCS.update(microstrip_width=microstrip_width, patch_inset=patch_inset)
+# A parameter key: an ASCII identifier not in the historical reserved set or Python keywords
 # (src/designer/expr.ts paramKeyError refuses the same keys in the designer).
 _KEY = re.compile(r"[A-Za-z_][A-Za-z0-9_]*")
 
@@ -345,8 +349,8 @@ def parse_expr(text) -> ast.Expression:
 def names_in(text) -> set[str]:
     """Parameter names an expression refers to (functions and constants excluded)."""
     tree = parse_expr(text)
-    called = {n.func.id for n in ast.walk(tree) if isinstance(n, ast.Call)}
-    return {n.id for n in ast.walk(tree) if isinstance(n, ast.Name)} - called - set(CONSTANTS)
+    called = {n.func for n in ast.walk(tree) if isinstance(n, ast.Call)}
+    return {n.id for n in ast.walk(tree) if isinstance(n, ast.Name) and n not in called} - set(CONSTANTS)
 
 
 class _NotFinite(Exception):
@@ -3258,7 +3262,7 @@ _PY_FUNCS = {"sqrt": "np.sqrt", "sin": "np.sin", "cos": "np.cos", "tan": "np.tan
 _PY_CONST = {"pi": "np.pi", "c0": "C0", "eps0": "8.8541878128e-12", "mu0": "1.25663706212e-6"}
 
 
-def _py(text, independent: set[str]) -> str:
+def _py(text, independent: set[str], synthesis_namespace: str = "_patch_seed", need: set[str] | None = None) -> str:
     """An expression as Python source: independent parameters become ``p["key"]``."""
     if isinstance(text, (int, float)) and not isinstance(text, bool):
         return repr(float(text)) if isinstance(text, float) else str(text)
@@ -3266,8 +3270,13 @@ def _py(text, independent: set[str]) -> str:
 
     class T(ast.NodeTransformer):
         def visit_Call(self, node):
-            self.generic_visit(node)
-            node.func = ast.parse(_PY_FUNCS[node.func.id], mode="eval").body
+            name = node.func.id
+            node.args = [self.visit(arg) for arg in node.args]
+            if name in ("microstrip_width", "patch_inset") and need is not None:
+                need.add("synthesis")
+            target = (f"{synthesis_namespace}.{name}" if name in ("microstrip_width", "patch_inset")
+                      else _PY_FUNCS[name])
+            node.func = ast.parse(target, mode="eval").body
             return node
 
         def visit_Name(self, node):
@@ -3397,7 +3406,10 @@ def to_python(d: dict) -> str:
     guard_design = {"params": d.get("params", []), "materials": guard_materials, "parts": guard_parts}
     indep = {p["key"] for p in d.get("params", []) if "expr" not in p}
     need: set[str] = set()
-    e = lambda v: _py(v, indep)  # noqa: E731
+    synthesis_namespace = "_patch_seed"
+    while synthesis_namespace in {p["key"] for p in d.get("params", [])}:
+        synthesis_namespace = "_" + synthesis_namespace
+    e = lambda v: _py(v, indep, synthesis_namespace, need)  # noqa: E731
     vec = lambda v: "[" + ", ".join(e(x) for x in v) + "]"  # noqa: E731
     faces, sheets, thin_names = _thin_faces(d, e)
     flat = {(i, j): (n, f) for i, j, n, f, _at in faces}
@@ -3799,6 +3811,8 @@ def to_python(d: dict) -> str:
         helpers += _PY_HELPERS["rotpoly"]
     if "torus" in need:
         helpers += _PY_HELPERS["torus"]
+    if "synthesis" in need:
+        helpers += [f"import fairbeam.patch_seed as {synthesis_namespace}", "", ""]
     at = out.index("MODEL = " + json.dumps({k: v for k, v in m.items() if isinstance(v, str)}, ensure_ascii=False))
     return "\n".join(out[:at] + helpers + out[at:])
 
@@ -3978,7 +3992,8 @@ def empty_design(id_: str, name: str) -> dict:
 # other than these two are in fairbeam.starters
 TEMPLATES = {"empty": "empty_design", "patch": "blank_design", "dipole": "starters.dipole_design",
              "monopole": "starters.monopole_design", "sleeve-dipole": "starters.sleeve_dipole_design",
-             "open-waveguide": "starters.open_waveguide_design", "microstrip": "starters.microstrip_design"}
+             "open-waveguide": "starters.open_waveguide_design", "microstrip": "starters.microstrip_design",
+             "inset-patch": "starters.inset_patch_design"}
 
 
 def template_design(template: str, id_: str, name: str) -> dict:

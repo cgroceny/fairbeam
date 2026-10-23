@@ -189,6 +189,10 @@ jobs:
           node scripts/check-user-project-browser.mjs
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           node scripts/check-quit-activity-browser.mjs
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          node --experimental-strip-types scripts/check-inset-patch.mjs
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          node scripts/check-inset-patch-browser.mjs
 
       - name: Keep browser failure evidence (including recovered attempts)
         if: always()

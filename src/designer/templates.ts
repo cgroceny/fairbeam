@@ -5,7 +5,7 @@
 // server writes (part and material names) stay in English.
 import { t } from "../i18n";
 
-export type TemplateKey = "empty" | "dipole" | "monopole" | "open-waveguide" | "patch" | "sleeve-dipole" | "microstrip";
+export type TemplateKey = "empty" | "dipole" | "monopole" | "open-waveguide" | "patch" | "inset-patch" | "sleeve-dipole" | "microstrip";
 
 export interface DesignTemplate {
   key: TemplateKey;
@@ -45,6 +45,8 @@ export const TEMPLATE_GROUPS: TemplateGroup[] = [
   {
     label: "templates.group.printed",
     templates: [
+      { key: "inset-patch", name: "templates.insetPatch.name", sub: "templates.insetPatch.sub",
+        created: (file) => t("templates.insetPatch.created", { file }) },
       { key: "patch", name: "templates.patch.name", sub: "templates.patch.sub",
         created: (file) => t("templates.patch.created", { file }) },
       { key: "sleeve-dipole", name: "templates.sleeveDipole.name", sub: "templates.sleeveDipole.sub",

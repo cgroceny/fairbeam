@@ -1,7 +1,15 @@
 {
   "about": "Shared cases for the design expression evaluator and the design checks, read by python/tests/test_design_checks.py (design.py, design_checks.py) and scripts/check-designer.mjs (src/designer/expr.ts, checks.ts). Expressions: 'value' is the result (to 1e-9 relative), 'error': true means both sides refuse it. 'exact': true means both sides give that same double, with no tolerance (the shared number rule: literals, names and every step are finite doubles, src/designer/expr.ts). Params: parameter lists (independent 'default', derived 'expr') resolved in order by paramValues (expr.ts) and resolve_names (design.py): 'values' are the resolved keys (exact), 'errors' the keys whose expression fails; 'key_error': i means both refuse params[i].key (paramKeyError, check_design). Numbers: plain numbers (not expressions) given to the evaluator and as a parameter default, written as strings because JSON has no NaN or Infinity (float() / Number() read them). Geometry: designs (edits like the cases) whose resolved shapes src/designer/geometry.ts (the instant preview) must reproduce. Cases: 'set' edits the blank design (python/fairbeam/design.py blank_design) at JSON paths, 'append' adds items to lists; 'expect' lists severity|code|path that the checks must report (the cheap ones on both sides, the rest from Python only).",
-  "names": {"W": 32, "h": 1.524, "f0": 2.45, "a": 1, "b": 3, "W1_x": 5, "n": 2.5, "er": 4.4},
+  "names": {"W": 32, "h": 1.524, "f0": 2.45, "a": 1, "b": 3, "W1_x": 5, "n": 2.5, "er": 4.4, "microstrip_width": 7, "patch_inset": 8},
   "expressions": [
+    {"expr": "microstrip_width(50,4.4,1.6)", "value": 3.082941405445224},
+    {"expr": "patch_inset(50,29.4215930843705,38.0099749575278,2.4)", "value": 10.914409094635674},
+    {"expr": "microstrip_width+microstrip_width(50,4.4,1.6)+patch_inset", "value": 18.082941405445224},
+    {"expr": "microstrip_width(50,4.4)", "error": true},
+    {"expr": "microstrip_width(50,0.5,1.6)", "error": true},
+    {"expr": "microstrip_width(50,4.4,0)", "error": true},
+    {"expr": "patch_inset(50,30,100,2.4)", "error": true},
+    {"expr": "patch_inset(1e9,30,38,2.4)", "error": true},
     {"expr": "W/2 + 1", "value": 17},
     {"expr": "-(a - b) ** 2", "value": -4},
     {"expr": "-2 ** 2", "value": -4},
