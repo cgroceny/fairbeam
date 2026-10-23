@@ -1206,25 +1206,43 @@ def _circular(res, i, d_dbi, theta, phi) -> dict:
     """Circular-polarisation split of the far field (IEEE, e^{jwt}): E_R = (E_theta + j E_phi)/sqrt 2,
     E_L = (E_theta - j E_phi)/sqrt 2 (openEMS' E_cprh / E_cplh up to a phase). The partial
     directivities are D * |E_R|^2 / |E|^2 and D * |E_L|^2 / |E|^2; the axial ratio is
-    (|E_R| + |E_L|) / | |E_R| - |E_L| | (0 dB = circular, large = linear)."""
-    et, ep = np.asarray(res.E_theta[i]), np.asarray(res.E_phi[i])
-    er, el = np.abs(et + 1j * ep) / np.sqrt(2), np.abs(et - 1j * ep) / np.sqrt(2)
+    (|E_R| + |E_L|) / | |E_R| - |E_L| | (0 dB = circular, large = linear).
+    Zero/nonfinite fields or directivity are missing samples (NaN, written as JSON null).
+    Scale each complex pair before taking ratios, so the result does not depend
+    on the absolute field amplitude overflowing or underflowing its square."""
+    et, ep = np.asarray(res.E_theta[i], complex), np.asarray(res.E_phi[i], complex)
+    d = np.asarray(d_dbi, float)
+    shape = (len(theta), len(phi))
+    if not all(shape) or et.shape != shape or ep.shape != shape or d.shape != shape:
+        raise ValueError("circular fields and directivity need the nonempty theta/phi grid")
+    scale = np.maximum.reduce([np.abs(et.real), np.abs(et.imag), np.abs(ep.real), np.abs(ep.imag)])
+    valid = np.isfinite(et) & np.isfinite(ep) & np.isfinite(d) & (scale > 0)
+    normalized = [np.divide(v, scale, out=np.zeros(shape), where=valid)
+                  for v in (et.real, et.imag, ep.real, ep.imag)]
+    tr, ti, pr, pi = normalized
+    er = np.hypot(tr - pi, ti + pr) / np.sqrt(2)
+    el = np.hypot(tr + pi, ti - pr) / np.sqrt(2)
     tot = er ** 2 + el ** 2
     with np.errstate(divide="ignore", invalid="ignore"):
-        d_lin = 10 ** (np.asarray(d_dbi) / 10)
-        dr = 10 * np.log10(np.maximum(d_lin * er ** 2 / tot, 1e-12))
-        dl = 10 * np.log10(np.maximum(d_lin * el ** 2 / tot, 1e-12))
-        ar = 20 * np.log10(np.minimum((er + el) / np.maximum(np.abs(er - el), 1e-30), 1e6))
-    floor = float(np.max(d_dbi)) - 60
-    k = np.unravel_index(int(np.argmax(d_dbi)), np.shape(d_dbi))
+        dr = np.where(valid, np.maximum(d + 10 * np.log10(er ** 2 / tot), -120), np.nan)
+        dl = np.where(valid, np.maximum(d + 10 * np.log10(el ** 2 / tot), -120), np.nan)
+        ar = np.where(valid, np.minimum(20 * np.log10((er + el) / np.abs(er - el)), 60), np.nan)
+    finite_d = np.isfinite(d)
+    floor = float(np.max(d[finite_d])) - 60 if np.any(finite_d) else np.nan
+    k = np.unravel_index(int(np.argmax(np.where(finite_d, d, -np.inf))), shape)
+    # An explicit angular grid need not contain +z, nor put it in the first row.
+    # Without a theta=0 sample, boresight is unavailable rather than interpolated.
+    boresight_i = next((j for j, t in enumerate(theta) if np.isfinite(t) and abs(t) < 1e-9), None)
+    boresight = {"theta": 0.0}
+    for key, values in (("rhcp_dbi", dr), ("lhcp_dbi", dl), ("axial_ratio_db", ar)):
+        boresight[key] = np.nan if boresight_i is None else round(float(values[boresight_i, 0]), 3)
     return {
         "rhcp_dbi": [_r(row, 2) for row in np.maximum(dr, floor)],
         "lhcp_dbi": [_r(row, 2) for row in np.maximum(dl, floor)],
-        "axial_ratio_db": [_r(row, 2) for row in np.minimum(ar, 60)],
+        "axial_ratio_db": [_r(row, 2) for row in ar],
         "peak": {"theta": float(theta[k[0]]), "phi": float(phi[k[1]]), "rhcp_dbi": round(float(dr[k]), 3),
-                 "lhcp_dbi": round(float(dl[k]), 3), "axial_ratio_db": round(float(min(ar[k], 60)), 3)},
-        "boresight": {"theta": 0.0, "rhcp_dbi": round(float(dr[0, 0]), 3), "lhcp_dbi": round(float(dl[0, 0]), 3),
-                      "axial_ratio_db": round(float(min(ar[0, 0], 60)), 3)},
+                 "lhcp_dbi": round(float(dl[k]), 3), "axial_ratio_db": round(float(ar[k]), 3)},
+        "boresight": boresight,
     }
 
 

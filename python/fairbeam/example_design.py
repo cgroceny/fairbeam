@@ -502,6 +502,10 @@ def _read_design(module, values: dict, source_path: Path):
         steps = getattr(sim, "pattern_steps", (3.0, 5.0))
         if tuple(steps) != (3.0, 5.0):
             far_field.update(theta_step=float(steps[0]), phi_step=float(steps[1]))
+    if getattr(sim, "cp_outputs", False):
+        # Preserve the request even when NF2FF is disabled; omitted remains the
+        # historical false default, so ordinary example copies stay unchanged.
+        far_field["circular"] = True
     if nf2ff and not far_field["enabled"]:
         raise ExampleConversionError("NF2FF geometry was found but the Simulation has no NF2FF monitor")
 

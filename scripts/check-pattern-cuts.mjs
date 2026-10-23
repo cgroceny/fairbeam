@@ -2,7 +2,7 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { analyzeCut, thetaCut, samplePattern, patternMetrics } from '../src/lib/patternMetrics.ts';
-import { resultDataTable } from '../src/designer/resultData.ts';
+import { resultDataTable, comparedResultDataTable } from '../src/designer/resultData.ts';
 import { compareCuts, traces } from '../src/compare/series.ts';
 import { selectedPatternFigure, lineChartSvg } from '../src/drawing/charts.ts';
 import { quantityGrid } from '../src/lib/farfieldQuantity.ts';
@@ -111,4 +111,41 @@ assert.deepEqual(analyzeCut(theta, phi, asymmetric, {kind:'elevation',angle:360}
 assert.equal(resultDataTable(bundle, 'pattern').rows.length, theta.length * phi.length, 'unselected standard report data retain full raw grid');
 const split = lineChartSvg({ width: 88, height: 60, title: 'SYNTHETIC gap', xLabel: 'deg', yLabel: 'dBi', series: [{label: 'gap', x: [0, 1, 2, 3, 4], y: [0, 1, NaN, 1, 0]}] });
 assert.equal((split.match(/stroke-width="0.35"/g) ?? []).length, 2, 'Cartesian figure breaks at nonfinite gaps');
+// Combined #228/#231 contract: AR is a masked ratio, never a radiation lobe.
+const arBundle = structuredClone(bundle), arField = arBundle.results.farfield[0];
+arField.directivity_dbi = theta.map(() => phi.map(() => 20));
+arField.cp.axial_ratio_db = theta.map(() => phi.map(p => p / 6));
+arField.directivity_dbi[2][1] = -0.01; // below Dmax−20; mask before interpolation
+const arGrid = quantityGrid(arBundle, arField, 'axial_ratio');
+assert.ok(Number.isNaN(arGrid[2][1]));
+assert.ok(Number.isNaN(samplePattern(theta, phi, arGrid, 60, 15)), 'AR masked neighbor is not bridged');
+const arCut = thetaCut(theta, phi, arGrid, 60);
+const arMetrics = patternMetrics(arCut, theta, phi, arGrid, false, 'axial_ratio');
+assert.equal(arMetrics.peak, null);
+for (const metric of ['hpbw', 'sll', 'frontBack']) assert.deepEqual(arMetrics[metric], { value: null, reason: 'quantity' });
+const selectedOptions = { patternCut: {kind:'conical',angle:60}, patternQuantity:'axial_ratio' };
+const arTable = resultDataTable(arBundle, 'pattern', ff.f, selectedOptions);
+const arIndex = arTable.header.indexOf('Axial ratio (dB)');
+assert.ok(arIndex >= 0 && !arTable.header.some(h => h.includes('(dBi)')));
+assert.equal(arTable.rows.find(r => r[arTable.header.indexOf('phi (deg)')] === phi[1])[arIndex], null);
+assert.ok(arTable.rows.every(r => r[arTable.header.indexOf('HPBW status')] === 'quantity'));
+const noCp = structuredClone(arBundle); delete noCp.results.farfield[0].cp;
+for (const q of ['axial_ratio','rhcp','lhcp']) {
+  const options = { ...selectedOptions, patternQuantity:q };
+  const table = comparedResultDataTable([{file:'has-cp',bundle:arBundle},{file:'no-cp',bundle:noCp}], 'pattern', ff.f, options);
+  const column = table.header.findIndex(h => h.endsWith(q==='axial_ratio'?'(dB)':'(dBi)'));
+  assert.ok(table.rows.filter(r=>r[0]==='no-cp').every(r=>r[column]===null), `${q} reference remains gaps`);
+  assert.ok(!table.header.includes('Directivity (dBi)'), `${q} comparison cannot silently fall back per reference`);
+  const fallback = comparedResultDataTable([{file:'base-no-cp',bundle:noCp},{file:'reference-cp',bundle:arBundle}], 'pattern', ff.f, options);
+  assert.ok(fallback.header.includes('Directivity (dBi)'));
+  assert.ok(!fallback.header.some(h=>/Axial ratio|RHCP|LHCP/.test(h)), 'fallback follows base, not reference availability');
+}
+for (const projection of ['polar','cartesian']) {
+  const svg = selectedPatternFigure(arBundle, arField, selectedOptions.patternCut, 'axial_ratio', projection);
+  assert.ok(svg.includes('Axial ratio (dB)') && !svg.includes('Axial ratio (dBi)'));
+  assert.ok(svg.includes('0–60 dB') && svg.includes('N/A (quantity)') && svg.includes('Dmax -20 dB'));
+  assert.ok(svg.includes('60') && svg.includes('0') && !/NaN|Infinity/.test(svg));
+  const fallback = selectedPatternFigure(noCp, noCp.results.farfield[0], selectedOptions.patternCut, 'axial_ratio', projection);
+  assert.ok(fallback.includes('Directivity (dBi)') && !fallback.includes('Axial ratio'));
+}
 console.log('Pattern cuts: analytic interpolation, antipodes, seam HPBW, sidelobes/floor, gaps/ambiguity, quantities, compare, CSV and publication SVG controls passed. Synthetic data only.');

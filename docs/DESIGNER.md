@@ -969,6 +969,12 @@ without the dialog.
     flags (x−, x+, y−, y+, z−, z+) for the faces of the near-to-far-field box that record; a face
     a feed waveguide crosses is left out, as in the pyramidal horn example. There is no dialog
     field for it yet.
+  - **Circular polarization (RHCP/LHCP and axial ratio)** requests the complex-field CP
+    postprocessing at the far-field frequencies. This saves `far_field.circular: true`; absent or
+    `false` keeps the existing default. It does not turn a disabled Far field monitor on.
+    The IEEE e^(+jωt) convention is E_R = (E_θ + jE_φ)/√2 and E_L = (E_θ − jE_φ)/√2.
+    Saving a request does not qualify the antenna as circularly polarized: run and check angular,
+    frequency, mesh and time convergence before drawing a bandwidth or efficiency conclusion.
   - **Surface current**: frequencies at which surface-current maps are recorded on the metal
     sheets, as `fairbeam run --fields` does. After a run they are under the run's 2D/3D Results in
     the navigation tree. Ribbon Simulation › Monitors › **Surface current** opens this field; when
@@ -1197,13 +1203,26 @@ frequency of its band's |S11| minimum from the project index):
 - **Table**: frequency, |S11|, VSWR and the impedance.
 - **Log** (dock): the openEMS output (the end of it for an earlier run), with a link to the full log.
 
-The far-field **quantity** (Directivity, Gain, Realized gain, and RHCP/LHCP directivity when the
+The far-field **quantity** (Directivity, Gain, Realized gain, RHCP/LHCP directivity and Axial ratio when the
 run has circular-polarisation data) is chosen in the Pattern tab's side panel, in the far-field card
 of the 3D view, or under **Post-processing › Farfield › Quantity** while a pattern is shown; the
 choice holds for the session. Gain is the directivity plus 10·log10(η_rad), realized gain the directivity plus
 10·log10(η_rad·(1 − |S11(f)|²)) with the driven port's S11 at the far-field frequency, so their
 maxima are the bundle's `gain_dbi` and `realized_gain_dbi`. Without a radiation efficiency the
 gain options are disabled (the tooltip says why) and the pattern stays directivity.
+
+**Axial ratio** uses its own **0–60 dB** scale, never dBi. 0 dB is ideal circular polarization;
+60 dB is the backend cap, including the linear-polarization limit. The peak and +z boresight
+readouts show **≥ 60 dB** at that cap and **—** when unavailable. Lower AR is more circular;
+the polar/3D radius encodes AR, not radiated strength or gain. Samples with total directivity
+below **Dmax − 20 dB** are hidden, including in the selected-quantity data/CSV table. Equality
+at the threshold is included. Zero/nonfinite fields and missing CP stay gaps; they are never
+turned into 0 dB. A comparison uses each run's own Dmax mask, and a run without CP contributes
+no AR samples. The raw pattern CSV still preserves the stored, unmasked CP grid.
+The mask suppresses weak-field ratios; it is not an accuracy or convergence test. A low AR at
+one sampled direction/frequency does not establish CP bandwidth, realized gain or efficiency.
+The CST-compatible VBA macro export lists `far_field.circular` as omitted: configure circular
+components and axial-ratio postprocessing after importing that macro.
 
 While the **3D pattern** is shown, a card at the top right of the 3D view holds its color scale,
 the quantity, the far-field frequency chips (and driven port for multi-port runs), Dmax, gain,
@@ -1600,3 +1619,5 @@ browser:
 The app sends nothing by itself and puts nothing else into the link. Attach the design file or a log
 if they help, and remove anything private first. In the desktop app the local run server opens the
 system browser, since the app window does not open web pages itself.
+
+The selected-cut analyzer also supports axial ratio when circular outputs are present. Its polar and Cartesian axes use the fixed 0–60 dB ratio scale (lower is more circular), with the same stored Dmax − 20 dB display mask applied before adjacent-angle interpolation. Masked or missing neighbors stay gaps. HPBW, SLL, and F/B are unavailable for axial ratio because it is not radiation strength. Selected-cut CSV and publication SVG/PDF retain dB units, missing values, and this qualification. A comparison resolves its quantity from the base result once: a reference without that circular quantity stays empty; an unavailable base quantity falls back consistently to directivity. Angular step settings and the circular-output checkbox are independent and both survive Design configuration and export.

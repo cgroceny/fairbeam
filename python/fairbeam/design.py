@@ -140,10 +140,10 @@ whole (a check says so)::
     "cuts": [{"start": ["-ws/2", "-ls/2", "h"], "stop": ["ws/2", "ls/2", "h"]},
              {"kind": "circle", "normal": "z", "elevation": "h", "center": [0, 0], "radius": 2}]
 
-Thin metal: a metal brick much thinner than the mesh can resolve (PCB copper, 17 to 70 µm) is
+Thin metal: a metal brick much thinner than the mesh can resolve (PCB copper, 17 to 70 Âµm) is
 built as a zero-thickness PEC sheet (:func:`thin_sheets`), so the mesh gets no cells of the copper
 thickness and the timestep stays reasonable. The limit is a tenth of the finest cell the automatic
-mesh aims for (λ at f max / cells per wavelength / √εr of the densest dielectric). The sheet sits
+mesh aims for (Î» at f max / cells per wavelength / âˆšÎµr of the densest dielectric). The sheet sits
 on the face that coincides with or touches a dielectric (the substrate side), else in the middle;
 port and resistor ends inside the drawn thickness move onto it. The bundle keeps the drawn
 thickness for display and the exports. ``"mesh": {"thin_metal": "volume"}`` keeps the volumes of plates at least 0.6 of the finest cell thick
@@ -312,7 +312,7 @@ _UNOPS = {ast.USub: lambda a: -a, ast.UAdd: lambda a: a}
 # a numeric literal (not a digit inside a name like W1_a) written with _ or as 0x.., 0o.., 0b..
 _NUMBER = re.compile(r"(?<![A-Za-z_\d.])\d[\w.]*")
 # a character the designer's tokenizer does not read (src/designer/expr.ts): a comment (#), a line
-# continuation (\), a non-ASCII letter or space (Python would read "ｗ" as w), quotes, brackets ...
+# continuation (\), a non-ASCII letter or space (Python would read "ï½—" as w), quotes, brackets ...
 _FOREIGN = re.compile(r"[^A-Za-z0-9_.+\-*/%(), \t\n\r\f\v]")
 
 
@@ -643,6 +643,11 @@ def check_design(d: dict) -> None:
             raise DesignError("topology must be parallel or series", f"resistors[{i}].topology")
         if r.get("direction") not in AXES:
             raise DesignError("direction must be x, y or z", f"resistors[{i}].direction")
+    ff = d.get("far_field", {})
+    if not isinstance(ff, dict):
+        raise DesignError("far_field must be an object", "far_field")
+    if "circular" in ff and not isinstance(ff["circular"], bool):
+        raise DesignError("circular must be true or false", "far_field.circular")
     mesh = d.get("mesh", {})
     if not isinstance(mesh, dict):
         raise DesignError("mesh must be an object", "mesh")
@@ -2624,7 +2629,7 @@ def apply_auto_timesteps(sim, f_max_hz: float) -> None:
 
 
 #: Q of the dominant mode of a patch-like cavity, fitted to what the solver needed (a 0.254 mm RT5880 patch rang for
-#: 52 ns, Q about 67; 1.6 mm FR-4 about 10): Q_rad = RINGDOWN_K εr² / ((εr - 1) h/λ0), 1/Q = 1/Q_rad + RINGDOWN_LOSS tan δ
+#: 52 ns, Q about 67; 1.6 mm FR-4 about 10): Q_rad = RINGDOWN_K ÎµrÂ² / ((Îµr - 1) h/Î»0), 1/Q = 1/Q_rad + RINGDOWN_LOSS tan Î´
 #: (the port and the box add loading on top of the substrate's own loss; 1.5 matches 1.6 mm and 0.3 mm FR-4 at Q 11 and 24)
 RINGDOWN_K = 0.037
 RINGDOWN_LOSS = 1.5
@@ -2636,7 +2641,7 @@ def ringdown_steps(eps_r: float, tan_d: float, h_mm: float, f_hz: float, dt_s: f
     fields to decay by ``end_db`` dB after the excitation pulse, from the Q of the cavity (radiation, which grows
     as the plate gets thin, and dielectric loss). ``dt_s`` is the real timestep (:data:`DT_SAFETY` applied). Returns
     ``q``, ``seconds`` (ring-down), ``steps`` (pulse plus ring-down), or None when the plate is not thin
-    (h/λ0 above 0.03) or the values do not allow an estimate."""
+    (h/Î»0 above 0.03) or the values do not allow an estimate."""
     from .excitation import dgauss_duration_s
 
     if not (eps_r > 1 and h_mm > 0 and f_hz > 0 and dt_s > 0 and end_db > 0):
@@ -2657,15 +2662,15 @@ THIN_METAL_FRACTION = 10     # metal thinner than 1/10 of the finest target cell
 THIN_METAL_ASPECT = 0.25     # ... and only a plate: thinner than 1/4 of its next size
 #: ``mesh.thin_metal`` "volume" keeps a plate's thickness only while that costs at most about 5x in timestep: the mesh puts
 #: three cells across the metal, so a plate thinner than 0.6 of the finest target cell (6x the sheet limit) would make cells
-#: more than 5x finer than the design needs (35 µm copper: 50x to 60x, a run of 20 minutes that never converges). Thinner
+#: more than 5x finer than the design needs (35 Âµm copper: 50x to 60x, a run of 20 minutes that never converges). Thinner
 #: plates are meshed as sheets; losses still use the thickness.
 VOLUME_COST_FACTOR = 6
 
 
 def thin_metal_limit(d: dict, names: dict, force: bool = False) -> float | None:
     """Metal bricks thinner than this (mm) along one axis are built as sheets: a tenth of the finest
-    cell the automatic mesh aims for, λ at f max over cells per wavelength in the medium
-    with the largest εr μr product among the materials the parts use. With ``mesh.thin_metal`` "volume" the limit is
+    cell the automatic mesh aims for, Î» at f max over cells per wavelength in the medium
+    with the largest Îµr Î¼r product among the materials the parts use. With ``mesh.thin_metal`` "volume" the limit is
     :data:`VOLUME_COST_FACTOR` times larger (only a plate thick enough to cost little in timestep keeps its thickness)
     unless ``force``: the limit of the default "sheet" setting, for the checks that say what "volume" costs. None when the values do not resolve."""
     m = d.get("mesh") or {}
@@ -2762,7 +2767,7 @@ def as_sheet(p: dict, sheet: dict) -> dict:
 
 def snap_to_sheets(a: list, c: list, k: int, sheets: list[dict]) -> tuple[list, list]:
     """Port or resistor ends ``a``, ``c`` (along axis ``k``) moved onto the sheets whose drawn
-    thickness they lie in: a probe drawn from the bottom of a 35 µm ground to the top of a 35 µm
+    thickness they lie in: a probe drawn from the bottom of a 35 Âµm ground to the top of a 35 Âµm
     patch then spans the substrate between the two sheets. Unchanged when that would leave no
     length along ``k``."""
     tol = 1e-9 * max([1.0] + [abs(x) for x in a + c])
@@ -2801,6 +2806,24 @@ def metal_loss(mt: dict, num) -> tuple[float | None, float | None]:
     if thick is not None and not thick > 0:
         raise DesignError("the sheet thickness must be > 0 mm", f"{w}.thickness")
     return sigma, thick
+
+
+def _configure_far_field(sim, ff: dict, num, vec) -> None:
+    """Apply requested output settings; circular output never enables an absent NF2FF box."""
+    sim.cp_outputs = ff.get("circular", False)
+    if not ff.get("enabled", True):
+        return
+    sim.pattern_steps = design_pattern_steps(ff, num)
+    faces = ff.get("faces")
+    if faces is not None and (not isinstance(faces, list) or len(faces) != 6 or not any(faces)):
+        raise DesignError("faces is 6 true/false flags (x-, x+, y-, y+, z-, z+), at least one true", "far_field.faces")
+    skip = {"directions": [bool(v) for v in faces]} if faces is not None and not all(faces) else {}
+    if ff.get("phase_center") is not None:
+        sim.add_nf2ff_box(center=vec(ff["phase_center"], "far_field.phase_center"), **skip)
+    else:
+        sim.add_nf2ff_box(**skip)
+    if ff.get("frequencies"):
+        sim.pattern_freqs = [num(f, f"far_field.frequencies[{k}]") * 1e9 for k, f in enumerate(ff["frequencies"])]
 
 
 def build(d: dict, values: dict):
@@ -3028,12 +3051,12 @@ def build(d: dict, values: dict):
                   "air_cells_per_wavelength": air, "max_ratio": 1.4, "pad": pad,
                   "dielectric_cells": 5 if has_dielectric else 4}
         notes = {
-            "cells_per_wavelength": f"{cpw} cells/λ at f max: {density} primitives" + (" including thin metal sheets" if thin_sheet else ""),
+            "cells_per_wavelength": f"{cpw} cells/Î» at f max: {density} primitives" + (" including thin metal sheets" if thin_sheet else ""),
             "edge_rule": "Exact edges for thin patterned metal" if thin_sheet else "Thirds placement for this geometry without thin converted sheets",
-            "air_cells_per_wavelength": f"{air} cells/λ in air from {cpw} feature cells/λ and {density} primitives",
+            "air_cells_per_wavelength": f"{air} cells/Î» in air from {cpw} feature cells/Î» and {density} primitives",
             "max_ratio": "1.4 limits growth between neighbouring cells",
-            "pad": ("λ/4 at f min gives the NF2FF box clearance from the radiator and boundary" if d.get("far_field", {}).get("enabled", True)
-                    else "λ/8 at f min; no far-field box is requested"),
+            "pad": ("Î»/4 at f min gives the NF2FF box clearance from the radiator and boundary" if d.get("far_field", {}).get("enabled", True)
+                    else "Î»/8 at f min; no far-field box is requested"),
             "dielectric_cells": ("At least five cells across dielectric thickness" if has_dielectric
                                  else "No dielectric; this minimum is unused"),
         }
@@ -3060,8 +3083,8 @@ def build(d: dict, values: dict):
             air = min(chosen["cells_per_wavelength"], max(8, round(
                 chosen["cells_per_wavelength"] / (1 + max(0, density - 1) / 8))))
             chosen["air_cells_per_wavelength"] = air
-            notes["air_cells_per_wavelength"] = (f"{air} cells/λ in air from "
-                f"{chosen['cells_per_wavelength']} feature cells/λ and {density} primitives")
+            notes["air_cells_per_wavelength"] = (f"{air} cells/Î» in air from "
+                f"{chosen['cells_per_wavelength']} feature cells/Î» and {density} primitives")
         if chosen["air_cells_per_wavelength"] > chosen["cells_per_wavelength"]:
             raise DesignError("must be <= cells_per_wavelength", "mesh.overrides.air_cells_per_wavelength")
         kw = chosen
@@ -3104,18 +3127,7 @@ def build(d: dict, values: dict):
         apply_auto_timesteps(sim, f_max)
 
     ff = d.get("far_field", {"enabled": True})
-    if ff.get("enabled", True):
-        sim.pattern_steps = design_pattern_steps(ff, num)
-        faces = ff.get("faces")
-        if faces is not None and (not isinstance(faces, list) or len(faces) != 6 or not any(faces)):
-            raise DesignError("faces is 6 true/false flags (x-, x+, y-, y+, z-, z+), at least one true", "far_field.faces")
-        skip = {"directions": [bool(v) for v in faces]} if faces is not None and not all(faces) else {}
-        if ff.get("phase_center") is not None:
-            sim.add_nf2ff_box(center=vec(ff["phase_center"], "far_field.phase_center"), **skip)
-        else:
-            sim.add_nf2ff_box(**skip)
-        if ff.get("frequencies"):
-            sim.pattern_freqs = [num(f, f"far_field.frequencies[{k}]") * 1e9 for k, f in enumerate(ff["frequencies"])]
+    _configure_far_field(sim, ff, num, vec)
     cur = (d.get("monitors") or {}).get("currents") or []
     if cur:  # fairbeam run records surface currents at these frequencies (cli._field_request)
         sim.current_freqs = [num(f, f"monitors.currents[{k}]") * 1e9 for k, f in enumerate(cur)]
@@ -3760,6 +3772,8 @@ def to_python(d: dict) -> str:
     if s.get("max_timesteps") in (None, "auto"):
         out.append(f"    apply_auto_timesteps(sim, ({e(s.get('f_max', 3))}) * 1e9)")
     ff = d.get("far_field", {"enabled": True})
+    if "circular" in ff:
+        out.append(f"    sim.cp_outputs = {ff['circular']!r}")
     if ff.get("enabled", True):
         design_pattern_steps(ff, _evaluator(resolve_names(d, {}))[0])
         args = []
@@ -3976,7 +3990,7 @@ _PY_HELPERS = {
 
 def empty_design(id_: str, name: str) -> dict:
     """A blank project: a band and one metal, no geometry yet. No dielectric is added up front (an unused FR4
-    only cluttered the list): Materials › Add dielectric copies one from the library when a substrate is needed."""
+    only cluttered the list): Materials â€º Add dielectric copies one from the library when a substrate is needed."""
     return {
         "schema": DESIGN_SCHEMA,
         "model": {"id": id_, "name": name, "description": ""},
@@ -4027,7 +4041,7 @@ def blank_design(id_: str, name: str) -> dict:
         # -60 dB: the efficiency off resonance, where almost all the incident power is reflected, needs
         # the ring-down well below -50 dB (docs/BUNDLE.md, results.efficiency)
         "simulation": {"f_min": "f0 * 0.6", "f_max": "f0 * 1.3", "boundaries": "MUR", "end_criteria_db": -60},
-        # RO4003C-like. openEMS applies tan δ as a constant conductivity, so it holds at tan_d_freq
+        # RO4003C-like. openEMS applies tan Î´ as a constant conductivity, so it holds at tan_d_freq
         # only: at the design frequency, not the datasheet's 10 GHz (that made the loss at 2.45 GHz
         # four times too high: 65 % radiation efficiency instead of 89 %)
         "materials": [

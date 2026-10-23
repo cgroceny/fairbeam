@@ -72,7 +72,7 @@ export type DesignTransform =
   | { type: "move"; offset: Vec3 }
   /** right-handed rotation by angle degrees about an axis through center; positive copies retain the original */
   | { type: "rotate"; axis: Axis; center: Vec3; angle: Expr; copies?: Expr }
-  /** `copies` more copies, the k-th shifted by k × step (the original stays) */
+  /** `copies` more copies, the k-th shifted by k Ã— step (the original stays) */
   | { type: "translate"; copies: Expr; step: Vec3 }
   /** positive uniform scale about origin; zero copies scales in place, positive copies retain the original */
   | { type: "scale"; factors: Vec3; origin: Vec3; copies?: Expr }
@@ -119,7 +119,7 @@ export interface DesignPort {
   R?: Expr;
   /** Postprocessing power-wave reference only; the native source/load R stays real. */
   reference_impedance?: { real: Expr; imag: Expr };
-  /** waveguide only: "TE10" (default), "TE20", "TE11", … */
+  /** waveguide only: "TE10" (default), "TE20", "TE11", â€¦ */
   mode?: string;
   /** Native axial TEM coaxial port; radii and shifts are in mm. */
   r_i?: Expr;
@@ -202,7 +202,7 @@ export interface Design {
     /** "sheet" (default): metal bricks much thinner than the mesh are built as zero-thickness sheets */
     thin_metal?: "sheet" | "volume";
   };
-  far_field: { enabled: boolean; frequencies?: Expr[]; /** Angular steps in degrees; defaults 3 and 5. */ theta_step?: Expr; phi_step?: Expr; phase_center?: [Expr, Expr, Expr]; /** which NF2FF box faces record (x-, x+, y-, y+, z-, z+); omitted: all */ faces?: boolean[] };
+  far_field: { enabled: boolean; circular?: boolean; frequencies?: Expr[]; /** Angular steps in degrees; defaults 3 and 5. */ theta_step?: Expr; phi_step?: Expr; phase_center?: [Expr, Expr, Expr]; /** which NF2FF box faces record (x-, x+, y-, y+, z-, z+); omitted: all */ faces?: boolean[] };
   parameter_sweep?: ParameterSweepDefinition;
   /** The opening view: where the 3D view's camera is and the point it looks at when the design opens (mm).
    * Drawing only; absent: the isometric view fitted to the model. */

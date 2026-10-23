@@ -601,6 +601,11 @@ export default function SimSettingsDialog() {
               <label class="dz-check"><input id={fieldId("far_field.enabled")} type="checkbox" checked={d().far_field.enabled}
                 onChange={(e) => { const c = e.currentTarget.checked; edit((x) => { x.far_field.enabled = c; }, "ff"); }} /> {t("sim.mon.farField")}</label>
               <Show when={d().far_field.enabled}>
+                <label class="dz-check"><input id={fieldId("far_field.circular")} type="checkbox" checked={d().far_field.circular === true}
+                  aria-describedby={`${fieldId("far_field.circular")}-note`}
+                  onChange={(e) => { const c = e.currentTarget.checked; edit((x) => { x.far_field.circular = c; }, "ff-circular"); }} /> {t("sim.mon.circular")}</label>
+                <p class="note" id={`${fieldId("far_field.circular")}-note`}>{t("sim.mon.circularNote")}</p>
+                <Show when={issues()["far_field.circular"]}><span class="dz-value dz-bad">{issues()["far_field.circular"]!.message}</span></Show>
                 <FreqList label={t("sim.mon.ffFreqs")} path="far_field.frequencies" value={d().far_field.frequencies ?? []} placeholder={t("sim.mon.ffFreqsEmpty")}
                   onChange={(v) => edit((x) => { x.far_field.frequencies = v; }, "fff")} />
                 <div class="dz-vec-row">

@@ -2,6 +2,7 @@ import { createMemo, createSignal, For, type JSX, Show } from "solid-js";
 import { useSize } from "./useSize";
 import { declutter, localDecimal, minus } from "./labels";
 import { t } from "../i18n";
+import { nearestPolarSample, peakPolarSample } from "./polarSamples";
 import "../styles/designer-sim.css";
 
 export interface PolarSeries {
@@ -77,7 +78,7 @@ export default function PolarChart(props: Props) {
     return d + (closed ? "Z" : "");
   };
 
-  const rings = () => [0, 10, 20, 30].filter((d) => d <= props.range);
+  const rings = () => Array.from({ length: Math.floor(props.range / 10) + 1 }, (_, i) => i * 10);
   // Keep the cardinal bearings in small plots; restore intermediate ticks as room returns.
   const spokes = () => {
     const step = geo().R < 64 ? 90 : geo().R < 100 ? 45 : 30;
@@ -99,29 +100,22 @@ export default function PolarChart(props: Props) {
   // Charts smaller than 420 x 320 px keep the legend only: there is no free ring to label in.
   const peakLabels = createMemo(() => {
     if (!props.directLabels || size().w < 420 || size().h < 320) return [];
-    const items = props.series.map((s) => {
-      let k = 0;
-      for (let i = 1; i < s.value.length; i++) if (drawable(s, i) && (s.value[i] > s.value[k] || !drawable(s, k))) k = i;
+    const items = props.series.flatMap((s) => {
+      const k = peakPolarSample(s, props.half);
+      if (k < 0) return [];
       const a = s.angle[k] ?? 0;
       const [x, y] = pt(a, geo().R + 30);
       const side = Math.sin((a * Math.PI) / 180);
       const anchor = (side > 0.2 ? "start" : side < -0.2 ? "end" : "middle") as "start" | "end" | "middle";
-      return { x, y: y + 4, text: s.label, anchor };
+      return [{ x, y: y + 4, text: s.label, exportText: s.exportLabel ?? s.label, anchor }];
     });
     const obstacles = spokes().map((a) => {
       const [x, y] = pt(a, geo().R + 15);
-      return { x, y: y + 4, text: `${minus(String(a))}°`, anchor: "middle" as const, mono: true, fixed: true };
+      return { x, y: y + 4, text: `${minus(String(a))}°`, exportText: "", anchor: "middle" as const, mono: true, fixed: true };
     });
     return declutter([...items, ...obstacles], { top: LEGEND_H() + 14, bottom: size().h - 4 }).slice(0, items.length);
   });
-  const valueAt = (s: PolarSeries, a: number) => {
-    let k = -1;
-    for (let i = 0; i < s.angle.length; i++) {
-      if (!drawable(s, i)) continue;
-      if (k < 0 || Math.abs(s.angle[i] - a) < Math.abs(s.angle[k] - a)) k = i;
-    }
-    return k < 0 ? { angle: a, value: NaN } : { angle: s.angle[k], value: s.value[k] };
-  };
+  const valueAt = (s: PolarSeries, a: number) => nearestPolarSample(s, a, props.half);
   /** The bearing the ring labels sit on. Candidates lie midway between two angle labels, so a ring
    * label never meets a spoke label; the one where the fewest curves cross a label wins (the curves
    * used to run through labels stacked on the back spoke). Ties go to the back (the horizon in half
@@ -198,7 +192,7 @@ export default function PolarChart(props: Props) {
         </For>
         <For each={props.series}>{(s) => <path d={path(s)} class="c-line" style={{ stroke: `var(${s.color})` }} />}</For>
         <For each={peakLabels()}>
-          {(l, i) => <text x={l.x} y={l.y} class="c-direct c-halo" data-figure-text={props.series[i()].exportLabel ?? l.text} text-anchor={l.anchor}>{l.text}</text>}
+          {(l) => <text x={l.x} y={l.y} class="c-direct c-halo" data-figure-text={l.exportText} text-anchor={l.anchor}>{l.text}</text>}
         </For>
         <Show when={hover() !== null}>
           <line x1={geo().cx} y1={geo().cy} x2={pt(hover()!, geo().R)[0]} y2={pt(hover()!, geo().R)[1]} class="c-cross" />

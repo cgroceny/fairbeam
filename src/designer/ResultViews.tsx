@@ -27,9 +27,9 @@ import { freqText, ghzText, num, withUnit } from "../lib/format";
 import { nearestIndex, sweep } from "../lib/rf";
 import { mappedPairLabel, pairLabel, sMatrix } from "../lib/sparams";
 import { efficiencyIssue, efficiencyWarningUi } from "../lib/runText";
-import { efficiencyData, farfieldSummary, toDb, type PortEfficiency } from "../lib/farfieldQuantity";
+import { efficiencyData, effectiveQuantity, farfieldSummary, toDb, type PortEfficiency } from "../lib/farfieldQuantity";
 import { efficiencyUnit, patternQuantity, setEfficiencyUnit } from "../lib/patternQuantityStore";
-import { lobeText, PatternQuantitySelect, quantityFallbackNote, totalEffText } from "../components/FarfieldCard";
+import { CircularReadouts, lobeText, PatternQuantitySelect, quantityFallbackNote, totalEffText } from "../components/FarfieldCard";
 import type { DownloadResult } from "../lib/download";
 import { downloadToast } from "../lib/toast";
 import { isTerminal } from "../runner/api";
@@ -395,12 +395,13 @@ function ResultPattern(props: { b: Bundle }) {
   };
   const ff = () => ffs()[Math.min(k(), ffs().length - 1)];
   const cmp = useCompare(() => props.b);
+  const shownQuantity = () => ff() ? effectiveQuantity(props.b, ff()!, patternQuantity()) : "directivity";
   const summary = createMemo(() => (ff() ? farfieldSummary(props.b, ff()!) : null));
   const patternEntries = (): PatternEntry[] => {
     const f = ff();
     if (!f) return [];
     const c = cmp();
-    const q = patternQuantity();
+    const q = shownQuantity();
     if (c) return c.flatMap((entry, i) => {
       const field = i === 0 ? f : nearestFarfield(entry.bundle, f.f, f.port);
       return field ? [{ id: `cmp-${i}`, label: `${entry.label} · ${freqText(field.f)}`, color: COLORS[i], bundle: entry.bundle, field, quantity: q }] : [];
@@ -418,6 +419,7 @@ function ResultPattern(props: { b: Bundle }) {
             <dt>Dmax</dt><dd class="mono">{withUnit(num(ff()!.dmax_dbi, 2), "dBi")}</dd>
             <dt>{t("farfield.quantity.gain")}</dt><dd class="mono">{ff()!.gain_dbi !== undefined ? withUnit(num(ff()!.gain_dbi, 2), "dBi") : "—"}</dd>
             <dt>{t("farfield.quantity.realized")}</dt><dd class="mono">{ff()!.realized_gain_dbi !== undefined ? withUnit(num(ff()!.realized_gain_dbi, 2), "dBi") : "—"}</dd>
+            <CircularReadouts ff={ff()!} />
             <dt>{t("farfield.radEff")}</dt>
             <dd class="mono" classList={{ "cell-warn": !!efficiencyIssue(ff()!) }} title={efficiencyWarningUi(ff()!) ?? undefined}>{ff()!.rad_efficiency !== null ? t("format.percent", { value: num(ff()!.rad_efficiency! * 100, 1) }) : "—"}</dd>
             <dt title={t("farfield.totalTitlePort")}>{t("farfield.total")}</dt>

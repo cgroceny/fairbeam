@@ -639,6 +639,7 @@ export function designChecks(d: Design): Check[] {
       error("mesh.air_cells_per_wavelength", "cells-per-wavelength", "air cells per wavelength must be > 0 and no greater than the metal and dielectric setting");
   }
   const ff = d.far_field ?? { enabled: true };
+  if (ff.circular !== undefined && typeof ff.circular !== "boolean") error("far_field.circular", "expr", "circular must be true or false");
   if (ff.enabled !== false) {
     for (const [axis, fallback] of [["theta", 3], ["phi", 5]] as const) {
       const path = `far_field.${axis}_step`;
