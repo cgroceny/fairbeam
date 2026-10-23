@@ -55,6 +55,12 @@ try {
       await page.select(kind, 'elevation'); await s.fill(angle, '17.5');
       await s.waitFor(async () => (await import('/src/compare/store.ts')).cutPhi() === 17.5);
       await s.wait(`${scope} [data-pattern-metrics]`, '17.5'); // cut coordinates retain their explicit numeric identity
+      await s.fill(angle, '17,5');
+      assert.equal(await page.$eval(angle, e => e.value), '17.5', 'decimal comma normalizes to a point');
+      await page.focus(angle); await page.keyboard.press('ArrowUp');
+      await s.waitFor(async () => (await import('/src/compare/store.ts')).cutPhi() === 18.5);
+      await page.keyboard.press('ArrowDown');
+      await s.waitFor(async () => (await import('/src/compare/store.ts')).cutPhi() === 17.5);
       await page.select(kind, 'conical'); await s.fill(angle, '60');
       await s.waitFor(async () => (await import('/src/lib/patternCutStore.ts')).cutTheta() === 60);
       await page.select(projection, 'cartesian');

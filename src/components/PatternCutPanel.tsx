@@ -7,6 +7,7 @@ import { analyzeCut, cutLabel, cutSpecs, patternMetrics, type CutMetric } from '
 import { cutTheta, patternCutChoice, patternCutMode, patternProjection, setCutTheta, setPatternCutMode, setPatternProjection } from '../lib/patternCutStore';
 import { quantityGrid, quantityUnit, type PatternQuantity } from '../lib/farfieldQuantity';
 import { axialRatioNote } from './FarfieldCard';
+import NumberField from './NumberField';
 import { num } from '../lib/format';
 import { t } from '../i18n';
 import '../styles/pattern-cuts.css';
@@ -52,7 +53,7 @@ export function PatternCutPanel(props: { entries: PatternEntry[]; principalAvail
       </select></label>
       <Show when={mode() !== 'principal'}>
         <label class="cluster-sm"><span>{mode() === 'conical' ? 'θ (°)' : 'φ (°)'}</span>
-          <input ref={angleInput} data-pattern-cut="angle" type="number" min="0" max={mode() === 'conical' ? 180 : 360} step="any"
+          <NumberField ref={angleInput} data-pattern-cut="angle" min="0" max={mode() === 'conical' ? 180 : 360} step="any"
             aria-invalid={invalid()} aria-describedby={invalid() ? errorId : undefined}
             value={mode() === 'conical' ? cutTheta() : cutPhi()} onInput={e => updateAngle(e.currentTarget)} />
         </label>
