@@ -4,6 +4,8 @@ import { mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import puppeteer from "puppeteer-core";
 import { chromePath, startStack } from "./scenarios/stack.mjs";
+if (process.env.CI !== "true" && process.env.FAIRBEAM_ALLOW_LOCAL_BROWSER !== "1")
+  throw new Error("Browser acceptance runs in CI; local use requires explicit root scheduling.");
 const out = join(process.env.FAIRBEAM_TEST_ARTIFACTS || "fairbeam-scenario-failures", "mesh-bottlenecks");
 let stack, browser, page;
 const errors = [];
@@ -21,8 +23,10 @@ try {
     page.on("request", request => {
       const path = new URL(request.url()).pathname;
       // These are the actual server submission routes, not the preview mesher. Never run a
-      // solver, study, optimization or Blender render if an interaction regresses.
-      if (request.method() === "POST" && /^\/api\/(runs|sweeps|convergence|optimizations|research\/runs|render-jobs)\/?$/.test(path)) {
+      // solver, study, optimization, Blender render or native action if an interaction regresses.
+      const job = /^\/api\/(?:runs|sweeps|convergence|optimizations|research\/runs|render-jobs)(?:\/|$)/.test(path);
+      const native = /^\/api\/(?:native-document(?:\/|$)|(?:research\/elmer\/install|blender\/open-download|open-feedback|renders\/[A-Za-z0-9_-]+\/open)\/?$)/.test(path);
+      if ((request.method() === "POST" && job) || native) {
         forbiddenStarts.push({ method: request.method(), path });
         void request.abort("blockedbyclient").catch(e => errors.push(String(e)));
       } else if (request.method() === "POST" && path === "/api/preview" && previewMode === "hold") heldPreviews.push(request);
@@ -131,7 +135,7 @@ try {
     await context.close();
   }
   assert.deepEqual(errors, [], "no page exceptions");
-  assert.deepEqual(forbiddenStarts, [], "no solver, study, optimization or render start was attempted");
+  assert.deepEqual(forbiddenStarts, [], "no solver, study, optimization, render or native action was attempted");
 } catch (error) {
   mkdirSync(out, { recursive: true });
   writeFileSync(join(out, "failure.json"), JSON.stringify({ error: String(error.stack || error), errors, forbiddenStarts, children: stack?.diagnostics() }, null, 2));
