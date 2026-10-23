@@ -266,6 +266,7 @@
   "chart.pointAt": "{label}: {at} noktasında {value}",
   "chart.polar.legendAria": "Örüntü eğrileri ve birimler",
   "chart.polar.rings": "Halkalar {unit} cinsinden · θ = 0° +z yönüdür",
+  "chart.polar.ringsAzimuth": "Halkalar {unit} cinsinden · θ sabitken φ değişir",
   "chart.q.linearMagnitude": "Doğrusal genlik",
   "chart.q.magnitude": "Genlik",
   "chart.q.magnitudeDb": "Genlik (dB)",

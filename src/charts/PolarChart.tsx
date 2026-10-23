@@ -159,7 +159,7 @@ export default function PolarChart(props: Props) {
             </span>
           )}
         </For>
-        <span class="legend-note">{t("chart.polar.rings", { unit: props.unit })}</span>
+        <span class="legend-note">{t(props.angleLabel === 'φ' ? "chart.polar.ringsAzimuth" : "chart.polar.rings", { unit: props.unit })}</span>
       </div>
       <svg width={size().w} height={size().h} role="img" aria-label={props.ariaLabel} onPointerMove={onMove} onPointerLeave={() => setHover(null)}>
         <For each={rings()}>

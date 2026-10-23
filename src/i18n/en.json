@@ -268,6 +268,7 @@
   "chart.pointAt": "{label}: {value} at {at}",
   "chart.polar.legendAria": "Pattern curves and units",
   "chart.polar.rings": "Rings in {unit} · θ = 0° is +z",
+  "chart.polar.ringsAzimuth": "Rings in {unit} · φ varies at fixed θ",
   "chart.q.linearMagnitude": "Linear magnitude",
   "chart.q.magnitude": "Magnitude",
   "chart.q.magnitudeDb": "Magnitude (dB)",

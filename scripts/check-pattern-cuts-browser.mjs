@@ -82,7 +82,10 @@ try {
       await s.click('patternCuts.azimuth',{within:scope,exact:true});
       assert.equal(await page.$eval(angle,e=>e.value),'90');
       await s.fill(angle,'60'); await page.select(projection,'polar');
-      await s.wait(`${scope} svg`, '60°');
+      // The selected angle belongs to the series legend, not the responsive bearing ticks.
+      await s.wait(`${scope} .polar-chart .legend-item`, 'θ = 60°');
+      await s.wait(`${scope} .polar-chart .legend-note`, await s.T('chart.polar.ringsAzimuth',{unit:'dBi'}));
+      assert.ok(await page.$eval(`${scope} .polar-chart svg .c-line`,e=>/L/.test(e.getAttribute('d')||'')),'selected conical curve is rendered');
       assert.deepEqual(await page.evaluate(auditInPage,scope),[]);
       await page.screenshot({path:join(out,`cuts-${scope.includes('dw-result')?'design':'examples'}-${lang}.png`)});
     };
