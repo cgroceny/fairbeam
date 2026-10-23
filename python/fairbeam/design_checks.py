@@ -31,6 +31,7 @@ from .design import (AXES, DT_SAFETY, auto_timesteps, ringdown_steps, EFFICIENCY
                      MAX_PRIMITIVES, DesignError, polyhedron_faces, apply_cuts, cut_pieces, sheet_plane, check_design, evaluate, in_plane, live_primitives, map_primitive, names_in, on_plane, prim_bbox, prim_contains, resolve_cuts,
                      port_feeds, resolve_primitive, sheet_transform_issues, thin_metal_limit, thin_sheets, transform_maps, wg_cutoff_ghz,
                      wg_mode)
+from .pattern_grid import PATTERN_STEP_MIN, PATTERN_STEP_MAX
 
 EPS = 1e-9
 # the Gaussian-derivative excitation (fairbeam.excitation, which needs numpy): -20 dB at f max, the
@@ -55,12 +56,13 @@ CHEAP = frozenset({
     "cells-per-wavelength", "end-criterion", "port-length", "port-volume", "port-r", "port-reference", "port-overlap", "no-port",
     "no-metal", "resistor-r", "resistor-length", "component-path", "cone-radii", "cone-length", "torus-radii",
     "wire-points", "wg-mode", "wg-size", "wg-cutoff", "wg-aperture", "cut-sheet", "boolean-transform-angle", "sheet-transform-angle", "scale", "mesh-lines",
-    "monitor-efficiency", "field-plane", "conductivity", "metal-thickness", "tan-d-band",
+    "monitor-efficiency", "field-plane", "conductivity", "metal-thickness", "tan-d-band", "ff-step",
 })
 
 
 # Plain-language guidance shared by server checks and the live CHEAP checks.
 EXPLANATIONS = {
+    "ff-step": "Use an angular step from 0.25 to 90 degrees. Smaller steps resolve narrower beams but increase far-field processing time and bundle size; they do not establish solver or mesh convergence.",
     "planar-port": "A native planar port creates only its center strip. Supply the matching ground and dielectric, resolve its gaps and metal planes, and keep three equally spaced measurement planes outside PML. A real wave reference is independent of the physical feed termination. No fallback port is used.",
     "port-reference": 'A complex power-wave reference is supported only on lumped ports and must contain exactly real and imag expressions. It is separate from the physical source resistance.',
     "boolean-transform-angle": "A live Boolean needs axis-aligned operands so its result stays exact. Use quarter-turn rotations for its operands, or materialise the Boolean before applying an arbitrary angle.",
@@ -653,6 +655,11 @@ class _Lint:
                            "air cells per wavelength must be > 0 and no greater than the metal and dielectric setting")
         ff = self.d.get("far_field", {})
         if ff.get("enabled", True):
+            for axis, default in (("theta", 3), ("phi", 5)):
+                path = f"far_field.{axis}_step"
+                step = self.ev(path, ff.get(f"{axis}_step", default))
+                if step is not None and not PATTERN_STEP_MIN <= step <= PATTERN_STEP_MAX:
+                    self.error(path, "ff-step", f"angular step must be from {PATTERN_STEP_MIN:g} to {PATTERN_STEP_MAX:g} degrees")
             if ff.get("phase_center") is not None:
                 center = self.vec("far_field.phase_center", ff["phase_center"])
                 if center is not None and not all(math.isfinite(v) for v in center):

@@ -499,6 +499,9 @@ def _read_design(module, values: dict, source_path: Path):
         pattern = getattr(sim, "pattern_freqs", None)
         if pattern is not None:
             far_field["frequencies"] = [str(f / 1e9) for f in pattern]
+        steps = getattr(sim, "pattern_steps", (3.0, 5.0))
+        if tuple(steps) != (3.0, 5.0):
+            far_field.update(theta_step=float(steps[0]), phi_step=float(steps[1]))
     if nf2ff and not far_field["enabled"]:
         raise ExampleConversionError("NF2FF geometry was found but the Simulation has no NF2FF monitor")
 
@@ -580,7 +583,7 @@ def _slot_paths(core: dict) -> list:
             scan(("ports", i, "group", "members", j), member, ("start", "stop"))
     for i, r in enumerate(core["resistors"]):
         scan(("resistors", i), r, ("start", "stop", "R", "L", "C"))
-    scan(("far_field",), core["far_field"], ("phase_center", "frequencies"))
+    scan(("far_field",), core["far_field"], ("phase_center", "frequencies", "theta_step", "phi_step"))
     if "monitors" in core:
         scan(("monitors",), core["monitors"], ("currents",))
     return out

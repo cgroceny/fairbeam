@@ -948,6 +948,17 @@ without the dialog.
     thinner plates (35 µm copper) stay sheets there too, because cells across them make the timestep 30 to 60 times smaller
     and the run last 5 to 25 minutes or never converge.
 - **Monitors**:
+  - **θ angular step / φ angular step** under Far field control NF2FF angular sampling, in
+    degrees (`far_field.theta_step` and `far_field.phi_step`, expressions allowed). Defaults are
+    3° and 5°; accepted values are 0.25° through 90°. Both theta poles (0° and 180°) are retained,
+    and phi runs from 0° up to but not including the duplicate 360° seam. The last interval may
+    be shorter when a step does not divide the span. The settings survive save, parameter sweeps,
+    multi-port runs and Python export as `sim.pattern_steps`. Smaller steps sample narrow beams
+    more densely; they do not prove mesh or solver convergence. Halving both steps uses roughly
+    four times as many angular samples, increasing post-processing cost and bundle size.
+    Embedded element patterns can be decimated for their storage budget; the run log and Array
+    tab warn when this happens. Array synthesis uses the stored grid, while per-port far fields
+    retain the evaluated grid. The separate efficiency-over-the-band monitor keeps its own grid.
   - **Far field** (on or off) and its frequencies (empty: the |S11| minimum of each matched band), and an
     optional **Set phase center (mm)**. A design file can also set `far_field.faces`, six true/false
     flags (x−, x+, y−, y+, z−, z+) for the faces of the near-to-far-field box that record; a face

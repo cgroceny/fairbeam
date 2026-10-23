@@ -184,7 +184,12 @@ The exact layout is in [BUNDLE.md](BUNDLE.md#element-pattern-encodings).
   blindness or truncated patterns near the grid edge. Nor are there beam-pointing optimizers or Taylor or
   Chebyshev tapers; weights are whatever you pass.
 - **Directivity** is integrated on the stored grid (3° × 5° by default). Very narrow beams from
-  large arrays need a finer `theta_step` / `phi_step` in `Simulation.evaluate`.
+  large arrays need finer angular steps. In a Design, use **Simulation settings → Monitors →
+  θ angular step / φ angular step** (`far_field.theta_step` / `phi_step`). Python models can set
+  `sim.pattern_steps = (theta, phi)` or pass explicit steps to `Simulation.evaluate`.
+  Steps are in degrees, from 0.25 to 90. The element-pattern budget may reduce a fine evaluated
+  grid again: the run log and Array tab report that reduction, and synthesis uses the stored
+  `theta` / `phi` arrays. A finer requested grid is not a guarantee of fine stored array data.
 - **Cost**: one run per port (N runs for N ports). For large arrays, simulate a small subarray, or
   excite only a few ports and use symmetry. Only fully excited arrays have a complete S-matrix and
   Γ_active.
