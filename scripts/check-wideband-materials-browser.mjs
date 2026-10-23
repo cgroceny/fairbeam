@@ -7,8 +7,13 @@ import { join } from "node:path";
 import puppeteer from "puppeteer-core";
 import { chromePath, startStack } from "./scenarios/stack.mjs";
 
+if (process.env.CI !== "true" && process.env.FAIRBEAM_ALLOW_LOCAL_BROWSER !== "1") {
+  throw new Error("Local browser acceptance requires explicit user permission.");
+}
+const out = join(process.env.FAIRBEAM_TEST_ARTIFACTS || "fairbeam-scenario-failures", "wideband-materials");
+mkdirSync(out, { recursive: true });
 let stack, browser, page;
-const starts = [], errors = [];
+const starts = [], errors = [], outcomes = [];
 try {
   stack = await startStack({ log: console.log, niceSolver: false });
   browser = await puppeteer.launch({ executablePath: await chromePath(), headless: true, args: ["--no-sandbox", "--enable-unsafe-swiftshader"] });
@@ -18,7 +23,9 @@ try {
     await page.setRequestInterception(true);
     page.on("request", request => {
       const path = new URL(request.url()).pathname;
-      if (request.method() === "POST" && /^\/api\/(?:runs|sweeps|convergence|optimizations|research\/runs|render-jobs)(?:\/|$)/.test(path)) {
+      const job = /^\/api\/(?:runs|sweeps|convergence|optimizations|research\/runs|render-jobs)(?:\/|$)/.test(path);
+      const native = /^\/api\/(?:native-document(?:\/|$)|(?:research\/elmer\/install|blender\/open-download|open-feedback|renders\/[A-Za-z0-9_-]+\/open)\/?$)/.test(path);
+      if (request.method() === "POST" && (job || native)) {
         starts.push({ method: request.method(), path });
         void request.abort("blockedbyclient");
       } else void request.continue();
@@ -84,14 +91,16 @@ try {
       return { before: material, after: JSON.parse(JSON.stringify(store.draft.materials.find(m => m.name === "Laminate"))) };
     });
     assert.deepEqual(saved.after, saved.before, "save/reopen preserves expressions, reference and pole intent");
+    await page.screenshot({ path: join(out, `editor-${lang}.png`) });
     assert.deepEqual(starts, [], "no solver or renderer start attempts");
     assert.deepEqual(errors, [], "no browser exceptions");
+    outcomes.push({ lang, editor: true, expressions: true, invalidCornersRefused: true,
+      savedIntent: saved, originalFit, revisedFit, solverRun: false });
     console.log(`${lang}: DS editor/defaults/expressions/errors, actual band fit identity, warning and save/reopen passed; zero solver/render starts`);
     await context.close();
   }
+  writeFileSync(join(out, "result.json"), JSON.stringify({ outcomes, starts, errors }, null, 2));
 } catch (error) {
-  const out = join(process.env.FAIRBEAM_TEST_ARTIFACTS || "fairbeam-scenario-failures", "wideband-materials");
-  mkdirSync(out, { recursive: true });
   writeFileSync(join(out, "error.txt"), String(error?.stack || error));
   writeFileSync(join(out, "diagnostics.json"), JSON.stringify({ starts, errors, children: stack?.diagnostics() }, null, 2));
   await page?.screenshot({ path: join(out, "failure.png") }).catch(() => {});
