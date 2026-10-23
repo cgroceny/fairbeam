@@ -1,8 +1,9 @@
 """Small shared fixture bridge; no server, native library or solver is loaded."""
 import copy
 import json
+import sys
 from pathlib import Path
-from fairbeam.design import blank_design, evaluate
+from fairbeam.design import blank_design, evaluate, resolve_names
 from fairbeam.design_checks import lint
 from fairbeam.designer_dispersion import resolved_input
 
@@ -24,5 +25,27 @@ def cases():
     return output
 
 
+def design_states(designs):
+    """Resolve the actual post-edit designs from the pure TS lifecycle regression."""
+    output = []
+    for design in designs:
+        names = resolve_names(design, {})
+        materials = []
+        for material in design["materials"]:
+            if "dispersion" not in material:
+                continue
+            try:
+                materials.append({"input": resolved_input(material, lambda v: evaluate(v, names))})
+            except ValueError as error:
+                materials.append({"error": str(error)})
+        output.append({"materials": materials, "checks": sorted(
+            f"{c['severity']}|{c['code']}|{c['path']}" for c in lint(design)
+            if c["path"].startswith("materials."))})
+    return output
+
+
 if __name__ == "__main__":
-    print(json.dumps({"cases": cases(), "blank": blank_design("wideband", "Wideband")}))
+    if "--designs" in sys.argv:
+        print(json.dumps(design_states(json.load(sys.stdin))))
+    else:
+        print(json.dumps({"cases": cases(), "blank": blank_design("wideband", "Wideband")}))
