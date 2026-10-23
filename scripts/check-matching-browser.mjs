@@ -12,7 +12,8 @@ await mkdir(out, { recursive: true });
 const template = JSON.parse(await readFile(join(root, 'public/projects/patch-antenna.json'), 'utf8'));
 const fixture = () => {
   const b = structuredClone(template), f = Array.from({ length: 41 }, (_, i) => (1 + i * .05) * 1e9);
-  b.name = 'Analytical 25 ohm load'; b.ports = [{ ...b.ports[0], number: 7, excite: true }];
+  b.name = b.model.name = 'SYNTHETIC analytical 25 ohm load'; b.run = null;
+  b.ports = [{ ...b.ports[0], number: 7, excite: true }];
   delete b.ports[0].reference_impedance;
   b.results.frequency = f; b.results.bands = []; b.results.farfield = [];
   const re = f.map(() => -1/3), im = f.map(() => 0);
@@ -43,10 +44,15 @@ try {
     const own = await s.store((_, m) => JSON.parse(JSON.stringify(m.s.file())));
     const b = fixture(); b.model.id = own.design.model.id;
     const file = `${own.id}--matching-fixture.json`;
-    const show = async (view, next = b) => s.ev(({ b, file, view }, m) => {
-      m.st.setIndex([...m.st.index().filter(r => r.file !== file), { file, model: b.model.id, name: b.name, created: b.created, simulated: true, engine: 'CPU', bands: [], params: b.model.params }]);
-      m.dr.setDesignResult({ file, bundle: b }); m.rf.focusResult({ file, view }, 'main');
-    }, { b: next, file, view }, { st: '/src/state.ts', dr: '/src/runner/designRun.ts', rf: '/src/designer/resultFocus.ts' });
+    const show = async (view, next = b) => {
+      const saved = {...next, created:new Date().toISOString()};
+      await writeFile(join(stack.projects,file),JSON.stringify(saved));
+      await s.ev(({ b, file, view }, m) => {
+        const valid=m.v.validateBundle(b); if(!valid.bundle) throw new Error(JSON.stringify(valid.errors));
+        m.st.setIndex([...m.st.index().filter(r => r.file !== file), { file, model: b.model.id, name: b.name, created: b.created, simulated: true, bands: [], params: [] }]);
+        m.dr.setDesignResult({ file, bundle: valid.bundle }); m.rf.focusResult({ file, view }, 'main');
+      }, { b: saved, file, view }, { st: '/src/state.ts', dr: '/src/runner/designRun.ts', rf: '/src/designer/resultFocus.ts',v:'/src/lib/validate.ts' });
+    };
     await show('impedance'); await s.wait('.dw-result .matching-enable input');
     await s.wait('.matching-panel', 'P7');
     assert.equal(await page.$eval('.matching-enable input', e => e.checked), false);
@@ -54,7 +60,7 @@ try {
     await page.select('.matching-field select', 'shunt-input:1');
     await s.wait('[data-matching-components]', 'nH'); await s.wait('[data-matching-components]', 'pF');
     assert.equal(await page.$$eval('.matching-chart path.c-line', es => es.filter(e => e.getAttribute('d')).length), 2);
-    await page.locator('.matching-field input[type=number]').fill('21');
+    await s.fill('[data-matching-sample]','21');
     await s.wait('[data-matching-frequency]', '2');
     await page.select('.matching-field select', 'quarter-wave');
     await s.wait('[data-matching-components]', '90°');

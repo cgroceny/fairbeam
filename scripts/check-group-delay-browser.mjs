@@ -20,8 +20,10 @@ const makeFixture = (name, shift = 0) => {
   const b = structuredClone(template), f = Array.from({ length: 41 }, (_, i) => 1 + shift + i * .05);
   const re = f.map(x => .5 * Math.cos(-2 * Math.PI * .6 * x));
   const im = f.map(x => .5 * Math.sin(-2 * Math.PI * .6 * x));
-  b.name = name; b.results.frequency = f.map(x => x * 1e9); b.results.bands = []; b.results.farfield = [];
-  b.results.ports = { '1': { s11_re: re, s11_im: im, zin_re: f.map(() => 50), zin_im: f.map(() => 0), z_ref: 50 } };
+  b.name = b.model.name = `SYNTHETIC ${name}`; b.run = null;
+  b.ports = [{...b.ports[0], number:7, excite:true}]; delete b.ports[0].reference_impedance;
+  b.results.frequency = f.map(x => x * 1e9); b.results.bands = []; b.results.farfield = [];
+  b.results.ports = { '7': { s11_re: re, s11_im: im, zin_re: f.map(() => 50), zin_im: f.map(() => 0), z_ref: 50 } };
   b.results.sparams = { ports: [1], port_numbers: [7], z_ref: [50], excited: [1], s: { '1,1': { re, im } } };
   return b;
 };
@@ -54,7 +56,10 @@ try {
     await page.type('.example-picker-pop input', 'Inset'); await page.keyboard.press('Enter');
     await s.waitFor(async () => (await import('/src/state.ts')).source() === 'inset-patch.json');
     const current = makeFixture('Pure 0.6 ns delay'), reference = makeFixture('Reference 0.6 ns', .025);
-    await s.ev((b, m) => { m.st.setBundle(b); m.st.setDockTab('reflection'); }, current, { st: '/src/state.ts' });
+    await s.ev((b, m) => {
+      const valid=m.v.validateBundle(b); if(!valid.bundle) throw new Error(JSON.stringify(valid.errors));
+      m.st.setBundle(valid.bundle); m.st.setDockTab('reflection');
+    }, current, { st: '/src/state.ts',v:'/src/lib/validate.ts' });
     await page.select('.dock .result-format', 'gd');
     await s.wait('.dock .group-delay-aperture select');
     await page.select('.dock .group-delay-aperture select', '11');
@@ -91,11 +96,13 @@ try {
     await s.click('header.screen.design', { sel: '.mode-switch button' }); await s.wait('.rb');
     current.model.id = own.design.model.id;
     const file = `${own.id}--phase-fixture.json`;
+    await writeFile(join(stack.projects,file),JSON.stringify(current));
     await s.ev(({ b, file }, m) => {
-      m.st.setIndex([...m.st.index().filter(r => r.file !== file), { file, model: b.model.id, name: b.name, created: b.created, simulated: true, engine: 'CPU', bands: [], params: b.model.params }]);
-      m.dr.setDesignResult({ file, bundle: b });
+      const valid=m.v.validateBundle(b); if(!valid.bundle) throw new Error(JSON.stringify(valid.errors));
+      m.st.setIndex([...m.st.index().filter(r => r.file !== file), { file, model: b.model.id, name: b.name, created: b.created, simulated: true, bands: [], params: [] }]);
+      m.dr.setDesignResult({ file, bundle: valid.bundle });
       m.rf.focusResult({ file, view: 'sparams' }, 'main');
-    }, { b: current, file }, { st: '/src/state.ts', dr: '/src/runner/designRun.ts', rf: '/src/designer/resultFocus.ts' });
+    }, { b: current, file }, { st: '/src/state.ts', dr: '/src/runner/designRun.ts', rf: '/src/designer/resultFocus.ts',v:'/src/lib/validate.ts' });
     await s.wait('.dw-result .result-format'); await page.select('.dw-result .result-format', 'gd');
     await s.wait('.dw-result .group-delay-aperture select');
     assert.equal(await page.$eval('.dw-result .group-delay-aperture select', e => e.value), '11');

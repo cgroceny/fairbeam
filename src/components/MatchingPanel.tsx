@@ -5,6 +5,7 @@ import { matchedImpedance, matchComponents, matchingSweep, reflection, synthesiz
 import { freqText, num } from "../lib/format";
 import { t } from "../i18n";
 import LineChart from "../charts/LineChart";
+import NumberField from "./NumberField";
 
 /** Ephemeral what-if state belongs to this displayed result, never a project or another run. */
 export function createMatching(bundle: () => Bundle) {
@@ -49,8 +50,8 @@ export default function MatchingPanel(props: { state: ReturnType<typeof createMa
       <label class="matching-enable"><input type="checkbox" checked={m.enabled()} onChange={e => m.setEnabled(e.currentTarget.checked)} />{t("matching.enable")}</label>
       <Show when={m.enabled()}>
         <label class="matching-field">{t("matching.sample", { count: m.sw()!.f.length })}
-          <input type="number" min="1" max={m.sw()!.f.length} step="1" value={Number.isFinite(m.index()) ? m.index() + 1 : ""}
-            onInput={e => m.setIndex(e.currentTarget.value === "" ? NaN : Number(e.currentTarget.value) - 1)} /></label>
+          <NumberField data-matching-sample min="1" max={m.sw()!.f.length} step="1" value={Number.isFinite(m.index()) ? m.index() + 1 : ""}
+            onChange={e => m.setIndex(e.currentTarget.value === "" ? NaN : Number(e.currentTarget.value) - 1)} /></label>
         <p class="mono" data-matching-frequency>{Number.isInteger(m.index()) && m.sw()!.f[m.index()] !== undefined ? freqText(m.sw()!.f[m.index()]) : "—"}</p>
         <Show when={m.network()} fallback={<p role="status" class="note">{t("matching.noSolution")}</p>}>
           <label class="matching-field">{t("matching.network")}
