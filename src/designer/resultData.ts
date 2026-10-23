@@ -9,6 +9,7 @@ import { effectiveQuantity, efficiencyData, mismatchAt, quantityGrid, quantityUn
 import { phasorColumns } from "../scene/fieldPlaneModel.ts";
 import { t, tEn } from "../i18n/index.ts";
 import { summaryTable } from "./runSummary.ts";
+import { radiationTable, type RadiationQuantity } from "../lib/radiationFrequency.ts";
 
 export interface ResultDataTable {
   header: string[];
@@ -19,6 +20,7 @@ export type ResultDataFormat = "db" | "db_phase" | "re_im" | "mag_phase" | "all"
 
 /** What the active plot shows, so copied/exported data matches it (both Results docks pass it). */
 export interface ResultDataOptions {
+  radiationQuantity?: RadiationQuantity;
   /** the S_ij picked in the S-parameter picker; every stored pair only when omitted */
   pairs?: [number, number][];
   /** S-parameter quantity: dB magnitude (default) or phase in degrees */
@@ -182,6 +184,7 @@ export function resultDataTable(bundle: Bundle | null | undefined, view: ResultV
     return { header: [...(withPort ? ["Port"] : []), "f (GHz)", "theta (deg)", "phi (deg)", "Directivity (dBi)", ...(extra ? [`${tEn(`farfield.quantity.${q}`)} (${quantityUnit(q)})`] : [])], rows };
   }
   if (view === "efficiency") {
+    if (options.radiationQuantity) return radiationTable(bundle, [options.radiationQuantity]);
     // every frequency of the band, the far-field frequencies and the band-wide efficiency (sorted):
     // the mismatch efficiency at each (|S11|² interpolated off the S11 grid), the radiation and total
     // efficiency where they are known, per driven port; percent

@@ -5,6 +5,12 @@ import { bandCentre } from "../lib/bands.ts";
 import { sweep } from "../lib/rf.ts";
 import { magDb, mappedPairLabel, phaseDeg, sMatrix } from "../lib/sparams.ts";
 import { activeReflection, gammaDb, type Weight } from "../lib/array.ts";
+import { radiationTable } from "../lib/radiationFrequency.ts";
+
+export function radiationFrequencyCsv(b: Bundle): string | null {
+  const table = radiationTable(b);
+  return table.rows.length ? toCsv(table.header, table.rows) : null;
+}
 
 const cell = (v: string | number | boolean | null | undefined): string => {
   if (v === null || v === undefined) return "";

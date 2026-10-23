@@ -5,7 +5,7 @@
 import { strToU8, zipSync } from "fflate";
 import type { Bundle } from "../types";
 import { cstMacro, DEFAULT_CST_OPTIONS } from "./cst.ts";
-import { arrayWeightsCsv, bandsCsv, farfieldCsv, patternCsv, signalsCsv, sparamsCsv, sweepCsv } from "./csv.ts";
+import { arrayWeightsCsv, bandsCsv, radiationFrequencyCsv, farfieldCsv, patternCsv, signalsCsv, sparamsCsv, sweepCsv } from "./csv.ts";
 import { readmeReport, type ModelFileRef } from "./report.ts";
 import * as touchstone from "./touchstone.ts";
 import { touchstoneS1p } from "./touchstone.ts";
@@ -121,6 +121,7 @@ export function packageFiles(b: Bundle, include: Record<PackageGroup, boolean>, 
     add("data/s11.s1p", `S11 of the excited port, Touchstone v1 (GHz, RI, R ${Number((sweep(b)?.zRef ?? 50).toFixed(2))})`, touchstoneS1p(b, localTime(now)));
     add("data/sweep.csv", "f, |S11| dB, S11 re/im, VSWR, Zin re/im per frequency point", sweepCsv(b));
     add("data/bands.csv", "Matched bands (|S11| < −10 dB)", bandsCsv(b));
+    add("data/radiation_frequency.csv", "Stored radiation scalars per physical port/frequency; coarse-pass and detailed-pattern sources separate, reliability-gated values beside raw audit values", radiationFrequencyCsv(b));
     add("data/farfield.csv", "Dmax, gain, realized gain, efficiency per pattern frequency", farfieldCsv(b));
     b.results.farfield.forEach((ff, i, ffs) => add(`data/pattern_${ffTag(ffs, i)}.csv`, `Directivity (dBi) over θ, φ at ${patternTag(ff.f).replace("GHz", " GHz")}${ff.port != null ? `, port ${ff.port} driven` : ""} (long format)`, patternCsv(ff)));
     add("data/port_signals.csv", "Port time signals: incident, reflected, total voltage, scaled current", signalsCsv(b));

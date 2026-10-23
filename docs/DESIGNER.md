@@ -1603,3 +1603,34 @@ browser:
 The app sends nothing by itself and puts nothing else into the link. Attach the design file or a log
 if they help, and remove anything private first. In the desktop app the local run server opens the
 system browser, since the app window does not open web pages itself.
+
+
+### Radiation versus frequency
+
+Enable **Efficiency over the band** before a run. The Efficiency result tab's **Quantity** menu
+selects sampled peak or boresight directivity, gain, realized gain, or axial ratio. The standalone
+viewer provides the same data in **Radiation vs f**. Each physical driven port and each compared
+run retains its own recorded frequency grid; no patterns, efficiency or CP values are invented
+between frequencies. Old bundles without these optional scalars show an explicit unavailable state.
+
+The existing coarse NF2FF pass supplies the scalars without another transform: currently six angle
+pairs represent four distinct directions, so the sampled peak can miss the actual peak. Boresight
+is θ=0 at the first stored φ. D/gain/realized gain use dBi; AR has its own 0–60 dB scale and a 3 dB
+reference. AR at the peak follows the sampled directivity peak, not the best CP direction. The
+Dmax−20 dB mask, absent fields, and accepted-power reliability failures produce gaps. Open Details
+for exact samples, actual angles and QA notes. Stored detailed patterns are separate diamond points;
+their reliability is unassessed here and they never fill the coarse curve. Copy/CSV includes the same
+plotted values plus separately labelled raw audit values, source, physical port and reliability.
+The package includes `data/radiation_frequency.csv`; the report includes qualified scalar tables.
+
+Consecutive AR ≤3 dB samples are listed with edge/gap/above-threshold neighbor qualifiers. A single
+passing sample does not establish bandwidth; these are not interpolated or converged AR bandwidths.
+Accepted-power reliability does not prove angular, radiation-pattern, gain or CP convergence.
+
+**Türkçe:** Çalıştırmadan önce **Bant boyunca verimlilik** etkinleştirilir. Verimlilik sekmesindeki
+**Nicelik** menüsü ve görüntüleyicideki **Frekansa göre ışınım** sekmesi aynı kayıtlı örnekleri kullanır.
+Kaba örneklenmiş tepe gerçek tepeyi kaçırabilir; eksik/güvenilmez değerler sıfır yerine boşluktur.
+Ana eksen θ=0, tepedeki AR ise örneklenmiş yönlülük tepesindeki eksenel orandır. AR dB, kazançlar
+dBi birimindedir. Ayrı saklanmış örüntü noktaları kaba eğriyi doldurmaz. AR ≤3 dB sağlayan ardışık
+örnekler, enterpole edilmiş veya yakınsamış bant genişliği değildir. Açısal ve sayısal yakınsama
+ayrıca doğrulanmalıdır.

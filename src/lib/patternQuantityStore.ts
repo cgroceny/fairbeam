@@ -3,6 +3,7 @@
 // remembered for the browser session (sessionStorage; the choice still works when storage is blocked).
 import { createSignal } from "solid-js";
 import { isPatternQuantity, type PatternQuantity } from "./farfieldQuantity.ts";
+import { isRadiationQuantity, type RadiationQuantity } from "./radiationFrequency.ts";
 
 export const PATTERN_QUANTITY_KEY = "fairbeam:pattern-quantity";
 export const EFFICIENCY_UNIT_KEY = "fairbeam:efficiency-unit";
@@ -35,4 +36,15 @@ export function setEfficiencyUnit(u: EfficiencyUnit) {
   if (!isUnit(u)) return;
   setUnit(u);
   write(EFFICIENCY_UNIT_KEY, u);
+}
+
+export type EfficiencyQuantity = "efficiency" | RadiationQuantity;
+const efficiencyKey = "fairbeam:efficiency-quantity";
+const isEfficiencyQuantity = (v: unknown): v is EfficiencyQuantity => v === "efficiency" || isRadiationQuantity(v);
+const [effQuantity, changeEffQuantity] = createSignal<EfficiencyQuantity>(read(efficiencyKey, isEfficiencyQuantity, "efficiency"));
+export const efficiencyQuantity = effQuantity;
+export const radiationQuantity = (): RadiationQuantity => isRadiationQuantity(effQuantity()) ? effQuantity() as RadiationQuantity : "realized_peak_dbi";
+export function setEfficiencyQuantity(q: EfficiencyQuantity) {
+  if (!isEfficiencyQuantity(q)) return;
+  changeEffQuantity(q); write(efficiencyKey, q);
 }

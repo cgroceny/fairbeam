@@ -15,7 +15,7 @@ import { nearestIndex, patternCut, sweep } from "../lib/rf";
 import { freqText, ghzText, num, withUnit } from "../lib/format";
 import { efficiencyIssue, efficiencyWarningUi } from "../lib/runText";
 import { effectiveQuantity, farfieldSummary, QUANTITY_LABEL, quantityGrid, quantityMax, quantityRange, quantityUnit } from "../lib/farfieldQuantity";
-import { patternQuantity } from "../lib/patternQuantityStore";
+import { radiationQuantity, patternQuantity } from "../lib/patternQuantityStore";
 import { axialRatioNote, CircularReadouts, PatternQuantitySelect, totalEffText } from "./FarfieldCard";
 import type { Signals } from "../types";
 import ComparePicker from "../compare/ComparePicker";
@@ -28,7 +28,7 @@ import PanelBoundary from "./PanelBoundary";
 // the Array tab (beam steering) only loads when opened
 const ArrayPanel = lazy(() => import("./ArrayPanel"));
 import { arrayActive, farfieldOverride, hasArray, scanPhi, setArrayActive, steeredFarField } from "../lib/arrayStore";
-import { copyResultData, exportResultCsv, resultDataTable, type ResultDataOptions } from "../designer/resultData";
+import { activeResultDataTable, copyResultData, exportResultCsv, resultDataTable, type ResultDataOptions } from "../designer/resultData";
 import { resultDataFormat, tableFormat, writeResultDataFormat, type ResultDataFormat } from "../designer/resultDataPreference";
 import { exportResultTouchstone } from "../designer/resultTouchstone";
 import type { ResultView } from "../designer/resultFocus";
@@ -38,6 +38,7 @@ import { exportNotice, registerSurfaceExports } from "../components/exportContex
 import { saveVisibleFigure, visibleFigureSvgs } from "../components/visibleFigure";
 import { t, tEn } from "../i18n";
 import "../styles/result-views.css";
+import RadiationFrequencyView from "./RadiationFrequencyView";
 
 /** label: an i18n key, translated at render */
 const ALL_TABS: { id: DockTab; label: string }[] = [
@@ -45,6 +46,7 @@ const ALL_TABS: { id: DockTab; label: string }[] = [
   { id: "impedance", label: "dock.results.impedance" },
   { id: "smith", label: "dock.results.smith" },
   { id: "pattern", label: "dock.results.pattern" },
+  { id: "radiation", label: "radiation.tab" },
   { id: "array", label: "dock.results.array" },
   { id: "signals", label: "dock.results.signals" },
 ];
@@ -114,6 +116,7 @@ export default function Dock() {
       case "impedance": return "impedance";
       case "smith": return "smith";
       case "pattern": return "pattern";
+      case "radiation": return "efficiency";
       default: return null;
     }
   };
@@ -126,6 +129,7 @@ export default function Dock() {
   // Copy data and CSV follow the plot: the picked S_ij, dB or phase, the Smith chart's port
   const dataOptions = (): ResultDataOptions => ({ format: tableFormat(dataFormat()),
     patternQuantity: shownQuantity(), patternPort: storedFF()?.port,
+    radiationQuantity: dockTab() === "radiation" ? radiationQuantity() : undefined,
     // The Pattern plot overlays both grids. The Array/Element toggle selects only the 3D
     // view; copying the plot must retain its array trace as well as the picked element.
     patternEntries: arrayMode() && steeredFarField() && storedFF() ? [
@@ -363,6 +367,10 @@ export default function Dock() {
   };
 
   const table = createMemo<TableData | null>(() => {
+    if (dockTab() === "radiation") {
+      const data = activeResultDataTable(bundle(), "efficiency", undefined, selectedDataRuns(), dataOptions());
+      return { columns: data.header, rows: data.rows.map(row => row.map(cell => cell ?? "—")) };
+    }
     const s = sw();
     const c = compareTableData();
     if (c) return c;
@@ -581,6 +589,9 @@ export default function Dock() {
                   label={cmp()?.[0]?.label}
                   overlays={smithOverlays()}
                 />
+              </Match>
+              <Match when={dockTab() === "radiation" && bundle()}>
+                <RadiationFrequencyView b={bundle()!} runs={cmp()} />
               </Match>
               <Match when={dockTab() === "pattern"}>
                 <Show when={ff()} fallback={<div class="panel-empty">{t("dock.results.noFarField")}</div>}>

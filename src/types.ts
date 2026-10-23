@@ -235,6 +235,8 @@ export interface FarField {
 /** Radiation efficiency Prad / Pacc at N frequencies from f_min to f_max (results.efficiency). Total
  * efficiency is rad_efficiency · (1 − |S11|²) with S11 of `port` at `f`. */
 export interface EfficiencySweep {
+  /** Scalars from the SAME coarse NF2FF pass as prad_w, aligned exactly to f. */
+  radiation?: RadiationSweep;
   port?: number; f: number[]; prad_w: number[]; pacc_w: number[]; rad_efficiency: (number | null)[]; mirror_planes: number; theta_step: number; phi_step: number; qa_warnings?: string[];
   /** estimated relative error of pacc_w from where the run stopped (docs/BUNDLE.md#efficiency) */
   pacc_error?: (number | null)[];
@@ -242,6 +244,18 @@ export interface EfficiencySweep {
   reliable?: boolean[];
   /** lossless models: the measured prad_w / pacc_w */
   rad_efficiency_raw?: (number | null)[];
+}
+
+export interface RadiationSweep {
+  source: "band-efficiency-nf2ff";
+  theta: number[]; phi: number[];
+  cp_requested: boolean; ar_mask_db: 20;
+  mismatch_efficiency: (number | null)[];
+  d_peak_dbi: (number | null)[]; d_boresight_dbi: (number | null)[];
+  peak_theta_deg: (number | null)[]; peak_phi_deg: (number | null)[];
+  gain_peak_dbi: (number | null)[]; gain_boresight_dbi: (number | null)[];
+  realized_peak_dbi: (number | null)[]; realized_boresight_dbi: (number | null)[];
+  ar_peak_db?: (number | null)[]; ar_boresight_db?: (number | null)[];
 }
 
 export interface CPPoint { theta: number; phi?: number; rhcp_dbi: number; lhcp_dbi: number; axial_ratio_db: number }

@@ -10,7 +10,7 @@ import { t } from "./i18n/index.ts";
 import { syncSavedTheme } from "./lib/generalSettings";
 
 export type Theme = "system" | "light" | "dark";
-export type DockTab = "reflection" | "impedance" | "smith" | "pattern" | "signals" | "array";
+export type DockTab = "reflection" | "impedance" | "smith" | "pattern" | "signals" | "array" | "radiation";
 export type Axis = "x" | "y" | "z";
 
 export interface Layers {

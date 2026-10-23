@@ -26,7 +26,7 @@ import { nearestIndex, patternCut, sweep } from "../lib/rf";
 import { mappedPairLabel, pairLabel, sMatrix } from "../lib/sparams";
 import { efficiencyIssue, efficiencyWarningUi } from "../lib/runText";
 import { efficiencyData, effectiveQuantity, farfieldSummary, QUANTITY_LABEL, quantityGrid, quantityMax, quantityRange, quantityUnit, toDb, type PortEfficiency } from "../lib/farfieldQuantity";
-import { efficiencyUnit, patternQuantity, setEfficiencyUnit } from "../lib/patternQuantityStore";
+import { efficiencyQuantity, radiationQuantity, efficiencyUnit, patternQuantity, setEfficiencyUnit } from "../lib/patternQuantityStore";
 import { axialRatioNote, CircularReadouts, lobeText, PatternQuantitySelect, quantityFallbackNote, totalEffText } from "../components/FarfieldCard";
 import type { DownloadResult } from "../lib/download";
 import { downloadToast } from "../lib/toast";
@@ -46,6 +46,7 @@ import { saveVisibleFigure, visibleFigureSvgs } from "../components/visibleFigur
 import ResultFigureMenu from "../components/ResultFigureMenu";
 import { resultExportStem, resultFrequencyTag } from "../lib/resultExportNames";
 import FieldMapView from "./FieldMapView";
+import RadiationFrequencyView, { RadiationQuantitySelect } from "../components/RadiationFrequencyView";
 import { ResultSummary } from "./RunSummaryView";
 import { fmt, t, tEn } from "../i18n";
 import "../styles/designer-sim.css";
@@ -252,6 +253,13 @@ function ResultSmith(props: { b: Bundle }) {
  * a band-wide radiation efficiency (results.efficiency). One colour per quantity for a single driven
  * port; per port (dashes for the quantity) for multi-port runs; per run when runs are compared. */
 function ResultEfficiency(props: { b: Bundle }) {
+  const cmp = useCompare(() => props.b);
+  return <div class="radiation-view"><RadiationQuantitySelect efficiency />
+    <Show when={efficiencyQuantity() === "efficiency"} fallback={<RadiationFrequencyView b={props.b} runs={cmp()} hideSelector />}><EfficiencyRatioView b={props.b} /></Show>
+  </div>;
+}
+
+function EfficiencyRatioView(props: { b: Bundle }) {
   const cmp = useCompare(() => props.b);
   const data = createMemo(() => efficiencyData(props.b));
   const db = () => efficiencyUnit() === "db";
@@ -566,6 +574,7 @@ export function ResultToolbar(props: { view: MainResultView }) {
       : {}),
     runNames: runs?.map((r) => runLabel(r.file)),
     patternQuantity: patternQuantity(),
+    radiationQuantity: props.view === "efficiency" && efficiencyQuantity() !== "efficiency" ? radiationQuantity() : undefined,
     fieldPlane: resultFocus()?.map,
     summaryDeltas: summaryMode() === "delta",
     summaryReference: summaryReference(),

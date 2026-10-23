@@ -1,0 +1,100 @@
+// Remote acceptance with explicitly synthetic scalars; no solver/renderer/native actions.
+// Authored for root's serial remote queue, never launched locally without permission.
+import assert from 'node:assert/strict';
+import {execFileSync} from 'node:child_process';
+import {mkdir, readFile, writeFile} from 'node:fs/promises';
+import {join, resolve} from 'node:path';
+import {tmpdir} from 'node:os';
+import puppeteer from 'puppeteer-core';
+import {root, startStack, chromePath, pythonPath} from './scenarios/stack.mjs';
+import {Session, auditInPage} from './scenarios/harness.mjs';
+import {safeDiagnosticText} from './scenarios/startup-diagnostics.mjs';
+if(process.env.GITHUB_ACTIONS!=='true'&&process.env.FAIRBEAM_ALLOW_BROWSER_TEST!=='1')
+  throw new Error('Browser test requires remote CI or explicit user permission (FAIRBEAM_ALLOW_BROWSER_TEST=1).');
+const out=resolve(process.env.FAIRBEAM_TEST_ARTIFACTS||join(tmpdir(),`fairbeam-radiation-${Date.now()}`),'radiation-frequency');
+await mkdir(out,{recursive:true});
+const records=JSON.parse(execFileSync(pythonPath(),[join(root,'python/tests/test_radiation_frequency.py'),'--json'],{encoding:'utf8'}));
+const original=JSON.parse(await readFile(join(root,'public/projects/helix-axial.json'),'utf8'));
+const fixture=()=>{
+  const b=structuredClone(original);b.name=b.model.name='Synthetic radiation scalar control';b.model.id='synthetic-radiation';b.results.farfield=[];
+  const a=structuredClone(records.find(r=>r.name==='baseline'));a.reliable=[true,false,true];a.pacc_error=[.02,.2,.04];
+  const p=structuredClone(a);p.port=19;p.radiation.realized_peak_dbi=[-31,-32,-33];p.radiation.ar_boresight_db=[2,null,4];
+  b.results.efficiency=[a,p];return b;
+};
+let stack,browser,page,session,activeLang;
+const outcomes=[],forbidden=[];
+try{
+  stack=await startStack({log:console.log});
+  browser=await puppeteer.launch({headless:true,executablePath:await chromePath(),args:['--no-sandbox','--enable-unsafe-swiftshader','--use-angle=swiftshader']});
+  for(const lang of ['en','tr']){
+    activeLang=lang;const context=await browser.createBrowserContext();
+    await context.overridePermissions(stack.url,['clipboard-read','clipboard-write','clipboard-sanitized-write']);
+    page=await context.newPage();await page.setViewport({width:1440,height:1000});
+    await page.evaluateOnNewDocument(language=>localStorage.setItem('fairbeam.generalSettings',JSON.stringify({language})),lang);
+    await page.setRequestInterception(true);
+    page.on('request',request=>{
+      const path=new URL(request.url()).pathname;
+      const job=/^\/api\/(?:runs|sweeps|convergence|optimizations|research\/runs|render-jobs)(?:\/|$)/.test(path);
+      const native=/^\/api\/(?:native-document(?:\/|$)|(?:research\/elmer\/install|blender\/open-download|open-feedback|renders\/[A-Za-z0-9_-]+\/open)\/?$)/.test(path);
+      if(request.method()==='POST'&&(job||native)){forbidden.push(request.url());void request.abort();}else void request.continue();
+    });
+    const s=session=new Session(page,{lang,scenario:'radiation-frequency',url:stack.url,artifactDirectory:out});
+    await page.goto(stack.url,{waitUntil:'domcontentloaded'});await s.wait('.home',undefined,{timeout:45000});
+    const b=fixture(),file=join(out,`synthetic-${lang}.json`);await writeFile(file,JSON.stringify(b));
+    await (await page.$('.app-header input[type=file]')).uploadFile(file);
+    await s.waitFor(async()=>(await import('/src/state.ts')).bundle()?.model.id==='synthetic-radiation');
+    await s.wait('.dock [data-tab="radiation"]');await page.click('.dock [data-tab="radiation"]');
+    const verify=async(surface)=>{
+      const select=`${surface} .radiation-select select`;
+      await page.select(select,'realized_peak_dbi');
+      await s.wait(`${surface} [data-radiation-frequency]`,await s.T('radiation.note'));
+      assert.ok((await page.$$eval(`${surface} .line-chart-legend .legend-item`,els=>els.map(e=>e.textContent))).some(t=>t.includes('P7')));
+      assert.ok((await page.$$eval(`${surface} .line-chart-legend .legend-item`,els=>els.map(e=>e.textContent))).some(t=>t.includes('P19')));
+      await page.select(select,'ar_boresight_db');
+      await s.wait(`${surface} [data-radiation-frequency]`,await s.T('radiation.arNote'));
+      const axis=await page.$$eval(`${surface} [data-radiation-frequency] .c-label[transform]`,els=>els.map(e=>e.textContent).join(' '));
+      assert.ok(axis.includes('dB')&&!axis.includes('dBi'),`${surface} AR axis has no dBi`);
+      // Details expose exact samples and a gap; inspect actual DOM values, not a data helper.
+      await page.$$eval(`${surface} [data-radiation-frequency] details`,els=>els.forEach(e=>{e.open=true;}));
+      const rows=await page.$$eval(`${surface} [data-radiation-frequency] details tbody tr`,els=>els.map(r=>[...r.querySelectorAll('td')].map(c=>c.textContent.trim())));
+      assert.equal(rows.length,6);assert.equal(rows[1][1],'—');assert.equal(rows[4][1],'—');assert.match(rows[0][1],/^0[.,]00$/);
+      await s.wait(surface,await s.T('radiation.boundary.gap'));
+      assert.deepEqual(await page.evaluate(auditInPage,`${surface} [data-radiation-frequency]`),[]);
+      const bounds=await page.$eval(`${surface} [data-radiation-frequency] .chart`,e=>{const r=e.getBoundingClientRect();return {width:r.width,height:r.height};});
+      assert.ok(bounds.width>200&&bounds.height>100,'visible chart has usable area');
+      await page.screenshot({path:join(out,`${surface==='.dock'?'viewer':'designer'}-${lang}.png`)});
+      outcomes.push({lang,surface,gaps:true,physicalPorts:[7,19],arUnit:'dB',syntheticOnly:true});
+    };
+    await verify('.dock');
+    await s.click('results.toolbar.copyData',{within:'.dock'});await s.wait('.dock-copy.copied');
+    const rows=(await page.evaluate(()=>navigator.clipboard.readText())).trimEnd().split(/\r?\n/).map(r=>r.split('\t'));
+    const ar=rows[0].indexOf('ar_boresight_db (dB)'),raw=rows[0].indexOf('ar_boresight_db raw (dB)');
+    assert.ok(ar>=0&&raw>=0);assert.equal(rows[2][ar],'');assert.equal(rows[2][raw],'0');assert.equal(rows[4][0],'19');
+    // Reopen saved result through the file input: scalars survive real strict-JSON import.
+    await (await page.$('.app-header input[type=file]')).uploadFile(file);
+    await s.waitFor(async()=>(await import('/src/state.ts')).bundle()?.results?.efficiency?.[1]?.port===19);
+    await s.click('header.screen.start',{within:'.mode-switch',exact:true});await s.wait('.home');
+    await page.locator('input[name="home-template"][value="patch"]').click();
+    await s.fill(await s.field(await s.T('home.newProject.name')),`Radiation control ${lang}`,{blur:false});
+    await s.click('home.newProject.create');await s.wait('.rb');
+    const own=await s.store((_,m)=>m.s.file());b.model.id=own.design.model.id;
+    const runFile=`${own.id}--synthetic-radiation.json`;await writeFile(join(stack.projects,runFile),JSON.stringify(b));
+    // Register the saved synthetic result as existing data; no run/solver endpoint is called.
+    await s.ev(({b,file},m)=>{
+      m.st.setIndex([...m.st.index().filter(r=>r.file!==file),{file,model:b.model.id,name:b.name,created:b.created,engine:'CPU',simulated:true,bands:[],params:[]}]);
+      m.dr.setDesignResult({file,bundle:b});m.rr.ensureDesignRunBundles();m.rf.focusResult({file,view:'efficiency'},'main');
+    },{b,file:runFile},{st:'/src/state.ts',dr:'/src/runner/designRun.ts',rr:'/src/designer/runResults.ts',rf:'/src/designer/resultFocus.ts'});
+    await s.wait('.dw-result .radiation-select');await verify('.dw-result');
+    // Default efficiency mode remains available in Designer.
+    await page.select('.dw-result .radiation-select select','efficiency');
+    await s.wait('.dw-result [role="radiogroup"]',await s.T('efficiency.unit'));
+    assert.deepEqual(forbidden,[]);assert.deepEqual(s.consoleIssues,[]);
+    await context.close();
+  }
+  await writeFile(join(out,'result.json'),JSON.stringify({outcomes,forbidden,syntheticOnly:true},null,2));
+  console.log(JSON.stringify({out,outcomes},null,2));
+}catch(error){
+  let screenshotError;await page?.screenshot({path:join(out,'failure.png')}).catch(e=>{screenshotError=String(e);});
+  await writeFile(join(out,'failure.json'),JSON.stringify({error:String(error?.stack||error),lang:activeLang,url:page?.url(),screenshotError,console:session?.consoleIssues,forbidden,completed:outcomes,children:stack?.diagnostics()},(_key,value)=>typeof value==='string'?safeDiagnosticText(value):value,2));
+  throw error;
+}finally{try{await browser?.close();}finally{await stack?.stop();}}

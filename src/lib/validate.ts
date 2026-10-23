@@ -8,6 +8,7 @@ import type { Bundle } from "../types";
 import { ENC_F32, ENC_I16 } from "./sparams.ts";
 import { currentSchema, schemaFamily } from "./legacy.ts";
 import { portGroupProblem } from "./portGroups.ts";
+import { validRadiationSweep } from "./radiationFrequency.ts";
 // messages shown in the UI (load errors and warnings), in the language of the moment
 import { t as msg } from "../i18n/index.ts";
 
@@ -325,6 +326,12 @@ export function validateBundle(raw: unknown): Validation {
       r.ports = ports;
       if (!good && Object.keys(isObj(r.ports) ? r.ports : {}).length === 0 && !isObj(r.sparams)) dropResults(msg("validate.noPortData"));
       else {
+        if (Array.isArray(r.efficiency)) for (const [i, s] of r.efficiency.entries()) {
+          if (isObj(s) && s.radiation !== undefined && !validRadiationSweep(s)) {
+            delete s.radiation;
+            warnings.push(msg("validate.radiationSweep", { n: i + 1 }));
+          }
+        }
         if (!Array.isArray(r.bands)) r.bands = [];
         r.bands = (r.bands as unknown[]).filter((x) => isObj(x) && isNum(x.f_center) && isNum(x.f_lo) && isNum(x.f_hi));
         if (!Array.isArray(r.farfield)) r.farfield = [];
