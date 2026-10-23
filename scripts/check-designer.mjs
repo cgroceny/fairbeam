@@ -771,6 +771,7 @@ for (const prim of [tube, ball, side, cone, ring]) {
 console.log(`check-designer: ${checks} checks, ${failures} failed (${fx.expressions.length} expressions, ${fx.cases.length} cases)`);
 // This script is part of both CI's check:designer and check:exports aggregations.
 await import('./check-result-session-state.mjs');
+await import('./check-mesh-bottlenecks.mjs');
 await import('./check-planar-ports.mjs');
 // Keep these focused regressions in the normal designer gate. Isolated processes prevent
 // browser-like globals in other fixtures from affecting their Node/module checks.

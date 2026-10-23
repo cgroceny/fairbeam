@@ -165,7 +165,8 @@
 /* ------------------------------------------------------------------ mesh view readout */
 .mv-panel {
   position: absolute; right: var(--al-pad-hud); top: var(--al-pad-hud); z-index: 4; display: grid; gap: var(--al-space-2);
-  width: 270px; padding: var(--al-space-2) var(--al-space-3); border: 1px solid var(--al-border); border-radius: var(--al-radius-lg);
+  width: 310px; max-width: calc(100% - 2 * var(--al-pad-hud)); max-height: calc(100% - 2 * var(--al-pad-hud)); overflow: auto;
+  padding: var(--al-space-2) var(--al-space-3); border: 1px solid var(--al-border); border-radius: var(--al-radius-lg);
   background: color-mix(in srgb, var(--al-surface) 92%, transparent); box-shadow: var(--al-shadow-pop); font-size: var(--al-text-xs);
 }
 .mv-head { display: flex; align-items: center; gap: var(--al-space-2); font-weight: 600; font-size: var(--al-text-sm); }
@@ -175,6 +176,9 @@
 .mv-row { display: flex; align-items: center; gap: var(--al-space-2); }
 .mv-row input[type="range"] { flex: 1; min-width: 0; }
 .mv-panel .note { margin: 0; }
+.mv-panel p { overflow-wrap: anywhere; margin: 0; }
+.mv-bottlenecks { display: grid; gap: var(--al-gap-stack); border-top: 1px solid var(--al-border); padding-top: var(--al-space-2); }
+.mv-bottleneck-row { display: flex; align-items: center; justify-content: space-between; gap: var(--al-gap-cluster); flex-wrap: wrap; }
 
 /* ------------------------------------------------------------------ status bar */
 .sb {

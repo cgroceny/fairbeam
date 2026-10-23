@@ -27,7 +27,7 @@ assert.ok(own.timesteps.every((n) => n <= 1000));
 const draftMesh = read("src/designer/draftMesh.ts");
 assert.match(draftMesh, /meshStats\(draftPreview\(\)\)/, "draftMeshStats reads the draft's preview");
 assert.match(draftMesh, /maxTimesteps: draft\.simulation\.max_timesteps \?\? null/, "the estimate takes the draft's own timestep limit");
-for (const file of ["src/designer/RunDialog.tsx", "src/designer/MeshView.tsx", "src/designer/SimSettingsDialog.tsx", "src/designer/StatusBar.tsx",
+for (const file of ["src/designer/RunDialog.tsx", "src/designer/SimSettingsDialog.tsx", "src/designer/StatusBar.tsx",
   "src/designer/DesignWorkspace.tsx", "src/designer/SweepDialog.tsx", "src/designer/RunDock.tsx", "src/runner/designRun.ts"]) {
   const text = read(file);
   assert.doesNotMatch(text, /meshStats\(bundle\(\)\)|estimateTime\(bundle\(\)|bundle\(\)\?\.mesh\?\.auto/, `${file}: no mesh numbers from the viewer's bundle`);

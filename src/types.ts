@@ -366,6 +366,12 @@ export interface Bundle {
       min_cell: number;
       max_cell: number;
       max_neighbour_ratio: number;
+      /** Optional diagnostic locations. Indices and coordinates refer to the original mesh lines. */
+      axis_bottlenecks?: Record<"x" | "y" | "z", {
+        min_interval_index: number; min_interval: [number, number]; min_cell: number;
+        max_neighbour_ratio: number; max_neighbour_ratio_index: number | null;
+        max_neighbour_ratio_coordinates: [number, number, number] | null;
+      }>;
       res_air: number;
       res_dielectric: number;
       timestep_s: number;

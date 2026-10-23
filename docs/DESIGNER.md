@@ -997,12 +997,40 @@ without the dialog.
 ## Mesh view
 
 Ribbon Simulation › **Mesh view** (or a click on the cell count in the status bar) shows the FDTD mesh
-lines of the current preview on one plane and fades the solids so the lines show through. The mesh
+lines of the displayed model on one plane and fades the solids so the lines show through. The mesh
 comes from the same mesher the run uses. The panel over the 3D view has:
 
 - the plane controls: x/y/z and a slider through the mesh lines;
 - the lines per axis, the cell count, the smallest and largest cell, and the timestep;
 - a **solver-time estimate**.
+
+**Timestep and grading** finds the first smallest interval on each axis and the worst adjacent
+cell-width ratio. **Show interval** or **Show pair** selects a perpendicular mesh plane, centers
+the view on the interval and highlights its exact boundary lines (three lines for a pair), even
+when the background mesh is thinned for display. Coordinates and widths are shown in mm using
+the bundle's unit. The smallest intervals on all three axes contribute to the timestep.
+
+All numbers, source candidates and highlights use the same **Shown mesh**. Selecting an older
+run does not substitute the draft's current mesh. A new preview/result clears the visible
+highlight until an interval is selected again. The run dialog and status bar still estimate a
+new run from the draft's preview.
+
+During an instant browser preview, geometry can change before the server returns its new mesh.
+Carried mesh lines and numbers are labelled as the last successful preview, including after a
+failed request; source-part attribution is withheld until the matching server preview succeeds.
+The initial placeholder bounds have no cells and are not offered as a mesh to inspect. This live
+preview qualification is not persistent mesher provenance in exported project files.
+
+**Likely source** matches nearby world-space bounding-box faces, not a record of which mesher
+rule created a line. Multiple matches are listed as ambiguous; an unmatched interval may come
+from a port, a custom mesh line or grading. Rotated and transformed parts receive an explicit
+bounding-box qualification. Lines span the whole domain: the inspector reports the number of
+cells added by one new line on that axis, before smoothing adds any other lines.
+
+**Review Thin metal = sheets…** opens and focuses the current draft's setting without changing
+it. Changing it requires a deliberate selection and a new preview/run; saved results retain
+their original mesh. Thin-sheet approximations and mesh convergence still need appropriate
+validation for the model.
 
 The estimate is cells × timesteps divided by a conservative throughput from
 [BENCHMARKS.md](BENCHMARKS.md): the M5 Pro CPU engine with 4 threads measured 318–329 MCells/s and
