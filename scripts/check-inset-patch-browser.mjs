@@ -7,32 +7,39 @@ import { tmpdir } from 'node:os';
 import puppeteer from 'puppeteer-core';
 import { startStack, chromePath } from './scenarios/stack.mjs';
 import { Session, auditInPage } from './scenarios/harness.mjs';
+import { safeDiagnosticText } from './scenarios/startup-diagnostics.mjs';
 
 if (process.env.GITHUB_ACTIONS !== 'true' && process.env.FAIRBEAM_ALLOW_BROWSER_TEST !== '1') {
   throw new Error('Browser test requires remote CI or explicit user permission (FAIRBEAM_ALLOW_BROWSER_TEST=1).');
 }
 const out = resolve(process.env.FAIRBEAM_TEST_ARTIFACTS || join(tmpdir(), `fairbeam-inset-patch-${Date.now()}`), 'inset-patch');
 await mkdir(out, { recursive: true });
-const stack = await startStack({ log: console.log });
-let browser;
+let stack, browser, page, session, activeLang;
 const outcomes = [];
+const forbidden = [];
 try {
+  stack = await startStack({ log: console.log });
   browser = await puppeteer.launch({ headless: true, executablePath: await chromePath(),
     args: ['--no-sandbox', '--enable-unsafe-swiftshader', '--use-angle=swiftshader'] });
   for (const lang of ['en', 'tr']) {
+    activeLang = lang;
     const context = await browser.createBrowserContext();
-    const page = await context.newPage();
+    page = await context.newPage();
     await page.setViewport({ width: 1440, height: 1000 });
     await page.evaluateOnNewDocument(language => localStorage.setItem('fairbeam.generalSettings', JSON.stringify({ language })), lang);
-    // Refuse any solver request if this regression accidentally acquires that scope.
-    const forbidden = [];
+    // server.py routes: ordinary runs, sweeps, mesh convergence, optimization and
+    // research solver jobs. Also refuse Blender jobs and known native actions;
+    // this test only creates, previews and saves a design in the browser.
     await page.setRequestInterception(true);
     page.on('request', request => {
-      if (request.method() === 'POST' && /\/api\/(?:jobs|run|sweeps|optimizations)(?:\/|$)/.test(new URL(request.url()).pathname)) {
+      const path = new URL(request.url()).pathname;
+      const startsJob = /^\/api\/(?:runs|sweeps|convergence|optimizations|research\/runs|render-jobs)(?:\/|$)/.test(path);
+      const nativeAction = /^\/api\/(?:native-document(?:\/|$)|(?:research\/elmer\/install|blender\/open-download|open-feedback|renders\/[A-Za-z0-9_-]+\/open)\/?$)/.test(path);
+      if (request.method() === 'POST' && (startsJob || nativeAction)) {
         forbidden.push(request.url()); void request.abort();
       } else void request.continue();
     });
-    const s = new Session(page, { lang, scenario: 'inset-patch', url: stack.url });
+    const s = session = new Session(page, { lang, scenario: 'inset-patch', url: stack.url, artifactDirectory: out });
     await page.goto(stack.url, { waitUntil: 'domcontentloaded' }); await s.wait('.home');
     await s.wait('.home-templates .nm-option', await s.T('templates.insetPatch.name'));
     await s.wait('.home-templates .nm-option', await s.T('templates.insetPatch.sub'));
@@ -71,10 +78,21 @@ try {
     await page.reload({ waitUntil: 'domcontentloaded' }); await s.wait('.rb');
     await s.waitFor(async id => (await import('/src/designer/store.ts')).file()?.id === id, before.file.id);
     assert.deepEqual(await s.store((_, m) => JSON.parse(JSON.stringify(m.s.draft))), wanted);
-    assert.deepEqual(forbidden, [], 'no solver endpoints requested');
+    assert.deepEqual(forbidden, [], 'no solver or native-action endpoints requested');
     outcomes.push({ lang, template: true, warning: true, inputs: ['f0', 'eps_r', 'h'], preview: true, saveReopen: true, solverRequests: 0 });
     await context.close();
   }
   await writeFile(join(out, 'result.json'), JSON.stringify(outcomes, null, 2));
   console.log(JSON.stringify({ out, outcomes }, null, 2));
-} finally { await browser?.close(); await stack.stop(); }
+} catch (error) {
+  let screenshotError;
+  await page?.screenshot({ path: join(out, 'failure.png') }).catch(e => { screenshotError = String(e); });
+  await writeFile(join(out, 'failure.json'), JSON.stringify({
+    error: String(error?.stack || error), lang: activeLang, url: page?.url(), screenshotError,
+    console: session?.consoleIssues, forbidden, completed: outcomes, children: stack?.diagnostics(),
+  }, (_key, value) => typeof value === 'string' ? safeDiagnosticText(value) : value, 2))
+    .catch(e => console.error('Could not save failure report:', safeDiagnosticText(e)));
+  throw error;
+} finally {
+  try { await browser?.close(); } finally { await stack?.stop(); }
+}
