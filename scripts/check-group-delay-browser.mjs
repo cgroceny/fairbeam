@@ -43,7 +43,9 @@ try {
     await page.setRequestInterception(true);
     page.on('request', req => {
       const path = new URL(req.url()).pathname;
-      if (req.method() === 'POST' && /^\/api\/(?:runs|sweeps|convergence|optimizations|research\/runs|render-jobs)\/?$/.test(path)) {
+      const job = /^\/api\/(?:runs|sweeps|convergence|optimizations|research\/runs|render-jobs)(?:\/|$)/.test(path);
+      const native = /^\/api\/(?:native-document(?:\/|$)|(?:research\/elmer\/install|blender\/open-download|open-feedback|renders\/[A-Za-z0-9_-]+\/open)\/?$)/.test(path);
+      if (req.method() === 'POST' && (job || native)) {
         blockedStarts.push(path); void req.abort();
       } else void req.continue();
     });
@@ -97,7 +99,7 @@ try {
 
     // Designer uses the same one-port selection and aperture, including its copy/export options.
     await s.click('header.screen.design', { sel: '.mode-switch button' }); await s.wait('.rb');
-    current.model.id = own.design.model.id;
+    current.model.id = own.design.model.id; current.created = new Date().toISOString();
     const file = `${own.id}--phase-fixture.json`;
     await writeFile(join(stack.projects,file),JSON.stringify(current));
     await s.ev(({ b, file }, m) => {

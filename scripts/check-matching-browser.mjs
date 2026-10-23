@@ -32,7 +32,9 @@ try {
     await page.setRequestInterception(true);
     page.on('request', req => {
       const path = new URL(req.url()).pathname;
-      if (req.method() === 'POST' && /^\/api\/(?:runs|sweeps|convergence|optimizations|research\/runs|render-jobs)\/?$/.test(path)) { starts.push(path); void req.abort(); }
+      const job = /^\/api\/(?:runs|sweeps|convergence|optimizations|research\/runs|render-jobs)(?:\/|$)/.test(path);
+      const native = /^\/api\/(?:native-document(?:\/|$)|(?:research\/elmer\/install|blender\/open-download|open-feedback|renders\/[A-Za-z0-9_-]+\/open)\/?$)/.test(path);
+      if (req.method() === 'POST' && (job || native)) { starts.push(path); void req.abort(); }
       else void req.continue();
     });
     await page.setViewport({ width: 1440, height: 1000 });
