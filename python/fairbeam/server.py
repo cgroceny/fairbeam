@@ -685,6 +685,14 @@ class App:
 
     # ---- endpoint implementations (return JSON-able objects or raise ApiError)
 
+    def close_activity(self) -> dict:
+        # Read both managers on every exit check, including work submitted by another
+        # client or document. Preserve unknown states so the client cannot infer idle.
+        return {"activity": [
+            *({"kind": "simulation", **job} for job in self.manager.active_jobs()),
+            *({"kind": "render", **job} for job in self.render_jobs.active_jobs()),
+        ]}
+
     def health(self) -> dict:
         return {"ok": True, "api": 1, "research": True, "elmer_driven": 2, "research_source": True, **self.versions, "cpu_count": self.cpu,
                 "physical_cores": self.physical, "host_cpu": resources.host_cpu_name(),
@@ -2063,6 +2071,7 @@ class Handler(BaseHTTPRequestHandler):
             ("GET", r"/api/blender", lambda: self._json(200, app.blender_info((parse_qs(urlsplit(self.path).query).get("path") or [""])[0]))),
             ("POST", r"/api/blender/open-download", lambda: (self._body(), self._json(200, app.open_blender_download()))[1]),
             ("POST", r"/api/render-jobs", lambda: self._json(201, app.submit_render(self._body(MAX_RENDER_JOB_BODY)))),
+            ("GET", r"/api/close-activity", lambda: self._json(200, app.close_activity())),
             ("GET", r"/api/render-jobs/(rb-[0-9a-f]+)", lambda i: self._json(200, app.render_job(i).to_dict())),
             ("POST", r"/api/render-jobs/(rb-[0-9a-f]+)/cancel", self._cancel_render),
             ("GET", r"/api/models", lambda: self._json(200, app.models())),

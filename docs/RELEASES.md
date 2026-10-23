@@ -190,6 +190,14 @@ editing them, or the prefill stops working.
 One entry per release, newest first. The installers are on the
 [release page](https://github.com/ismailakdag/fairbeam-releases/releases) of each version.
 
+### Unreleased
+
+- Include running and queued Blender renders in the desktop Quit and Close Window questions,
+  with separate simulation/render counts. A final check catches work started while an unsaved-work
+  question was open. Unavailable or unknown activity requires explicit consent; Cancel leaves
+  the application and jobs running. This fixes [#314](https://github.com/ismailakdag/fairbeam/issues/314)
+  in source after the published 0.8.4 tag; existing 0.8.4 downloads are unchanged.
+
 ### 0.8.4 (release preparation)
 
 - Close and Quit ask before canceling running or queued simulations, including other models,
@@ -242,8 +250,7 @@ One entry per release, newest first. The installers are on the
   feedback within the active import dialog, including VBA and PCB imports.
 - Add research-fixture provenance and identity checks. These are opt-in research tools, not
   new measured validation of the solver.
-Known limitations: Blender renders are not included in the simulation exit check and are canceled
-on quit without a render warning ([#314](https://github.com/ismailakdag/fairbeam/issues/314)). The
+The published 0.8.4 tag predates the Blender quit warning described under Unreleased. The
 Windows bootstrap investigation [#251](https://github.com/ismailakdag/fairbeam/issues/251), the
 macOS/Unix exit-during-spawn timing window and the native validation omissions remain documented
 in the [historical review record](release-notes/0.8.4-draft.md). Elmer and coax remain experimental.

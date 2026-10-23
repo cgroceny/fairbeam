@@ -566,6 +566,11 @@ class JobManager:
             jobs = sorted(self.jobs.values(), key=lambda j: j.created, reverse=True)
             return [j.to_dict(include_results=include_results) for j in jobs]
 
+    def active_jobs(self) -> list[dict]:
+        """Fresh server-wide exit activity, without historical results or input data."""
+        with self.lock:
+            return [{"id": job.id, "status": job.status} for job in self.jobs.values() if not job.terminal]
+
     def get(self, job_id: str) -> Job | None:
         return self.jobs.get(job_id)
 

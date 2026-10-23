@@ -212,6 +212,28 @@ export interface ModelVersion {
 export type ParamValue = number | string | boolean;
 
 export type JobStatus = "queued" | "running" | "done" | "failed" | "cancelled" | "interrupted";
+export interface CloseActivityJob {
+  kind: "simulation" | "render";
+  id: string;
+  status: "queued" | "running";
+}
+
+/** Missing, malformed or unknown activity must never become an empty exit check. */
+export function parseCloseActivity(value: unknown): CloseActivityJob[] {
+  if (!value || typeof value !== "object" || !Array.isArray((value as { activity?: unknown }).activity))
+    throw new Error("Invalid close activity response");
+  const ids = new Set<string>();
+  return (value as { activity: unknown[] }).activity.map(item => {
+    if (!item || typeof item !== "object") throw new Error("Invalid close activity entry");
+    const job = item as CloseActivityJob;
+    if ((job.kind !== "simulation" && job.kind !== "render") || typeof job.id !== "string" || !job.id.trim()
+      || (job.status !== "queued" && job.status !== "running")) throw new Error("Unknown close activity");
+    const key = JSON.stringify([job.kind, job.id]);
+    if (ids.has(key)) throw new Error("Duplicate close activity");
+    ids.add(key);
+    return { kind: job.kind, id: job.id, status: job.status };
+  });
+}
 export type Phase = "queued" | "building" | "setup" | "running" | "postprocessing" | "exporting" | JobStatus;
 
 export interface Eta {
@@ -541,6 +563,7 @@ export const api = {
   preview: (model: string, params: Record<string, ParamValue>, signal?: AbortSignal) =>
     call<PreviewResult>("POST", "/preview", { model, params }, signal),
   runs: (signal?: AbortSignal) => call<{ runs: Job[] }>("GET", "/runs?summary=1", undefined, signal).then((d) => d.runs),
+  closeActivity: (signal?: AbortSignal) => call<unknown>("GET", "/close-activity", undefined, signal).then(parseCloseActivity),
   submit: (body: { model: string; params: Record<string, ParamValue>; threads: number; engine?: string; name?: string; end_criteria_db?: number; points?: number; cells?: number }) =>
     call<Job>("POST", "/runs", withThreads(body)),
   /** memory / CPU check of a planned run; level "unknown" means it could not be checked */
