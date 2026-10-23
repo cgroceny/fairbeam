@@ -55,7 +55,7 @@ export function PatternCutPanel(props: { entries: PatternEntry[]; principalAvail
         <label class="cluster-sm"><span>{mode() === 'conical' ? 'θ (°)' : 'φ (°)'}</span>
           <NumberField ref={angleInput} data-pattern-cut="angle" min="0" max={mode() === 'conical' ? 180 : 360} step="any"
             aria-invalid={invalid()} aria-describedby={invalid() ? errorId : undefined}
-            value={mode() === 'conical' ? cutTheta() : cutPhi()} onInput={e => updateAngle(e.currentTarget)} />
+            value={mode() === 'conical' ? cutTheta() : cutPhi()} onChange={e => updateAngle(e.currentTarget)} />
         </label>
         <Show when={mode() === 'conical'}><button class="btn btn-sm" onClick={() => { setInvalid(false); setCutTheta(90); if (angleInput) angleInput.value = '90'; }}>{t('patternCuts.azimuth')}</button></Show>
       </Show>

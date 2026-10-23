@@ -73,7 +73,9 @@ try {
       await s.wait(`${scope} svg`, 'φ (°)');
       const fb = (20 + 5*Math.sqrt(3)).toFixed(2).replace('.', lang === 'tr' ? ',' : '.');
       await s.wait(`${scope} [data-pattern-metrics]`, fb);
-      await s.fill(angle, '181'); await s.waitFor(sel => document.querySelector(sel)?.getAttribute('aria-invalid') === 'true', angle);
+      await s.fill(angle, '181', {blur:false});
+      assert.equal(await s.ev((_,m) => m.p.cutTheta(), null, {p:'/src/lib/patternCutStore.ts'}),60,'typing a partial angle does not change the committed cut');
+      await page.keyboard.press('Tab'); await s.waitFor(sel => document.querySelector(sel)?.getAttribute('aria-invalid') === 'true', angle);
       assert.equal(await s.ev((_,m) => m.p.cutTheta(), null, {p:'/src/lib/patternCutStore.ts'}),60,'invalid input preserves the last valid cut');
       assert.ok((await page.$eval(`${scope} [role="alert"]`, e => e.textContent)).includes(await s.T('patternCuts.invalid',{max:180})));
       await s.click('patternCuts.azimuth',{within:scope,exact:true});
