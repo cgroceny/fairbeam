@@ -8,7 +8,8 @@ import { mappedPairLabel, physicalPortNumber, reflectionAtPort, sMatrix } from '
 import { sweep } from '../src/lib/rf.ts';
 import { bundleMetrics, summaryTable } from '../src/designer/runSummary.ts';
 import { mismatchAt } from '../src/lib/farfieldQuantity.ts';
-import { activeResultDataTable, resultDataTable } from '../src/designer/resultData.ts';
+import { activeResultDataTable, resultDataTable, resultDataCsv } from '../src/designer/resultData.ts';
+import { parseCsv } from '../src/export/csv.ts';
 import { parseTouchstoneNPort, touchstoneNPort, touchstoneS1p } from '../src/export/touchstone.ts';
 import { exportResultTouchstone } from '../src/designer/resultTouchstone.ts';
 import { validateBundle } from '../src/lib/validate.ts';
@@ -123,7 +124,15 @@ near(bundleMetrics(oneOut).s11MinDb, Math.min(...sw.s11Db));
 for (const view of ['sparams','smith','impedance','vswr','table','summary']) {
   const table = resultDataTable(oneOut, view, undefined, { format:'re_im' });
   assert.equal(table.header.at(-1), 'Port processing'); assert.ok(table.rows.every(r => r.at(-1).includes('Postprocessed:')));
+  const exported = resultDataCsv(table), expected = [table.header, ...table.rows.map(row => row.map(value => String(value ?? '')))];
+  assert.ok(exported.includes('\r\n'), 'actual result CSV uses CRLF record terminators');
+  assert.deepEqual(parseCsv(exported), expected, 'CRLF parsing preserves the exact final provenance header and cells');
+  assert.deepEqual(parseCsv(exported.replaceAll('\r\n', '\n')), expected, 'LF parsing retains the same fields');
 }
+// Record terminators are not cell content; commas, escaped quotes, spaces and empty
+// trailing cells remain content and must not be stripped by a broad trim workaround.
+assert.deepEqual(parseCsv('label,last\r\n"x,y"," a ""quoted"" value "\r\nempty,\r\n'),
+  [['label','last'],['x,y',' a "quoted" value '],['empty','']]);
 near(resultDataTable(oneOut,'sparams',undefined,{format:'re_im'}).rows[1][1], sm.get(1,1).re[1]);
 near(resultDataTable(oneOut,'impedance').rows[1][1], sw.zRe[1]);
 near(resultDataTable(oneOut,'vswr').rows[1][1], sw.vswr[1]);
