@@ -9,7 +9,8 @@ import StackedCharts from "../charts/StackedCharts";
 import { plotQuantities, type PlotFormat } from "../charts/plotQuantities";
 import SmithChart from "../charts/SmithChart";
 import { bundle } from "../state";
-import { magDb, mappedPairLabel, matrixPortLabel, physicalPortNumber, pairLabel, phaseDeg, reflectionAtPort, sMatrix, type SMatrix } from "../lib/sparams";
+import { hasSParameterPhase, magDb, mappedPairLabel, matrixPortLabel, physicalPortNumber, pairLabel, phaseDeg, reflectionAtPort, sMatrix, type SMatrix } from "../lib/sparams";
+import { GROUP_DELAY_APERTURES, groupDelayAperture, writeGroupDelayAperture } from "../designer/resultDataPreference";
 import { gridKeys, radioGroupKeys } from "../lib/a11y";
 import { numPlain } from "../lib/format";
 import { t } from "../i18n";
@@ -77,6 +78,19 @@ export const examplesSParams = store;
 /** Bundles with two or more ports get the S-parameter views. */
 export const multiPort = () => (store.S()?.ports.length ?? 0) >= 2;
 export const sParams = store.S;
+
+/** The same aperture drives the plotted derivative, marker values and numeric exports. */
+export function GroupDelayControls(props: { format?: PlotFormat }) {
+  return <Show when={props.format === "gd"}>
+    <label class="group-delay-aperture" title={t("sparams.apertureHint")}>
+      <span>{t("sparams.aperture")}</span>
+      <select class="btn btn-ghost btn-sm" aria-label={t("sparams.apertureAria")} value={groupDelayAperture()}
+        onChange={(e) => writeGroupDelayAperture(Number(e.currentTarget.value))}>
+        <For each={GROUP_DELAY_APERTURES}>{(points) => <option value={points}>{t("sparams.aperturePoints", { count: points })}</option>}</For>
+      </select>
+    </label>
+  </Show>;
+}
 
 /** Picker (matrix popover) and dB/phase switch for the dock bar (or, with `smith`, the Smith
  * chart's port). `store` defaults to the Examples dock's selection. */
@@ -189,6 +203,7 @@ export function SParamTools(props: { smith?: boolean; store?: SParamSelection; f
         <button class="seg-btn" role="radio" aria-checked={store.mode() === "db"} classList={{ active: store.mode() === "db" }} onClick={() => store.setMode("db")}>dB</button>
         <button class="seg-btn" role="radio" aria-checked={store.mode() === "phase"} classList={{ active: store.mode() === "phase" }} onClick={() => store.setMode("phase")}>{t("chart.q.phase")}</button>
       </div></Show>
+      <GroupDelayControls format={props.format} />
     </Show>
   );
 }
@@ -200,8 +215,8 @@ export function SParamChart(props: { markers?: { x: number; label: string; activ
   const groups = createMemo(() => plotQuantities(store.selectedPairs().flatMap((p, k) => {
       const c = S().get(p[0], p[1]);
       if (!c) return [];
-      return [{ id: key(p), label: mappedPairLabel(S(), p), color: COLORS[k], x: fGHz(), re: c.re, im: c.im }];
-    }), props.format ?? "plot", store.mode()));
+      return [{ id: key(p), label: mappedPairLabel(S(), p), color: COLORS[k], x: fGHz(), re: c.re, im: c.im, phaseKnown: hasSParameterPhase(bundle()) }];
+    }), props.format ?? "plot", store.mode(), { aperturePoints: groupDelayAperture() }));
   return (
     <Show when={groups().some((g) => g.series.length)} fallback={<div class="panel-empty">{t("sparams.chooseOneAbove")}</div>}>
       <StackedCharts groups={groups()} inspectionChart={props.inspectionKey}

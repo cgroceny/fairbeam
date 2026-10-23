@@ -8,6 +8,70 @@
 - **Radiation efficiency** = Prad / P_acc. P_acc = ½·Re(u·i*) is the power accepted at the port. It is stored at the far-field frequencies and, with `--efficiency [N]` (a design's `monitors.efficiency`), at N frequencies across the band, with a reliability flag per frequency ([BUNDLE.md](BUNDLE.md#efficiency)). A model declared lossless (`sim.lossless = True`) reports 1 while Prad / P_acc is within 5 % of 1 ([BUNDLE.md](BUNDLE.md#results)).
 - **Gain** = efficiency · Dmax. **Realized gain** = gain · (1 − |S11|²).
 
+## Unwrapped phase and group delay
+
+In the S-parameters result view or the Examples reflection view, choose **Unwrapped phase**
+or **Group delay** from the data-format selector. Both use the selected complex S-parameters;
+magnitude-only reference imports cannot supply phase. Group delay is
+`τg = −dφ/df / 360` in ns when phase is in degrees and frequency is in GHz.
+The **Aperture** control selects a local least-squares linear phase fit over 3, 5, 11 or 21
+samples. Wider apertures suppress noise but also smooth narrow dispersive features. At an
+endpoint the fit uses a one-sided window; a short valid segment uses all its available samples
+(at least two). Changing the aperture does not alter the unwrapped phase or stored results.
+
+Each original frequency grid must be finite, nonnegative and strictly increasing; invalid
+grids are rejected rather than sorted or deduplicated. Zero complex amplitude, nonfinite
+samples and an exactly ambiguous 180° step leave gaps. Neither interpolation nor the
+derivative crosses a gap. Unwrapping starts independently after each gap, so the absolute
+phase branch is arbitrary by whole turns. The warning for an observed phase wrap or 180°
+step is not proof of aliasing: recovering the true delay assumes adjacent true phase
+increments below 180°. Extra complete turns are indistinguishable from the sampled complex
+data. Refine the frequency sampling when this assumption is uncertain. Delay near deep
+reflection nulls may be noisy even when the complex amplitude is nonzero.
+
+Comparisons unwrap each run on its original grid, interpolate continuous phase onto the
+shared frequency grid, then fit the derivative there. The aperture therefore counts samples
+on the displayed comparison grid, not on each original grid; adding a valid comparison can
+change the smoothing bandwidth. No values are extrapolated beyond a run's range, and
+invalid frequency grids and magnitude-only runs do not contribute grid points. Copy data and CSV use the
+same grid, units, aperture and unsampled numeric values as the plot; missing values are empty
+cells. The Examples data table uses those values too (long tables may be visually sampled).
+Exports that request phase from a magnitude-only reference are explicitly rejected.
+The existing **All** format remains the magnitude, wrapped phase and real/imaginary views.
+These formats are display analysis only; they do not add TDR/time-domain results.
+
+## Ideal matching estimate
+
+The Designer's single-run **Impedance** and **Smith** views offer an opt-in ideal
+matching circuit. Pick an existing frequency sample and one of the admissible
+L-sections (series or shunt at the source, with either algebraic sign). Reactive
+loads can admit four solutions. Values are positive inductances in nH or
+capacitances in pF; zero elements are omitted. The displayed order is from source
+to load. A purely resistive load also admits a lossless 90-degree transformer,
+with `Zt = sqrt(Rload * Zref)`. Its electrical length varies linearly with frequency;
+no substrate, dispersion or physical line length is inferred.
+
+The original and ideal matched |S11| curves use the stored load impedance at every
+frequency, with constant ideal component values. Smith also overlays the ideal
+reflection locus. This is a circuit what-if, **not** a re-simulated or measured
+matched antenna: losses, parasitics and layout are absent. The original bundle,
+model and exported CSV/Touchstone data are unchanged. The estimate resets when
+changing result or view. Matching uses the existing stored reference plane; it
+does not de-embed a feed or insert elements into the Design.
+
+Any session port-postprocessing projection disables this estimate, including a
+real-reference change or ideal feed removal. Choose **Show original result** in
+**Port postprocessing** first; the matching tool never silently returns to a
+different plane. Unwrapped phase and group-delay plots and CSV instead follow
+the active processed matrix and retain its port-processing provenance.
+
+Only one-port complex data with a constant positive real reference is supported.
+Magnitude-only references, complex or frequency-varying references and multiport
+or run-comparison matching are unavailable. Missing/nonpassive load samples stay
+gaps. Synthesis uses the selected stored sample without interpolating an unknown
+load or extrapolating outside the recorded band. Analytic circuit controls check
+the equations; they do not establish electromagnetic or manufacturing accuracy.
+
 ## Accuracy notes
 
 - openEMS uses a staircase (Yee) FDTD mesh. Slanted and curved edges snap to mesh lines, and zero-thickness sheets sit on grid planes. Expect resonances to shift by a few percent unless the openEMS mesh is fine on the metal edges.

@@ -21,6 +21,12 @@
 
 ## Tasarımcıda port son işlemesi
 
+İdeal eşleme tahmini yalnızca kaydedilmiş özgün referans düzleminde kullanılabilir.
+Gerçek referans değişimi veya ideal besleme gecikmesi kaldırma dahil her port son
+işlemesi bu tahmini kapatır. Önce **Özgün sonucu göster** seçilmelidir; eşleme aracı
+başka bir düzleme sessizce dönmez. Açılmış faz ve grup gecikmesi grafikleri ile CSV
+ise etkin işlenmiş matrisi kullanır ve port son işlemesi köken bilgisini korur.
+
 Bir Tasarım sonucunun S-parametreleri, empedans, VSWR, Smith, tablo veya özet sekmesinde
 **Port son işlemesi** bölümünü açın. Ortak `R + jX` referansını ohm cinsinden (`R > 0`),
 her fiziksel portun kaldırılacak tek yönlü gecikmesini pikosaniye cinsinden girin.

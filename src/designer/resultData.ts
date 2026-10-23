@@ -2,10 +2,11 @@ import { hasComplexPortReference, portProcessingInfo, primaryPortLabel } from ".
 import { powerWaveReflection } from "../lib/powerWaves.ts";
 import type { Bundle, FarField } from "../types";
 import { complexDb, complexMagnitude, complexPhase } from "../charts/plotQuantities.ts";
+import { analyzeSParameterPhase } from "../lib/sparamPhase.ts";
 import { sweep } from "../lib/rf.ts";
 import { hasSParameterPhase, magDb, mappedPairLabel, matrixPortLabel, physicalPortNumber, pairLabel, phaseDeg, reflectionAtPort, sMatrix } from "../lib/sparams.ts";
 import type { ResultView } from "./resultFocus.ts";
-import { nearestFarfield, traceLabels } from "../compare/series.ts";
+import { nearestFarfield, phaseComparisonGrid, traceLabels } from "../compare/series.ts";
 import { effectiveQuantity, efficiencyData, mismatchAt, quantityGrid, type PatternQuantity } from "../lib/farfieldQuantity.ts";
 import { phasorColumns } from "../scene/fieldPlaneModel.ts";
 import { t, tEn } from "../i18n/index.ts";
@@ -16,7 +17,7 @@ export interface ResultDataTable {
   rows: (string | number | null)[][];
 }
 
-export type ResultDataFormat = "db" | "db_phase" | "re_im" | "mag_phase" | "all";
+export type ResultDataFormat = "db" | "db_phase" | "re_im" | "mag_phase" | "all" | "gd" | "phase_unwrapped";
 
 /** What the active plot shows, so copied/exported data matches it (both Results docks pass it). */
 export interface ResultDataOptions {
@@ -26,6 +27,10 @@ export interface ResultDataOptions {
   sparamMode?: "db" | "phase";
   /** Numeric representation of complex S/Z samples. */
   format?: ResultDataFormat;
+  /** Odd sample aperture of the local least-squares group-delay derivative. */
+  aperturePoints?: number;
+  /** Internal comparison grid: phase is unwrapped before interpolation and differentiation. */
+  frequencyGridGHz?: number[];
   /** the Smith chart's port: its S_pp and input impedance (default: the sweep's S11 and Zin) */
   smithPort?: number;
   /** comparison: the names the legend uses for the runs (parallel to `runs`) */
@@ -48,17 +53,23 @@ const empty = (header: string[]): ResultDataTable => ({ header, rows: [] });
 // no NaN or ±Infinity in copied/CSV data (an exactly zero |Sij| is -Infinity dB): an empty cell
 const finiteCell = (n: number | undefined): number | null => typeof n === "number" && Number.isFinite(n) ? n : null;
 const phase = complexPhase;
-function sColumns(pair: [number, number], re: number[], im: number[], format: ResultDataFormat, phaseKnown = true, label = pairLabel(pair)) {
+const derivedPhaseFormat = (format: ResultDataFormat | undefined) => format === "gd" || format === "phase_unwrapped";
+function sColumns(pair: [number, number], re: number[], im: number[], format: ResultDataFormat, phaseKnown = true, label = pairLabel(pair), fGHz: number[] = [], options: ResultDataOptions = {}) {
   const p = label;
+  if (derivedPhaseFormat(format)) {
+    const analysis = analyzeSParameterPhase(fGHz, re, im, { gridGHz: options.frequencyGridGHz, aperturePoints: options.aperturePoints });
+    const values = format === "gd" ? analysis.delayNs : analysis.phaseDeg;
+    return [{ label: format === "gd" ? `τg ${p} (ns)` : `Unwrapped ∠${p} (deg)`, value: (k: number) => phaseKnown ? values[k] : Number.NaN }];
+  }
   const safe = (fn: (k: number) => number) => (k: number) => Number.isFinite(re[k]) && Number.isFinite(im[k]) ? fn(k) : Number.NaN;
-  const modes: Record<ResultDataFormat, { label: string; value: (k: number) => number }[]> = {
+  const modes: Record<Exclude<ResultDataFormat, "gd" | "phase_unwrapped">, { label: string; value: (k: number) => number }[]> = {
     db: [{ label: `|${p}| (dB)`, value: safe(k => complexDb(re[k], im[k])) }],
     db_phase: [{ label: `|${p}| (dB)`, value: safe(k => complexDb(re[k], im[k])) }, { label: `∠${p} (deg)`, value: safe(k => phase(re[k], im[k])) }],
     re_im: [{ label: `Re ${p}`, value: k => re[k] }, { label: `Im ${p}`, value: k => im[k] }],
     mag_phase: [{ label: `|${p}|`, value: safe(k => complexMagnitude(re[k], im[k])) }, { label: `∠${p} (deg)`, value: safe(k => phase(re[k], im[k])) }],
     all: [{ label: `|${p}| (dB)`, value: safe(k => complexDb(re[k], im[k])) }, { label: `∠${p} (deg)`, value: safe(k => phase(re[k], im[k])) }, { label: `Re ${p}`, value: k => re[k] }, { label: `Im ${p}`, value: k => im[k] }, { label: `|${p}|`, value: safe(k => complexMagnitude(re[k], im[k])) }],
   };
-  return modes[format].map(column => !phaseKnown && !column.label.startsWith("|") ? { ...column, value: () => Number.NaN } : column);
+  return modes[format as keyof typeof modes].map(column => !phaseKnown && !column.label.startsWith("|") ? { ...column, value: () => Number.NaN } : column);
 }
 function zColumns(re: number[], im: number[], format: ResultDataFormat) {
   const safe = (fn: (k: number) => number) => (k: number) => Number.isFinite(re[k]) && Number.isFinite(im[k]) ? fn(k) : Number.NaN;
@@ -76,6 +87,7 @@ export function resultDataTable(bundle: Bundle | null | undefined, view: ResultV
 }
 
 function baseResultDataTable(bundle: Bundle | null | undefined, view: ResultView, frequencyHz?: number, options: ResultDataOptions = {}): ResultDataTable {
+  if (view !== "sparams" && derivedPhaseFormat(options.format)) options = { ...options, format: undefined, frequencyGridGHz: undefined };
   const results = bundle?.results;
   if (!results) return empty(["No result data"]);
   if (hasComplexPortReference(bundle) && (view === "smith" || view === "vswr")) return empty(["Complex power-wave reference: Smith impedance grid and physical VSWR unavailable"]);
@@ -91,20 +103,24 @@ function baseResultDataTable(bundle: Bundle | null | undefined, view: ResultView
       // the picked pairs this run stores (a two-port run beside a four-port one lacks some)
       const picked = (options.pairs ?? []).filter(([i, j]) => matrix.get(i, j));
       const format = options.format;
+      const nativeGHz = matrix.f.map(f => f / 1e9);
+      const gridGHz = derivedPhaseFormat(format) ? options.frequencyGridGHz ?? nativeGHz : nativeGHz;
       const cols = (options.pairs === undefined ? matrix.pairs : picked).flatMap((p) => {
         const c = matrix.get(p[0], p[1])!;
-        if (format) return sColumns(p, c.re, c.im, format, phaseKnown, mappedPairLabel(matrix, p)).map(x => ({ label: x.label, values: c.re.map((_, k) => x.value(k)) }));
+        if (format) return sColumns(p, c.re, c.im, format, phaseKnown, mappedPairLabel(matrix, p), nativeGHz, options).map(x => ({ label: x.label, values: gridGHz.map((_, k) => x.value(k)) }));
         return options.sparamMode === "phase" ? [{ label: `∠${mappedPairLabel(matrix, p)} (deg)`, values: phaseKnown ? phaseDeg(c) : c.re.map(() => NaN) }] : [{ label: `|${mappedPairLabel(matrix, p)}| (dB)`, values: magDb(c) }];
       });
-      return { header: ["f (GHz)", ...cols.map((x) => x.label)], rows: matrix.f.map((f, k) => [f / 1e9, ...cols.map((x) => finiteCell(x.values[k]))]) };
+      return { header: ["f (GHz)", ...cols.map((x) => x.label)], rows: gridGHz.map((f, k) => [f, ...cols.map((x) => finiteCell(x.values[k]))]) };
     }
     const sw = sweep(bundle);
     if (!sw) return empty(["f (GHz)", "|S11| (dB)"]);
     const haveComplex = sw.s11Re && sw.s11Im;
     const fallbackRe = haveComplex ? sw.s11Re : sw.f.map(() => Number.NaN);
     const fallbackIm = haveComplex ? sw.s11Im : sw.f.map(() => Number.NaN);
-    const cols = options.format ? sColumns([1, 1], fallbackRe, fallbackIm, options.format, phaseKnown).map(c => c.label === "|S11| (dB)" && !haveComplex ? { ...c, value: (i: number) => sw.s11Db[i] } : c) : [{ label: "|S11| (dB)", value: (i: number) => sw.s11Db[i] }];
-    return { header: ["f (GHz)", ...cols.map(c => c.label)], rows: sw.f.map((f, i) => [f / 1e9, ...cols.map(c => finiteCell(c.value(i)))]) };
+    const nativeGHz = sw.f.map(f => f / 1e9);
+    const gridGHz = derivedPhaseFormat(options.format) ? options.frequencyGridGHz ?? nativeGHz : nativeGHz;
+    const cols = options.format ? sColumns([1, 1], fallbackRe, fallbackIm, options.format, phaseKnown, "S11", nativeGHz, options).map(c => c.label === "|S11| (dB)" && !haveComplex ? { ...c, value: (i: number) => sw.s11Db[i] } : c) : [{ label: "|S11| (dB)", value: (i: number) => sw.s11Db[i] }];
+    return { header: ["f (GHz)", ...cols.map(c => c.label)], rows: gridGHz.map((f, i) => [f, ...cols.map(c => finiteCell(c.value(i)))]) };
   }
 
   if (view === "smith" && options.smithPort !== undefined) {
@@ -255,6 +271,9 @@ export const resultDataCsv = (table: ResultDataTable) => [table.header, ...table
 export function comparedResultDataTable(runs: { file: string; bundle: Bundle }[], view: ResultView, frequencyHz?: number, options: ResultDataOptions = {}): ResultDataTable {
   if (!runs.length) return { header: [], rows: [] };
   if ((view === "smith" || view === "vswr") && runs.some(r => hasComplexPortReference(r.bundle))) return { header: ["Unavailable for complex power-wave references"], rows: [] };
+  if (view === "sparams" && derivedPhaseFormat(options.format)) {
+    options = { ...options, frequencyGridGHz: phaseComparisonGrid(runs.map(({ bundle }) => bundle)) };
+  }
   // Comparison uses each run's stored pattern, never a standalone viewer's synthesized overlay.
   const tables = runs.map((r) => resultDataTable(r.bundle, view, frequencyHz, { ...options, patternEntries: undefined }));
   const params = [...new Map(runs.flatMap((r) => r.bundle.model.params).map((p) => [p.key, p])).values()];
