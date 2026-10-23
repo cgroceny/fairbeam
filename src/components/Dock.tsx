@@ -10,7 +10,7 @@ import SmithChart from "../charts/SmithChart";
 import FigureMenu from "./FigureMenu";
 import { radioGroupKeys } from "../lib/a11y";
 import { bundle, dockTab, farfieldIndex, setDockTab, setFarfieldIndex, setLayers, source, type DockTab } from "../state";
-import { hasSParameterPhase, sMatrix } from "../lib/sparams";
+import { hasSParameterPhase, mappedPairLabel, sMatrix } from "../lib/sparams";
 import { nearestIndex, patternCut, sweep } from "../lib/rf";
 import { freqText, ghzText, num, withUnit } from "../lib/format";
 import { efficiencyIssue, efficiencyWarningUi } from "../lib/runText";
@@ -252,7 +252,7 @@ export default function Dock() {
   const singleNamed = createMemo(() => {
     if (dataFormat() === "plot" || multiPort()) return [];
     const m = examplesSParams.S();
-    if (m?.pairs.length) return plotQuantities(m.pairs.flatMap((p, k) => { const v = m.get(p[0], p[1]); return v ? [{ id: `${p[0]},${p[1]}`, label: `S${p[0]}${p[1]}`, color: `--al-series-${k + 1}`, x: m.f.map(f => f / 1e9), re: v.re, im: v.im, phaseKnown: hasSParameterPhase(bundle()) }] : []; }), dataFormat(), "db", { aperturePoints: groupDelayAperture() });
+    if (m?.pairs.length) return plotQuantities(m.pairs.flatMap((p, k) => { const v = m.get(p[0], p[1]); return v ? [{ id: `${p[0]},${p[1]}`, label: mappedPairLabel(m, p), color: `--al-series-${k + 1}`, x: m.f.map(f => f / 1e9), re: v.re, im: v.im, phaseKnown: hasSParameterPhase(bundle()) }] : []; }), dataFormat(), "db", { aperturePoints: groupDelayAperture() });
     const s = sw();
     return dataFormat() === "db" && s ? [{ key: "db", title: t("chart.q.magnitudeDb"), yLabel: t("chart.q.magnitudeDb"), kind: "reflection" as const, series: [{ id: "s11", label: "|S11|", color: "--al-series-1", x: s.f.map(f => f / 1e9), y: s.s11Db }] }] : [];
   });

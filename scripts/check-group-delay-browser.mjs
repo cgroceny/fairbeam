@@ -1,4 +1,4 @@
-// Optional browser/UI acceptance test. Do not run without the user's permission to use a browser.
+// Browser/UI acceptance test. Runs in remote CI; local execution requires the user's permission.
 // Authored for #229; pure mathematical controls are in check-sparam-phase*.mjs.
 // No solver. startStack uses the existing isolated scenario workspace.
 import assert from 'node:assert/strict';
@@ -18,7 +18,7 @@ const makeFixture = (name, shift = 0) => {
   const im = f.map(x => .5 * Math.sin(-2 * Math.PI * .6 * x));
   b.name = name; b.results.frequency = f.map(x => x * 1e9); b.results.bands = []; b.results.farfield = [];
   b.results.ports = { '1': { s11_re: re, s11_im: im, zin_re: f.map(() => 50), zin_im: f.map(() => 0), z_ref: 50 } };
-  b.results.sparams = { ports: [1], z_ref: [50], excited: [1], s: { '1,1': { re, im } } };
+  b.results.sparams = { ports: [1], port_numbers: [7], z_ref: [50], excited: [1], s: { '1,1': { re, im } } };
   return b;
 };
 const stack = await startStack({ log: console.log });
@@ -50,10 +50,11 @@ try {
     await s.wait('.dock .chart-phase-notes', await s.T('sparams.phaseAssumption'));
     await s.click('results.toolbar.copyData', { within: '.dock' }); await s.wait('.dock-copy.copied');
     const readRows = async () => (await page.evaluate(() => navigator.clipboard.readText())).trim().split(/\r?\n/).map(r => r.split('\t'));
-    let rows = await readRows(); assert.match(rows[0][1], /τg S11 \(ns\)/);
+    let rows = await readRows(); assert.equal(rows[0][1], 'τg S11 [P7] (ns)');
+    assert.ok(await page.$eval('.dock .chart-stack', e => e.textContent.includes('S11 [P7]')), 'one-port plot preserves physical port identity like CSV');
     rows.slice(1).forEach(row => assert.ok(Math.abs(Number(row[1]) - .6) < 1e-10));
     await s.click('results.tab.table', { within: '.dock', sel: 'button' });
-    await s.wait('.dock table', 'τg S11 (ns)');
+    await s.wait('.dock table', 'τg S11 [P7] (ns)');
     await s.click('results.tab.table', { within: '.dock', sel: 'button' });
     await page.select('.dock .result-format', 'phase_unwrapped');
     await s.gone('.dock .group-delay-aperture select');

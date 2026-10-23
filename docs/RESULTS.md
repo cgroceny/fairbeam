@@ -33,7 +33,7 @@ Comparisons unwrap each run on its original grid, interpolate continuous phase o
 shared frequency grid, then fit the derivative there. The aperture therefore counts samples
 on the displayed comparison grid, not on each original grid; adding a valid comparison can
 change the smoothing bandwidth. No values are extrapolated beyond a run's range, and
-invalid or magnitude-only runs do not contribute grid points. Copy data and CSV use the
+invalid frequency grids and magnitude-only runs do not contribute grid points. Copy data and CSV use the
 same grid, units, aperture and unsampled numeric values as the plot; missing values are empty
 cells. The Examples data table uses those values too (long tables may be visually sampled).
 Exports that request phase from a magnitude-only reference are explicitly rejected.
