@@ -162,7 +162,14 @@ check(/points=\{plot\(\)\.points\}/.test(views) && /t\("efficiency\.noteFarfield
   "the Efficiency view marks the far-field points and says where more radiation efficiency comes from");
 check(en["ribbon.sim.efficiency"] === "Efficiency" && /label=\{t\("ribbon\.sim\.efficiency"\)\}[^\n]*openRibbonResult\("efficiency"\)/.test(keys), "Post-processing opens the Efficiency tab");
 check(en["ribbon.post.farfield"] === "Far field" && /<Show when=\{ribbonFarfield\(\)\}>[\s\S]{0,200}<RGroup label=\{t\("ribbon\.post\.farfield"\)\}[\s\S]{0,300}<PatternQuantitySelect/.test(keys), "Post-processing shows the quantity picker while a pattern is shown");
-check(/quantityGrid\(props\.b, f, q\)/.test(views) && /PatternQuantitySelect bundle=\{props\.b\}/.test(views), "the Pattern tab's cuts follow the quantity, with its picker beside them");
+const patternPanel = read("src/components/PatternCutPanel.tsx");
+check(/const q = shownQuantity\(\)/.test(views)
+  && /bundle: props\.b, field: f, quantity: q/.test(views)
+  && /<PatternCutPanel entries=\{patternEntries\(\)\}/.test(views)
+  && /quantityGrid\(entry\.bundle, entry\.field, entry\.quantity\)/.test(patternPanel)
+  && /analyzeCut\(entry\.field\.theta, entry\.field\.phi, grid, spec/.test(patternPanel)
+  && /PatternQuantitySelect bundle=\{props\.b\}/.test(views),
+  "the Pattern tab passes its chosen quantity through the shared cut panel, with its picker beside it");
 const viewport = read("src/scene/Viewport.tsx");
 check(/quantityGrid\(b, f, q\), max: quantityMax\(b, f, q\)/.test(viewport) && /patternQuantity\], buildPattern/.test(viewport), "the 3D pattern redraws with the quantity");
 check(/<FarfieldCard bundle=\{bundle\(\)!\}/.test(viewport) && /showPattern3dEntry\(i\)/.test(viewport), "the 3D view's far-field card, its chips focusing the entry in Design");
