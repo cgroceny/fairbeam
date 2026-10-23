@@ -60,6 +60,17 @@ try{
       const rows=await page.$$eval(`${surface} [data-radiation-frequency] details tbody tr`,els=>els.map(r=>[...r.querySelectorAll('td')].map(c=>c.textContent.trim())));
       assert.equal(rows.length,6);assert.equal(rows[1][1],'—');assert.equal(rows[4][1],'—');assert.match(rows[0][1],/^0[.,]00$/);
       await s.wait(surface,await s.T('radiation.boundary.gap'));
+      // The dock is resizable. Expand it through its keyboard control, then prove
+      // the actual SVG fits the surface instead of accepting an off-screen size.
+      if(surface==='.dock'){
+        await page.focus('.dock .dock-resize');await page.keyboard.press('End');
+      }
+      await s.waitFor(surface=>{
+        const root=document.querySelector(surface),chart=root?.querySelector('[data-radiation-frequency] .chart'),body=root?.querySelector('.dock-body')||root;
+        if(!chart||!body)return false;
+        const c=chart.getBoundingClientRect(),b=body.getBoundingClientRect();
+        return c.top>=b.top-1&&c.bottom<=Math.min(b.bottom,innerHeight)+1&&c.left>=b.left-1&&c.right<=b.right+1;
+      },surface);
       assert.deepEqual(await page.evaluate(auditInPage,`${surface} [data-radiation-frequency]`),[]);
       const bounds=await page.$eval(`${surface} [data-radiation-frequency] .chart`,e=>{const r=e.getBoundingClientRect();return {width:r.width,height:r.height};});
       assert.ok(bounds.width>200&&bounds.height>100,'visible chart has usable area');

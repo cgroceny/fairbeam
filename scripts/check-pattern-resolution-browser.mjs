@@ -95,6 +95,10 @@ try {
     await openSettings();
     assert.equal(await page.$eval(thetaInput, e => e.value), '3', 'discard restores the omitted theta default');
     assert.equal(await page.$eval(phiInput, e => e.value), '5', 'discard restores the omitted phi default');
+    const rejectedPreview = page.waitForResponse(response => {
+      if(new URL(response.url()).pathname!=='/api/preview'||response.status()!==422)return false;
+      try{return JSON.parse(response.request().postData()).design.far_field.theta_step===0;}catch{return false;}
+    },{timeout:15000});
     await s.fill(thetaInput, '0');
     await s.waitFor(() => document.querySelector('#dz-far_field-theta_step')?.getAttribute('aria-invalid') === 'true');
     const error = await page.$eval(thetaInput, e => document.getElementById(e.getAttribute('aria-describedby').split(' ')[0])?.textContent);
@@ -111,6 +115,12 @@ try {
     assert.ok((await page.$eval('.rd-errors', e => e.textContent)).includes(expectedError));
     await s.click('common.cancel', { within: '[role="dialog"]' });
     await s.gone('#rd-form');
+    const rejected = await (await rejectedPreview).json();
+    assert.ok(rejected.checks?.some(c=>c.code==='ff-step'&&c.severity==='error'),'invalid angular grid is refused by the preview API');
+    // One browser resource diagnostic is expected from this exact intentional 422.
+    // All additional console/page errors still fail the complete scenario.
+    const expectedConsole='console error: Failed to load resource: the server responded with a status of 422 (Unprocessable Content)';
+    assert.deepEqual(s.consoleIssues,[expectedConsole]);
     await openSettings();
     await s.fill(thetaInput, 'f0 / 2');
     await s.fill(phiInput, '11');
@@ -132,8 +142,8 @@ try {
     await s.wait('.home');
     const readsBeforeReload = designReads;
     await page.reload({ waitUntil: 'domcontentloaded' });
-    await s.wait('.home');
-    await openDesign();
+    await s.wait('.rb');
+    await s.waitFor(async id => { const m=await import('/src/designer/store.ts');return !m.loading()&&m.file()?.id===id; },id);
     assert.ok(designReads > readsBeforeReload, 'reopening loads the saved design from the server');
     await openSettings();
     assert.equal(await page.$eval(thetaInput, e => e.value), 'f0 / 2');
@@ -163,7 +173,7 @@ try {
     assert.deepEqual(await page.evaluate(auditInPage, '.array-panel'), []);
     await page.screenshot({ path: join(out, `synthetic-decimation-${lang}.png`) });
     assert.equal(runPosts, 0, 'no simulation, study, research or render submission occurred');
-    assert.deepEqual(s.consoleIssues, [], 'no unexpected console or page errors');
+    assert.deepEqual(s.consoleIssues, [expectedConsole], 'only the verified intentional angular-grid refusal was logged');
     outcomes.push({ lang, defaults: [3, 5], discard: true, localizedErrorBlocksRun: true,
       saved: ['f0 / 2', 11], serverReopened: true, runPosts, syntheticDecimationNotice: true,
       storedShape: [ti.length, pi.length], sourceShape: [source.theta.length, source.phi.length] });
