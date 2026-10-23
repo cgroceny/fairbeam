@@ -190,6 +190,22 @@ class DesignerDispersion(unittest.TestCase):
             self.assertNotEqual(digest, design_digest(other))
         self.assertEqual(design_digest(json.loads(json.dumps(d))), digest)
 
+    def test_constant_capture_keeps_existing_conductivity_grouping(self):
+        from fairbeam.example_design import _read_design
+        sim = SimpleNamespace(unit=1e-3, csx=object(), materials={}, excitation={"type": "gaussian-derivative"},
+                              ports=[], lumped_elements=[], current_freqs=[], f_min=.5e9, f_max=5e9,
+                              boundaries=["PML_8"] * 6, end_criteria_db=-40, max_timesteps=1000)
+        entries = [{"name": name, "type": "Material", "material": {
+            "eps_r": 4.3, "tan_d": .02, "tan_d_freq": 1e9, "kappa": kappa},
+            "primitives": [{"kind": "box", "exact": True, "priority": 0, "start": [0, 0, 0], "stop": [1, 2, 3]}]}
+            for name, kappa in [("A", .01), ("B", .02), ("C", .01)]]
+        with patch("fairbeam.example_design._check_reconstructible_ports"), \
+                patch("fairbeam.example_design.read_structure", return_value=(entries, [], None)):
+            _, core = _read_design(SimpleNamespace(build=lambda _values: sim), {}, Path("constant.py"))
+        self.assertEqual([m["name"] for m in core["materials"]], ["A", "B"])
+        self.assertEqual([p["material"] for p in core["parts"]], ["A", "B", "A"])
+        self.assertFalse(any("dispersion" in m for m in core["materials"]))
+
     def test_outside_reference_warns_without_constant_loss_fix(self):
         d = blank_design("wideband", "Wideband")
         d["simulation"].update(f_min=2, f_max=3)

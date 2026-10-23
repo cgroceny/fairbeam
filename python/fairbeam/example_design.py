@@ -443,7 +443,9 @@ def _read_design(module, values: dict, source_path: Path):
                     item["mu_r"] = str(m["mu_r"])
                 if m.get("tan_d_freq") is not None:
                     item["tan_d_freq"] = str(m["tan_d_freq"] / 1e9)
-            key = ("dielectric", json.dumps({k: v for k, v in item.items() if k != "name"}, sort_keys=True))
+                key = ("dielectric", item["eps_r"], item["tan_d"], item.get("tan_d_freq"), m.get("kappa"), item.get("mu_r"))
+            else:
+                key = ("dispersive", json.dumps({k: v for k, v in item.items() if k != "name"}, sort_keys=True))
         elif typ == "LumpedElement":
             continue
         else:
