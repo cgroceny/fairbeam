@@ -15,7 +15,7 @@ const fixture = () => {
   const grid = theta.map(t => phi.map(p => 20 * Math.cos(t * Math.PI / 180) + 5 * Math.sin(t * Math.PI / 180) * Math.cos(p * Math.PI / 180)));
   b.name = 'SYNTHETIC cut analyzer'; b.model.name = b.name;
   b.model.description = 'Analytic synthetic angular data for UI acceptance; no simulation or measurement.';
-  b.half_space = false; b.run = null;
+  b.half_space = null; b.run = null;
   const ff = { ...b.results.farfield[0], theta, phi, directivity_dbi: grid, dmax_dbi: 20, rad_efficiency: 0.5, gain_dbi: 20 + 10*Math.log10(0.5) };
   ff.cp = { rhcp_dbi: grid.map(r => r.map(v => v-4)), lhcp_dbi: grid.map(r => r.map(v => v-7)), axial_ratio_db: grid.map(r => r.map(() => 3)),
     peak: {theta:0,phi:0,rhcp_dbi:16,lhcp_dbi:13,axial_ratio_db:3}, boresight: {theta:0,phi:0,rhcp_dbi:16,lhcp_dbi:13,axial_ratio_db:3} };
@@ -51,6 +51,7 @@ try {
       await writeFile(join(stack.projects,file),JSON.stringify(saved));
       await s.ev(({b,file}, m) => {
         const validated = m.v.validateBundle(b); if (!validated.bundle) throw new Error(JSON.stringify(validated.errors));
+        if (JSON.stringify(validated.bundle.half_space) !== JSON.stringify(b.half_space)) throw new Error('Synthetic half-space fixture was not preserved by admission');
         m.st.setIndex([...m.st.index().filter(r => r.file !== file), {file,model:b.model.id,name:b.name,created:b.created,simulated:true,bands:[],params:[]}]);
         m.dr.setDesignResult({file,bundle:validated.bundle}); m.rf.focusResult({file,view:'pattern'}, 'main');
       }, {b:saved,file}, {st:'/src/state.ts',dr:'/src/runner/designRun.ts',rf:'/src/designer/resultFocus.ts',v:'/src/lib/validate.ts'});
@@ -90,7 +91,7 @@ try {
       await page.select('.dw-result .ff-quantity',q);
       await s.wait('.dw-result [data-pattern-metrics]',await s.T(`farfield.quantity.${q}`));
     }
-    const half = structuredClone(b); half.half_space = true;
+    const half = structuredClone(b); half.half_space = {axis:'z',side:'min',position:0,kind:'PEC'};
     await showDesign(half); await s.wait('.dw-result [data-pattern-metrics]',await s.T('patternCuts.reason.halfSpace'));
     await s.fill('.dw-result [data-pattern-cut="angle"]','120');
     await s.wait('.dw-result .pattern-analyzer',await s.T('patternCuts.noCoverage'));

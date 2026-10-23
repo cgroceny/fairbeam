@@ -86,7 +86,7 @@ try {
         if(name==='linear')assert.match(await readout('farfield.arPeak'),/≥\s*60[.,]00\s*dB/);
         if(name==='rhcp')assert.match(await readout('farfield.arPeak'),/^0[.,]00\s*dB$/);
         await page.select('.dock [data-pattern-cut=kind]','conical');
-        await s.ev(angle=>{const input=document.querySelector('.dock [data-pattern-cut=angle]');input.value=String(angle);input.dispatchEvent(new Event('input',{bubbles:true}));},name==='low-directivity'?0:45);
+        await s.fill('.dock [data-pattern-cut=angle]',String(name==='low-directivity'?0:45));
         await s.wait('.dock [data-pattern-metrics]',await s.T('patternCuts.reason.quantity'));
         await s.click('results.toolbar.copyData',{within:'.dock'});await s.wait('.dock-copy.copied');
         const rows=(await page.evaluate(()=>navigator.clipboard.readText())).trimEnd().split(/\r?\n/).map(r=>r.split('\t'));
