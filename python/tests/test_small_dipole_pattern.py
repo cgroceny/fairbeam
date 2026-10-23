@@ -328,6 +328,64 @@ class SmallDipolePatternTests(unittest.TestCase):
                 with self.assertRaises(ValueError):acquire(out,1,max_wall_seconds=limit)
             self.assertFalse(out.exists());launch.assert_not_called()
 
+    def test_acquire_timeout_uses_real_waiter_and_cleans_owned_process(self):
+        from tests import test_coax_resonator as owner
+
+        for deadline in (1800., 2700.):
+            for scenario in ('suspend', 'monotonic', 'late_completion'):
+                with self.subTest(deadline=deadline, scenario=scenario):
+                    class Clock:
+                        elapsed, wall = 10., 100.
+                        def monotonic(self):return self.elapsed
+                        def time(self):return self.wall
+                    clock = Clock()
+
+                    class Process:
+                        pid, win_job, returncode = 123, object(), None
+                        def __init__(self):self.waits = []
+                        def poll(self):return self.returncode
+                        def wait(self, timeout=None):
+                            self.waits.append(timeout)
+                            if self.returncode is not None:return self.returncode
+                            clock.elapsed += deadline + .25 if scenario == 'monotonic' else .1
+                            clock.wall += .1 if scenario == 'monotonic' else deadline + .25
+                            if scenario == 'late_completion':
+                                self.returncode = 0
+                                return 0
+                            raise subprocess.TimeoutExpired('fake-owned-worker', timeout)
+
+                    proc = Process()
+                    def terminate(*args, **kwargs):proc.returncode = -15
+                    with tempfile.TemporaryDirectory() as tmp, \
+                         patch(__name__ + '.popen_group', return_value=proc) as launch, \
+                         patch(__name__ + '.time', clock), patch.object(owner, 'time', clock), \
+                         patch.object(owner, 'terminate_group', side_effect=terminate) as stop, \
+                         patch(__name__ + '.terminate_group', side_effect=terminate) as fallback, \
+                         patch(__name__ + '.release_group') as release:
+                        out = Path(tmp) / 'timeout'
+                        kwargs = {} if deadline == 1800. else dict(max_wall_seconds=deadline)
+                        action = 'returned after' if scenario == 'late_completion' else 'exceeded'
+                        message = f'owned FDTD worker {action} its {deadline:g}-second deadline'
+                        with self.assertRaisesRegex(TimeoutError, message):
+                            acquire(out, 1, rate=1000., **kwargs)
+                        launch.assert_called_once()
+                        if scenario == 'late_completion':
+                            stop.assert_not_called();self.assertEqual(proc.waits, [1.])
+                        else:
+                            stop.assert_called_once_with(proc.pid, grace=0, job=proc.win_job)
+                            self.assertEqual(proc.waits, [1., 15])
+                        fallback.assert_not_called();release.assert_called_once_with(proc)
+                        receipt = json.loads((out / 'worker.json').read_text())
+                        progress = json.loads((out / 'progress.json').read_text())
+                        self.assertEqual(receipt['deadline_seconds'], deadline)
+                        self.assertEqual(receipt['failure'], repr(TimeoutError(message)))
+                        self.assertIsNone(receipt['exit_code'])
+                        self.assertGreater(max(receipt['wall_seconds'], receipt['monotonic_seconds']), deadline)
+                        self.assertEqual(progress['status'], 'rejected')
+                        self.assertEqual(progress['reason'], receipt['failure'])
+                        self.assertIsNone(progress['active_launcher_pid'])
+                        self.assertFalse((out / 'comparison.json').exists())
+
     def test_forecast_uses_selected_limit_without_changing_measured_rate(self):
         proc=Mock(pid=123,win_job=None);proc.poll.return_value=2
         with tempfile.TemporaryDirectory()as tmp,patch(__name__+'.forecast',return_value=1900.),patch(__name__+'.popen_group',return_value=proc)as launch,patch(__name__+'.wait_owned',return_value=2),patch(__name__+'.release_group'):

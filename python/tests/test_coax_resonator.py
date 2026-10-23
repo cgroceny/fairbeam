@@ -74,11 +74,11 @@ def wait_owned(proc, seconds=1800):
             if proc.poll() is None:
                 terminate_group(proc.pid, grace=0, job=proc.win_job)
             proc.wait(timeout=15)
-            raise TimeoutError("owned FDTD worker exceeded its 30-minute deadline")
+            raise TimeoutError(f"owned FDTD worker exceeded its {seconds:g}-second deadline")
         try:
             code = proc.wait(timeout=min(1., remaining))
             if max(time.monotonic() - start, time.time() - wall) > seconds:
-                raise TimeoutError("owned FDTD worker returned after its 30-minute deadline")
+                raise TimeoutError(f"owned FDTD worker returned after its {seconds:g}-second deadline")
             return code
         except subprocess.TimeoutExpired:
             pass
