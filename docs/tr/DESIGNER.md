@@ -644,7 +644,7 @@ gerçek veya karmaşık Kurokawa referansı, fiziksel port başına ideal uyumlu
 tek yönlü besleme gecikmesi ve sıralı diferansiyel/ortak çiftler sunar. Uygula/Sıfırla
 yalnızca gösterilen sonucu ve sonuç dışa aktarımlarını etkiler; kayıtlı tasarım, ham
 paket ve eniyileyici değişmez. Son işlem etiketi görünür kalır; ışıma, güç ve çözücü
-kanıtları özgündür. [Sonuçlar](RESULTS.md#tasarımcıda-port-son-işlemesi) sayfası işlem
+kanıtları özgündür. [Sonuçlar](RESULTS.md#designer-port-postprocessing) sayfası işlem
 sırasını, referansları ve eksik veri kurallarını açıklar. Karmaşık referansta standart
 Smith/VSWR ve Touchstone kullanılamaz; CSV kullanılabilir. Gerçek referanslı mod dışa
 aktarımı açık mod bilgisiyle Touchstone 2.0'dır. Karma mod içe aktarımı desteklenmez;

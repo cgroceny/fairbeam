@@ -8,6 +8,74 @@
 - **Işıma verimliliği** = Prad / P_acc. P_acc = ½·Re(u·i*), portun kabul ettiği güçtür. Uzak alan frekanslarında; ayrıca `--efficiency [N]` (tasarımda `monitors.efficiency`) ile bant boyunca N frekansta, frekans başına güvenilirlik işaretiyle kaydedilir ([BUNDLE.md](BUNDLE.md#efficiency)). Kayıpsız olarak tanımlanan bir model (`sim.lossless = True`), Prad / P_acc değeri 1'in %5 yakınındayken 1 bildirir ([BUNDLE.md](BUNDLE.md#results)).
 - **Kazanç** = verimlilik · Dmax. **Gerçekleşen kazanç** = kazanç · (1 − |S11|²).
 
+## Açılmış faz ve grup gecikmesi
+
+S-parametreleri sonuç görünümünde veya Örnekler yansıma görünümünde veri biçimi
+seçicisinden **Açılmış faz** ya da **Grup gecikmesi** seçin. İkisi de seçili karmaşık
+S-parametrelerini kullanır; yalnızca genlik içeren referanslar faz sağlayamaz.
+Faz derece ve frekans GHz olduğunda `τg = −dφ/df / 360` grup gecikmesini ns cinsinden
+verir. **Açıklık** denetimi 3, 5, 11 veya 21 örnek üzerinde yerel en küçük kareler
+doğrusal faz uyumunu seçer. Daha geniş açıklık gürültüyü azaltırken dar dispersif
+özellikleri de yumuşatır. Uç noktalarda tek taraflı pencere kullanılır; kısa geçerli
+bölümde eldeki tüm örnekler (en az iki) kullanılır. Açıklığı değiştirmek açılmış fazı
+veya kaydedilmiş sonuçları değiştirmez.
+
+Her özgün frekans ızgarası sonlu, negatif olmayan ve kesin artan değerler içermelidir;
+geçersiz ızgaralar sıralanmak veya yinelenen değerleri ayıklanmak yerine reddedilir.
+Sıfır karmaşık genlik, sonlu olmayan örnekler ve tam 180° olan belirsiz adım boşluk
+bırakır. Ne ara değerleme ne de türev boşluğu aşar. Faz açma her boşluktan sonra
+bağımsız başlar; mutlak faz dalı tam turlar kadar belirsizdir. Gözlenen faz sarımı
+veya 180° adım uyarısı örtüşmenin kanıtı değildir: gerçek gecikmeyi bulmak, komşu
+gerçek faz artışlarının 180° altında olmasını varsayar. Ek tam turlar örneklenmiş
+karmaşık veriden ayırt edilemez. Bu varsayım belirsizse frekans örneklemesini sıklaştırın.
+Karmaşık genlik sıfır olmasa bile derin yansıma sıfırları yakınında gecikme gürültülü olabilir.
+
+Karşılaştırmalar her çalıştırmanın fazını özgün ızgarasında açar, sürekli fazı ortak
+frekans ızgarasına ara değerler ve türevi orada hesaplar. Açıklık bu nedenle her özgün
+ızgaranın değil, gösterilen karşılaştırma ızgarasının örneklerini sayar; geçerli bir
+karşılaştırma eklemek yumuşatma bant genişliğini değiştirebilir. Çalıştırmanın aralığı
+dışına değer üretilmez; geçersiz frekans ızgaraları ve yalnızca genlik içeren
+çalıştırmalar ortak ızgaraya nokta eklemez. Veri kopyalama ve CSV, grafikle aynı ızgara,
+birimler, açıklık ve gösterim için seyreltilmemiş sayısal değerleri kullanır; eksik
+değerler boş hücrelerdir. Örnekler veri tablosu da bu değerleri kullanır (uzun tablolar
+gösterim için seyreltilmiş olabilir). Yalnızca genlik içeren referanstan faz isteyen
+dışa aktarımlar açıkça reddedilir. Mevcut **Tümü** biçimi genlik, sarılmış faz ve
+gerçek/sanal görünümleri olarak kalır. Bunlar yalnızca görüntüleme analizidir;
+TDR veya zaman alanı sonuçları eklemez.
+
+## İdeal eşleme tahmini
+
+Tasarımcının tek çalıştırmalı **Empedans** ve **Smith** görünümleri isteğe bağlı ideal
+eşleme devresi sunar. Mevcut bir frekans örneğini ve uygun L bölümlerinden birini
+(kaynak tarafında seri veya paralel, iki cebirsel işaretten biriyle) seçin. Reaktif
+yükler dört çözüme izin verebilir. Değerler nH cinsinden pozitif endüktanslar veya
+pF cinsinden pozitif kapasitanslardır; sıfır elemanlar atlanır. Gösterilen sıra
+kaynaktan yüke doğrudur. Salt dirençli yük ayrıca `Zt = sqrt(Rload * Zref)` olan
+kayıpsız 90 derecelik dönüştürücüye izin verir. Elektriksel uzunluk frekansla doğrusal
+değişir; altlık, dispersiyon veya fiziksel hat uzunluğu çıkarılmaz.
+
+Özgün ve ideal eşlenmiş |S11| eğrileri, sabit ideal eleman değerleriyle her frekansta
+kaydedilmiş yük empedansını kullanır. Smith ayrıca ideal yansıma eğrisini gösterir.
+Bu bir devre varsayımıdır; yeniden simüle edilmiş veya ölçülmüş eşlenmiş anten
+**değildir**: kayıplar, parazitler ve yerleşim yoktur. Özgün paket, model ve dışa
+aktarılan CSV/Touchstone verileri değişmez. Sonuç veya görünüm değişince tahmin
+sıfırlanır. Eşleme mevcut kaydedilmiş referans düzlemini kullanır; besleme hattını
+çıkarmaz veya Tasarıma eleman eklemez.
+
+Gerçek referans değişimi veya ideal besleme gecikmesi kaldırma dahil her oturum
+port son işlemesi bu tahmini kapatır. Önce **Port son işlemesi** bölümünde
+**Özgün sonucu göster** seçilmelidir; eşleme aracı başka bir düzleme sessizce dönmez.
+Açılmış faz ve grup gecikmesi grafikleri ile CSV ise etkin işlenmiş matrisi kullanır
+ve port son işlemesi köken bilgisini korur.
+
+Yalnızca sabit pozitif gerçek referanslı tek portlu karmaşık veri desteklenir.
+Yalnızca genlik içeren referanslar, karmaşık veya frekansa bağlı referanslar, çok portlu
+veri ve çalıştırma karşılaştırmasında eşleme kullanılamaz. Eksik veya pasif olmayan
+yük örnekleri boşluk olarak kalır. Sentez, bilinmeyen yükü ara değerlemeden veya
+kaydedilmiş bant dışına değer üretmeden seçili kaydedilmiş örneği kullanır.
+Analitik devre denetimleri denklemleri doğrular; elektromanyetik veya üretim
+doğruluğunu kanıtlamaz.
+
 ## Doğruluk notları
 
 - openEMS basamaklı (Yee) FDTD mesh kullanır. Eğik ve eğri kenarlar mesh çizgilerine oturur; sıfır kalınlıklı levhalar ızgara düzlemlerine yerleşir. Metal kenarlarında mesh yeterince sık değilse rezonanslar birkaç yüzde kayabilir.
@@ -20,12 +88,6 @@
 [RunHistory tarama CSV'si](STUDIES.md#runhistory-sweep-csv) aynı bant tanımlarını küçük harfli sütun adlarıyla izler: `band_lo_ghz` ve `band_hi_ghz` sınırlar, `band_center_ghz` bunların ortası, `band_best_ghz` ise |S11| minimumunun frekansıdır. Her işin ilk bandını kullanır; sınırlardan biri eksikse merkez boş kalır. RunHistory, minimum frekans sütununu **En iyi uyum** olarak adlandırır.
 
 ## Tasarımcıda port son işlemesi
-
-İdeal eşleme tahmini yalnızca kaydedilmiş özgün referans düzleminde kullanılabilir.
-Gerçek referans değişimi veya ideal besleme gecikmesi kaldırma dahil her port son
-işlemesi bu tahmini kapatır. Önce **Özgün sonucu göster** seçilmelidir; eşleme aracı
-başka bir düzleme sessizce dönmez. Açılmış faz ve grup gecikmesi grafikleri ile CSV
-ise etkin işlenmiş matrisi kullanır ve port son işlemesi köken bilgisini korur.
 
 Bir Tasarım sonucunun S-parametreleri, empedans, VSWR, Smith, tablo veya özet sekmesinde
 **Port son işlemesi** bölümünü açın. Ortak `R + jX` referansını ohm cinsinden (`R > 0`),
@@ -64,4 +126,4 @@ pozitif gerçek referanslar gerekir; yerel karmaşık veya frekansa bağlı/dalg
 referansları reddedilir. Geçiş/TRL kalibrasyonu veya dispersif hat modeli uygulanmaz.
 Uzak alan, verim, güç, çözücü QA'sı, çalışma listesi ve eniyileyici özgün veride kalır.
 Yeni görünümde eski pasiflik/karşılıklılık QA değerleri yeniden ölçülmüş gibi sunulmaz.
-Örnekler görüntüleyicisi özgün veriyi gösterir. [Ayrıntılı dalga ve dosya tanımı](../RESULTS.md#designer-port-postprocessing).
+Örnekler görüntüleyicisi özgün veriyi gösterir.
