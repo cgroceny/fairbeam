@@ -75,6 +75,15 @@ pictures are added to the dialog's thumbnail list next to the in-app renderer's,
 `renders/<design>/` with the same names. `blenderEngine` in `src/render/blender.ts` is the same render as a one-call
 `BlenderEngine` (`src/render/engine.ts`).
 
+## Quitting during a render
+
+Desktop Quit and Close Window check running and queued Blender renders across the server,
+including jobs from another document or client. The question lists render and simulation
+counts separately. Cancel keeps the application and jobs running; choosing to quit cancels
+the unfinished work. Work started while a save question was open is checked again before exit.
+If activity cannot be checked, explicit confirmation is still required. This behavior is a
+source change after the published 0.8.4 tag; its existing downloads retain the older limitation.
+
 ## Look table (shared with the in-app renderer)
 
 | Kind / name | Look |

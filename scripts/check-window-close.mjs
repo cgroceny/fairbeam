@@ -30,7 +30,7 @@ const built = await build({
     resolveId(id) { if (id.endsWith("window-close-entry")) return "\0window-close-entry"; },
     load(id) {
       if (id !== "\0window-close-entry") return;
-      return ["designer/store", "designer/windowClose", "lib/unsavedWork", "editor/store", "designer/closeActivity"].map((path, i) =>
+      return ["designer/store", "designer/windowClose", "lib/unsavedWork", "editor/store", "designer/closeActivity", "runner/api"].map((path, i) =>
         `export * as m${i} from ${JSON.stringify(`${root}src/${path}.ts`)};`).join("\n");
     },
   }],
@@ -92,7 +92,7 @@ globalThis.fetch = async (url, init = {}) => {
 };
 
 const code = (Array.isArray(built) ? built[0] : built).output[0].code;
-const { m0: store, m1: wc, m2: work, m3: editor, m4: activity } = await import(`data:text/javascript;base64,${Buffer.from(code).toString("base64")}`);
+const { m0: store, m1: wc, m2: work, m3: editor, m4: activity, m5: api } = await import(`data:text/javascript;base64,${Buffer.from(code).toString("base64")}`);
 
 // ------------------------------------------------------------------ the shell's side
 
@@ -371,7 +371,18 @@ assert.equal(r.ask(), 'close');
 }
 // Closing the actual app must query server-wide activity, including runs absent from local history.
 editor.setDraft(editor.file().source);
-let active = ["other-workspace-running", "queued-sweep"];
+const simulation = (id, status = "running") => ({ kind: "simulation", id, status });
+const render = (id, status = "running") => ({ kind: "render", id, status });
+let active = [simulation("other-workspace-running"), simulation("queued-sweep", "queued")];
+assert.deepEqual(api.parseCloseActivity({ activity: [simulation("same"), render("same", "queued")] }),
+  [simulation("same"), render("same", "queued")], "activity identity includes its manager kind");
+for (const invalid of [null, {}, { activity: null }, { activity: [null] },
+  { activity: [{ kind: "other", id: "x", status: "running" }] },
+  { activity: [{ kind: "render", id: "x", status: "new-unknown-state" }] },
+  { activity: [{ kind: "render", id: "", status: "running" }] },
+  { activity: [render("duplicate"), render("duplicate")] }]) {
+  assert.throws(() => api.parseCloseActivity(invalid), "unavailable or ambiguous status cannot clear exit");
+}
 let readError = false;
 let readDeferred = null;
 let reads = 0;
@@ -385,7 +396,7 @@ const unregister = activity.registerCloseActivity(async () => {
   const r = shellRequest("quit");
   assert.equal(r.ask(), "pending", "clean app waits for a fresh server-wide run query");
   await sleep(0);
-  assert.equal(activity.closeActivity()?.count, 2);
+  assert.deepEqual(activity.closeActivity()?.counts, { simulations: 2, renders: 0 });
   assert.equal(r.ask(), "pending", "runs question blocks quit");
   activity.decideCloseActivity(false);
   assert.equal(r.ask(), "cancel", "Cancel preserves active/queued runs");
@@ -404,9 +415,9 @@ const unregister = activity.registerCloseActivity(async () => {
   activity.decideCloseActivity(true);
   assert.equal(r.ask(), "pending", "designer consent follows run consent");
   wc.approveWindowDiscard();
-  active.push("new-run-during-draft-question");
+  active.push(render("new-render-during-draft-question", "queued"));
   assert.equal(r.ask(), "pending"); await sleep(0);
-  assert.equal(activity.closeActivity()?.count, 3, "a new run needs consent");
+  assert.deepEqual(activity.closeActivity()?.counts, { simulations: 2, renders: 1 }, "a new render needs consent");
   activity.decideCloseActivity(false);
   assert.equal(r.ask(), "cancel");
   assert.ok(store.dirty(), "Cancel after Don't save retains the draft");
@@ -419,7 +430,7 @@ const unregister = activity.registerCloseActivity(async () => {
   active = []; readError = true;
   const r = shellRequest();
   assert.equal(r.ask(), "pending"); await sleep(0);
-  assert.equal(activity.closeActivity()?.count, null, "unavailable status needs explicit consent");
+  assert.equal(activity.closeActivity()?.counts, null, "unavailable status needs explicit consent");
   activity.decideCloseActivity(false);
   assert.equal(r.ask(), "cancel");
   readError = false;
@@ -431,7 +442,7 @@ const unregister = activity.registerCloseActivity(async () => {
   readDeferred = null;
   const next = shellRequest(); assert.equal(next.ask(), "pending");
   await sleep(0);
-  release(["stale"]); await sleep(0);
+  release([render("stale")]); await sleep(0);
   assert.equal(activity.closeActivity(), null, "stale response cannot open a new request's question");
   assert.equal(next.ask(), "pending"); await sleep(0);
   assert.equal(next.ask(), "close");
@@ -444,7 +455,7 @@ const unregister = activity.registerCloseActivity(async () => {
   const created = store.createDesign({ id: "b", name: "B" });
   assert.ok(store.replaceRequest());
   assert.equal(r.ask(), "cancel", "replacement question cancels the pending exit");
-  release(["late-running"]); await sleep(0);
+  release([render("late-running")]); await sleep(0);
   assert.equal(activity.closeActivity(), null, "a canceled exit's late status cannot open a run question");
   store.replaceRequest().decide(false);
   assert.equal(await created, null);
@@ -458,5 +469,43 @@ const unregister = activity.registerCloseActivity(async () => {
   assert.equal(reads, before);
   wc.finishUpdate(r.id);
 }
+{
+  active = [simulation("same")];
+  const r = shellRequest("quit");
+  assert.equal(r.ask(), "pending"); await sleep(0);
+  activity.decideCloseActivity(true);
+  // The approved simulation finishes and a render gets the same raw ID.
+  active = [render("same", "queued")];
+  assert.equal(r.ask(), "pending"); await sleep(0);
+  assert.deepEqual(activity.closeActivity()?.counts, { simulations: 0, renders: 1 }, "render cannot inherit simulation consent");
+  activity.decideCloseActivity(true);
+  active.push(render("arrived-during-final-question"));
+  assert.equal(r.ask(), "pending"); await sleep(0);
+  assert.deepEqual(activity.closeActivity()?.counts, { simulations: 0, renders: 2 }, "work added during final activity consent asks again");
+  activity.decideCloseActivity(true);
+  assert.equal(r.ask(), "pending"); await sleep(0);
+  assert.equal(r.ask(), "close", "approved identities need no repeated consent");
+}
+{
+  active = [render("finishes")];
+  const r = shellRequest();
+  assert.equal(r.ask(), "pending"); await sleep(0);
+  activity.decideCloseActivity(true);
+  active = [];
+  assert.equal(r.ask(), "pending"); await sleep(0);
+  assert.equal(r.ask(), "close", "completed renders do not demand a second question");
+}
+{
+  readError = true;
+  const r = shellRequest("quit");
+  assert.equal(r.ask(), "pending"); await sleep(0);
+  activity.decideCloseActivity(true);
+  readError = false; active = [render("appeared-after-unknown")];
+  assert.equal(r.ask(), "pending"); await sleep(0);
+  assert.deepEqual(activity.closeActivity()?.counts, { simulations: 0, renders: 1 }, "unknown consent does not approve subsequently known work");
+  activity.decideCloseActivity(false);
+  assert.equal(r.ask(), "cancel");
+  active = [];
+}
 unregister();
-console.log("check-window-close: designer/Python consent, active runs, unknown status, final recheck and stale replies pass");
+console.log("check-window-close: designer/Python consent, typed simulation/render activity, unknown status, final recheck and stale replies pass");
