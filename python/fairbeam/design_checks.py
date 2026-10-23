@@ -652,6 +652,8 @@ class _Lint:
                 self.error("mesh.air_cells_per_wavelength", "cells-per-wavelength",
                            "air cells per wavelength must be > 0 and no greater than the metal and dielectric setting")
         ff = self.d.get("far_field", {})
+        if "circular" in ff and not isinstance(ff["circular"], bool):
+            self.error("far_field.circular", "expr", "circular must be true or false")
         if ff.get("enabled", True):
             if ff.get("phase_center") is not None:
                 center = self.vec("far_field.phase_center", ff["phase_center"])
@@ -1808,7 +1810,7 @@ class _Lint:
         try:
             check_design(d)
         except DesignError as e:
-            code = "expr" if ".group" in (e.where or "") or e.where == "mesh.refine_features" else "structure"
+            code = "expr" if ".group" in (e.where or "") or e.where in ("mesh.refine_features", "far_field.circular") else "structure"
             if (e.where or "").startswith("resistors[") and (e.where or "").endswith(".symbol"):
                 code = "resistor-r"
             self.error(e.where or "", code, e.detail)

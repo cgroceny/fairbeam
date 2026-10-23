@@ -27,7 +27,7 @@ import {
 import type { PortGlyph } from "./portGlyphs";
 import { patternMesh } from "./pattern";
 import FarfieldCard from "../components/FarfieldCard";
-import { quantityGrid, quantityMax } from "../lib/farfieldQuantity";
+import { effectiveQuantity, quantityGrid, quantityMax, quantityRange } from "../lib/farfieldQuantity";
 import { patternQuantity } from "../lib/patternQuantityStore";
 import { showPattern3dEntry } from "../designer/runResults";
 import { arrayActive, arraySet, arrayWeights, farfieldOverride } from "../lib/arrayStore";
@@ -877,8 +877,8 @@ export default function Viewport() {
       // far-field magnitude does not depend on the phase centre; in half space anchor it on the ground
       const ctr = new THREE.Vector3(c0[0], c0[1], b.half_space ? b.half_space.position : c0[2]);
       // the chosen quantity (gain, realized gain, a circular part; directivity when the entry lacks it)
-      const q = farfieldOverride() ? "directivity" : patternQuantity();
-      patternRoot.add(patternMesh(f, ctr, radius * 1.15, fieldStops(), !!b.half_space, { values: quantityGrid(b, f, q), max: quantityMax(b, f, q) }));
+      const q = farfieldOverride() ? "directivity" : effectiveQuantity(b, f, patternQuantity());
+      patternRoot.add(patternMesh(f, ctr, radius * 1.15, fieldStops(), !!b.half_space, { values: quantityGrid(b, f, q), max: quantityMax(b, f, q), range: quantityRange(q), maskMissing: q === "axial_ratio" }));
       requestRender();
     }
     createEffect(on([() => layers.pattern, farfieldIndex, farfieldOverride, patternQuantity], buildPattern, { defer: true }));

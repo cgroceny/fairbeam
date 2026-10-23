@@ -11,16 +11,18 @@ export function rampColor(stops: THREE.Color[], t: number, out = new THREE.Color
 }
 
 /**
- * 3D pattern surface. Radius and colour both encode dBi (so colour is never the only channel),
+ * 3D pattern surface. Radius and colour encode the selected quantity (dBi, or AR in dB),
  * normalised over the top PATTERN_RANGE_DB dB below `max`. `values` replaces the directivity grid
- * (gain, realized gain, a circular part: lib/farfieldQuantity.ts), with `max` the top of its scale.
+ * (gain, realized gain, a circular part or AR: lib/farfieldQuantity.ts). AR uses 0–60 dB and
+ * omits masked triangles/lines; its radius is a polarization ratio, not radiated strength.
  */
 export function patternMesh(ff: FarField, center: THREE.Vector3, size: number, stops: THREE.Color[], halfSpace: boolean,
-  shown?: { values: number[][]; max: number }): THREE.Group {
+  shown?: { values: number[][]; max: number; range?: number; maskMissing?: boolean }): THREE.Group {
   const { theta, phi } = ff;
   const d = shown?.values ?? ff.directivity_dbi;
   const max = shown?.max ?? ff.dmax_dbi;
-  const floor = max - PATTERN_RANGE_DB;
+  const range = shown?.range ?? PATTERN_RANGE_DB;
+  const floor = max - range;
   const nt = theta.findLastIndex((t) => !halfSpace || t <= 90.0001) + 1;
   const np = phi.length;
   if (nt === 0 || np === 0) return new THREE.Group();
@@ -36,7 +38,7 @@ export function patternMesh(ff: FarField, center: THREE.Vector3, size: number, s
       const jj = j % np;
       // a missing sample (NaN after validation) collapses to the centre instead of breaking the mesh
       const dv = d[i][jj];
-      const t = Number.isFinite(dv) ? Math.max(0, (dv - floor) / PATTERN_RANGE_DB) : 0;
+      const t = Number.isFinite(dv) ? Math.min(1, Math.max(0, (dv - floor) / range)) : 0;
       const r = size * t;
       const k = (i * (np + 1) + j) * 3;
       pos[k] = center.x + r * sinTheta[i] * cosPhi[jj];
@@ -57,6 +59,8 @@ export function patternMesh(ff: FarField, center: THREE.Vector3, size: number, s
     for (let j = 0; j < np; j++) {
       const a = i * (np + 1) + j;
       const b = a + np + 1;
+      // An AR mask is an absent angular region, not a surface folded to zero.
+      if (shown?.maskMissing && ![d[i][j], d[i][(j + 1) % np], d[i + 1][j], d[i + 1][(j + 1) % np]].every(Number.isFinite)) continue;
       idx[indexOffset++] = a;
       idx[indexOffset++] = b;
       idx[indexOffset++] = a + 1;
@@ -68,7 +72,7 @@ export function patternMesh(ff: FarField, center: THREE.Vector3, size: number, s
   const g = new THREE.BufferGeometry();
   g.setAttribute("position", new THREE.BufferAttribute(pos, 3));
   g.setAttribute("color", new THREE.BufferAttribute(col, 3));
-  g.setIndex(new THREE.BufferAttribute(idx, 1));
+  g.setIndex(new THREE.BufferAttribute(idx.subarray(0, indexOffset), 1));
   g.computeVertexNormals();
 
   const group = new THREE.Group();
@@ -88,6 +92,7 @@ export function patternMesh(ff: FarField, center: THREE.Vector3, size: number, s
   const lines = new Float32Array(lineSegments * 6);
   let lineOffset = 0;
   const addSegment = (i0: number, j0: number, i1: number, j1: number) => {
+    if (shown?.maskMissing && ![d[i0][j0 % np], d[i1][j1 % np]].every(Number.isFinite)) return;
     const a = (i0 * (np + 1) + j0) * 3;
     const b = (i1 * (np + 1) + j1) * 3;
     for (let k = 0; k < 3; k++) {
@@ -99,7 +104,7 @@ export function patternMesh(ff: FarField, center: THREE.Vector3, size: number, s
   for (let i = 0; i < nt; i += stepT) for (let j = 0; j < np; j++) addSegment(i, j, i, j + 1);
   for (let j = 0; j < np; j += stepP) for (let i = 0; i < nt - 1; i++) addSegment(i, j, i + 1, j);
   const lg = new THREE.BufferGeometry();
-  lg.setAttribute("position", new THREE.BufferAttribute(lines, 3));
+  lg.setAttribute("position", new THREE.BufferAttribute(lines.subarray(0, lineOffset), 3));
   const wire = new THREE.LineSegments(lg, new THREE.LineBasicMaterial({ color: 0x0b0b0b, transparent: true, opacity: 0.18, depthWrite: false }));
   wire.renderOrder = 4;
   group.add(wire);

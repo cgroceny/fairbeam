@@ -499,6 +499,10 @@ def _read_design(module, values: dict, source_path: Path):
         pattern = getattr(sim, "pattern_freqs", None)
         if pattern is not None:
             far_field["frequencies"] = [str(f / 1e9) for f in pattern]
+    if getattr(sim, "cp_outputs", False):
+        # Preserve the request even when NF2FF is disabled; omitted remains the
+        # historical false default, so ordinary example copies stay unchanged.
+        far_field["circular"] = True
     if nf2ff and not far_field["enabled"]:
         raise ExampleConversionError("NF2FF geometry was found but the Simulation has no NF2FF monitor")
 

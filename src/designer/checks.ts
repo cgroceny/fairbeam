@@ -636,6 +636,7 @@ export function designChecks(d: Design): Check[] {
       error("mesh.air_cells_per_wavelength", "cells-per-wavelength", "air cells per wavelength must be > 0 and no greater than the metal and dielectric setting");
   }
   const ff = d.far_field ?? { enabled: true };
+  if (ff.circular !== undefined && typeof ff.circular !== "boolean") error("far_field.circular", "expr", "circular must be true or false");
   if (ff.enabled !== false) {
     if (ff.phase_center !== undefined) {
       if (!Array.isArray(ff.phase_center) || ff.phase_center.length !== 3) error("far_field.phase_center", "expr", "expected a list of 3 values");

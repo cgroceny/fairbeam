@@ -175,6 +175,13 @@ jobs:
           $env:TMP = $env:RUNNER_TEMP
           node scripts/check-scenarios.mjs --skip-run
 
+      - name: Circular-polarization synthetic field and display contracts
+        shell: pwsh
+        run: |
+          $env:FAIRBEAM_PYTHON = (Get-Command python).Source
+          $env:PYTHONUTF8 = '1'
+          node --experimental-strip-types scripts/check-circular.mjs
+
       - name: Viewer identity, result recovery and Compare layout regressions
         shell: pwsh
         env:
@@ -189,6 +196,8 @@ jobs:
           node scripts/check-user-project-browser.mjs
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           node scripts/check-quit-activity-browser.mjs
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          node scripts/check-circular-browser.mjs
 
       - name: Keep browser failure evidence (including recovered attempts)
         if: always()

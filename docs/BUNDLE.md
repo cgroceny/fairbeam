@@ -410,7 +410,7 @@ The JSON band fields retain their original meanings. In the [CSV export](EXPORTS
 | `realized_gain_dbi` | number? | `10·log10(efficiency · Dmax · (1 − \|S11\|²))`. Present only if efficiency > 0 |
 | `mirror_planes` | number | Number of PEC/PMC boundaries used for the correction. See above |
 | `port` | number? | Port that was driven for this entry (bundles since multi-port support). Multi-port runs have one entry per excited port and pattern frequency, all at the same frequencies |
-| `cp` | object? | Circular polarisation, for models that set `sim.cp_outputs = True`. See below |
+| `cp` | object? | Circular polarization, for models that set `sim.cp_outputs = True` or Designer projects with `far_field.circular: true`. See below |
 
 **cp.** With the IEEE convention and openEMS' e^{jωt} phasors, the right- and left-hand circular
 components of the far field are E_R = (E_θ + jE_φ)/√2 and E_L = (E_θ − jE_φ)/√2 (for a wave along +z,
@@ -419,12 +419,24 @@ RHCP rotates from x to y). Grids are indexed `[theta][phi]` like `directivity_db
 | Field | Type | Description |
 | --- | --- | --- |
 | `rhcp_dbi`, `lhcp_dbi` | number[][] | Partial directivities D·\|E_R\|²/\|E\|² and D·\|E_L\|²/\|E\|² in dBi (they add up to `directivity_dbi` in linear units), floored at `dmax_dbi − 60` |
-| `axial_ratio_db` | number[][] | Axial ratio (\|E_R\| + \|E_L\|) / \|\|E_R\| − \|E_L\|\| in dB: 0 = circular, capped at 60 dB (linear) |
+| `axial_ratio_db` | (number or null)[][] | 20·log10((\|E_R\| + \|E_L\|) / \|\|E_R\| − \|E_L\|\|): 0 dB = circular; 60 dB is a saturation cap, including linear polarization |
 | `peak` | object | `{theta, phi, rhcp_dbi, lhcp_dbi, axial_ratio_db}` at the directivity maximum |
 | `boresight` | object | `{theta: 0, rhcp_dbi, lhcp_dbi, axial_ratio_db}` at θ = 0 |
 
 The pattern CSV export adds `rhcp_dBi`, `lhcp_dBi` and `axial_ratio_dB` columns and the far-field
 CSV the boresight values.
+
+Zero or nonfinite complex-field pairs have no defined polarization; their CP scalars are JSON
+`null`, including peak/boresight scalars when applicable. Readers retain the other valid grid
+samples and treat nulls as gaps. The partial-directivity floor is a storage convention, not a
+measurement of the weak component. The viewer's Axial ratio quantity and selected-quantity
+table apply a **D ≥ Dmax − 20 dB** mask, use a separate 0–60 dB scale and leave unavailable
+samples empty. This display mask does not alter the stored CP grid or the raw pattern CSV.
+Raw numerical CSV exports use their existing `nan` marker for unavailable normalized numbers;
+the selected-quantity data/CSV table uses an empty cell. Neither means zero AR.
+Peak AR is at the maximum stored total directivity; boresight means θ = 0° (+z), not the first
+row of an angular grid that starts elsewhere. These sampled values do not qualify bandwidth,
+gain or efficiency and require angular/frequency/mesh/time-convergence checks.
 
 `prad_w` and `pacc_w` are absolute values for the unit-amplitude excitation. They are typically very small numbers, and only their ratio is meaningful.
 

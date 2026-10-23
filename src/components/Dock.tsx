@@ -14,9 +14,9 @@ import { hasSParameterPhase, sMatrix } from "../lib/sparams";
 import { nearestIndex, patternCut, sweep } from "../lib/rf";
 import { freqText, ghzText, num, withUnit } from "../lib/format";
 import { efficiencyIssue, efficiencyWarningUi } from "../lib/runText";
-import { effectiveQuantity, farfieldSummary, QUANTITY_LABEL, quantityGrid, quantityMax } from "../lib/farfieldQuantity";
+import { effectiveQuantity, farfieldSummary, QUANTITY_LABEL, quantityGrid, quantityMax, quantityRange, quantityUnit } from "../lib/farfieldQuantity";
 import { patternQuantity } from "../lib/patternQuantityStore";
-import { PatternQuantitySelect, totalEffText } from "./FarfieldCard";
+import { axialRatioNote, CircularReadouts, PatternQuantitySelect, totalEffText } from "./FarfieldCard";
 import type { Signals } from "../types";
 import ComparePicker from "../compare/ComparePicker";
 import { compareBundles, comparing, cutPhi, pinned, setCutPhi, setZPart, zPart } from "../compare/store";
@@ -235,12 +235,12 @@ export default function Dock() {
   const cmp = createMemo(() => (comparing() ? traces(bundle(), compareBundles()) : null));
   const cmpS11 = createMemo(() => (cmp() ? compareLines(cmp()!, (s) => s.s11Db) : null));
   const cmpZ = createMemo(() => (cmp() ? compareLines(cmp()!, (s) => (zPart() === "re" ? s.zRe : s.zIm)) : null));
-  const cmpCuts = createMemo(() => {
-    const q = patternQuantity();
-    return cmp() && ff() ? compareCuts(cmp()!, ff()!.f, cutPhi(), ff(), (b, x) => quantityGrid(b, x, q)) : null;
-  });
   /** the quantity the cuts show (directivity for the array overlay and entries without it) */
   const shownQuantity = () => (arrayMode() && steeredFarField() && storedFF()) || !bundle() || !ff() ? "directivity" : effectiveQuantity(bundle()!, ff()!, patternQuantity());
+  const cmpCuts = createMemo(() => {
+    const q = shownQuantity();
+    return cmp() && ff() ? compareCuts(cmp()!, ff()!.f, cutPhi(), ff(), (b, x) => quantityGrid(b, x, q)) : null;
+  });
   const ffSummary = createMemo(() => (bundle() && ff() ? farfieldSummary(bundle()!, ff()!) : null));
   const cmpSpData = createMemo(() => (spCompare() && cmp() ? compareSParams(cmp()!, examplesSParams.selectedPairs(), examplesSParams.mode()) : null));
   const cmpSp = createMemo(() => (spCompare() && cmp() ? compareSParamQuantities(cmp()!, examplesSParams.selectedPairs(), dataFormat(), examplesSParams.mode()) : null));
@@ -309,7 +309,7 @@ export default function Dock() {
         { id: "element", label: `${t("dock.results.element", { port: el.port ?? "?" })} · φ = ${cutPhi()}°`, color: "--al-series-2", angle: e.angle, value: e.value },
       ];
     }
-    const grid = quantityGrid(b, f, patternQuantity());
+    const grid = quantityGrid(b, f, shownQuantity());
     const a = patternCut(f.theta, f.phi, grid, 0, half);
     const c = patternCut(f.theta, f.phi, grid, 90, half);
     return [
@@ -354,7 +354,7 @@ export default function Dock() {
         if (!cuts?.length) return null;
         const angles = [...new Set(cuts.flatMap((c) => c.angle))].sort((a, b) => a - b);
         return compareTable("θ (°)", angles, cuts, [
-          { label: `φ = ${cutPhi()}° (dBi)`, values: (i) => interp(cuts[i].angle, cuts[i].value, angles) },
+          { label: `φ = ${cutPhi()}° (${quantityUnit(shownQuantity())})`, values: (i) => interp(cuts[i].angle, cuts[i].value, angles) },
         ]);
       }
       default:
@@ -382,7 +382,7 @@ export default function Dock() {
         const c = cuts();
         if (!c.length) return null;
         return {
-          columns: ["θ (°)", `${c[0].label} (dBi)`, `${c[1].label} (dBi)`],
+          columns: ["θ (°)", `${c[0].label} (${quantityUnit(shownQuantity())})`, `${c[1].label} (${quantityUnit(shownQuantity())})`],
           rows: c[0].angle.map((a, i) => [a, c[0].value[i], c[1].value[i] ?? "—"]),
         };
       }
@@ -590,9 +590,9 @@ export default function Dock() {
                       series={cmpCuts() ?? cuts()}
                       directLabels={!!cmpCuts()}
                       max={Math.ceil(Math.max(...[shownQuantity() === "directivity" ? ff()!.dmax_dbi : quantityMax(bundle()!, ff()!, shownQuantity()), ...(cmpCuts() ?? cuts()).flatMap((c) => c.value)].filter(Number.isFinite), -60))}
-                      range={30}
+                      range={quantityRange(shownQuantity())}
                       half={!!bundle()?.half_space && !(cmp() ?? []).some((t) => !t.bundle.half_space)}
-                      unit="dBi"
+                      unit={quantityUnit(shownQuantity())}
                     />
                     <dl class="kv pattern-stats">
                       <Show
@@ -602,6 +602,8 @@ export default function Dock() {
                           <dt>Dmax</dt><dd class="mono">{withUnit(num(ff()!.dmax_dbi, 2), "dBi")}</dd>
                           <dt>{t("farfield.quantity.gain")}</dt><dd class="mono">{ff()!.gain_dbi !== undefined ? withUnit(num(ff()!.gain_dbi, 2), "dBi") : "—"}</dd>
                           <dt>{t("farfield.quantity.realized")}</dt><dd class="mono">{ff()!.realized_gain_dbi !== undefined ? withUnit(num(ff()!.realized_gain_dbi, 2), "dBi") : "—"}</dd>
+                          <CircularReadouts ff={ff()!} />
+                          <Show when={shownQuantity() === "axial_ratio"}><dt>{t("farfield.quantity.axial_ratio")}</dt><dd>{axialRatioNote()}</dd></Show>
                           <dt>{t("farfield.radEff")}</dt>
                           <dd class="mono" classList={{ "cell-warn": !!efficiencyIssue(ff()!) }} title={efficiencyWarningUi(ff()!) ?? undefined}>
                             {ff()!.rad_efficiency !== null ? t("format.percent", { value: num(ff()!.rad_efficiency! * 100, 1) }) : "—"}

@@ -778,6 +778,7 @@ export interface ParametricDesign {
   materials?: { name: string; eps_r?: unknown; tan_d?: unknown }[];
   ports?: { number?: number; type?: string; R?: unknown; start?: unknown[]; stop?: unknown[]; direction?: string }[];
   simulation?: { f_min?: unknown; f_max?: unknown };
+  far_field?: { circular?: boolean };
 }
 
 export interface CstExtras {
@@ -1410,6 +1411,8 @@ export function cstMacro(b: Bundle, opt: CstOptions = DEFAULT_CST_OPTIONS, extra
   }
 
   const ffs = b.results?.farfield ?? [];
+  if (pd?.far_field?.circular === true || ffs.some(ff => ff.cp))
+    m.warnings.push("far_field.circular is not exported: RHCP/LHCP and axial-ratio postprocessing must be configured after importing the CST-compatible VBA macro");
   // a model with a far-field box but no analysed pattern yet (a design's preview): the import turns
   // the far field on again
   if (b.nf2ff_box && !ffs.length) data(m, { far_field: true });

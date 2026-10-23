@@ -10,10 +10,10 @@ import { radioGroupKeys } from "../lib/a11y";
 import { ghzText, num, withUnit } from "../lib/format";
 import { efficiencyIssue, efficiencyWarningUi } from "../lib/runText";
 import {
-  effectiveQuantity, farfieldSummary, PATTERN_QUANTITIES, QUANTITY_LABEL, quantityAvailability, quantityMax, toDb, type PatternQuantity,
+  effectiveQuantity, farfieldSummary, PATTERN_QUANTITIES, QUANTITY_LABEL, quantityAvailability, quantityMax, quantityRange, quantityUnit, toDb, type PatternQuantity,
 } from "../lib/farfieldQuantity";
+import { axialRatioReadouts, AXIAL_RATIO_MASK_DB, AXIAL_RATIO_MAX_DB } from "../lib/circular";
 import { patternQuantity, setPatternQuantity } from "../lib/patternQuantityStore";
-import { PATTERN_RANGE_DB } from "../scene/patternRange";
 import type { Bundle, FarField } from "../types";
 import { t } from "../i18n";
 import "../styles/farfield-card.css";
@@ -29,11 +29,21 @@ export const lobeText = (p: { theta: number; phi: number }) =>
 export const totalEffText = (eff: number) => `${t("format.percent", { value: num(eff * 100, 1) })} · ${withUnit(minus(num(toDb(eff), 2)), "dB")}`;
 /** A value with its unit kept together ("2.15 dBi"), or "—". */
 const dbi = (v: number | null | undefined) => (v === null || v === undefined || !Number.isFinite(v) ? "—" : withUnit(num(v, 2), "dBi"));
+export const axialRatioNote = () => t("farfield.arNote", { threshold: AXIAL_RATIO_MASK_DB, cap: AXIAL_RATIO_MAX_DB });
+const arText = (v: number | null) => v === null ? "—" : `${v >= AXIAL_RATIO_MAX_DB ? "≥ " : ""}${withUnit(num(v, 2), "dB")}`;
+/** Both values use the same low-field mask as the AR surface/cuts. */
+export function CircularReadouts(props: { ff: FarField }) {
+  const values = createMemo(() => axialRatioReadouts(props.ff));
+  return <Show when={props.ff.cp}>
+    <dt title={axialRatioNote()}>{t("farfield.arPeak")}</dt><dd class="mono">{arText(values().peak)}</dd>
+    <dt title={axialRatioNote()}>{t("farfield.arBoresight")}</dt><dd class="mono">{arText(values().boresight)}</dd>
+  </Show>;
+}
 
 /** The quantity picker (a native select: keyboard and screen readers for free); options a far field
  * cannot show are disabled with the reason as their tooltip. */
 export function PatternQuantitySelect(props: { bundle: Bundle; ff: FarField; id?: string; class?: string; directivityOnly?: string }) {
-  const options = () => PATTERN_QUANTITIES.filter((q) => (q !== "rhcp" && q !== "lhcp") || !!props.ff.cp);
+  const options = () => PATTERN_QUANTITIES;
   const avail = (q: PatternQuantity) => (props.directivityOnly && q !== "directivity" ? { ok: false, reason: noteText(props.directivityOnly) } : quantityAvailability(props.bundle, props.ff, q));
   const shown = () => (props.directivityOnly ? "directivity" : effectiveQuantity(props.bundle, props.ff, patternQuantity()));
   return (
@@ -63,7 +73,9 @@ const noteText = (s: string) => (s === ARRAY_PATTERN_NOTE ? arrayPatternNote() :
 
 export default function FarfieldCard(props: { bundle: Bundle; ff: FarField; entries: FarField[]; active: number; onSelect: (i: number) => void; arrayPattern?: boolean }) {
   const q = () => (props.arrayPattern ? "directivity" : effectiveQuantity(props.bundle, props.ff, patternQuantity()));
-  const top = () => (props.arrayPattern ? props.ff.dmax_dbi : quantityMax(props.bundle, props.ff, patternQuantity()));
+  const top = () => (props.arrayPattern ? props.ff.dmax_dbi : quantityMax(props.bundle, props.ff, q()));
+  const range = () => quantityRange(q());
+  const scaleNote = () => q() === "axial_ratio" ? t("farfield.arScale") : t("farfield.scaleUnit", { range: range() });
   const s = createMemo(() => farfieldSummary(props.bundle, props.ff));
   const multiPort = () => props.entries.some((f) => f.port != null) && new Set(props.entries.map((f) => f.port)).size > 1;
   const samePorts = (f: FarField, i: number) => props.entries.some((g, j) => j !== i && g.f === f.f);
@@ -74,9 +86,10 @@ export default function FarfieldCard(props: { bundle: Bundle; ff: FarField; entr
   // round tick values (0, -10, -20) placed by value on the ramp, whose top is `top()` and bottom
   // PATTERN_RANGE_DB below it; a tick at the top value (4.1) is Dmax's row in the list below
   const roundTicks = () => {
-    const hi = top(), lo = hi - PATTERN_RANGE_DB;
+    const hi = top(), lo = hi - range();
     const out: { v: number; f: number }[] = [];
-    for (let v = Math.ceil(lo / 10) * 10; v <= hi + 1e-9; v += 10) out.push({ v, f: (v - lo) / PATTERN_RANGE_DB });
+    const step = q() === "axial_ratio" ? 30 : 10; // keep the short card's labels separated
+    for (let v = Math.ceil(lo / step) * step; v <= hi + 1e-9; v += step) out.push({ v, f: (v - lo) / range() });
     return out;
   };
   return (
@@ -105,22 +118,24 @@ export default function FarfieldCard(props: { bundle: Bundle; ff: FarField; entr
             </div>
           </Show>
           <Show when={fallback()}><p class="ff-card-note" role="note">{fallback()}</p></Show>
+          <Show when={q() === "axial_ratio"}><p class="ff-card-note" role="note">{axialRatioNote()}</p></Show>
         </div>
       </Show>
       {/* a short view folds the scale: the caption goes into the ramp's tooltip and the unit onto the top tick */}
-      <div class="colorbar-body" title={`${t("farfield.scaleUnit", { range: PATTERN_RANGE_DB })}${q() === "rhcp" || q() === "lhcp" ? ` · ${t("farfield.topIsDmax")}` : ""}`}>
+      <div class="colorbar-body" title={`${scaleNote()}${q() === "rhcp" || q() === "lhcp" ? ` · ${t("farfield.topIsDmax")}` : ""}`}>
         <div class="colorbar-ramp" aria-hidden="true" />
         <div class="colorbar-ticks colorbar-ticks-round">
-          <For each={roundTicks()}>{(k, i) => <span style={{ "--f": k.f }}>{minus(num(k.v, 0))}<Show when={i() === roundTicks().length - 1}><span class="ff-tick-unit"> dBi</span></Show></span>}</For>
+          <For each={roundTicks()}>{(k, i) => <span style={{ "--f": k.f }}>{minus(num(k.v, 0))}<Show when={i() === roundTicks().length - 1}><span class="ff-tick-unit"> {quantityUnit(q())}</span></Show></span>}</For>
         </div>
       </div>
-      <div class="colorbar-unit ff-scale-unit">{t("farfield.scaleUnit", { range: PATTERN_RANGE_DB })}<Show when={q() === "rhcp" || q() === "lhcp"}> · {t("farfield.topIsDmax")}</Show></div>
+      <div class="colorbar-unit ff-scale-unit">{scaleNote()}<Show when={q() === "rhcp" || q() === "lhcp"}> · {t("farfield.topIsDmax")}</Show></div>
       <Show when={!collapsed()}>
         <dl class="kv ff-card-kv" id={bodyId}>
           <dt>Dmax</dt><dd class="mono">{dbi(s().dmaxDbi)}</dd>
           <Show when={!props.arrayPattern} fallback={<><dt>{t("farfield.pattern")}</dt><dd>{t("farfield.arrayAllFed")}</dd></>}>
           <dt>{t("farfield.quantity.gain")}</dt><dd class="mono">{dbi(s().gainDbi)}</dd>
           <dt>{t("farfield.quantity.realized")}</dt><dd class="mono">{dbi(s().realizedDbi)}</dd>
+          <CircularReadouts ff={props.ff} />
           <dt>{t("farfield.radEff")}</dt>
           <dd class="mono" classList={{ "cell-warn": !!warn() }} title={note() ?? undefined}>
             {pct(s().radEff)}<Show when={warn()}> <TriangleAlert size={12} aria-label={t("farfield.overUnity")} /></Show>

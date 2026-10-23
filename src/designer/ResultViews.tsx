@@ -25,9 +25,9 @@ import { freqText, ghzText, num, withUnit } from "../lib/format";
 import { nearestIndex, patternCut, sweep } from "../lib/rf";
 import { mappedPairLabel, pairLabel, sMatrix } from "../lib/sparams";
 import { efficiencyIssue, efficiencyWarningUi } from "../lib/runText";
-import { efficiencyData, effectiveQuantity, farfieldSummary, QUANTITY_LABEL, quantityGrid, quantityMax, toDb, type PortEfficiency } from "../lib/farfieldQuantity";
+import { efficiencyData, effectiveQuantity, farfieldSummary, QUANTITY_LABEL, quantityGrid, quantityMax, quantityRange, quantityUnit, toDb, type PortEfficiency } from "../lib/farfieldQuantity";
 import { efficiencyUnit, patternQuantity, setEfficiencyUnit } from "../lib/patternQuantityStore";
-import { lobeText, PatternQuantitySelect, quantityFallbackNote, totalEffText } from "../components/FarfieldCard";
+import { axialRatioNote, CircularReadouts, lobeText, PatternQuantitySelect, quantityFallbackNote, totalEffText } from "../components/FarfieldCard";
 import type { DownloadResult } from "../lib/download";
 import { downloadToast } from "../lib/toast";
 import { isTerminal } from "../runner/api";
@@ -393,13 +393,14 @@ function ResultPattern(props: { b: Bundle }) {
   };
   const ff = () => ffs()[Math.min(k(), ffs().length - 1)];
   const cmp = useCompare(() => props.b);
-  const qLabel = () => QUANTITY_LABEL[ff() ? effectiveQuantity(props.b, ff()!, patternQuantity()) : "directivity"];
+  const shownQuantity = () => ff() ? effectiveQuantity(props.b, ff()!, patternQuantity()) : "directivity";
+  const qLabel = () => QUANTITY_LABEL[shownQuantity()];
   const summary = createMemo(() => (ff() ? farfieldSummary(props.b, ff()!) : null));
   const cuts = () => {
     const f = ff();
     if (!f) return [];
     const c = cmp();
-    const q = patternQuantity();
+    const q = shownQuantity();
     if (c) return compareCuts(c, f.f, cutPhi(), f, (b, x) => quantityGrid(b, x, q));
     const half = !!props.b.half_space;
     const grid = quantityGrid(props.b, f, q);
@@ -414,12 +415,13 @@ function ResultPattern(props: { b: Bundle }) {
     <Show when={ff()} fallback={<div class="panel-empty">{t("results.pattern.none")}</div>}>
       <div class="rdk-split">
         <PolarChart ariaLabel={cmp() ? t("results.pattern.cutCompared", { quantity: qLabel(), phi: cutPhi() }) : t("results.pattern.cuts", { quantity: qLabel() })} series={cuts()} directLabels={!!cmp()}
-          half={!!props.b.half_space} unit="dBi" range={30}
-          max={Math.ceil(Math.max(quantityMax(props.b, ff()!, patternQuantity()), ...cuts().flatMap((c) => c.value).filter(Number.isFinite)))} />
+          half={!!props.b.half_space} unit={quantityUnit(shownQuantity())} range={quantityRange(shownQuantity())}
+          max={Math.ceil(Math.max(quantityMax(props.b, ff()!, shownQuantity()), ...cuts().flatMap((c) => c.value).filter(Number.isFinite)))} />
         <div class="rdk-side">
           <FreqChips label={t("farfield.frequency")} freqs={[...new Set(ffs().map((f) => f.f))]} active={ff()!.f} />
           <label class="rdk-field"><span>{t("results.pattern.quantity")}</span><PatternQuantitySelect bundle={props.b} ff={ff()!} /></label>
           <Show when={quantityFallbackNote(props.b, ff()!, patternQuantity())}>{(note) => <p class="rdk-note" role="note">{note()}</p>}</Show>
+          <Show when={shownQuantity() === "axial_ratio"}><p class="rdk-note" role="note">{axialRatioNote()}</p></Show>
           <Show when={cmp()}>
             <div class="seg seg-sm" role="radiogroup" aria-label={t("results.pattern.cut")} onKeyDown={radioGroupKeys}>
               <button class="seg-btn" role="radio" aria-checked={cutPhi() === 0} onClick={() => setCutPhi(0)}>φ 0°</button>
@@ -431,6 +433,7 @@ function ResultPattern(props: { b: Bundle }) {
             <dt>Dmax</dt><dd class="mono">{withUnit(num(ff()!.dmax_dbi, 2), "dBi")}</dd>
             <dt>{t("farfield.quantity.gain")}</dt><dd class="mono">{ff()!.gain_dbi !== undefined ? withUnit(num(ff()!.gain_dbi, 2), "dBi") : "—"}</dd>
             <dt>{t("farfield.quantity.realized")}</dt><dd class="mono">{ff()!.realized_gain_dbi !== undefined ? withUnit(num(ff()!.realized_gain_dbi, 2), "dBi") : "—"}</dd>
+            <CircularReadouts ff={ff()!} />
             <dt>{t("farfield.radEff")}</dt>
             <dd class="mono" classList={{ "cell-warn": !!efficiencyIssue(ff()!) }} title={efficiencyWarningUi(ff()!) ?? undefined}>{ff()!.rad_efficiency !== null ? t("format.percent", { value: num(ff()!.rad_efficiency! * 100, 1) }) : "—"}</dd>
             <dt title={t("farfield.totalTitlePort")}>{t("farfield.total")}</dt>
