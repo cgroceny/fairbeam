@@ -2,14 +2,15 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { postprocessPorts, portProcessingEligibility } from '../src/lib/portPostprocess.ts';
-import { portProcessingInfo, originalPortResult } from '../src/lib/portProcessingMetadata.ts';
+import { portProcessingInfo, originalPortResult, hasComplexPortReference, hasMixedPortCoordinates, primaryPortLabel } from '../src/lib/portProcessingMetadata.ts';
 import { createPortProcessingSession } from '../src/designer/resultSessionState.ts';
-import { physicalPortNumber, reflectionAtPort, sMatrix } from '../src/lib/sparams.ts';
+import { mappedPairLabel, physicalPortNumber, reflectionAtPort, sMatrix } from '../src/lib/sparams.ts';
 import { sweep } from '../src/lib/rf.ts';
-import { bundleMetrics } from '../src/designer/runSummary.ts';
+import { bundleMetrics, summaryTable } from '../src/designer/runSummary.ts';
 import { mismatchAt } from '../src/lib/farfieldQuantity.ts';
 import { activeResultDataTable, resultDataTable } from '../src/designer/resultData.ts';
 import { parseTouchstoneNPort, touchstoneNPort, touchstoneS1p } from '../src/export/touchstone.ts';
+import { exportResultTouchstone } from '../src/designer/resultTouchstone.ts';
 
 let checks = 0;
 function near(a, b, eps = 2e-12) { checks++; assert.ok(Math.abs(a - b) <= eps, `${a} != ${b}`); }
@@ -161,7 +162,7 @@ for (const [edit, error] of [
   [b=>delete b.results.sparams.z_ref,'reference'],
   [b=>b.results.ports['7'].z_ref_f=[35,35,35],'reference'],
   [b=>b.ports[0].type='waveguide','reference'],
-  [b=>b.ports[0].reference_impedance={real:50,imag:10},'reference'],
+  [b=>b.results.sparams.z_ref=[{real:35,imag:10},50,90],'reference'],
   [b=>b.results.ports['7'].z_ref=50,'reference'],
   [b=>b.results.frequency[1]=b.results.frequency[0],'frequency'],
 ]) { const b=structuredClone(circuit); edit(b); assert.equal(portProcessingEligibility(b).error,error); assert.equal(postprocessPorts(b,options(b,75)).bundle,null); }
@@ -169,4 +170,112 @@ const allMissing=structuredClone(one); allMissing.results.sparams.s['1,1'].re.fi
 assert.equal(postprocessPorts(allMissing,options(allMissing,75)).error,'noSamples');
 assert.equal(postprocessPorts(one,options(one,75,{7:1e100})).error,'settings');
 assert.deepEqual(circuit,untouched);
+
+// Complex references: independent physical load formula, including the short's non-(-1)
+// power reflection and the finite-load conjugate match. Z recovery must undo -j Im(Zref).
+const divide = (a,b) => { const d=b[0]**2+b[1]**2; return [(a[0]*b[0]+a[1]*b[1])/d,(a[1]*b[0]-a[0]*b[1])/d]; };
+for (const target of [[75,25],[10,-80]]) for (const load of [[75,-25],[10,80],[0,0],[120,31],[-20,10]]) {
+  const native = divide([load[0]-50,load[1]],[load[0]+50,load[1]]);
+  const b = matrixBundle([1e9],[50],[[[native]]],[19]);
+  const out = transform(b,{...options(b,target[0]),referenceImagOhm:target[1]});
+  const g = sMatrix(out).get(1,1), expected = divide([load[0]-target[0],load[1]+target[1]],[load[0]+target[0],load[1]+target[1]]);
+  near(g.re[0],expected[0]); near(g.im[0],expected[1]);
+  near(sweep(out).zRe[0],load[0]); near(sweep(out).zIm[0],load[1]);
+  assert.ok(hasComplexPortReference(out)); assert.ok(Number.isNaN(sweep(out).vswr[0]));
+  assert.equal(resultDataTable(out,'vswr').rows.length,0); assert.equal(resultDataTable(out,'smith').rows.length,0);
+  near(resultDataTable(out,'impedance').rows[0][1],load[0]);
+  assert.equal(touchstoneNPort(out),null); assert.equal(touchstoneS1p(out),null);
+  await assert.rejects(exportResultTouchstone(out,'complex-control'),/Touchstone/,'complex reference must fail before any download path');
+}
+const open = matrixBundle([1e9],[50],[[[[1,0]]]],[7]);
+const complexOpen = transform(open,{...options(open,75),referenceImagOhm:25});
+near(sMatrix(complexOpen).get(1,1).re[0],1); near(sMatrix(complexOpen).get(1,1).im[0],0);
+assert.ok(Number.isNaN(sweep(complexOpen).zRe[0]),'an exact open has valid S and no finite Z');
+assert.equal(activeResultDataTable(one,'smith',undefined,[{file:'raw',bundle:one},{file:'complex',bundle:complexOpen}]).rows.length,0);
+
+// Independent nonsymmetric nodal circuit solves at unequal real source references and a
+// common complex target. No production transform or inverse generates these expectations.
+const nodal = JSON.parse(readFileSync(new URL('./fixtures/port-power-wave.json',import.meta.url)));
+const nb = matrixBundle(nodal.frequency_hz,nodal.source_references_ohm,nodal.source,nodal.physical_ports);
+const nbSnapshot = structuredClone(nb); freeze(nb);
+const complexN = transform(nb,{...options(nb,75),referenceImagOhm:25});
+const cn = sMatrix(complexN);
+nodal.target.forEach((matrix,k)=>matrix.forEach((row,i)=>row.forEach((z,j)=>{
+  near(cn.get(i+1,j+1).re[k],z[0]); near(cn.get(i+1,j+1).im[k],z[1]);
+})));
+assert.notEqual(cn.get(1,2).re[0],cn.get(2,1).re[0],'measured nonreciprocity is never symmetrized');
+assert.deepEqual(nb,nbSnapshot); assert.equal(complexN.results.farfield,nb.results.farfield);
+
+// Mixed-mode known ideal through. Differential V=Vp-Vn, I=(Ip-In)/2 -> 2Z;
+// common V=(Vp+Vn)/2, I=Ip+In -> Z/2. The 2-port through is an exact modal short/open.
+const modalThrough = transform(through,{...options(through,50),mixedPairs:[[7,19]]}), mt = sMatrix(modalThrough);
+assert.deepEqual(mt.zRef,[100,25]); assert.deepEqual(mt.ports.map(p=>physicalPortNumber(mt,p)),[null,null]);
+for (let k=0;k<3;k++) { near(mt.get(1,1).re[k],-1); near(mt.get(2,2).re[k],1); near(mt.get(1,2).re[k],0); near(mt.get(2,1).re[k],0); }
+assert.match(primaryPortLabel(modalThrough),/^Sdd11/); assert.match(mappedPairLabel(mt,[2,1]),/^Scd11/);
+assert.ok(hasMixedPortCoordinates(modalThrough)); near(sweep(modalThrough).zRe[0],0);
+assert.deepEqual(modalThrough.results.ports,through.results.ports,'modal coordinates do not replace physical-port evidence');
+const annotated=structuredClone(circuit);
+annotated.ports[0].reference_impedance={real:20,imag:-150};
+annotated.results.ports['7'].power_wave_reference={real:20,imag:-150,gamma_re:[999,999,999],gamma_im:[999,999,999]};
+assert.equal(portProcessingEligibility(annotated).error,null,'optional chip matching annotation is not native S normalization');
+for (const pairs of [[],[[7,19]]]) {
+  const out=transform(annotated,{...options(annotated,75),referenceImagOhm:25,mixedPairs:pairs});
+  assert.equal(Object.hasOwn(out.results.ports['7'],'power_wave_reference'),false,'stale chip gamma cannot leak into a transformed view');
+  assert.equal(annotated.results.ports['7'].power_wave_reference.gamma_re[0],999,'raw annotation remains immutable');
+}
+const four=matrixBundle([1e9],[50,50,50,50],[[[[0,0],[1,0],[0,0],[0,0]],[[1,0],[0,0],[0,0],[0,0]],[[0,0],[0,0],[0,0],[1,0]],[[0,0],[0,0],[1,0],[0,0]]]], [7,2,19,5]);
+const fourMode=sMatrix(transform(four,{...options(four,50),mixedPairs:[[7,2],[19,5]]}));
+assert.deepEqual(fourMode.zRef,[100,100,25,25]);
+for(let i=0;i<4;i++)for(let j=0;j<4;j++) { near(fourMode.get(i+1,j+1).re[0],i===j?(i<2?-1:1):0); near(fourMode.get(i+1,j+1).im[0],0); }
+
+// Explicit sums/differences against the independent 3-port target circuit. P7,P19 is
+// canonical pair1,3, not pair1,2. Reversing it flips D-to-other signs but not DD or CC.
+const mixed = transform(circuit,{...options(circuit,75),mixedPairs:[[7,19]]}), mm=sMatrix(mixed);
+const flipped = sMatrix(transform(circuit,{...options(circuit,75),mixedPairs:[[19,7]]}));
+assert.deepEqual(mm.zRef,[150,37.5,75]); assert.deepEqual(mm.ports.map(p=>physicalPortNumber(mm,p)),[null,null,2]);
+for (let k=0;k<c.frequency_hz.length;k++) for(let q=0;q<2;q++) {
+  const a=c.target[k], expected=[
+    [(a[0][0][q]-a[0][2][q]-a[2][0][q]+a[2][2][q])/2,(a[0][0][q]+a[0][2][q]-a[2][0][q]-a[2][2][q])/2,(a[0][1][q]-a[2][1][q])*Math.SQRT1_2],
+    [(a[0][0][q]-a[0][2][q]+a[2][0][q]-a[2][2][q])/2,(a[0][0][q]+a[0][2][q]+a[2][0][q]+a[2][2][q])/2,(a[0][1][q]+a[2][1][q])*Math.SQRT1_2],
+    [(a[1][0][q]-a[1][2][q])*Math.SQRT1_2,(a[1][0][q]+a[1][2][q])*Math.SQRT1_2,a[1][1][q]]];
+  for(let i=0;i<3;i++)for(let j=0;j<3;j++) {
+    const values=q===0?'re':'im'; near(mm.get(i+1,j+1)[values][k],expected[i][j]);
+    near(flipped.get(i+1,j+1)[values][k],expected[i][j]*(i===0?-1:1)*(j===0?-1:1));
+  }
+}
+const mixedComplex=transform(nb,{...options(nb,75),referenceImagOhm:25,mixedPairs:[[7,19]]});
+assert.deepEqual(sMatrix(mixedComplex).zRefImag,[50,12.5,25]);
+assert.equal(touchstoneNPort(mixedComplex),null); assert.ok(Number.isNaN(sweep(mixedComplex).vswr[0]));
+const mixedGap=transform(gap,{...options(gap,75),mixedPairs:[[7,19]]});
+assert.equal(portProcessingInfo(mixedGap).missingSamples,1); assert.ok(Number.isNaN(sMatrix(mixedGap).get(1,2).re[1]));
+for(const pairs of [[[7,7]],[[7,19],[19,2]],[[7,99]],[[7]],[[7,19,2]],[['7',19]],null]) {
+  assert.equal(postprocessPorts(circuit,{...options(circuit,75),mixedPairs:pairs}).error,'pairs');
+}
+for (const invalid of [NaN,Infinity,null,'25']) assert.equal(postprocessPorts(circuit,{...options(circuit,75),referenceImagOhm:invalid}).error,'settings');
+// The primary reflection and summary must describe D1, not a stale physical S11.
+const mixedData=resultDataTable(mixed,'sparams',undefined,{format:'re_im'});
+assert.match(mixedData.header[1],/^Re Sdd11/); near(mixedData.rows[0][1],mm.get(1,1).re[0]);
+near(sweep(mixed).s11Re[0],mm.get(1,1).re[0]);
+const modalSummary=summaryTable([{file:'modal',label:'Modal',bundle:mixed},{file:'raw',label:'Raw',bundle:circuit}],{deltas:true});
+assert.match(modalSummary.rows[0].at(-1),/^Sdd11/); assert.equal(modalSummary.rows[1].at(-1),'S11');
+assert.equal(modalSummary.rows[1][modalSummary.header.indexOf('Δ |Network reflection| min (dB)')],null,'unlike coordinates cannot imply improvement');
+
+// Independent limited Touchstone2 decoder for the exported Full RI grammar (not the
+// application importer, which deliberately does not support modal imports yet).
+function decodeModal(text,n,descriptors,ref) {
+  assert.match(text,/^\[Version\] 2\.0/m); assert.match(text,/^\[Matrix Format\] Full/m);
+  assert.equal(text.match(/^\[Mixed-Mode Order\] (.*)$/m)[1],descriptors);
+  assert.deepEqual(text.match(/^\[Reference\] (.*)$/m)[1].split(/\s+/).map(Number),Array(n).fill(ref));
+  if(n===2)assert.match(text,/^\[Two-Port Data Order\] 12_21/m);
+  const rows=text.split('[Network Data]\n')[1].split('[End]')[0].trim().split('\n').map(line=>line.trim().split(/\s+/).map(Number));
+  rows.forEach(row=>{assert.equal(row.length,1+2*n*n);assert.ok(row.every(Number.isFinite));}); return rows;
+}
+const modalText=touchstoneNPort(mixed,'synthetic control');
+assert.match(modalText,/1 -> 7, 2 -> 2, 3 -> 19/); assert.match(modalText,/D1\(P7-P19\)/);
+const modalRows=decodeModal(modalText,3,'D1,3 C1,3 S2',75);
+modalRows.forEach((row,k)=>{near(row[0],c.frequency_hz[k]);for(let i=0;i<3;i++)for(let j=0;j<3;j++){
+  near(row[1+2*(i*3+j)],mm.get(i+1,j+1).re[k],6e-8); near(row[2+2*(i*3+j)],mm.get(i+1,j+1).im[k],6e-8);
+}});
+decodeModal(touchstoneNPort(modalThrough),2,'D1,2 C1,2',50);
+assert.equal(touchstoneNPort(mixedGap),null);
 console.log(`PASS port postprocessing: ${checks} numeric comparisons plus mapping, provenance, gaps, refusal, raw identity and session controls; no browser or solver.`);

@@ -23,7 +23,7 @@ The [RunHistory sweep CSV](STUDIES.md#runhistory-sweep-csv) follows the same ban
 ## Designer port postprocessing
 
 In a Designer result's S-parameters, impedance, VSWR, Smith, table or summary tab,
-open **Port postprocessing**. Choose one common positive real reference in ohms and
+open **Port postprocessing**. Choose one common reference `R + jX` in ohms (`R > 0`) and
 a signed, one-way delay in picoseconds for each **physical** port. The matrix index
 is shown beside the physical ID. Apply changes explicitly; **Show original result**
 resets only that loaded result. Settings are held in memory by loaded result identity,
@@ -37,7 +37,7 @@ reference; reflection receives twice its one-way phase. No material, propagation
 velocity, length, loss or dispersion is inferred. Phase arguments exceeding 1,000,000
 radians at any port are refused to bound floating-point phase precision.
 
-The persistent **Postprocessed** label identifies this result view. S, Smith, Z, VSWR,
+The persistent **Postprocessed** label identifies this result view. S, Z,
 the matched bands and summary, Copy/CSV, Touchstone and exported plot titles use the
 same projection. Comparison retains each run's own settings and identifies processed
 traces/rows. CSV includes processing provenance; Touchstone includes source references,
@@ -45,7 +45,40 @@ physical IDs, delay signs/units and the transform order in comments. The matched
 are contiguous stored samples below the result's threshold (default −10 dB), without
 invented crossing frequencies; a band ending at missing data is a lower bound. A missing
 or singular coupled matrix sample stays a gap, with a displayed count. Touchstone refuses
-gaps rather than inventing complex values.
+gaps rather than inventing complex values. Smith and VSWR use the same projection when
+the target reference is real. For complex targets, these two views and Touchstone are
+unavailable, with an explanation; CSV retains the complex samples and provenance.
+
+Complex targets use Kurokawa power waves:
+`a = (V + Zref I)/(2 sqrt(Re Zref))`, `b = (V - conj(Zref) I)/(2 sqrt(Re Zref))`.
+Consequently `Gamma = (Zin - conj(Zref))/(Zin + Zref)` and
+`Zin = Re(Zref) (1 + Gamma)/(1 - Gamma) - j Im(Zref)`; the other ports are terminated
+in `Zref`. A conjugately matched load has zero power reflection; a short at complex
+reference does **not** generally have Gamma = −1. Standard Smith impedance circles and
+the traveling-wave standing-wave ratio do not describe these complex-reference power
+waves. No non-passive value is clipped, and an exact open retains S = 1 with undefined
+finite impedance. See the [scikit-rf complex-reference discussion](https://scikit-rf.readthedocs.io/en/latest/examples/networktheory/Working%20with%20Complex%20Characteristic%20Impedances.html).
+
+For mixed mode, enter disjoint ordered pairs of **physical** port IDs, such as `7,19; 2,5`.
+The first number is positive polarity. The complete wave basis contains every differential
+channel, every common channel, then the unpaired single-ended channels. With equal target
+references, `aD = (ap-an)/sqrt(2)` and `aC = (ap+an)/sqrt(2)` (and likewise for b), so
+`Smodal = T S T^T`. References are `2Z` for differential, `Z/2` for common and `Z` for
+unpaired channels. Labels retain both mode and physical IDs; reversing a pair changes
+its differential coupling signs. Bands, the impedance/table view and summary refer to
+the **first differential pair**, explicitly labelled Sdd11; the S/Smith selectors expose
+other channels. Comparing different reference/plane/modal settings suppresses network
+metric improvement deltas. Radiation remains the original physical-port evidence.
+
+Real-reference modal Touchstone uses **Touchstone 2.0**, extension `.ts`, explicit
+`[Mixed-Mode Order]`, Full matrix data, and `[Two-Port Data Order] 12_21` for two channels.
+The D/C/S descriptors use canonical original single-ended indices, not physical IDs;
+comments retain the index-to-physical-ID mapping. `[Reference]` lists the underlying
+single-ended resistances, not `2R` and `R/2`. Complex-reference Touchstone is refused
+because its reference field cannot encode these complex power-wave references. This
+export does not add mixed-mode import support; Fairbeam's importer still refuses that
+format. The [ratified Touchstone 2.0 specification](https://www.ibis.org/touchstone_ver2.0/)
+defines the modal ordering and reference convention.
 
 Far-field, efficiency, power, solver, run-list and optimizer evidence remain at the
 original reference. Port analysis does not recompute radiated/accepted power or the
@@ -53,10 +86,10 @@ original solver's passivity/reciprocity QA. Those matrix QA values are unavailab
 the projection, rather than copied as new measurements. In a summary, a far-field sample
 chosen near a newly located match still contains the original radiation measurement.
 
-Only a complete matrix with known phase and explicit, constant, positive real references
-is supported (including a single-port legacy result with a valid reference). Invalid
-port mapping, incomplete multiport data, waveguide/per-frequency references, complex
-chip references and invalid frequency grids are refused. This is not launch-discontinuity
-removal, a TRL calibration, a dispersive feed model, or mixed-mode conversion. Those
-parts of issue #237 remain follow-up work. The standalone Examples viewer continues to
+The **original** complete matrix must have known phase and explicit, constant, positive
+real references (including a single-port legacy result with a valid reference). Invalid
+port mapping, incomplete multiport data, native complex or waveguide/per-frequency
+references and invalid frequency grids are refused. Complex target chip references and
+mixed mode are supported; this is not launch-discontinuity removal, a TRL calibration,
+or a dispersive feed model. The standalone Examples viewer continues to
 show original data; this control is scoped to Designer result tabs.

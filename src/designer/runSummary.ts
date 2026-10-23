@@ -13,6 +13,7 @@ import { ghzDigits } from "../lib/ghzDigits.ts";
 import { bandCentre } from "../lib/bands.ts";
 import { differingParams, madeLabels } from "./resultTabs.ts";
 import { t } from "../i18n/index.ts";
+import { hasMixedPortCoordinates, primaryPortLabel, samePortProcessing } from "../lib/portProcessingMetadata.ts";
 
 /** The far-field entry nearest the resonance, with the numbers the summary shows. */
 export interface FarfieldHeadline {
@@ -277,6 +278,7 @@ const DELTA_REFERENCE_HEADER = "Δ reference run";
  * value) and the file of that reference run. The reference is `reference` (a run's file) when it is
  * among the runs, else the oldest run. */
 export function summaryTable(runs: readonly SummaryRun[], options: { deltas?: boolean; reference?: string | null } = {}): SummaryTable {
+  const modal = runs.some(r => hasMixedPortCoordinates(r.bundle));
   const withDeltas = !!options.deltas && runs.length >= 2;
   const columns = differingParams(runs.map((r) => r.bundle.model));
   const made = madeLabels(runs.map((r) => r.bundle.created));
@@ -284,14 +286,16 @@ export function summaryTable(runs: readonly SummaryRun[], options: { deltas?: bo
   const bandCount = Math.max(1, ...all.map((m) => m?.bands.length ?? 0));
   const header = [
     "Run", "File", "Made", ...columns.map((c) => `${c.key}${c.unit ? ` (${c.unit})` : ""}`),
-    "Verdict", "f res (GHz)", "|S11| min (dB)", "Bandwidth -10 dB (MHz)", "Bandwidth (%)", ...bandHeaders(bandCount),
+    "Verdict", "f res (GHz)", modal ? "|Network reflection| min (dB)" : "|S11| min (dB)", "Bandwidth -10 dB (MHz)", "Bandwidth (%)", ...bandHeaders(bandCount),
     "Far field f (GHz)", "Dmax (dBi)", "Gain (dBi)", "Realized gain (dBi)", "Radiation efficiency (%)", "Total efficiency (%)", "Cells",
-    ...(withDeltas ? [...DELTA_COLUMNS.map((c) => c.header), DELTA_REFERENCE_HEADER] : []),
+    ...(withDeltas ? [...DELTA_COLUMNS.map((c) => modal && c.key === "s11" ? "Δ |Network reflection| min (dB)" : c.header), DELTA_REFERENCE_HEADER] : []),
+    ...(modal ? ["Network reflection"] : []),
   ];
   const ref = withDeltas ? referenceIndex(runs, options.reference) : -1;
   const rows = runs.map((r, i) => {
     const m = all[i];
-    const deltas = withDeltas && i !== ref ? metricDeltas(all[ref], m) : null;
+    const computed = withDeltas && i !== ref ? metricDeltas(all[ref], m) : null;
+    const deltas = computed && !samePortProcessing(runs[ref].bundle, r.bundle) ? { ...computed, f0: null, s11: null, bw: null } : computed;
     const ff = m?.farfield ?? null;
     return [
       r.label, r.file, made[i] === "—" ? null : made[i],
@@ -306,6 +310,7 @@ export function summaryTable(runs: readonly SummaryRun[], options: { deltas?: bo
       round(ff ? ff.f / 1e9 : null, 6), round(ff?.dmaxDbi, 3), round(ff?.gainDbi, 3), round(ff?.realizedDbi, 3),
       round(ff?.radEff == null ? null : ff.radEff * 100, 2), round(m?.totalEff == null ? null : m.totalEff * 100, 2), m?.cells ?? null,
       ...(withDeltas ? [...DELTA_COLUMNS.map((c) => round(deltas?.[c.key]?.value, c.digits)), i === ref ? null : runs[ref].label] : []),
+      ...(modal ? [primaryPortLabel(r.bundle)] : []),
     ];
   });
   return { header, rows };

@@ -53,7 +53,7 @@ import "../styles/result-views.css";
 
 import PortProcessingPanel from "../components/PortProcessingPanel";
 import { displayedPortResult, portProcessingSession } from "./portProcessingSession";
-import { portProcessingInfo } from "../lib/portProcessingMetadata";
+import { hasComplexPortReference, hasMixedPortCoordinates, originalPortResult, portProcessingInfo, primaryPortLabel } from "../lib/portProcessingMetadata";
 
 // Local presentation boundary: the runner/cache and its consumers keep their raw objects.
 const designResult = createRoot(() => createMemo(() => {
@@ -73,14 +73,15 @@ const designSParams = createRoot(() => createSParamSelection(() => {
 
 /** The focused run with the runs compared with it (null: no comparison), each labelled by its short
  * run label (A, B, ...), which the dock's Runs tab explains: legends stay short enough to read. */
-function useCompare(b: () => Bundle) {
+function useCompare(b: () => Bundle, original = false) {
   return createMemo(() => {
-    const others = comparedRuns();
+    const others = comparedRuns().map(run => original ? { ...run, bundle: originalPortResult(run.bundle) } : run);
     if (!others.length) return null;
     const current = designResult();
     const files = new Map<Bundle, string>(others.map((o) => [o.bundle, o.file]));
-    if (current?.bundle === b()) files.set(b(), current.file);
-    return traces(b(), others.map((o) => o.bundle), [current?.bundle === b() ? runLabel(current.file) : undefined, ...others.map((o) => runLabel(o.file))])
+    const sameCurrent = current && (original ? originalPortResult(current.bundle) : current.bundle) === b();
+    if (sameCurrent) files.set(b(), current.file);
+    return traces(b(), others.map((o) => o.bundle), [sameCurrent ? runLabel(current.file) : undefined, ...others.map((o) => runLabel(o.file))])
       .map((t) => { const file = files.get(t.bundle); return file ? { ...t, label: runShortLabel(file) + processingLabel(t.bundle) } : t; });
   });
 }
@@ -142,7 +143,7 @@ function ResultSParams(props: { b: Bundle; format: ResultDataFormat }) {
                   {/* the resonance is the band's best match (the |S11| minimum); its centre is the middle of the edges */}
                   <dt title={t("spec.bestMatch.title")}>{bands().length > 1 ? t("results.sparams.bandN", { n: i() + 1 }) : t("results.sparams.band")}</dt>
                   <dd class="mono">{withUnit(c.best, "GHz")}</dd>
-                  <dt>|S11| min</dt><dd class="mono">{withUnit(minusSign(num(b.s11_min_db, 1)), "dB")}</dd>
+                  <dt>|{primaryPortLabel(props.b)}| min</dt><dd class="mono">{withUnit(minusSign(num(b.s11_min_db, 1)), "dB")}</dd>
                   <dt title={t("spec.centre.title")}>{t("spec.centre")}</dt><dd class="mono">{withUnit(c.centre, "GHz")}</dd>
                   <dt>{t("summary.range")}</dt><dd class="mono">{withUnit(c.range, "GHz")}</dd>
                   <dt>{t("results.sparams.bandwidth")}</dt><dd class="mono">{withUnit(c.bwMhz, "MHz")}<Show when={c.open}><span class="kv-sub">{t("spec.bandOpen")}</span></Show></dd>
@@ -264,7 +265,7 @@ function ResultSmith(props: { b: Bundle }) {
  * a band-wide radiation efficiency (results.efficiency). One colour per quantity for a single driven
  * port; per port (dashes for the quantity) for multi-port runs; per run when runs are compared. */
 function ResultEfficiency(props: { b: Bundle }) {
-  const cmp = useCompare(() => props.b);
+  const cmp = useCompare(() => originalPortResult(props.b), true);
   const data = createMemo(() => efficiencyData(props.b));
   const db = () => efficiencyUnit() === "db";
   const val = (eta: number | null) => (eta === null || !Number.isFinite(eta) ? Number.NaN : db() ? toDb(eta) : eta * 100);
@@ -470,14 +471,14 @@ function ResultTable(props: { b: Bundle }) {
       const s11 = compareLines(c, (s) => s.s11Db);
       const vswr = compareLines(c, (s) => s.vswr.map(finite));
       return compareTable("f (GHz)", s11.x, c, [
-        { label: "|S11| (dB)", values: (i) => s11.series[i].y },
+        { label: c.some(trace => hasMixedPortCoordinates(trace.bundle)) ? t("portProcessing.primaryReflection") : "|S11| (dB)", values: (i) => s11.series[i].y },
         { label: "VSWR", values: (i) => vswr.series[i].y },
       ]);
     }
     const s = sweep(props.b);
     if (!s) return null;
     return {
-      columns: ["f (GHz)", "|S11| (dB)", "VSWR", "Re Zin (Ω)", "Im Zin (Ω)"],
+      columns: ["f (GHz)", `|${primaryPortLabel(props.b)}| (dB)`, "VSWR", "Re Zin (Ω)", "Im Zin (Ω)"],
       rows: everyRow(s.f.length).map((i) => [s.f[i] / 1e9, s.s11Db[i], Number.isFinite(s.vswr[i]) ? s.vswr[i] : s.vswr[i] === Infinity ? "∞" : "", s.zRe[i], s.zIm[i]]),
     };
   });
@@ -494,7 +495,11 @@ export function ResultBody(props: { view: MainResultView; b: Bundle; format: Res
   return <div class="port-result-body">
     <Show when={portProcessingInfo(shown())}><p class="note port-processing-notice">{t("portProcessing.badge")} · {t("portProcessing.originalContext")}</p></Show>
     <Show when={["sparams", "impedance", "vswr", "smith", "table", "summary"].includes(props.view)}><PortProcessingPanel bundle={shown()} /></Show>
-    <ResultBodyContent view={props.view} b={shown()} format={props.format} />
+    <Show when={hasMixedPortCoordinates(shown())}><p class="note">{t("portProcessing.modalPrimary", { label: primaryPortLabel(shown()) })}</p></Show>
+    <Show when={!(["smith", "vswr"].includes(props.view) && [shown(), ...comparedRuns().map(r => r.bundle)].some(hasComplexPortReference))}
+      fallback={<p class="note">{t("portProcessing.complexLimits")}</p>}>
+      <ResultBodyContent view={props.view} b={shown()} format={props.format} />
+    </Show>
   </div>;
 }
 

@@ -1,9 +1,9 @@
-import { portProcessingInfo } from "../lib/portProcessingMetadata.ts";
+import { hasComplexPortReference, portProcessingInfo, primaryPortLabel } from "../lib/portProcessingMetadata.ts";
 import { powerWaveReflection } from "../lib/powerWaves.ts";
 import type { Bundle, FarField } from "../types";
 import { complexDb, complexMagnitude, complexPhase } from "../charts/plotQuantities.ts";
 import { sweep } from "../lib/rf.ts";
-import { hasSParameterPhase, magDb, mappedPairLabel, physicalPortNumber, pairLabel, phaseDeg, reflectionAtPort, sMatrix } from "../lib/sparams.ts";
+import { hasSParameterPhase, magDb, mappedPairLabel, matrixPortLabel, physicalPortNumber, pairLabel, phaseDeg, reflectionAtPort, sMatrix } from "../lib/sparams.ts";
 import type { ResultView } from "./resultFocus.ts";
 import { nearestFarfield, traceLabels } from "../compare/series.ts";
 import { effectiveQuantity, efficiencyData, mismatchAt, quantityGrid, type PatternQuantity } from "../lib/farfieldQuantity.ts";
@@ -78,6 +78,7 @@ export function resultDataTable(bundle: Bundle | null | undefined, view: ResultV
 function baseResultDataTable(bundle: Bundle | null | undefined, view: ResultView, frequencyHz?: number, options: ResultDataOptions = {}): ResultDataTable {
   const results = bundle?.results;
   if (!results) return empty(["No result data"]);
+  if (hasComplexPortReference(bundle) && (view === "smith" || view === "vswr")) return empty(["Complex power-wave reference: Smith impedance grid and physical VSWR unavailable"]);
   const phaseKnown = hasSParameterPhase(bundle);
   if (!phaseKnown && (view === "smith" || view === "impedance")) return empty(["f (GHz)", "Re Zin (Ω)", "Im Zin (Ω)"]);
 
@@ -113,7 +114,7 @@ function baseResultDataTable(bundle: Bundle | null | undefined, view: ResultView
     const g = m?.get(p, p);
     const s = m ? mappedPairLabel(m, [p, p]) : pairLabel([p, p]);
     const physical = m ? physicalPortNumber(m, p) : p;
-    const zinPort = physical === p ? `port ${p}` : physical === null ? `matrix port ${p} (model unknown)` : `model port ${physical} (matrix ${p})`;
+    const zinPort = m?.modalChannels ? matrixPortLabel(m, p) : physical === p ? `port ${p}` : physical === null ? `matrix port ${p} (model unknown)` : `model port ${physical} (matrix ${p})`;
     const header = ["f (GHz)", `Re ${s}`, `Im ${s}`, `Re Zin ${zinPort} (Ω)`, `Im Zin ${zinPort} (Ω)`];
     if (m && g && m.ports.length > 1) {
       const reflection = reflectionAtPort(bundle, p)!;
@@ -132,8 +133,9 @@ function baseResultDataTable(bundle: Bundle | null | undefined, view: ResultView
     if (view === "vswr") return { header: ["f (GHz)", "VSWR"], rows: sw.f.map((f, i) => [f / 1e9, finiteCell(sw.vswr[i])]) };
     const fmt = options.format;
     if (view === "smith" || view === "table") {
-      const base = view === "smith" ? ["Re S11", "Im S11", "Re Zin (Ω)", "Im Zin (Ω)"] : ["|S11| (dB)", "VSWR", "Re Zin (Ω)", "Im Zin (Ω)"];
-      const sCols = fmt && sw.s11Re && sw.s11Im ? sColumns([1, 1], sw.s11Re, sw.s11Im, fmt, phaseKnown) : [];
+      const label = primaryPortLabel(bundle);
+      const base = view === "smith" ? [`Re ${label}`, `Im ${label}`, "Re Zin (Ω)", "Im Zin (Ω)"] : [`|${label}| (dB)`, "VSWR", "Re Zin (Ω)", "Im Zin (Ω)"];
+      const sCols = fmt && sw.s11Re && sw.s11Im ? sColumns([1, 1], sw.s11Re, sw.s11Im, fmt, phaseKnown, label) : [];
       const zCols = fmt ? zColumns(sw.zRe, sw.zIm, fmt) : [];
       const extras = [...sCols, ...zCols].filter(c => !base.includes(c.label));
       return {
@@ -148,7 +150,7 @@ function baseResultDataTable(bundle: Bundle | null | undefined, view: ResultView
       };
     }
     const cols = fmt ? zColumns(sw.zRe, sw.zIm, fmt) : [{ label: "Re Zin (Ω)", value: (i: number) => sw.zRe[i] }, { label: "Im Zin (Ω)", value: (i: number) => sw.zIm[i] }];
-    const reference = (bundle.ports.find((p) => p.excite) ?? bundle.ports[0])?.reference_impedance;
+    const reference = portProcessingInfo(bundle) ? undefined : (bundle.ports.find((p) => p.excite) ?? bundle.ports[0])?.reference_impedance;
     if (reference) {
       const power = (i: number) => powerWaveReflection(sw.zRe[i], sw.zIm[i], reference.real, reference.imag);
       cols.push({ label: "Re power-wave Zref (Ω)", value: () => reference.real }, { label: "Im power-wave Zref (Ω)", value: () => reference.imag },
@@ -252,6 +254,7 @@ export const resultDataCsv = (table: ResultDataTable) => [table.header, ...table
 /** One shared raw-data table for a comparison selection. */
 export function comparedResultDataTable(runs: { file: string; bundle: Bundle }[], view: ResultView, frequencyHz?: number, options: ResultDataOptions = {}): ResultDataTable {
   if (!runs.length) return { header: [], rows: [] };
+  if ((view === "smith" || view === "vswr") && runs.some(r => hasComplexPortReference(r.bundle))) return { header: ["Unavailable for complex power-wave references"], rows: [] };
   // Comparison uses each run's stored pattern, never a standalone viewer's synthesized overlay.
   const tables = runs.map((r) => resultDataTable(r.bundle, view, frequencyHz, { ...options, patternEntries: undefined }));
   const params = [...new Map(runs.flatMap((r) => r.bundle.model.params).map((p) => [p.key, p])).values()];

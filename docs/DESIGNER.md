@@ -1587,8 +1587,11 @@ system browser, since the app window does not open web pages itself.
 
 
 Designer result tabs offer session-only **Port postprocessing** for a complete complex
-S matrix: a common real reference and ideal matched lossless one-way feed delays per
-physical port. Apply/Reset affect the shown result and its result exports, never the
+S matrix: a common real or complex Kurokawa reference, ideal matched lossless one-way
+feed delays per physical port, and ordered differential/common pairs. Apply/Reset
+affect the shown result and its result exports, never the
 saved design, raw bundle or optimizer. Processed results carry a persistent label;
 radiation, power and solver evidence remain original. See [Results](RESULTS.md#designer-port-postprocessing)
 for the transform order, supported references, missing-data rules and limitations.
+Complex references disable the standard Smith/VSWR views and Touchstone; CSV remains
+available. Real-reference modal Touchstone uses explicit version 2.0 mode metadata.

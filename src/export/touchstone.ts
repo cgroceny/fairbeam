@@ -1,4 +1,4 @@
-import { portProcessingInfo } from "../lib/portProcessingMetadata.ts";
+import { channelLabel, hasComplexPortReference, hasMixedPortCoordinates, portProcessingInfo } from "../lib/portProcessingMetadata.ts";
 // Touchstone v1 (.s1p) export of the excited port's S11, for import into RF tools such as scikit-rf.
 //
 //   ! comments (ASCII only: some importers reject other bytes)
@@ -28,6 +28,7 @@ function portReferences(b: Bundle, physical: number, scalar: number, count: numb
 }
 
 export function touchstoneS1p(b: Bundle, exported: string = new Date().toISOString()): string | null {
+  if (hasComplexPortReference(b) || hasMixedPortCoordinates(b)) return null;
   if (!hasSParameterPhase(b)) return null;
   const port = b.ports.find((p) => p.excite) ?? b.ports[0];
   const pr = port ? b.results?.ports?.[String(port.number)] : undefined;
@@ -73,6 +74,8 @@ export function touchstoneS1p(b: Bundle, exported: string = new Date().toISOStri
  * port's scalar reference; frequency-dependent and unequal references use the full power-wave transform.
  */
 export function touchstoneNPort(b: Bundle, exported: string = new Date().toISOString()): string | null {
+  if (hasComplexPortReference(b)) return null; // Touchstone reference resistances cannot encode complex Kurokawa references.
+  if (hasMixedPortCoordinates(b)) return touchstoneMixedMode(b, exported);
   if (!hasSParameterPhase(b)) return null;
   const S = sMatrix(b);
   if (!S || S.legacy || S.ports.length < 2) return null;
@@ -145,6 +148,34 @@ export function touchstoneNPort(b: Bundle, exported: string = new Date().toISOSt
     }
   }
   return lines.join("\n") + "\n";
+}
+
+/** Touchstone 2.0 mixed-mode data. [Reference] is the underlying SINGLE-ENDED R,
+ * not the modal 2R/R/2. Descriptors use canonical original indices; comments retain
+ * the physical IDs. Explicit 12_21 makes all full matrices row-major, including N=2. */
+function touchstoneMixedMode(b: Bundle, exported: string): string | null {
+  const info = portProcessingInfo(b), m = sMatrix(b);
+  if (!info || !m || !frequencies(m.f) || hasComplexPortReference(b) || !positive(info.settings.referenceOhm)) return null;
+  const n = m.ports.length;
+  if (info.channels.length !== n || info.physicalPorts.length !== n) return null;
+  for (const i of m.ports) for (const j of m.ports) {
+    const c = m.get(i, j); if (!c || !samples(c.re, m.f.length) || !samples(c.im, m.f.length)) return null;
+  }
+  const descriptors = info.channels.map(c => `${c.kind === "single" ? "S" : c.kind === "differential" ? "D" : "C"}${c.canonical.join(",")}`);
+  const lines = [
+    `[Version] 2.0`, `! Mixed-mode Kurokawa power-wave S-parameters written by Fairbeam ${APP_VERSION}`,
+    `! Project: ${ascii(b.name)}`, `! Exported: ${exported}`, `! ${ascii(info.description)}`,
+    `! Canonical single-ended index -> physical model port: ${info.physicalPorts.map((id, i) => `${i + 1} -> ${id}`).join(", ")}`,
+    `! Channel order: ${info.channels.map(channelLabel).join(", ")}`,
+    `# Hz S RI R ${num(info.settings.referenceOhm)}`, `[Number of Ports] ${n}`,
+    ...(n === 2 ? [`[Two-Port Data Order] 12_21`] : []), `[Number of Frequencies] ${m.f.length}`,
+    `[Reference] ${info.physicalPorts.map(() => num(info.settings.referenceOhm)).join(" ")}`,
+    `[Mixed-Mode Order] ${descriptors.join(" ")}`, `[Matrix Format] Full`, `[Network Data]`,
+  ];
+  m.f.forEach((f, k) => lines.push(`${num(f)} ${m.ports.flatMap(i => m.ports.flatMap(j => {
+    const c = m.get(i, j)!; return [fmtS(c.re[k]), fmtS(c.im[k])];
+  })).join(" ")}`));
+  lines.push(`[End]`); return lines.join("\n") + "\n";
 }
 
 /** Minimal Touchstone v1 N-port reader: [f in Hz, S[k][i][j] as [re, im]]. */

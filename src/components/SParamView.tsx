@@ -9,7 +9,7 @@ import StackedCharts from "../charts/StackedCharts";
 import { plotQuantities, type PlotFormat } from "../charts/plotQuantities";
 import SmithChart from "../charts/SmithChart";
 import { bundle } from "../state";
-import { magDb, mappedPairLabel, physicalPortNumber, pairLabel, phaseDeg, reflectionAtPort, sMatrix, type SMatrix } from "../lib/sparams";
+import { magDb, mappedPairLabel, matrixPortLabel, physicalPortNumber, pairLabel, phaseDeg, reflectionAtPort, sMatrix, type SMatrix } from "../lib/sparams";
 import { gridKeys, radioGroupKeys } from "../lib/a11y";
 import { numPlain } from "../lib/format";
 import { t } from "../i18n";
@@ -88,6 +88,7 @@ export function SParamTools(props: { smith?: boolean; store?: SParamSelection; f
   const [pos, setPos] = createSignal({ top: 0, left: 0 });
   const store = props.store ?? examplesSParams;
   const S = () => store.S()!;
+  const mapping = (p: number) => S().modalChannels ? matrixPortLabel(S(), p) : physicalPortNumber(S(), p) ?? t("sparams.unknownPort");
   const toggle = (p: [number, number]) => {
     const k = key(p);
     const cur = store.selectedPairs().map(key);
@@ -135,7 +136,7 @@ export function SParamTools(props: { smith?: boolean; store?: SParamSelection; f
         <div class="seg seg-sm" role="radiogroup" aria-label={t("sparams.smithPort")} onKeyDown={radioGroupKeys}>
           <For each={S().ports}>
             {(p) => (
-              <button class="seg-btn" role="radio" aria-checked={store.smithPort() === p} classList={{ active: store.smithPort() === p }} onClick={() => store.setSmithPort(p)} title={t("sparams.portMapping", { mapping: `${p} → ${physicalPortNumber(S(), p) ?? t("sparams.unknownPort")}` })}>
+              <button class="seg-btn" role="radio" aria-checked={store.smithPort() === p} classList={{ active: store.smithPort() === p }} onClick={() => store.setSmithPort(p)} title={t("sparams.portMapping", { mapping: `${p} → ${mapping(p)}` })}>
                 {mappedPairLabel(S(), [p, p])}
               </button>
             )}
@@ -154,7 +155,7 @@ export function SParamTools(props: { smith?: boolean; store?: SParamSelection; f
               <span class="menu-label push">{store.selectedPairs().length}/{MAX_SERIES}</span>
             </div>
             <Show when={S().physicalPorts !== undefined}>
-              <p class="menu-label">{t("sparams.portMapping", { mapping: S().ports.map(p => `${p} → ${physicalPortNumber(S(), p) ?? t("sparams.unknownPort")}`).join(", ") })}</p>
+              <p class="menu-label">{t("sparams.portMapping", { mapping: S().ports.map(p => `${p} → ${mapping(p)}`).join(", ") })}</p>
             </Show>
             <div class="sp-grid" role="group" aria-label={t("sparams.matrixAria")} onKeyDown={(e) => gridKeys(e, S().ports.length)} style={{ "grid-template-columns": `repeat(${S().ports.length}, auto)` }}>
               <For each={S().ports}>

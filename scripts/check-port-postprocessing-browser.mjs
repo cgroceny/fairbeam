@@ -123,8 +123,11 @@ try {
     assert.ok((await page.$eval(panel, e => e.textContent)).includes(await s.T('portProcessing.reference')));
     for (let i = 0; i < 3; i++) assert.ok((await page.$eval(panel, e => e.textContent)).includes(await s.T('portProcessing.delay', { port: circuit.physical_ports[i], index: i + 1 })));
     const inputs = `${panel} input`;
-    assert.deepEqual(await page.$$eval(inputs, els => els.map(e => e.value)), ['35', '0', '0', '0']);
-    for (let i = 0; i < 4; i++) await s.fill((await page.$$(inputs))[i], String([75, ...delays][i]));
+    const fillNamed = async (name,value) => s.fill(await page.$(`${panel} input[name="${name}"]`),String(value));
+    assert.equal(await page.$$eval(`${panel} input[inputmode="decimal"]`,els=>els.length),5,'locale-proof NumberField controls');
+    assert.deepEqual(await page.$$eval(inputs, els => els.map(e => e.value)), ['35', '0', '0', '0', '0', '']);
+    await fillNamed('port-reference-real',75);
+    for (let i = 0; i < 3; i++) await fillNamed(`port-delay-${circuit.physical_ports[i]}`,delays[i]);
     await s.click('portProcessing.apply', { within: panel });
     await s.wait('.dw-result-bar .chip', await s.T('portProcessing.badge'));
     await s.wait('.port-processing-notice', await s.T('portProcessing.originalContext'));
@@ -146,19 +149,53 @@ try {
     assert.match(ts.text, /Postprocessed:/); assert.match(ts.text, /1 -> 7, 2 -> 2, 3 -> 19/);
     const network = parseTouchstoneNPort(ts.text, 3); assert.equal(network.z0, 75); assert.deepEqual(network.f, circuit.frequency_hz);
     network.s.forEach((matrix, k) => matrix.forEach((row, i) => row.forEach((z, j) => z.forEach((value, c) => near(value, circuit.target[k][i][j][c])))));
-    await open(); await s.fill((await page.$$(inputs))[0], '-1');
+    await open(); await fillNamed('port-reference-real',-1);
     await s.click('portProcessing.apply', { within: panel }); await s.wait(`${panel} [role=alert]`, await s.T('portProcessing.error.settings'));
     assert.equal(await copy(), copied, 'invalid draft cannot change the displayed or exported matrix');
     await select(1);
     await s.gone('.port-processing-notice');
-    assert.deepEqual(await page.$$eval(inputs, els => els.map(e => e.value)), ['35', '0', '0', '0']);
+    assert.deepEqual(await page.$$eval(inputs, els => els.map(e => e.value)), ['35', '0', '0', '0', '0', '']);
     assert.ok(!(await copy()).includes('Postprocessed:'), 'another result starts at its stored reference');
     await select(0);
     await s.wait('.port-processing-notice');
-    assert.deepEqual(await page.$$eval(inputs, els => els.map(e => e.value)), ['75', '31', '77', '-18']);
+    assert.deepEqual(await page.$$eval(inputs, els => els.map(e => e.value)), ['75', '0', '31', '77', '-18', '']);
     assert.equal(await copy(), copied, 'returning to the same loaded object retains its applied settings');
     const visual = await page.evaluate(auditInPage, panel); assert.deepEqual(visual, []);
     await page.screenshot({ path: join(out, `processed-${lang}.png`) });
+    // Same actual panel, real mixed-mode basis. Physical IDs 7,19 map to original
+    // canonical indices 1,3; D1's expected value is an explicit independent sum.
+    await fillNamed('port-mixed-pairs','7,19');
+    await s.click('portProcessing.apply', { within: panel });
+    await s.wait('.port-result-body','Sdd11');
+    const modalCopied=await copy(), modalRows=modalCopied.trimEnd().split(/\r?\n/).map(row=>row.split('\t'));
+    const modalRe=modalRows[0].findIndex(h=>h.startsWith('Re Sdd11')), modalIm=modalRows[0].findIndex(h=>h.startsWith('Im Sdd11'));
+    assert.ok(modalRe>0 && modalIm>0); assert.match(modalRows[0][modalRe],/P7-P19/);
+    modalRows.slice(1).forEach((row,k)=>[0,1].forEach(q=>near(row[q?modalIm:modalRe],(circuit.target[k][0][0][q]-circuit.target[k][0][2][q]-circuit.target[k][2][0][q]+circuit.target[k][2][2][q])/2)));
+    await s.click('results.toolbar.touchstoneTitle', { within: '.dw-result' });
+    const modalFile=await download(downloads,'.ts');
+    assert.match(modalFile.text,/^\[Version\] 2\.0/m); assert.match(modalFile.text,/^\[Mixed-Mode Order\] D1,3 C1,3 S2/m);
+    assert.match(modalFile.text,/^\[Reference\] 75 75 75/m);
+    const exportedRows=modalFile.text.split('[Network Data]\n')[1].split('[End]')[0].trim().split('\n').map(line=>line.split(/\s+/).map(Number));
+    exportedRows.forEach((row,k)=>{ near(row[0],circuit.frequency_hz[k]); near(row[1],Number(modalRows[k+1][modalRe])); near(row[2],Number(modalRows[k+1][modalIm])); });
+    await fillNamed('port-mixed-pairs','7,19;19,2');
+    await s.click('portProcessing.apply', { within: panel }); await s.wait(`${panel} [role=alert]`,await s.T('portProcessing.error.pairs'));
+    assert.equal(await copy(),modalCopied,'overlapping pairs leave the applied matrix unchanged');
+    // Complex target retains typed coordinates, refuses standards-incompatible output,
+    // and never draws a physical VSWR or Smith impedance grid for power waves.
+    await fillNamed('port-mixed-pairs','7,19'); await fillNamed('port-reference-imaginary',25);
+    await s.click('portProcessing.apply', { within: panel });
+    await s.wait(panel,await s.T('portProcessing.complexLimits'));
+    assert.match(await copy(),/target=75\+j25/);
+    const filesBefore=await readdir(downloads);
+    await s.click('results.toolbar.touchstoneTitle', { within: '.dw-result' });
+    await s.wait('.toast-error',await s.T('portProcessing.touchstoneComplex'));
+    assert.deepEqual(await readdir(downloads),filesBefore,'refused complex export writes no file');
+    for(const view of ['smith','vswr']) {
+      await s.ev((view,m)=>m.rf.focusResult({file:window.__portControls[0].file,view},'main'),view,{rf:'/src/designer/resultFocus.ts'});
+      await s.wait('.port-result-body',await s.T('portProcessing.complexLimits'));
+      assert.equal(await page.$('.port-result-body .chart svg'),null);
+    }
+    await select(0); await open();
     await s.click('portProcessing.reset', { within: panel }); await s.gone('.port-processing-notice');
     assert.ok(!(await copy()).includes('Postprocessed:'), 'reset returns original evidence');
     await select(2); await s.wait(panel, await s.T('portProcessing.error.matrix'));
@@ -170,7 +207,9 @@ try {
     // All persisted fixture bytes remain original after Apply, refusal, switching and Reset.
     for (const r of records) assert.deepEqual(JSON.parse(await readFile(join(stack.projects, r.file), 'utf8')), r.bundle);
     outcomes.push({ lang, physicalPorts: circuit.physical_ports, targetOhm: 75, delayPs: delays, copied,
-      csv: csv.name, touchstone: ts.name, invalidRefused: true, incompleteRefused: true, identityIsolated: true, rawUnchanged: true, visual });
+      csv: csv.name, touchstone: ts.name, mixedTouchstone:modalFile.name, complexExportRefused:true,
+      mixedPhysicalMapping:true, overlappingPairsRefused:true, complexSmithVswrUnavailable:true,
+      invalidRefused: true, incompleteRefused: true, identityIsolated: true, rawUnchanged: true, visual });
     await context.close();
   }
   await writeFile(join(out, 'result.json'), JSON.stringify({ outcomes, forbidden, syntheticOnly: true, speechTested: false }, null, 2));

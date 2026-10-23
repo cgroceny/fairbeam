@@ -18,3 +18,44 @@
 - Yarım dalga dipol: rezonans, kapalı biçimli indüklenmiş EMK rezonansının %1,3–1,4 altındadır; R_in 72–73 Ω, Dmax 2,13–2,15 dBi ve verimlilik 0,999'dur. Tam tablolar, durdurma ölçütü incelemesi ve önerilen ayarlar [VALIDATION.md](VALIDATION.md) sayfasındadır.
 
 [RunHistory tarama CSV'si](STUDIES.md#runhistory-sweep-csv) aynı bant tanımlarını küçük harfli sütun adlarıyla izler: `band_lo_ghz` ve `band_hi_ghz` sınırlar, `band_center_ghz` bunların ortası, `band_best_ghz` ise |S11| minimumunun frekansıdır. Her işin ilk bandını kullanır; sınırlardan biri eksikse merkez boş kalır. RunHistory, minimum frekans sütununu **En iyi uyum** olarak adlandırır.
+
+## Tasarımcıda port son işlemesi
+
+Bir Tasarım sonucunun S-parametreleri, empedans, VSWR, Smith, tablo veya özet sekmesinde
+**Port son işlemesi** bölümünü açın. Ortak `R + jX` referansını ohm cinsinden (`R > 0`),
+her fiziksel portun kaldırılacak tek yönlü gecikmesini pikosaniye cinsinden girin.
+**Bu sonuca uygula** görünümü değiştirir; **Özgün sonucu göster** o yüklenmiş nesneyi
+sıfırlar. Ayarlar yalnızca oturumda tutulur; dosyaya, tasarıma veya eniyileyiciye yazılmaz.
+
+Önce özgün referansa uyumlu ideal kayıpsız besleme hattı kaldırılır, sonra tam matris
+yeniden normalleştirilir. `exp(+jωt)` için `S'_ij = S_ij exp(+j 2π f (τ_i+τ_j))`;
+pozitif gecikme aygıta doğru hat kaldırır, negatif gecikme hat ekler. Yansımaya iki kat
+tek yönlü faz uygulanır. Malzeme, uzunluk veya dispersiyon çıkarılmaz; bant boyunca
+1.000.000 radyanı aşan faz reddedilir. Tekil veya eksik örnekler sıfırla doldurulmaz.
+
+Karmaşık hedefte Kurokawa güç dalgaları kullanılır:
+`Gamma = (Zin - conj(Zref))/(Zin + Zref)` ve
+`Zin = Re(Zref)(1+Gamma)/(1-Gamma) - j Im(Zref)`.
+Diğer portlar hedef referansla sonlandırılır. Eşlenik uyum sıfır güç yansıması verir;
+kısa devrede Gamma genel olarak −1 değildir. Fiziksel VSWR ve standart Smith empedans
+ızgarası burada geçerli olmadığından bu görünümler açıklamayla kapatılır. S ve Z ile
+CSV örnekleri korunur. Karmaşık referans Touchstone alanıyla kodlanamadığından o dışa
+aktarım reddedilir; gerçek referans seçilerek veya CSV kullanılarak ilerlenebilir.
+
+Diferansiyel/ortak mod için `7,19; 2,5` gibi ayrık **fiziksel port** çiftleri girin;
+ilk sayı pozitif kutuptur. Kanal sırası tüm diferansiyel, tüm ortak ve eşleşmemiş tek
+uçlu kanallardır. Referanslar sırasıyla `2Z`, `Z/2`, `Z`; güç dalgaları
+`aD=(ap-an)/sqrt(2)`, `aC=(ap+an)/sqrt(2)` ve aynı biçimde b'dir. Bantlar, empedans,
+tablo ve özet açıkça etiketlenmiş ilk diferansiyel çift Sdd11'i kullanır. S/Smith
+seçicileri diğer kanalları açar. Farklı referans/düzlem/mod ayarları arasında ağ
+ölçütlerinin iyileşme farkları gösterilmez. Özgün fiziksel port ışıması ve güçleri değişmez.
+
+Gerçek referanslı mod verisi `.ts` uzantısıyla Touchstone 2.0 olarak yazılır.
+`[Mixed-Mode Order]` özgün tek uçlu matris indislerini, yorumlar fiziksel port eşlemesini
+taşır; `[Reference]` tek uçlu dirençleri içerir (`2R` veya `R/2` değil). Bu değişiklik
+karma mod içe aktarma desteği eklemez. Özgün veride fazı bilinen tam matris ve sabit
+pozitif gerçek referanslar gerekir; yerel karmaşık veya frekansa bağlı/dalga kılavuzu
+referansları reddedilir. Geçiş/TRL kalibrasyonu veya dispersif hat modeli uygulanmaz.
+Uzak alan, verim, güç, çözücü QA'sı, çalışma listesi ve eniyileyici özgün veride kalır.
+Yeni görünümde eski pasiflik/karşılıklılık QA değerleri yeniden ölçülmüş gibi sunulmaz.
+Örnekler görüntüleyicisi özgün veriyi gösterir. [Ayrıntılı dalga ve dosya tanımı](../RESULTS.md#designer-port-postprocessing).
