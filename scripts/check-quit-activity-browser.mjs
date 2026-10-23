@@ -23,16 +23,19 @@ try {
       localStorage.setItem("fairbeam.generalSettings", JSON.stringify({ language: lang }));
       const fetch = window.fetch.bind(window);
       window.__activeForQuit = [
-        { id: "external", status: "running", kind: "optimize" },
-        { id: "queued-elmer", status: "queued", kind: "research" },
+        { id: "external", status: "running", kind: "simulation" },
+        { id: "queued-elmer", status: "queued", kind: "simulation" },
         { id: "done", status: "done" }, { id: "failed", status: "failed" }, { id: "cancelled", status: "cancelled" },
       ];
       window.__quitReads = 0;
       window.fetch = async (url, init) => {
-        if (String(url) !== "/api/runs?summary=1") return fetch(url, init);
+        if (String(url) !== "/api/close-activity") return fetch(url, init);
         window.__quitReads++;
         if (window.__quitUnavailable) throw new TypeError("offline fixture");
-        return new Response(JSON.stringify({ runs: window.__activeForQuit }), { headers: { "Content-Type": "application/json" } });
+        if (window.__quitHttpFailure) return new Response("{}", { status: 500 });
+        const response = window.__quitMalformed ? { activity: [{ kind: "render", id: "unknown", status: "future" }] }
+          : { activity: window.__activeForQuit.filter(job => !["done", "failed", "cancelled", "interrupted"].includes(job.status)) };
+        return new Response(JSON.stringify(response), { headers: { "Content-Type": "application/json" } });
       };
     }, lang);
     await page.goto(stack.url, { waitUntil: "domcontentloaded" });
@@ -55,6 +58,9 @@ try {
     const runningDescription = count => lang === "en"
       ? (count === 1 ? "1 simulation is running or queued. Quitting cancels it." : `${count} simulations are running or queued. Quitting cancels them.`)
       : `${count} simülasyon çalışıyor veya sırada. Çıkarsanız iptal edilir.`;
+    const renderDescription = count => lang === "en"
+      ? (count === 1 ? "1 Blender render is running or queued. Quitting cancels it." : `${count} Blender renders are running or queued. Quitting cancels them.`)
+      : `${count} Blender render işlemi çalışıyor veya sırada. Çıkarsanız iptal edilir.`;
     await page.evaluate(() => { window.__queuedForQuit = window.__activeForQuit.splice(1, 1)[0]; });
     await begin(26200);
     await page.waitForSelector("#close-runs-title");
@@ -84,6 +90,33 @@ try {
     await answered("cancel");
     assert.equal(await page.evaluate(() => window.__activeForQuit.length), 5, "Cancel never cancels or removes a run");
 
+    await page.evaluate(() => { window.__savedSimulations = window.__activeForQuit; });
+    for (const count of [1, 2]) {
+      await page.evaluate(count => {
+        window.__activeForQuit = Array.from({ length: count }, (_, i) => ({ kind: "render", id: `render-${i}`, status: i ? "queued" : "running" }));
+      }, count);
+      await begin(26300 + count);
+      await page.waitForSelector("#close-runs-title");
+      assert.equal(await page.$eval("#close-runs-title", e => e.textContent), await text("closeRuns.renders.title"));
+      assert.equal(await page.$eval("#close-runs-description", e => e.textContent), renderDescription(count));
+      assert.equal(await page.evaluate(() => document.activeElement.textContent), await text("common.cancel"));
+      await page.keyboard.press("Escape"); await answered("cancel");
+      assert.equal(await page.evaluate(() => window.__activeForQuit.length), count, "Cancel preserves queued/running renders");
+    }
+    await page.evaluate(() => { window.__activeForQuit = [...window.__savedSimulations,
+      { kind: "render", id: "external", status: "running" }, { kind: "render", id: "queued-render", status: "queued" }]; });
+    await begin(26303);
+    await page.waitForSelector("#close-runs-title");
+    assert.equal(await page.$eval("#close-runs-title", e => e.textContent), await text("closeRuns.mixed.title"));
+    assert.equal(await page.$eval("#close-runs-description", e => e.textContent), `${runningDescription(2)} ${renderDescription(2)}`);
+    assert.equal(await page.$eval("#close-runs-title", e => {
+      const dialog = e.closest(".dialog");
+      return dialog.scrollWidth <= dialog.clientWidth && dialog.getBoundingClientRect().bottom <= innerHeight;
+    }), true, "mixed EN/TR copy fits without clipping");
+    if (process.env.FAIRBEAM_SCREENSHOT_DIR) await page.screenshot({ path: join(process.env.FAIRBEAM_SCREENSHOT_DIR, `quit-mixed-${lang}.png`) });
+    await page.click(".dialog .dialog-actions button:first-child"); await answered("close");
+    await page.evaluate(() => { window.__activeForQuit = window.__savedSimulations; });
+
     await page.evaluate(async lang => {
       const store = await import("/src/designer/store.ts");
       await store.createDesign({ id: `quit_${lang}`, name: `Quit ${lang}`, template: "dipole" });
@@ -94,10 +127,10 @@ try {
     await page.click("#close-runs-title + p"); // description does not approve
     await page.click(".dialog .dialog-actions button:first-child");
     await page.waitForSelector("#close-project-title");
-    await page.evaluate(() => window.__activeForQuit.push({ id: "new-during-save", status: "queued" }));
+    await page.evaluate(() => window.__activeForQuit.push({ id: "external", kind: "render", status: "queued" }));
     await page.click(".close-project-dialog .dialog-actions button:first-child"); // Don't save
     await page.waitForSelector("#close-runs-title");
-    assert.equal(await page.$eval("#close-runs-description", e => e.textContent), runningDescription(3));
+    assert.equal(await page.$eval("#close-runs-description", e => e.textContent), `${runningDescription(2)} ${renderDescription(1)}`, "new render cannot reuse consent for the same simulation ID");
     await page.keyboard.press("Escape");
     await answered("cancel");
     assert.equal(await page.evaluate(async () => (await import("/src/designer/store.ts")).draft.model.description), "Keep this after Cancel");
@@ -111,10 +144,18 @@ try {
     await page.keyboard.press("Escape");
     await answered("cancel");
     await page.evaluate(() => { window.__quitUnavailable = false; window.__activeForQuit = []; });
+    for (const failure of ["__quitHttpFailure", "__quitMalformed"]) {
+      await page.evaluate(failure => { window[failure] = true; }, failure);
+      await begin(failure === "__quitHttpFailure" ? 26304 : 26305);
+      await page.waitForSelector("#close-runs-title");
+      assert.equal(await page.$eval("#close-runs-description", e => e.textContent), await text("closeRuns.unknown.description"));
+      await page.keyboard.press("Escape"); await answered("cancel");
+      await page.evaluate(failure => { window[failure] = false; }, failure);
+    }
     await begin(26204);
     await answered("close");
     assert.ok(await page.evaluate(() => window.__quitReads >= 7), "every new exit obtains fresh server activity");
-    console.log(`${lang}: exact singular/plural run descriptions, fresh active/queued runs, Escape, deferred discard, new-run recheck and unavailable status pass`);
+    console.log(`${lang}: simulation/render/mixed singular/plural counts, Cancel focus/Escape, typed-ID final recheck, unknown/HTTP/malformed status and compact layout pass`);
     await context.close();
   }
 } catch (error) {

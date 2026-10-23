@@ -21,6 +21,7 @@ HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE.parent))
 
 from fairbeam import blender_find, blender_job, blender_render, renders  # noqa: E402
+from fairbeam.jobs import Job  # noqa: E402
 from fairbeam.server import App, make_server  # noqa: E402
 
 FAKE = str(HERE / "fake_blender.py")
@@ -351,6 +352,54 @@ class Http(unittest.TestCase):
         self.assertEqual(status, 200)
         self.assertFalse(data["found"])
         self.assertEqual(data["path"], "C:\\x\\blender.exe")
+
+    def test_close_activity_includes_both_managers_without_history_or_paths(self):
+        # Populate real managers with jobs from different documents; no Blender/solver is launched.
+        run_statuses = ("running", "queued", "done", "failed", "cancelled", "interrupted")
+        runs = {f"run-{s}": Job(self.root / "jobs", id=f"run-{s}", status=s, model=f"document-{s}")
+                for s in run_statuses}
+        render_statuses = ("running", "queued", "done", "failed", "cancelled")
+        render_jobs = {}
+        for status in render_statuses:
+            job = blender_job.RenderJob(f"render-{status}", f"another-document-{status}", self.root / "private",
+                                        [], None, {})
+            job.status = status
+            render_jobs[job.id] = job
+        with mock.patch.object(self.app.manager, "jobs", runs), mock.patch.object(self.app.render_jobs, "jobs", render_jobs):
+            status, result, _ = self.request("GET", "/api/close-activity")
+            self.assertEqual(status, 200)
+            self.assertEqual(result, {"activity": [
+                {"kind": "simulation", "id": "run-running", "status": "running"},
+                {"kind": "simulation", "id": "run-queued", "status": "queued"},
+                {"kind": "render", "id": "render-running", "status": "running"},
+                {"kind": "render", "id": "render-queued", "status": "queued"},
+            ]})
+            # Reads are fresh, do not cancel jobs, and retain unknown future states for fail-closed clients.
+            self.assertFalse(any(job.cancel_requested for job in render_jobs.values()))
+            render_jobs["render-running"].status = "done"
+            render_jobs["render-queued"].status = "future-active-state"
+            _, result, _ = self.request("GET", "/api/close-activity")
+            self.assertEqual(result["activity"][-1],
+                             {"kind": "render", "id": "render-queued", "status": "future-active-state"})
+            self.assertEqual(len(result["activity"]), 3)
+
+    def test_close_activity_manager_failure_is_not_an_empty_success(self):
+        with mock.patch.object(self.app.render_jobs, "active_jobs", side_effect=RuntimeError("fixture unavailable")):
+            status, result, _ = self.request("GET", "/api/close-activity")
+        self.assertEqual(status, 500)
+        self.assertNotIn("activity", result)
+
+    def test_close_activity_empty_and_colliding_manager_ids(self):
+        with mock.patch.object(self.app.manager, "jobs", {}), mock.patch.object(self.app.render_jobs, "jobs", {}):
+            self.assertEqual(self.request("GET", "/api/close-activity")[:2], (200, {"activity": []}))
+        with mock.patch.object(self.app.manager, "active_jobs", return_value=[{"id": "same", "status": "running"}]), \
+                mock.patch.object(self.app.render_jobs, "active_jobs", return_value=[{"id": "same", "status": "queued"}]):
+            status, result, _ = self.request("GET", "/api/close-activity")
+        self.assertEqual(status, 200)
+        self.assertEqual(result, {"activity": [
+            {"kind": "simulation", "id": "same", "status": "running"},
+            {"kind": "render", "id": "same", "status": "queued"},
+        ]})
 
     def test_render_roundtrip_and_traversal(self):
         info = {"found": True, "ok": True, "path": sys.executable, "version": "4.2.3", "label": "4.2.3", "source": "env",

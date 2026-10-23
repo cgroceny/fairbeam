@@ -5,8 +5,8 @@ import { useModal } from "../lib/dialog";
 import { closeDesign, defaultDesignerSession, dirty, draft, file, message, releaseDraft, replaceRequest, type ReplaceRequest, saveAndCloseDesign, saveBeforeLeaving, saving } from "./store";
 
 import { answerWindowClose, approveUpdateDiscard, approveWindowDiscard, decideWindowClose, finishUpdate, updateApproved, windowClose, type WindowLeave } from "./windowClose";
-import { closeActivity, decideCloseActivity, registerCloseActivity } from "./closeActivity";
-import { api, isTerminal } from "../runner/api";
+import { closeActivity, decideCloseActivity, registerCloseActivity, type ActivityCounts } from "./closeActivity";
+import { api } from "../runner/api";
 import { modifierShortcut } from "../lib/shortcut";
 import { t } from "../i18n";
 
@@ -161,10 +161,20 @@ function WindowCloseDialog(props: { kind: WindowLeave }) {
   );
 }
 
-function RunningWorkDialog(props: { count: number | null }) {
+function RunningWorkDialog(props: { counts: ActivityCounts | null }) {
   let dialog!: HTMLDivElement;
   let cancelButton!: HTMLButtonElement;
   const cancel = () => decideCloseActivity(false);
+  const title = () => props.counts === null ? "closeRuns.unknown.title"
+    : props.counts.renders === 0 ? "closeRuns.title"
+    : props.counts.simulations === 0 ? "closeRuns.renders.title" : "closeRuns.mixed.title";
+  const description = () => {
+    const counts = props.counts;
+    if (counts === null) return t("closeRuns.unknown.description");
+    const runs = () => t(counts.simulations === 1 ? "closeRuns.description.one" : "closeRuns.description", { count: counts.simulations });
+    const renders = () => t(counts.renders === 1 ? "closeRuns.renders.description.one" : "closeRuns.renders.description", { count: counts.renders });
+    return counts.renders === 0 ? runs() : counts.simulations === 0 ? renders() : `${runs()} ${renders()}`;
+  };
   useModal(() => dialog, cancel, () => cancelButton);
   return (
     <div class="scrim" onPointerDown={e => e.target === e.currentTarget && cancel()}>
@@ -172,13 +182,13 @@ function RunningWorkDialog(props: { count: number | null }) {
         aria-describedby="close-runs-description" tabindex="-1">
         <div class="dialog-head">
           <div>
-            <h2 id="close-runs-title">{t(props.count === null ? "closeRuns.unknown.title" : "closeRuns.title")}</h2>
-            <p id="close-runs-description">{props.count === null ? t("closeRuns.unknown.description") : t(props.count === 1 ? "closeRuns.description.one" : "closeRuns.description", { count: props.count })}</p>
+            <h2 id="close-runs-title">{t(title())}</h2>
+            <p id="close-runs-description">{description()}</p>
           </div>
           <button class="icon-btn" onClick={cancel} aria-label={t("common.cancel")}><X size={16} /></button>
         </div>
         <div class="dialog-foot"><div class="dialog-actions">
-          <button class="btn btn-ghost" onClick={() => decideCloseActivity(true)}>{t("closeRuns.quit")}</button>
+          <button class="btn btn-ghost" onClick={() => decideCloseActivity(true)}>{t(props.counts?.renders === 0 ? "closeRuns.quit" : "closeRuns.quitWork")}</button>
           <button ref={cancelButton} class="btn btn-primary" onClick={cancel}>{t("common.cancel")}</button>
         </div></div>
       </div>
@@ -189,11 +199,11 @@ function RunningWorkDialog(props: { count: number | null }) {
 /** Mounted above workspace modes so File > Close also works after visiting Results or Start. */
 export default function CloseProjectHost() {
   onMount(() => {
-    // /runs is the server's full manager list, not the current document's cached history.
+    // Fresh server-wide simulation and Blender activity, never document-scoped history.
     onCleanup(registerCloseActivity(async () => {
       const controller = new AbortController();
       const timer = setTimeout(() => controller.abort(), 5000);
-      try { return (await api.runs(controller.signal)).filter(job => !isTerminal(job.status)).map(job => job.id); }
+      try { return await api.closeActivity(controller.signal); }
       finally { clearTimeout(timer); }
     }));
     const onClose = (event: Event) => {
@@ -226,7 +236,7 @@ export default function CloseProjectHost() {
     <>
       <Show when={requested() && file()}><CloseProjectDialog /></Show>
       <Show when={windowClose()}>{(request) => <Portal><WindowCloseDialog kind={request().kind} /></Portal>}</Show>
-      <Show when={closeActivity()}>{request => <Portal><RunningWorkDialog count={request().count} /></Portal>}</Show>
+      <Show when={closeActivity()}>{request => <Portal><RunningWorkDialog counts={request().counts} /></Portal>}</Show>
       {/* in <body>, after every other modal: the New model dialog stays behind it */}
       <Show when={replaceRequest()} keyed>{(request) => <Portal><ReplaceProjectDialog request={request} /></Portal>}</Show>
       <Show when={updateApproved() !== null}><Portal>
