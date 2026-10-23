@@ -37,3 +37,14 @@
 .rdk-details > .rdk-note { margin-top: var(--al-space-1); }
 
 .result-figure-menu { position: fixed; z-index: var(--al-z-menu, 1000); min-width: 160px; }
+
+/* Session-only port analysis follows existing result fields and disclosure styling. */
+.port-result-body { display: flex; flex-direction: column; min-height: 0; height: 100%; overflow: auto; }
+.port-result-body > .rdk-split { flex: 1; min-height: 240px; }
+.port-processing-panel { margin: 8px 12px; flex: none; }
+.port-processing-panel > summary { cursor: pointer; }
+.port-processing-fields { display: flex; flex-wrap: wrap; gap: 12px; margin: 8px 0; }
+.port-processing-fields .rdk-field { min-width: 160px; flex: 1 1 160px; }
+.port-processing-fields input { width: 100%; }
+.port-processing-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.port-processing-notice { margin: 8px 12px 0; flex: none; }

@@ -8,6 +8,7 @@ import type { Bundle, EfficiencySweep, FarField, PortResult } from "../types";
 import { mainBeam } from "./array.ts";
 import { efficiencyWarningUi } from "./runText.ts";
 import { t } from "../i18n/index.ts";
+import { originalPortResult } from "./portProcessingMetadata.ts";
 
 export type PatternQuantity = "directivity" | "gain" | "realized" | "rhcp" | "lhcp";
 export const PATTERN_QUANTITIES: readonly PatternQuantity[] = ["directivity", "gain", "realized", "rhcp", "lhcp"];
@@ -33,6 +34,8 @@ export function drivenPort(b: Bundle, ff?: Pick<FarField, "port"> | null): numbe
 
 /** The reflection of a driven port (each driven port has its own from the run that drove it). */
 export function portReflection(b: Bundle, port: number | null): PortResult | null {
+  // Port postprocessing is a view-only network operation, not a new radiation measurement.
+  b = originalPortResult(b);
   const ports = b.results?.ports ?? {};
   if (port != null && ports[String(port)]) return ports[String(port)];
   const own = drivenPort(b);

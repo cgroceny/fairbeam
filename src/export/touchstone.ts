@@ -1,3 +1,4 @@
+import { portProcessingInfo } from "../lib/portProcessingMetadata.ts";
 // Touchstone v1 (.s1p) export of the excited port's S11, for import into RF tools such as scikit-rf.
 //
 //   ! comments (ASCII only: some importers reject other bytes)
@@ -52,7 +53,8 @@ export function touchstoneS1p(b: Bundle, exported: string = new Date().toISOStri
     `! Model:     ${ascii(b.model.id)}`,
     `! Simulated: ${b.created} (${ascii(b.solver.engine)}${b.generator.openems ? ` ${ascii(b.generator.openems)}` : ""}, ${ascii(b.solver.method)})`,
     `! Exported:  ${exported}`,
-    port ? `! Port ${port.number}: ${port.type}, R = ${port.R} Ohm, along ${port.direction}` : "! Port 1",
+    ...(portProcessingInfo(b) ? [`! ${ascii(portProcessingInfo(b)!.description)}`] : []),
+    port ? `! Port ${port.number}: ${port.type}, ${portProcessingInfo(b) ? "original model R" : "R"} = ${port.R} Ohm, along ${port.direction}` : "! Port 1",
     ...(Object.hasOwn(pr, "z_ref_f")
       ? ["! S11 renormalised from the per-frequency real port reference to the fixed R below"]
       : []),
@@ -117,6 +119,7 @@ export function touchstoneNPort(b: Bundle, exported: string = new Date().toISOSt
     `! Model:     ${ascii(b.model.id)}`,
     `! Simulated: ${b.created} (${ascii(b.solver.engine)}${b.generator.openems ? ` ${ascii(b.generator.openems)}` : ""}, ${ascii(b.solver.method)})`,
     `! Exported:  ${exported}`,
+    ...(portProcessingInfo(b) ? [`! ${ascii(portProcessingInfo(b)!.description)}`] : []),
     `! ${n} matrix ports (${S.ports.join(", ")}), one simulation per excited port, power-wave S-parameters`,
     `! Matrix index -> model port: ${S.ports.map(p => `${p} -> ${physicalPortNumber(S, p) ?? "unknown (invalid mapping)"}`).join(", ")}`,
     "! S-matrix renormalised to the fixed real R below using the actual per-port references",

@@ -5012,5 +5012,22 @@
   "server.warning.workspace_recovery": "The project file was saved; workspace metadata needs recovery: {detail}",
   "server.warning.original_recovery": "The copy was saved; the original workspace needs recovery: {detail}",
   "server.warning.index_refresh": "The result index could not be refreshed: {detail}",
-  "server.invalid_parameters": "Check the parameter values."
+  "server.invalid_parameters": "Check the parameter values.",
+  "portProcessing.title": "Port postprocessing",
+  "portProcessing.badge": "Postprocessed",
+  "portProcessing.reference": "Common real reference (Ω)",
+  "portProcessing.delay": "Remove one-way delay at P{port} (S index {index}), ps",
+  "portProcessing.scope": "This Designer result view supports real positive references and ideal matched lossless feeds. Changes stay in this session. Complex references, frequency-dependent waveguide references, launch calibration and mixed-mode conversion are unavailable.",
+  "portProcessing.delayHint": "Positive delay removes line toward the device; negative adds line. The feed must be matched to the original port reference. Feed removal is applied first, then renormalization. Delay is one-way; reflection receives twice this phase. No material or line length is inferred.",
+  "portProcessing.apply": "Apply to this result",
+  "portProcessing.reset": "Show original result",
+  "portProcessing.active": "Reference: {reference} Ω. Removed one-way delay: {delays}. Missing matrix samples: {missing}.",
+  "portProcessing.originalContext": "Network plots, matched bands, summary and data exports use the same processed S matrix. Far-field, efficiency, power, solver and run-list evidence remain at their original reference; optimizer inputs stay unchanged.",
+  "portProcessing.error.phase": "Complex S-parameter phase is required. Open a result with measured or simulated phase.",
+  "portProcessing.error.matrix": "A complete S matrix is required at every port. A single stored reflection cannot define a multiport transformation.",
+  "portProcessing.error.mapping": "The matrix-to-physical-port mapping is missing or inconsistent. This result cannot be processed safely.",
+  "portProcessing.error.reference": "Only explicit constant positive real references are supported. Waveguide, per-frequency, complex or inconsistent references cannot be processed here.",
+  "portProcessing.error.frequency": "A finite, strictly increasing frequency grid is required.",
+  "portProcessing.error.settings": "Enter a positive finite reference and a finite delay for each physical port. The phase must remain within 1,000,000 radians across the stored band.",
+  "portProcessing.error.noSamples": "No complete finite matrix sample could be transformed. The displayed result has not changed."
 }

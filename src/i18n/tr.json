@@ -4931,5 +4931,22 @@
   "server.warning.workspace_recovery": "Proje dosyası kaydedildi; çalışma alanı meta verilerinin kurtarılması gerekiyor: {detail}",
   "server.warning.original_recovery": "Kopya kaydedildi; asıl çalışma alanının kurtarılması gerekiyor: {detail}",
   "server.warning.index_refresh": "Sonuç dizini yenilenemedi: {detail}",
-  "server.invalid_parameters": "Parametre değerlerini kontrol edin."
+  "server.invalid_parameters": "Parametre değerlerini kontrol edin.",
+  "portProcessing.title": "Port son işlemesi",
+  "portProcessing.badge": "Son işlem uygulanmış",
+  "portProcessing.reference": "Ortak gerçek referans (Ω)",
+  "portProcessing.delay": "P{port} için kaldırılan tek yönlü gecikme (S indisi {index}), ps",
+  "portProcessing.scope": "Bu Tasarım sonuç görünümü, pozitif gerçek referansları ve ideal uyumlu kayıpsız besleme hatlarını destekler. Değişiklikler bu oturumda kalır. Karmaşık referanslar, frekansa bağlı dalga kılavuzu referansları, geçiş kalibrasyonu ve karma mod dönüşümü kullanılamaz.",
+  "portProcessing.delayHint": "Pozitif gecikme hattı aygıta doğru kaldırır; negatif değer hat ekler. Besleme hattı özgün port referansına uyumlu olmalıdır. Önce hat kaldırılır, sonra yeniden normalleştirme uygulanır. Gecikme tek yönlüdür; yansımaya bunun iki katı faz uygulanır. Malzeme veya hat uzunluğu tahmin edilmez.",
+  "portProcessing.apply": "Bu sonuca uygula",
+  "portProcessing.reset": "Özgün sonucu göster",
+  "portProcessing.active": "Referans: {reference} Ω. Kaldırılan tek yönlü gecikme: {delays}. Eksik matris örneği: {missing}.",
+  "portProcessing.originalContext": "Ağ grafikleri, uyum bantları, özet ve veri dışa aktarımları aynı son işlem uygulanmış S matrisini kullanır. Uzak alan, verim, güç, çözücü ve çalışma listesi kanıtları özgün referanslarında kalır; eniyileyici girdileri değişmez.",
+  "portProcessing.error.phase": "Karmaşık S-parametresi fazı gereklidir. Ölçülmüş veya benzetilmiş faz içeren bir sonuç açın.",
+  "portProcessing.error.matrix": "Her port için tam S matrisi gereklidir. Tek kayıtlı yansıma, çok portlu dönüşümü tanımlayamaz.",
+  "portProcessing.error.mapping": "Matris ile fiziksel port eşlemesi eksik veya tutarsız. Bu sonuç güvenle işlenemez.",
+  "portProcessing.error.reference": "Yalnızca açıkça belirtilmiş sabit pozitif gerçek referanslar desteklenir. Dalga kılavuzu, frekansa bağlı, karmaşık veya tutarsız referanslar burada işlenemez.",
+  "portProcessing.error.frequency": "Sonlu ve kesin olarak artan bir frekans ızgarası gereklidir.",
+  "portProcessing.error.settings": "Pozitif sonlu bir referans ve her fiziksel port için sonlu bir gecikme girin. Kayıtlı bant boyunca faz 1.000.000 radyan içinde kalmalıdır.",
+  "portProcessing.error.noSamples": "Dönüştürülebilecek tam ve sonlu matris örneği yok. Görüntülenen sonuç değişmedi."
 }

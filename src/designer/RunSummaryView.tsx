@@ -14,6 +14,8 @@ import { columnDecimals, compact, ghzText, num, seconds } from "../lib/format";
 import { efficiencyWarningUi } from "../lib/runText";
 import { farfieldSummary } from "../lib/farfieldQuantity";
 import { designResult } from "../runner/designRun";
+import { displayedPortResult } from "./portProcessingSession";
+import { portProcessingInfo } from "../lib/portProcessingMetadata";
 import type { Bundle } from "../types";
 import { radioGroupKeys } from "../lib/a11y";
 import { fmt, t } from "../i18n";
@@ -233,7 +235,7 @@ function RunsCompare(props: { runs: { file: string; bundle: Bundle }[] }) {
               <td class="rs-name" title={row.name}>
                 {/* the badge is an icon (its words in its title and for screen readers): the name keeps the width */}
                 <div class="rs-name-in">
-                  <span class="rs-name-text">{row.name}</span>
+                  <span class="rs-name-text">{row.name}<Show when={portProcessingInfo(row.bundle)}> · {t("portProcessing.badge")}</Show></span>
                   <RunQualityBadge compact q={bundleQuality(row.bundle)} />
                 </div>
               </td>
@@ -256,7 +258,7 @@ function RunsCompare(props: { runs: { file: string; bundle: Bundle }[] }) {
 export function ResultSummary(props: { b: Bundle }) {
   const runs = createMemo(() => {
     const current = designResult();
-    const others = comparedRuns();
+    const others = comparedRuns().map(run => ({ ...run, bundle: displayedPortResult(run.bundle) }));
     return others.length && current ? [{ file: current.file, bundle: props.b }, ...others] : [];
   });
   return (

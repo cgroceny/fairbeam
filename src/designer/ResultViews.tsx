@@ -31,11 +31,11 @@ import { lobeText, PatternQuantitySelect, quantityFallbackNote, totalEffText } f
 import type { DownloadResult } from "../lib/download";
 import { downloadToast } from "../lib/toast";
 import { isTerminal } from "../runner/api";
-import { clearDesignResult, designJob, designResult } from "../runner/designRun";
+import { clearDesignResult, designJob, designResult as rawDesignResult } from "../runner/designRun";
 import type { Bundle } from "../types";
 import { resultFocus } from "./resultFocus";
 import { MAX_COMPARE } from "./navModel";
-import { comparedLoadState, comparisonReady, retryComparedRuns, comparedRuns, designRunBundle, designRuns, otherProjectRuns, ensureDesignRunBundles, loadRunBundle, runLabel, runShortLabel, selectedRuns, selectRun, showView } from "./runResults";
+import { comparedLoadState, comparisonReady, retryComparedRuns, comparedRuns as rawComparedRuns, designRunBundle, designRuns, otherProjectRuns, ensureDesignRunBundles, loadRunBundle, runLabel, runShortLabel, selectedRuns, selectRun, showView } from "./runResults";
 import { MAIN_TAB_LABELS, type MainResultView } from "./resultTabs";
 import { copyResultData, exportResultCsv, resultDataTable, type ResultDataOptions } from "./resultData";
 import { summaryMode, summaryReference } from "./summaryMode";
@@ -50,6 +50,18 @@ import { ResultSummary } from "./RunSummaryView";
 import { fmt, t, tEn } from "../i18n";
 import "../styles/designer-sim.css";
 import "../styles/result-views.css";
+
+import PortProcessingPanel from "../components/PortProcessingPanel";
+import { displayedPortResult, portProcessingSession } from "./portProcessingSession";
+import { portProcessingInfo } from "../lib/portProcessingMetadata";
+
+// Local presentation boundary: the runner/cache and its consumers keep their raw objects.
+const designResult = createRoot(() => createMemo(() => {
+  const raw = rawDesignResult();
+  return raw ? { ...raw, bundle: displayedPortResult(raw.bundle) } : null;
+}));
+const comparedRuns = () => rawComparedRuns().map(run => ({ ...run, bundle: displayedPortResult(run.bundle) }));
+const processingLabel = (b: Bundle) => portProcessingInfo(b) ? ` · ${t("portProcessing.badge")}` : "";
 
 const COLORS = SERIES_COLORS;
 
@@ -69,7 +81,7 @@ function useCompare(b: () => Bundle) {
     const files = new Map<Bundle, string>(others.map((o) => [o.bundle, o.file]));
     if (current?.bundle === b()) files.set(b(), current.file);
     return traces(b(), others.map((o) => o.bundle), [current?.bundle === b() ? runLabel(current.file) : undefined, ...others.map((o) => runLabel(o.file))])
-      .map((t) => { const file = files.get(t.bundle); return file ? { ...t, label: runShortLabel(file) } : t; });
+      .map((t) => { const file = files.get(t.bundle); return file ? { ...t, label: runShortLabel(file) + processingLabel(t.bundle) } : t; });
   });
 }
 
@@ -152,7 +164,7 @@ function SpTools(props: { show: boolean; smith?: boolean; format?: ResultDataFor
 
 
 function ResultImpedance(props: { b: Bundle }) {
-  const reference = () => (props.b.ports.find((p) => p.excite) ?? props.b.ports[0])?.reference_impedance;
+  const reference = () => portProcessingInfo(props.b) ? undefined : (props.b.ports.find((p) => p.excite) ?? props.b.ports[0])?.reference_impedance;
   const matching = createMemo(() => {
     const ref = reference(), s = sweep(props.b);
     if (!ref || !s || !s.f.length) return null;
@@ -466,7 +478,7 @@ function ResultTable(props: { b: Bundle }) {
     if (!s) return null;
     return {
       columns: ["f (GHz)", "|S11| (dB)", "VSWR", "Re Zin (Ω)", "Im Zin (Ω)"],
-      rows: everyRow(s.f.length).map((i) => [s.f[i] / 1e9, s.s11Db[i], Number.isFinite(s.vswr[i]) ? s.vswr[i] : "∞", s.zRe[i], s.zIm[i]]),
+      rows: everyRow(s.f.length).map((i) => [s.f[i] / 1e9, s.s11Db[i], Number.isFinite(s.vswr[i]) ? s.vswr[i] : s.vswr[i] === Infinity ? "∞" : "", s.zRe[i], s.zIm[i]]),
     };
   });
   return (
@@ -478,6 +490,15 @@ function ResultTable(props: { b: Bundle }) {
 
 /** One result view of the shown run: MainArea.tsx fills a main-area tab with it. */
 export function ResultBody(props: { view: MainResultView; b: Bundle; format: ResultDataFormat }) {
+  const shown = () => displayedPortResult(props.b);
+  return <div class="port-result-body">
+    <Show when={portProcessingInfo(shown())}><p class="note port-processing-notice">{t("portProcessing.badge")} · {t("portProcessing.originalContext")}</p></Show>
+    <Show when={["sparams", "impedance", "vswr", "smith", "table", "summary"].includes(props.view)}><PortProcessingPanel bundle={shown()} /></Show>
+    <ResultBodyContent view={props.view} b={shown()} format={props.format} />
+  </div>;
+}
+
+function ResultBodyContent(props: { view: MainResultView; b: Bundle; format: ResultDataFormat }) {
   return (
     <Switch>
       <Match when={props.view === "sparams"}><ResultSParams b={props.b} format={props.format} /></Match>
@@ -568,16 +589,17 @@ export function ResultToolbar(props: { view: MainResultView }) {
     summaryReference: summaryReference(),
   });
   const comparedBundles = async (run: { file: string; bundle: Bundle }) => {
+    const processingRevision = portProcessingSession.revision();
     const files = selectedRuns();
     if (resultFocus() && resultFocus()?.file !== run.file) throw new Error(t("results.compare.changed"));
     // the summary lists its runs, one included (its rows carry the file name)
     if (files.length < 2) return props.view === "summary" ? [{ file: run.file, bundle: run.bundle }] : undefined;
-    const loaded = await Promise.all(files.map(async (file) => ({ file, bundle: file === run.file ? run.bundle : await loadRunBundle(file) })));
-    if (designResult()?.file !== run.file || designResult()?.bundle !== run.bundle || (resultFocus() && resultFocus()?.file !== run.file) || selectedRuns().join("\n") !== files.join("\n")) throw new Error(t("results.compare.changed"));
+    const loaded = await Promise.all(files.map(async (file) => ({ file, bundle: file === run.file ? run.bundle : displayedPortResult(await loadRunBundle(file)) })));
+    if (portProcessingSession.revision() !== processingRevision || designResult()?.file !== run.file || designResult()?.bundle !== run.bundle || (resultFocus() && resultFocus()?.file !== run.file) || selectedRuns().join("\n") !== files.join("\n")) throw new Error(t("results.compare.changed"));
     return loaded;
   };
   const exportFrequency = () => props.view === "pattern" ? resultFocus()?.f ?? designResult()?.bundle.results?.farfield[0]?.f : undefined;
-  const exportBase = (b: Bundle) => resultExportStem(b, props.view, exportFrequency());
+  const exportBase = (b: Bundle) => resultExportStem(b, props.view, exportFrequency()) + (portProcessingInfo(b) ? "_postprocessed" : "");
   const plot = () => bar.closest(".dw-result")?.querySelector<HTMLElement>(".dw-result-plot") ?? null;
   const ready = () => !!designResult()?.bundle.results && (!resultFocus() || resultFocus()?.file === designResult()?.file);
   const figureReady = () => ready() && comparisonReady() && !["table", "summary", "fieldmap"].includes(props.view);
@@ -585,7 +607,7 @@ export function ResultToolbar(props: { view: MainResultView }) {
     const run = designResult();
     if (!run || !figureReady()) return;
     try {
-      const title = [run.bundle.name, tEn(`results.tab.${props.view}`), resultFrequencyTag(run.bundle, exportFrequency())].filter(Boolean).join(" — ");
+      const title = [run.bundle.name, tEn(`results.tab.${props.view}`), resultFrequencyTag(run.bundle, exportFrequency()), ...[run, ...comparedRuns()].flatMap(r => portProcessingInfo(r.bundle) ? [`${runShortLabel(r.file)}: ${portProcessingInfo(r.bundle)!.description}`] : [])].filter(Boolean).join(" — ");
       await saveVisibleFigure(plot(), exportBase(run.bundle), format, title);
     } catch (error) { feedback(t("results.figure.failed", { error: String(error) }), true); }
   };
@@ -614,7 +636,7 @@ export function ResultToolbar(props: { view: MainResultView }) {
     if (!run?.bundle.results) return;
     try {
       const runs = await comparedBundles(run);
-      saved(await exportResultTouchstone(run.bundle, resultExportStem(run.bundle, "sparams"), runs));
+      saved(await exportResultTouchstone(run.bundle, resultExportStem(run.bundle, "sparams") + (portProcessingInfo(run.bundle) ? "_postprocessed" : ""), runs));
     } catch (error) { feedback(t("results.toolbar.touchstoneFailed", { error: error instanceof Error ? error.message : String(error) }), true); }
   };
   onMount(()=> {
@@ -652,6 +674,7 @@ export function ResultToolbar(props: { view: MainResultView }) {
   return (
     <div class="dw-result-bar" classList={{ "is-narrow": barSize().w > 0 && barSize().w < 1000 }} ref={bar} role="toolbar" aria-label={t("results.toolbar.aria", { tab: MAIN_TAB_LABELS[props.view] })}>
       <span class="dock-hint rdk-shown" title={designResult()?.file}>{shown()}</span>
+      <Show when={[designResult(), ...comparedRuns()].some(run => run && portProcessingInfo(run.bundle))}><span class="chip" title={t("portProcessing.originalContext")}>{t("portProcessing.badge")}</span></Show>
       {/* a field map belongs to one run: no comparison, and no S-parameter data format */}
       <Show when={props.view !== "fieldmap"}>
       <div class="rdk-compare-control">

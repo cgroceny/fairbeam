@@ -1584,3 +1584,11 @@ browser:
 The app sends nothing by itself and puts nothing else into the link. Attach the design file or a log
 if they help, and remove anything private first. In the desktop app the local run server opens the
 system browser, since the app window does not open web pages itself.
+
+
+Designer result tabs offer session-only **Port postprocessing** for a complete complex
+S matrix: a common real reference and ideal matched lossless one-way feed delays per
+physical port. Apply/Reset affect the shown result and its result exports, never the
+saved design, raw bundle or optimizer. Processed results carry a persistent label;
+radiation, power and solver evidence remain original. See [Results](RESULTS.md#designer-port-postprocessing)
+for the transform order, supported references, missing-data rules and limitations.

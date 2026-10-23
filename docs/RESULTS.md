@@ -18,3 +18,45 @@
 - Half-wave dipole: resonance 1.3-1.4 % below the closed-form induced-EMF resonance, R_in 72-73 Ω, Dmax 2.13-2.15 dBi, efficiency 0.999. Full tables, the end-criterion study and recommended settings are in [VALIDATION.md](VALIDATION.md).
 
 The [RunHistory sweep CSV](STUDIES.md#runhistory-sweep-csv) follows the same band definitions with lowercase column names: `band_lo_ghz` and `band_hi_ghz` are the edges, `band_center_ghz` is their middle, and `band_best_ghz` is the |S11| minimum frequency. It uses the first band of each job; missing edges leave the center blank. RunHistory labels the minimum frequency **Best match**.
+
+
+## Designer port postprocessing
+
+In a Designer result's S-parameters, impedance, VSWR, Smith, table or summary tab,
+open **Port postprocessing**. Choose one common positive real reference in ohms and
+a signed, one-way delay in picoseconds for each **physical** port. The matrix index
+is shown beside the physical ID. Apply changes explicitly; **Show original result**
+resets only that loaded result. Settings are held in memory by loaded result identity,
+not a filename, and are never saved into the bundle, design or optimizer inputs.
+
+The operation removes an ideal matched lossless feed at each original port reference
+first, then renormalizes the full power-wave matrix. With the exp(+jωt) convention,
+`S'_ij = S_ij exp(+j 2π f (τ_i + τ_j))` before renormalization. Positive delay moves
+toward the device; negative delay adds line. The feed must be matched to the original
+reference; reflection receives twice its one-way phase. No material, propagation
+velocity, length, loss or dispersion is inferred. Phase arguments exceeding 1,000,000
+radians at any port are refused to bound floating-point phase precision.
+
+The persistent **Postprocessed** label identifies this result view. S, Smith, Z, VSWR,
+the matched bands and summary, Copy/CSV, Touchstone and exported plot titles use the
+same projection. Comparison retains each run's own settings and identifies processed
+traces/rows. CSV includes processing provenance; Touchstone includes source references,
+physical IDs, delay signs/units and the transform order in comments. The matched bands
+are contiguous stored samples below the result's threshold (default −10 dB), without
+invented crossing frequencies; a band ending at missing data is a lower bound. A missing
+or singular coupled matrix sample stays a gap, with a displayed count. Touchstone refuses
+gaps rather than inventing complex values.
+
+Far-field, efficiency, power, solver, run-list and optimizer evidence remain at the
+original reference. Port analysis does not recompute radiated/accepted power or the
+original solver's passivity/reciprocity QA. Those matrix QA values are unavailable on
+the projection, rather than copied as new measurements. In a summary, a far-field sample
+chosen near a newly located match still contains the original radiation measurement.
+
+Only a complete matrix with known phase and explicit, constant, positive real references
+is supported (including a single-port legacy result with a valid reference). Invalid
+port mapping, incomplete multiport data, waveguide/per-frequency references, complex
+chip references and invalid frequency grids are refused. This is not launch-discontinuity
+removal, a TRL calibration, a dispersive feed model, or mixed-mode conversion. Those
+parts of issue #237 remain follow-up work. The standalone Examples viewer continues to
+show original data; this control is scoped to Designer result tabs.

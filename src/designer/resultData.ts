@@ -1,3 +1,4 @@
+import { portProcessingInfo } from "../lib/portProcessingMetadata.ts";
 import { powerWaveReflection } from "../lib/powerWaves.ts";
 import type { Bundle, FarField } from "../types";
 import { complexDb, complexMagnitude, complexPhase } from "../charts/plotQuantities.ts";
@@ -70,6 +71,11 @@ function zColumns(re: number[], im: number[], format: ResultDataFormat) {
 
 /** Raw, unsampled data for a result view. Numeric cells retain the precision stored in the bundle. */
 export function resultDataTable(bundle: Bundle | null | undefined, view: ResultView, frequencyHz?: number, options: ResultDataOptions = {}): ResultDataTable {
+  const table = baseResultDataTable(bundle, view, frequencyHz, options), info = portProcessingInfo(bundle);
+  return info ? { header: [...table.header, "Port processing"], rows: table.rows.map(row => [...row, info.description]) } : table;
+}
+
+function baseResultDataTable(bundle: Bundle | null | undefined, view: ResultView, frequencyHz?: number, options: ResultDataOptions = {}): ResultDataTable {
   const results = bundle?.results;
   if (!results) return empty(["No result data"]);
   const phaseKnown = hasSParameterPhase(bundle);
@@ -274,7 +280,10 @@ export function comparedResultDataTable(runs: { file: string; bundle: Bundle }[]
 /** The table Copy data and CSV write: one run, or every compared run. */
 export function activeResultDataTable(bundle: Bundle | null | undefined, view: ResultView, frequencyHz?: number, runs?: { file: string; bundle: Bundle }[], options: ResultDataOptions = {}): ResultDataTable {
   // the summary lists its runs as rows, one run included (its file name is a column)
-  if (view === "summary" && runs?.length) return summaryTable(runs.map((r, i) => ({ label: options.runNames?.[i] ?? r.bundle.model.name, file: r.file, bundle: r.bundle })), { deltas: options.summaryDeltas, reference: options.summaryReference });
+  if (view === "summary" && runs?.length) {
+    const table = summaryTable(runs.map((r, i) => ({ label: options.runNames?.[i] ?? r.bundle.model.name, file: r.file, bundle: r.bundle })), { deltas: options.summaryDeltas, reference: options.summaryReference });
+    return runs.some(r => portProcessingInfo(r.bundle)) ? { header: [...table.header, "Port processing"], rows: table.rows.map((row, i) => [...row, portProcessingInfo(runs[i].bundle)?.description ?? "Original stored result"]) } : table;
+  }
   return runs && runs.length >= 2 ? comparedResultDataTable(runs, view, frequencyHz, options) : resultDataTable(bundle, view, frequencyHz, options);
 }
 
