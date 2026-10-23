@@ -20,7 +20,17 @@ const fixture=()=>{
   b.run=null; // Synthetic scalars must not inherit the source example's historical Metal run.
   const a=structuredClone(records.find(r=>r.name==='baseline'));a.reliable=[true,false,true];a.pacc_error=[.02,.2,.04];
   const p=structuredClone(a);p.port=19;p.radiation.realized_peak_dbi=[-31,-32,-33];p.radiation.ar_boresight_db=[2,null,4];
-  b.results.efficiency=[a,p];return b;
+  // Only the bundle envelope is reused. No historical geometry, mesh, resonance,
+  // S-matrix, timing or source attribution is part of this analytic control.
+  b.created='2026-10-24T00:00:00Z';b.generator={name:'synthetic-browser-control',version:'1',openems:null,csxcad:null,python:'not a solver run'};
+  b.model.description='Synthetic scalar and reflection samples; no physical simulation or convergence claim.';
+  delete b.model.reference;b.model.params=[];b.parts=[];b.half_space=null;b.nf2ff_box=null;b.nf2ff_center=null;b.focus=null;
+  b.domain={min:[-1,-1,-1],max:[1,1,1]};
+  b.mesh={x:[-1,0,1],y:[-1,0,1],z:[-1,0,1],cells:[2,2,2],total_cells:8,min_cell:1,max_cell:1};
+  b.ports=[7,19].map(number=>({number,type:'lumped',R:50,direction:'z',start:[0,0,-1],stop:[0,0,1],excite:true}));
+  const port=()=>({s11_re:[.1,.2,.3],s11_im:[0,0,0],zin_re:[50*1.1/.9,75,50*1.3/.7],zin_im:[0,0,0],z_ref:50});
+  b.results={frequency:a.f,ports:{'7':port(),'19':port()},bands:[],farfield:[],signals:{},efficiency:[a,p]};
+  return b;
 };
 let stack,browser,page,session,activeLang;
 const outcomes=[],forbidden=[];
@@ -64,6 +74,11 @@ try{
       // the actual SVG fits the surface instead of accepting an off-screen size.
       if(surface==='.dock'){
         await page.focus('.dock .dock-resize');await page.keyboard.press('End');
+      }else{
+        // Designer's main plot and its Runs dock share the vertical space. Use
+        // the supported keyboard minimum, and verify the resulting layout state.
+        await page.focus('.rdk .dock-resize');await page.keyboard.press('Home');
+        await s.waitFor(()=>document.querySelector('.rdk .dock-resize')?.getAttribute('aria-valuenow')==='120');
       }
       await s.waitFor(surface=>{
         const root=document.querySelector(surface),chart=root?.querySelector('[data-radiation-frequency] .chart'),body=root?.querySelector('.dock-body')||root;
@@ -78,9 +93,6 @@ try{
       outcomes.push({lang,surface,gaps:true,physicalPorts:[7,19],arUnit:'dB',syntheticOnly:true});
     };
     await verify('.dock');
-    // Restore the shared dock size before opening Designer; the preceding End-key
-    // check deliberately expands the viewer and would otherwise shrink its main plot.
-    await page.click('.dock .dock-resize',{clickCount:2});
     await s.click('results.toolbar.copyData',{within:'.dock'});await s.wait('.dock-copy.copied');
     const rows=(await page.evaluate(()=>navigator.clipboard.readText())).trimEnd().split(/\r?\n/).map(r=>r.split('\t'));
     const ar=rows[0].indexOf('ar_boresight_db (dB)'),raw=rows[0].indexOf('ar_boresight_db raw (dB)');
@@ -110,6 +122,7 @@ try{
   console.log(JSON.stringify({out,outcomes},null,2));
 }catch(error){
   let screenshotError;await page?.screenshot({path:join(out,'failure.png')}).catch(e=>{screenshotError=String(e);});
-  await writeFile(join(out,'failure.json'),JSON.stringify({error:String(error?.stack||error),lang:activeLang,url:page?.url(),screenshotError,console:session?.consoleIssues,forbidden,completed:outcomes,children:stack?.diagnostics()},(_key,value)=>typeof value==='string'?safeDiagnosticText(value):value,2));
+  const layout=await page?.evaluate(()=>({viewport:{width:innerWidth,height:innerHeight},dockHeight:localStorage.getItem('fairbeam.dock-height'),rects:['.dock','.dock .dock-body','.dw-result','.dw-result [data-radiation-frequency] .chart','.rdk'].map(selector=>({selector,rect:document.querySelector(selector)?.getBoundingClientRect().toJSON()})),separators:[...document.querySelectorAll('.dock-resize')].map(e=>({now:e.getAttribute('aria-valuenow'),max:e.getAttribute('aria-valuemax')}))})).catch(()=>null);
+  await writeFile(join(out,'failure.json'),JSON.stringify({error:String(error?.stack||error),lang:activeLang,url:page?.url(),screenshotError,layout,console:session?.consoleIssues,forbidden,completed:outcomes,children:stack?.diagnostics()},(_key,value)=>typeof value==='string'?safeDiagnosticText(value):value,2));
   throw error;
 }finally{try{await browser?.close();}finally{await stack?.stop();}}
