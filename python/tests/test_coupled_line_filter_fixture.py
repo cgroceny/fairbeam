@@ -173,7 +173,7 @@ def study(root):
         scope='Homogeneous thin PEC only; finite open ends/junctions are not ideal circuit elements; no fabricated-launch certificate')
 
 
-def scattering_reference(freq):
+def scattering_reference(freq, plane_mm=6.):
     # Independent modal four-port networks, open unused ends, and connect
     # their scattering blocks directly rather than cascading ABCD matrices.
     q = np.array([[1,1,0,0],[0,0,1,1],[1,-1,0,0],[0,0,1,-1]])/np.sqrt(2)
@@ -195,7 +195,7 @@ def scattering_reference(freq):
     ie, ii = blocks[:,i,:][:,:,e], blocks[:,i,:][:,:,i]
     result = ee+ei@np.linalg.solve(np.eye(6)-swap@ii,swap@ie)
     gamma = 2j*np.pi*freq*np.sqrt(f.ER)/f.C0
-    return result*np.exp(-gamma*12e-3)[:,None,None]
+    return result*np.exp(-gamma*2*plane_mm*1e-3)[:,None,None]
 
 
 
@@ -421,6 +421,33 @@ class CoupledFilterTests(unittest.TestCase):
         original = f.reference(plane_mm=6.)
         other = f.reference(plane_mm=9.)
         np.testing.assert_allclose(align_plane(other,'pec'),original,atol=1e-13,rtol=0)
+
+    def test_stopband_reference_planes_preserve_reciprocity(self):
+        # Exercise the full admitted band, including the high-rejection edges
+        # where subtracting the large ABCD determinant products loses digits.
+        from fairbeam.network import shift_reference_planes
+        frequency = np.linspace(1e9, 3e9, 1001)
+        gamma = 2j*np.pi*frequency*np.sqrt(f.ER)/f.C0
+        original = f.reference(frequency, plane_mm=6.)
+        for plane in (9., 30.):
+            with self.subTest(plane_mm=plane):
+                other = f.reference(frequency, plane_mm=plane)
+                np.testing.assert_allclose(other, other.transpose(0, 2, 1), atol=1e-13, rtol=0)
+                aligned = shift_reference_planes(other, gamma, [(plane-6.)*1e-3]*2)
+                np.testing.assert_allclose(aligned, original, atol=1e-13, rtol=0)
+                # An independent modal scattering connection checks every
+                # matrix entry; reciprocity alone would not certify a value.
+                np.testing.assert_allclose(other, scattering_reference(frequency, plane),
+                                           atol=4e-12, rtol=0)
+
+    def test_through_reference_matches_an_independent_matched_line(self):
+        frequency = np.linspace(1e9, 3e9, 101)
+        for plane in (6., 9., 30.):
+            length_m = (f.dimensions()['junctions_mm'][-1]+2*plane)*1e-3
+            expected = network_s(frequency, [0, 1],
+                [(0, 1, f.Z0, length_m*np.sqrt(f.ER)/f.C0)], z_ref=f.Z0)
+            np.testing.assert_allclose(f.reference(frequency, kind='through', plane_mm=plane),
+                                       expected, atol=1e-13, rtol=0)
 
 
     def test_full_wave_matrix_with_cross_incident_waves(self):
