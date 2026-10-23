@@ -34,11 +34,12 @@ export const CHEAP = new Set([
   "cells-per-wavelength", "end-criterion", "port-length", "port-volume", "port-r", "port-reference", "port-overlap", "no-port",
   "no-metal", "resistor-r", "resistor-length", "component-path", "cone-radii", "cone-length", "torus-radii",
   "wire-points", "wg-mode", "wg-size", "wg-cutoff", "wg-aperture", "cut-sheet", "boolean-transform-angle", "sheet-transform-angle", "scale", "mesh-lines",
-  "monitor-efficiency", "field-plane", "conductivity", "metal-thickness", "tan-d-band",
+  "monitor-efficiency", "field-plane", "conductivity", "metal-thickness", "tan-d-band", "ff-step",
 ]);
 
 /** Keep CHEAP wording in sync with Python EXPLANATIONS (checked by check-designer). */
 export const EXPLANATIONS: Readonly<Record<string, string>> = {
+  "ff-step": "Use an angular step from 0.25 to 90 degrees. Smaller steps resolve narrower beams but increase far-field processing time and bundle size; they do not establish solver or mesh convergence.",
   "planar-port": "A native planar port creates only its center strip. Supply the matching ground and dielectric, resolve its gaps and metal planes, and keep three equally spaced measurement planes outside PML. A real wave reference is independent of the physical feed termination. No fallback port is used.",
   "coax-mesh": "Native openEMS parity was verified on a synthetic air-line control, not every design. Energy decay alone does not prove accuracy. Compare S-parameters and impedance across at least two transverse refinements and check the snapped measurement plane. CUDA/Metal are not qualified.",
   "coax-port": "An axial coaxial TEM port needs concentric PEC conductors, a nondispersive dielectric, ordered radii and feed/probe planes inside its length. Check its radii, material references and offsets before running.",
@@ -105,6 +106,8 @@ export const EXPLANATIONS: Readonly<Record<string, string>> = {
  * for usable results, not a physical one. An error blocks the run. */
 export const END_DB_MIN = -300;
 export const END_DB_MAX = -10;
+export const PATTERN_STEP_MIN = 0.25;
+export const PATTERN_STEP_MAX = 90;
 
 /** Efficiency over the band (monitors.efficiency.points; design.py EFFICIENCY_POINTS_*): the number
  * of frequencies, a whole number in this range, 21 when absent. It needs the far field. */
@@ -638,6 +641,12 @@ export function designChecks(d: Design): Check[] {
   const ff = d.far_field ?? { enabled: true };
   if (ff.circular !== undefined && typeof ff.circular !== "boolean") error("far_field.circular", "expr", "circular must be true or false");
   if (ff.enabled !== false) {
+    for (const [axis, fallback] of [["theta", 3], ["phi", 5]] as const) {
+      const path = `far_field.${axis}_step`;
+      const step = ev(path, ff[`${axis}_step`] === undefined ? fallback : ff[`${axis}_step`]);
+      if (step !== null && !(step >= PATTERN_STEP_MIN && step <= PATTERN_STEP_MAX))
+        error(path, "ff-step", `angular step must be from ${PATTERN_STEP_MIN} to ${PATTERN_STEP_MAX} degrees`);
+    }
     if (ff.phase_center !== undefined) {
       if (!Array.isArray(ff.phase_center) || ff.phase_center.length !== 3) error("far_field.phase_center", "expr", "expected a list of 3 values");
       else {

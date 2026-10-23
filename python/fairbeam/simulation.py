@@ -144,6 +144,7 @@ class Simulation:
         # default far-field frequencies (Hz) when evaluate() gets none; None = band centres. For
         # broadband antennas (horns, helices) the S11 minimum says little about the design frequency.
         self.pattern_freqs = None
+        self.pattern_steps = (3.0, 5.0)
         # surface-current maps (Hz) that `fairbeam run` records when no --fields flag is given
         # (fairbeam.fields; a design's monitors.currents); None = none
         self.current_freqs = None
@@ -760,11 +761,12 @@ class Simulation:
 
     # ------------------------------------------------------------------ post-processing
 
-    def evaluate(self, n_freq: int = 801, pattern_freqs=None, theta_step: float = 3.0,
-                 phi_step: float = 5.0, s11_band_db: float = -10.0, efficiency_points: int | None = None) -> dict:
+    def evaluate(self, n_freq: int = 801, pattern_freqs=None, theta_step: float | None = None,
+                 phi_step: float | None = None, s11_band_db: float = -10.0, efficiency_points: int | None = None) -> dict:
         """Port quantities, bands and far field of the finished run. ``efficiency_points``
         (default ``self.efficiency_points``) adds ``efficiency``: Prad / Pacc at that many
-        frequencies across the band (:meth:`_band_efficiency`)."""
+        frequencies across the band (:meth:`_band_efficiency`). Angular steps default to
+        ``self.pattern_steps`` (3, 5 degrees); explicit arguments override each axis."""
         if self.sim_path is None:
             raise RuntimeError("run() first")
         f = np.linspace(self.f_min, self.f_max, n_freq)
@@ -816,17 +818,22 @@ class Simulation:
         out["s11_band_db"] = float(s11_band_db)
 
         if self.nf2ff is not None:
+            from .pattern_grid import angular_grid, pattern_steps
+
+            defaults = self.pattern_steps
+            theta_step, phi_step = pattern_steps(defaults[0] if theta_step is None else theta_step,
+                                                  defaults[1] if phi_step is None else phi_step)
             if pattern_freqs is None:
                 pattern_freqs = self.pattern_freqs
             if pattern_freqs is None:
                 pattern_freqs = [b["f_center"] for b in out["bands"]][:4] or [float(f[np.argmin(s11_db)])]
             pattern_freqs = [float(v) for v in pattern_freqs]
-            theta = np.arange(0.0, 180.0 + 1e-9, theta_step)
-            phi = np.arange(0.0, 360.0, phi_step)
+            theta, phi = angular_grid(theta_step, phi_step)
             center = np.array(self.nf2ff_center if self.nf2ff_center is not None else _center(self))
             res = self.nf2ff.CalcNF2FF(self.sim_path, pattern_freqs, theta, phi, center=center * self.unit)
             # kept for the embedded element patterns of multi-port runs (fairbeam.multiport)
-            self._nf2ff = {"res": res, "freqs": pattern_freqs, "theta": theta, "phi": phi}
+            self._nf2ff = {"res": res, "freqs": pattern_freqs, "theta": theta, "phi": phi,
+                           "requested_steps": [theta_step, phi_step]}
             # With PEC/PMC boundaries openEMS mirrors the recording surface, so Prad (and the Dmax
             # derived from it) cover the full image space. Undo that for the physical half space.
             mirrors = mirror_planes(self.boundaries)
@@ -843,7 +850,10 @@ class Simulation:
                 gamma2 = float(np.interp(fp, f, np.abs(s11) ** 2))
                 raw = prad / pacc if pacc > 0 else None
                 eff, note = self._lossless_efficiency(raw, fp, p_meta.get("type"), lossless)
-                entry = {"f": fp, "theta": _r(theta, 2), "phi": _r(phi, 2),
+                # Keep coordinates at full precision: a short final theta interval must not
+                # round onto the appended 180-degree pole.
+                entry = {"f": fp, "theta": theta.tolist(), "phi": phi.tolist(),
+                         "requested_steps": [theta_step, phi_step],
                          "directivity_dbi": [_r(row, 2) for row in d_dbi],
                          "dmax_dbi": round(10 * np.log10(d_max), 3), "prad_w": prad, "pacc_w": pacc,
                          "rad_efficiency": None if eff is None else round(eff, 4),

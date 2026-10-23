@@ -54,6 +54,7 @@ def capture(*, cp=True, mirrors=0, eta=(.5, .8, 1.1), source_f=F, gamma=(.1, .2,
     nf = SimpleNamespace(CalcNF2FF=Mock(return_value=res))
     sim = SimpleNamespace(f_min=1e9, f_max=3e9, unit=1e-3, sim_path="/synthetic-no-native-call",
                           nf2ff=nf, cp_outputs=cp, end_criteria_db=-60, run_stats={},
+                          pattern_steps=(7., 11.),  # detailed-grid choice must not refine this coarse pass
                           _pacc_error=Mock(return_value=None if errors is None else np.asarray(errors)),
                           _lossless_efficiency=Simulation._lossless_efficiency)
     powers = np.ones(len(source_f)) if pacc is None else np.asarray(pacc, float)
@@ -78,13 +79,14 @@ def synthetic_records():
 
 class RadiationFrequency(unittest.TestCase):
     def test_same_single_transform_and_aligned_scalar_schema(self):
-        entry, transform, _, _ = capture()
+        entry, transform, _, sim = capture()
         transform.assert_called_once()
         args, kw = transform.call_args
         self.assertEqual(args[0], "/synthetic-no-native-call")
         self.assertEqual(args[1], F.tolist())
         np.testing.assert_array_equal(args[2], THETA)
         np.testing.assert_array_equal(args[3], PHI)
+        self.assertEqual(sim.pattern_steps, (7., 11.), "band capture leaves detailed-grid settings untouched")
         np.testing.assert_array_equal(kw["center"], [.001, .002, .003])
         self.assertEqual(kw["outfile"], EFFICIENCY_OUTFILE)
         self.assertEqual(set(kw), {"center", "outfile"})

@@ -138,6 +138,21 @@ class DesignerCircular(unittest.TestCase):
                         else:
                             self.assertIsNone(got.pattern_freqs)
 
+    def test_circular_and_nondivisor_steps_are_both_configured(self):
+        d = blank_design("cp-steps", "CP steps")
+        num, vec = _evaluator(resolve_names(d, {}))
+        ff = {"enabled": True, "circular": True, "theta_step": "7", "phi_step": "11"}
+        sim = spy_sim()
+        _configure_far_field(sim, ff, num, vec)
+        self.assertTrue(sim.cp_outputs)
+        self.assertEqual(sim.pattern_steps, (7, 11))
+        sim.add_nf2ff_box.assert_called_once_with()
+        disabled = spy_sim()
+        _configure_far_field(disabled, {**ff, "enabled": False, "theta_step": 0}, num, vec)
+        self.assertTrue(disabled.cp_outputs)
+        self.assertFalse(hasattr(disabled, "pattern_steps"))
+        disabled.add_nf2ff_box.assert_not_called()
+
     def test_capture_preserves_cp_request_without_building_native_geometry(self):
         for enabled in (False, True):
             for value in (False, True):

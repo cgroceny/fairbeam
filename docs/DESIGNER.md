@@ -948,6 +948,22 @@ without the dialog.
     thinner plates (35 µm copper) stay sheets there too, because cells across them make the timestep 30 to 60 times smaller
     and the run last 5 to 25 minutes or never converge.
 - **Monitors**:
+  - **θ angular step / φ angular step** under Far field control NF2FF angular sampling, in
+    degrees (`far_field.theta_step` and `far_field.phi_step`, expressions allowed). Defaults are
+    3° and 5°; accepted values are 0.25° through 90°. Both theta poles (0° and 180°) are retained,
+    and phi runs from 0° up to but not including the duplicate 360° seam. The last interval may
+    be shorter when a step does not divide the span. The settings survive save, parameter sweeps,
+    multi-port runs and Python export as `sim.pattern_steps`. Smaller steps sample narrow beams
+    more densely; they do not prove mesh or solver convergence. Halving both steps uses roughly
+    four times as many angular samples, increasing post-processing cost and bundle size.
+    Embedded element patterns can be decimated for their storage budget; the run log and Array
+    tab warn when this happens. Array synthesis uses the stored grid, while per-port far fields
+    retain the evaluated grid. The separate efficiency-over-the-band monitor keeps its own grid.
+    Viewer plot cuts at unsampled azimuths (including the opposite half of an elevation cut) use periodic
+    linear interpolation in the displayed quantity's units; these estimates do not add simulated
+    samples. Beamwidth stays unavailable when a crossing is absent or separated by a data gap.
+    For phi steps that do not tile 360° uniformly, the independent `dmax_pattern_dbi` diagnostic is
+    omitted; openEMS' `dmax_dbi` remains separate.
   - **Far field** (on or off) and its frequencies (empty: the |S11| minimum of each matched band), and an
     optional **Set phase center (mm)**. A design file can also set `far_field.faces`, six true/false
     flags (x−, x+, y−, y+, z−, z+) for the faces of the near-to-far-field box that record; a face
@@ -1604,6 +1620,7 @@ The app sends nothing by itself and puts nothing else into the link. Attach the 
 if they help, and remove anything private first. In the desktop app the local run server opens the
 system browser, since the app window does not open web pages itself.
 
+The selected-cut analyzer also supports axial ratio when circular outputs are present. Its polar and Cartesian axes use the fixed 0–60 dB ratio scale (lower is more circular), with the same stored Dmax − 20 dB display mask applied before adjacent-angle interpolation. Masked or missing neighbors stay gaps. HPBW, SLL, and F/B are unavailable for axial ratio because it is not radiation strength. Selected-cut CSV and publication SVG/PDF retain dB units, missing values, and this qualification. A comparison resolves its quantity from the base result once: a reference without that circular quantity stays empty; an unavailable base quantity falls back consistently to directivity. Angular step settings and the circular-output checkbox are independent and both survive Design configuration and export.
 
 ### Radiation versus frequency
 

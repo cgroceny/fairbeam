@@ -175,7 +175,7 @@ jobs:
           $env:TMP = $env:RUNNER_TEMP
           node scripts/check-scenarios.mjs --skip-run
 
-      - name: Circular-polarization synthetic field and display contracts
+      - name: Far-field sampling, cut and circular-polarization contracts
         shell: pwsh
         run: |
           $env:FAIRBEAM_PYTHON = (Get-Command python).Source
@@ -183,6 +183,11 @@ jobs:
           node --experimental-strip-types scripts/check-circular.mjs
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           node --experimental-strip-types scripts/check-radiation-frequency.mjs
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          node --experimental-strip-types scripts/check-pattern-resolution.mjs
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          node --experimental-strip-types scripts/check-pattern-cuts.mjs
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
       - name: Viewer identity, result recovery and Compare layout regressions
         shell: pwsh
@@ -199,9 +204,14 @@ jobs:
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           node scripts/check-quit-activity-browser.mjs
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          node scripts/check-pattern-resolution-browser.mjs
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          node scripts/check-pattern-cuts-browser.mjs
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           node scripts/check-circular-browser.mjs
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           node scripts/check-radiation-frequency-browser.mjs
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
       - name: Keep browser failure evidence (including recovered attempts)
         if: always()

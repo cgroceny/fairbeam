@@ -81,6 +81,7 @@ assert.equal(nearestStoredIndex([1,2,3],2),1,'choose missing-sample frequency be
 assert.equal(nearestStoredIndex([1,2,3],1.6),1);assert.equal(nearestStoredIndex([1,2,3],.9),-1);assert.equal(nearestStoredIndex([1,2,3],3.1),-1);
 for(const q of RADIATION_QUANTITIES){
   const table=radiationTable(b,[q]);assert.deepEqual(resultDataTable(b,'efficiency',undefined,{radiationQuantity:q}),table);
+  assert.deepEqual(resultDataTable(b,'efficiency',undefined,{radiationQuantity:q,patternQuantity:'axial_ratio',patternCut:{kind:'conical',angle:90},patternQuantityFixed:true}),table,'pattern controls do not change frequency data');
   const column=table.header.indexOf(`${q} (${radiationUnit(q)})`);
   assert.deepEqual(table.rows.slice(0,3).map(r=>r[column]),radiationBands(b)[0].samples.map(s=>s.values[q]));
   assert.equal(table.rows.at(-1)[2],'stored-pattern');assert.equal(radiationUnit(q),q.startsWith('ar_')?'dB':'dBi');
@@ -89,6 +90,18 @@ const csv=radiationFrequencyCsv(b);assert.ok(csv.includes('theta axis (deg)'));a
 const parsed=parseCsv(csv);assert.equal(parsed.length,5);
 const cmp=comparedResultDataTable([{file:'base',bundle:b},{file:'second',bundle:bundle(other)}],'efficiency',undefined,{radiationQuantity:'realized_peak_dbi'});
 assert.equal(cmp.rows.length,7);assert.ok(cmp.header.includes('run'));assert.ok(cmp.rows.some(r=>r[cmp.header.indexOf('Port')]===19));
+// Integrated #228/#231/#242/#236: a detailed selected cut keeps its own quantity,
+// mask and reference gaps even when the frequency selector is set independently.
+const cutOptions={patternQuantity:'axial_ratio',patternCut:{kind:'conical',angle:90},patternPort:19};
+const selectedCut=resultDataTable(b,'pattern',2e9,cutOptions);
+assert.deepEqual(resultDataTable(b,'pattern',2e9,{...cutOptions,radiationQuantity:'realized_peak_dbi'}),selectedCut,'frequency controls do not change selected-cut exports');
+assert.ok(selectedCut.header.includes('Axial ratio (dB)'));
+assert.ok(selectedCut.rows.length>0 && selectedCut.rows.every(r=>r[selectedCut.header.indexOf('HPBW status')]==='quantity'),'AR never acquires lobe metrics');
+const noCp=structuredClone(b);delete noCp.results.farfield[0].cp;
+const cutCompare=comparedResultDataTable([{file:'cp',bundle:b},{file:'no-cp',bundle:noCp}],'pattern',2e9,{...cutOptions,radiationQuantity:'ar_peak_db'});
+const arColumn=cutCompare.header.indexOf('Axial ratio (dB)'), missing=cutCompare.rows.filter(r=>r[cutCompare.header.indexOf('run')]==='no-cp');
+assert.ok(arColumn>=0 && missing.length>0 && missing.every(r=>r[arColumn]===null),'missing reference CP stays a gap instead of frequency scalars or directivity');
+assert.deepEqual(comparedResultDataTable([{file:'base',bundle:b},{file:'second',bundle:bundle(other)}],'efficiency',undefined,{...cutOptions,radiationQuantity:'realized_peak_dbi'}),cmp,'pattern comparison controls never align or replace coarse frequency records');
 const files=packageFiles(b,Object.fromEntries(PACKAGE_GROUPS.map(g=>[g.id,g.id==='data'])));
 assert.equal(files.find(f=>f.path==='data/radiation_frequency.csv')?.data,csv);
 const svg=reportPages(b,{generated:'synthetic control',date:'2026-10-23'}).join('\n');

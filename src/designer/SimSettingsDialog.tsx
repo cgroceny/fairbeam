@@ -608,6 +608,13 @@ export default function SimSettingsDialog() {
                 <Show when={issues()["far_field.circular"]}><span class="dz-value dz-bad">{issues()["far_field.circular"]!.message}</span></Show>
                 <FreqList label={t("sim.mon.ffFreqs")} path="far_field.frequencies" value={d().far_field.frequencies ?? []} placeholder={t("sim.mon.ffFreqsEmpty")}
                   onChange={(v) => edit((x) => { x.far_field.frequencies = v; }, "fff")} />
+                <div class="dz-vec-row">
+                  <ExprField label={t("sim.mon.thetaStep")} unit="°" value={d().far_field.theta_step ?? 3} path="far_field.theta_step"
+                    onChange={v => edit(x => { x.far_field.theta_step = v; }, "ff-theta-step")} />
+                  <ExprField label={t("sim.mon.phiStep")} unit="°" value={d().far_field.phi_step ?? 5} path="far_field.phi_step"
+                    onChange={v => edit(x => { x.far_field.phi_step = v; }, "ff-phi-step")} />
+                </div>
+                <p class="note">{t("sim.mon.angularStepsNote")}</p>
                 <label class="dz-check"><input id={`${fieldId("far_field.phase_center")}-enable`} type="checkbox" checked={d().far_field.phase_center !== undefined} onChange={(e) => edit((x) => { x.far_field.phase_center = e.currentTarget.checked ? [0, 0, 0] : undefined; }, "phase-center-toggle")} /> {t("sim.mon.phaseCentre")}</label>
                 <Show when={d().far_field.phase_center}><div class="dz-vec"><div class="dz-vec-row">
                   <For each={[0, 1, 2]}>{(k) => <ExprField label={["X", "Y", "Z"][k]} unit="mm" compact value={d().far_field.phase_center![k]} path={`far_field.phase_center[${k}]`} onChange={(v) => edit((x) => { const p = [...(x.far_field.phase_center ?? [0, 0, 0])] as [Expr, Expr, Expr]; p[k] = v; x.far_field.phase_center = p; }, `phase-center-${k}`)} />}</For>

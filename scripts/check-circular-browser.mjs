@@ -72,6 +72,7 @@ try {
       await (await page.$('.app-header input[type=file]')).uploadFile(file);
       await s.waitFor(async id=>(await import('/src/state.ts')).bundle()?.model.id===id,b.model.id);
       await s.wait('.dock [data-tab="pattern"]');await page.click('.dock [data-tab="pattern"]');
+      await page.select('.dock [data-pattern-cut=kind]','principal');
       const select=await s.wait('.dock select[aria-label]',await s.T('farfield.quantityAria'));
       const unavailable=['zero','missing'].includes(name);
       assert.equal(await select.evaluate(e=>e.querySelector('option[value="axial_ratio"]').disabled),unavailable);
@@ -84,10 +85,18 @@ try {
         if(['null-boresight','off-boresight'].includes(name))assert.equal(await readout('farfield.arBoresight'),'—');
         if(name==='linear')assert.match(await readout('farfield.arPeak'),/≥\s*60[.,]00\s*dB/);
         if(name==='rhcp')assert.match(await readout('farfield.arPeak'),/^0[.,]00\s*dB$/);
+        await page.select('.dock [data-pattern-cut=kind]','conical');
+        await s.ev(angle=>{const input=document.querySelector('.dock [data-pattern-cut=angle]');input.value=String(angle);input.dispatchEvent(new Event('input',{bubbles:true}));},name==='low-directivity'?0:45);
+        await s.wait('.dock [data-pattern-metrics]',await s.T('patternCuts.reason.quantity'));
         await s.click('results.toolbar.copyData',{within:'.dock'});await s.wait('.dock-copy.copied');
         const rows=(await page.evaluate(()=>navigator.clipboard.readText())).trimEnd().split(/\r?\n/).map(r=>r.split('\t'));
-        assert.equal(rows[0].at(-1),'Axial ratio (dB)');
-        if(name==='low-directivity'){assert.equal(rows[2].at(-1),'0');assert.equal(rows[3].at(-1),'');}
+        const arColumn=rows[0].indexOf('Axial ratio (dB)'),phiColumn=rows[0].indexOf('phi (deg)');
+        assert.ok(arColumn>=0);
+        assert.ok(rows.slice(1).every(row=>row[rows[0].indexOf('HPBW status')]==='quantity'));
+        if(name==='low-directivity'){assert.equal(rows.find((r,i)=>i>0&&Number(r[phiColumn])===90)[arColumn],'0');assert.equal(rows.find((r,i)=>i>0&&Number(r[phiColumn])===180)[arColumn],'');}
+        await page.select('.dock [data-pattern-cut=projection]','cartesian');
+        await s.wait('.dock .pattern-analyzer .chart-container');
+        await page.select('.dock [data-pattern-cut=projection]','polar');
         await page.click('.dock .freq-chips button');await s.wait('.ff-card');
         assert.equal(await page.$eval('.ff-card select',e=>e.value),'axial_ratio');
         assert.equal(await page.$eval('.ff-card .ff-scale-unit',e=>e.textContent),await s.T('farfield.arScale'));

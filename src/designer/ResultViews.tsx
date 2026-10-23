@@ -13,21 +13,23 @@ import LineChart, { type PointSeries, type Series } from "../charts/LineChart";
 import StackedCharts from "../charts/StackedCharts";
 import { useSize } from "../charts/useSize";
 import { plotQuantities } from "../charts/plotQuantities";
-import PolarChart from "../charts/PolarChart";
+import { PatternCutPanel, type PatternEntry } from '../components/PatternCutPanel';
+import { patternCutChoice } from '../lib/patternCutStore';
+import { nearestFarfield } from '../compare/series';
 import SmithChart from "../charts/SmithChart";
 import { DataTable } from "../components/Dock";
-import { compareCuts, compareLines, compareSParamQuantities, compareTable, SERIES_COLORS, traces, traceLabels, type GroupedTable } from "../compare/series";
+import { compareLines, compareSParamQuantities, compareTable, SERIES_COLORS, traces, traceLabels, type GroupedTable } from "../compare/series";
 import { createSParamSelection, SParamSmithCompare, SParamTools } from "../components/SParamView";
-import { cutPhi, setCutPhi, setZPart, zPart } from "../compare/store";
+import { cutPhi, setZPart, zPart } from "../compare/store";
 import { radioGroupKeys } from "../lib/a11y";
 import { bandTexts } from "../lib/bands";
 import { freqText, ghzText, num, withUnit } from "../lib/format";
-import { nearestIndex, patternCut, sweep } from "../lib/rf";
+import { nearestIndex, sweep } from "../lib/rf";
 import { mappedPairLabel, pairLabel, sMatrix } from "../lib/sparams";
 import { efficiencyIssue, efficiencyWarningUi } from "../lib/runText";
-import { efficiencyData, effectiveQuantity, farfieldSummary, QUANTITY_LABEL, quantityGrid, quantityMax, quantityRange, quantityUnit, toDb, type PortEfficiency } from "../lib/farfieldQuantity";
+import { efficiencyData, effectiveQuantity, farfieldSummary, toDb, type PortEfficiency } from "../lib/farfieldQuantity";
 import { efficiencyQuantity, radiationQuantity, efficiencyUnit, patternQuantity, setEfficiencyUnit } from "../lib/patternQuantityStore";
-import { axialRatioNote, CircularReadouts, lobeText, PatternQuantitySelect, quantityFallbackNote, totalEffText } from "../components/FarfieldCard";
+import { CircularReadouts, lobeText, PatternQuantitySelect, quantityFallbackNote, totalEffText } from "../components/FarfieldCard";
 import type { DownloadResult } from "../lib/download";
 import { downloadToast } from "../lib/toast";
 import { isTerminal } from "../runner/api";
@@ -402,40 +404,24 @@ function ResultPattern(props: { b: Bundle }) {
   const ff = () => ffs()[Math.min(k(), ffs().length - 1)];
   const cmp = useCompare(() => props.b);
   const shownQuantity = () => ff() ? effectiveQuantity(props.b, ff()!, patternQuantity()) : "directivity";
-  const qLabel = () => QUANTITY_LABEL[shownQuantity()];
   const summary = createMemo(() => (ff() ? farfieldSummary(props.b, ff()!) : null));
-  const cuts = () => {
+  const patternEntries = (): PatternEntry[] => {
     const f = ff();
     if (!f) return [];
     const c = cmp();
     const q = shownQuantity();
-    if (c) return compareCuts(c, f.f, cutPhi(), f, (b, x) => quantityGrid(b, x, q));
-    const half = !!props.b.half_space;
-    const grid = quantityGrid(props.b, f, q);
-    const a = patternCut(f.theta, f.phi, grid, 0, half);
-    const b = patternCut(f.theta, f.phi, grid, 90, half);
-    return [
-      { id: "phi0", label: "φ = 0° (xz)", color: COLORS[0], angle: a.angle, value: a.value },
-      { id: "phi90", label: "φ = 90° (yz)", color: COLORS[1], angle: b.angle, value: b.value },
-    ];
+    if (c) return c.flatMap((entry, i) => {
+      const field = i === 0 ? f : nearestFarfield(entry.bundle, f.f, f.port);
+      return field ? [{ id: `cmp-${i}`, label: `${entry.label} · ${freqText(field.f)}`, color: COLORS[i], bundle: entry.bundle, field, quantity: q }] : [];
+    });
+    return [{ id: 'current', label: '', color: COLORS[0], bundle: props.b, field: f, quantity: q }];
   };
   return (
     <Show when={ff()} fallback={<div class="panel-empty">{t("results.pattern.none")}</div>}>
-      <div class="rdk-split">
-        <PolarChart ariaLabel={cmp() ? t("results.pattern.cutCompared", { quantity: qLabel(), phi: cutPhi() }) : t("results.pattern.cuts", { quantity: qLabel() })} series={cuts()} directLabels={!!cmp()}
-          half={!!props.b.half_space} unit={quantityUnit(shownQuantity())} range={quantityRange(shownQuantity())}
-          max={Math.ceil(Math.max(quantityMax(props.b, ff()!, shownQuantity()), ...cuts().flatMap((c) => c.value).filter(Number.isFinite)))} />
-        <div class="rdk-side">
+      <PatternCutPanel entries={patternEntries()} principalAvailable={!cmp()}>
           <FreqChips label={t("farfield.frequency")} freqs={[...new Set(ffs().map((f) => f.f))]} active={ff()!.f} />
           <label class="rdk-field"><span>{t("results.pattern.quantity")}</span><PatternQuantitySelect bundle={props.b} ff={ff()!} /></label>
           <Show when={quantityFallbackNote(props.b, ff()!, patternQuantity())}>{(note) => <p class="rdk-note" role="note">{note()}</p>}</Show>
-          <Show when={shownQuantity() === "axial_ratio"}><p class="rdk-note" role="note">{axialRatioNote()}</p></Show>
-          <Show when={cmp()}>
-            <div class="seg seg-sm" role="radiogroup" aria-label={t("results.pattern.cut")} onKeyDown={radioGroupKeys}>
-              <button class="seg-btn" role="radio" aria-checked={cutPhi() === 0} onClick={() => setCutPhi(0)}>φ 0°</button>
-              <button class="seg-btn" role="radio" aria-checked={cutPhi() === 90} onClick={() => setCutPhi(90)}>φ 90°</button>
-            </div>
-          </Show>
           <dl class="kv">
             <dt>{t("results.pattern.frequency")}</dt><dd class="mono">{freqText(ff()!.f)}</dd>
             <dt>Dmax</dt><dd class="mono">{withUnit(num(ff()!.dmax_dbi, 2), "dBi")}</dd>
@@ -450,8 +436,7 @@ function ResultPattern(props: { b: Bundle }) {
             <Show when={new Set(ffs().map((f) => f.port)).size > 1}><dt>{t("farfield.drivenPort")}</dt><dd class="mono">P{summary()?.port ?? "?"}</dd></Show>
             <dt>θ = 0°</dt><dd>+z</dd>
           </dl>
-        </div>
-      </div>
+      </PatternCutPanel>
     </Show>
   );
 }
@@ -575,6 +560,9 @@ export function ResultToolbar(props: { view: MainResultView }) {
     runNames: runs?.map((r) => runLabel(r.file)),
     patternQuantity: patternQuantity(),
     radiationQuantity: props.view === "efficiency" && efficiencyQuantity() !== "efficiency" ? radiationQuantity() : undefined,
+    patternCut: patternCutChoice(),
+    patternPrincipalAvailable: !comparedRuns().length,
+    patternFallbackPhi: cutPhi(),
     fieldPlane: resultFocus()?.map,
     summaryDeltas: summaryMode() === "delta",
     summaryReference: summaryReference(),

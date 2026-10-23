@@ -14,6 +14,8 @@ export interface PolarSeries {
   /** signed angle from the zenith in degrees, clockwise positive */
   angle: number[];
   value: number[];
+  /** Explicit domain coverage; false forbids closing an incomplete analyzed cut. */
+  periodic?: boolean;
 }
 
 interface Props {
@@ -23,6 +25,7 @@ interface Props {
   half: boolean;
   unit: string;
   ariaLabel: string;
+  angleLabel?: string;
   /** label each series at its peak (required for series 3, which is below 3:1 on light) */
   directLabels?: boolean;
 }
@@ -71,7 +74,7 @@ export default function PolarChart(props: Props) {
       pen = true;
     });
     const span = s.angle.length ? Math.max(...s.angle) - Math.min(...s.angle) : 0;
-    const closed = !props.half && span >= 340 && s.value.every((v) => Number.isFinite(v));
+    const closed = !props.half && (s.periodic ?? span >= 340) && s.value.every((v) => Number.isFinite(v));
     return d + (closed ? "Z" : "");
   };
 
@@ -204,7 +207,7 @@ export default function PolarChart(props: Props) {
       </svg>
       <Show when={hover() !== null}>
         <div class="chart-tip" style={{ right: "12px", top: `${LEGEND_H()}px` }}>
-          <div class="tip-head">θ = {minus(valueAt(props.series[0], hover()!).angle.toFixed(0))}°</div>
+          <div class="tip-head">{props.angleLabel ?? 'θ'} = {minus(valueAt(props.series[0], hover()!).angle.toFixed(0))}°</div>
           <For each={props.series}>
             {(s) => (
               <div class="tip-row">

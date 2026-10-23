@@ -74,26 +74,54 @@ def steering_weights(bundle: dict, theta0: float, phi0: float = 0.0, f: float | 
     return out
 
 
+def _phi_weights(phi: np.ndarray) -> np.ndarray:
+    """Periodic trapezoidal integration weights in radians, including the actual seam interval."""
+    if (phi.ndim != 1 or not len(phi) or not np.all(np.isfinite(phi))
+            or np.any(phi < 0) or np.any(phi >= 360) or np.any(np.diff(phi) <= 0)):
+        raise ValueError("Element-pattern phi must be finite, strictly increasing and within [0, 360)")
+    intervals = np.diff(np.r_[phi, phi[0] + 360])
+    return np.deg2rad((np.roll(intervals, 1) + intervals) / 2)
+
+
 def combine(bundle: dict, weights, f: float | None = None) -> dict:
     """Array pattern and active reflection coefficients for complex port weights.
 
     Returns a dict with the directivity grid (dBi, [theta][phi]), its maximum and direction, the
     realized gain (4 pi U / P_incident, so mismatch, coupling and loss included), the total
     efficiency P_rad / P_inc, and ``gamma_active`` per port over the bundle's frequency axis (only
-    when the S-matrix is complete).
+    when the S-matrix is complete). Phi integration uses the stored periodic intervals;
+    theta retains trapezoidal integration of U sin(theta). These are sampled-grid estimates.
     """
     ep, k, fields = element_patterns(bundle, f)
     ports = [p["port"] for p in ep["ports"]]
     w = normalize_weights(weights, ports)
+    if not all(np.isfinite(v) for v in w.values()):
+        raise ValueError("array weights must be finite")
     if not any(abs(v) > 0 for v in w.values()):
         raise ValueError("all weights are zero")
+    theta_deg = np.asarray(ep["theta"], float)
+    phi = np.asarray(ep["phi"], float)
+    phi_weights = _phi_weights(phi)
+    if (theta_deg.ndim != 1 or len(theta_deg) < 3 or not np.all(np.isfinite(theta_deg))
+            or np.any(np.diff(theta_deg) <= 0) or theta_deg[0] != 0 or theta_deg[-1] != 180):
+        raise ValueError("Element-pattern theta must include both poles and an interior sample in increasing order")
+    shape = (len(theta_deg), len(phi))
+    if any(component.shape != shape or not np.all(np.isfinite(component))
+           for pair in fields.values() for component in pair):
+        raise ValueError("Element-pattern fields must be finite and match the angular grid")
     et = sum(w[p] * fields[p][0] for p in ports)
     epf = sum(w[p] * fields[p][1] for p in ports)
-    u = np.abs(et) ** 2 + np.abs(epf) ** 2                          # proportional to radiation intensity
-    theta = np.deg2rad(np.asarray(ep["theta"], float))
-    phi = np.asarray(ep["phi"], float)
+    with np.errstate(over="ignore", invalid="ignore"):
+        u = np.abs(et) ** 2 + np.abs(epf) ** 2                      # proportional to radiation intensity
+    if not np.all(np.isfinite(u)):
+        raise ValueError("Combined element-pattern intensity must be finite")
+    theta = np.deg2rad(theta_deg)
     m = 2.0 ** ep.get("mirror_planes", 0)
-    integral = np.trapezoid(u.mean(axis=1) * np.sin(theta), theta) * 2 * np.pi / m  # physical space
+    # Equal phi weights are only valid when the grid tiles 360 degrees uniformly. A requested
+    # nondivisor step or storage decimation can leave a shorter interval across the seam.
+    integral = np.trapezoid((u @ phi_weights) * np.sin(theta), theta) / m  # physical space
+    if not np.isfinite(integral) or integral <= 0:
+        raise ValueError("Array radiation power cannot be determined from this angular grid")
     d = 4 * np.pi * u / integral
     i, j = np.unravel_index(int(np.argmax(u)), u.shape)
     r = float(ep.get("radius_m", 1.0))

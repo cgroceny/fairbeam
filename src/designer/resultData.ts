@@ -10,6 +10,7 @@ import { phasorColumns } from "../scene/fieldPlaneModel.ts";
 import { t, tEn } from "../i18n/index.ts";
 import { summaryTable } from "./runSummary.ts";
 import { radiationTable, type RadiationQuantity } from "../lib/radiationFrequency.ts";
+import { analyzeCut, cutLabel, cutSpecs, patternMetrics, type PatternCutChoice } from '../lib/patternMetrics.ts';
 
 export interface ResultDataTable {
   header: string[];
@@ -33,8 +34,14 @@ export interface ResultDataOptions {
   runNames?: (string | undefined)[];
   /** the far-field quantity shown (the pattern data add its column beside the directivity) */
   patternQuantity?: PatternQuantity;
+  /** Internal comparison contract: the base already resolved its quantity; references keep missing data. */
+  patternQuantityFixed?: boolean;
   /** Driven port of the selected pattern; compared runs without that port have no samples. */
   patternPort?: number;
+  /** Selected plotted cut(s). Omitted retains the full stored grid export used in reports. */
+  patternCut?: PatternCutChoice;
+  patternPrincipalAvailable?: boolean;
+  patternFallbackPhi?: number;
   /** Standalone pattern overlay: each displayed grid, including a synthesized array. */
   patternEntries?: { label: string; field: FarField }[];
   /** the summary of several runs: add the Δ columns (the Summary tab's "Δ vs A" view is on) */
@@ -174,7 +181,21 @@ export function resultDataTable(bundle: Bundle | null | undefined, view: ResultV
     if (!ff?.theta?.length || !ff.phi?.length) return empty(["theta (deg)", "phi (deg)", "Directivity (dBi)"]);
     const withPort = ffs.some((x) => x.port != null);
     // the shown quantity (gain, realized gain, a circular part) beside the directivity
-    const q = options.patternQuantity ? effectiveQuantity(bundle, ff, options.patternQuantity) : "directivity";
+    const q = options.patternQuantity ? (options.patternQuantityFixed ? options.patternQuantity : effectiveQuantity(bundle, ff, options.patternQuantity)) : "directivity";
+    if (options.patternCut) {
+      const grid = quantityGrid(bundle, ff, q);
+      return {
+        header: [...(withPort ? ['Port'] : []), 'f (GHz)', 'Cut', 'Cut angle (deg)', 'theta (deg)', 'phi (deg)', `${tEn(`farfield.quantity.${q}`)} (${quantityUnit(q)})`,
+          'HPBW estimate (deg)', 'HPBW status', 'SLL estimate (dB; floor -40 dB)', 'SLL status', 'Peak / 3D antipode (dB)', 'F/B status', 'Adjacent dB interpolation', 'Cut min spacing (deg)', 'Cut max spacing (deg)'],
+        rows: cutSpecs(options.patternCut, options.patternPrincipalAvailable ?? true, options.patternFallbackPhi ?? 0).flatMap(spec => {
+          const cut = analyzeCut(ff.theta, ff.phi, grid, spec, !!bundle.half_space);
+          const metrics = patternMetrics(cut, ff.theta, ff.phi, grid, !!bundle.half_space, q);
+          return cut.angle.map((a, i) => [...(withPort ? [ff.port ?? null] : []), ff.f / 1e9, cutLabel(spec), a, cut.theta[i], cut.phi[i], finiteCell(cut.value[i]),
+            metrics.hpbw.value, metrics.hpbw.reason ?? 'sampled estimate', metrics.sll.value, metrics.sll.reason ?? 'sampled estimate',
+            metrics.frontBack.value, metrics.frontBack.reason ?? 'sampled estimate', cut.interpolated ? 'yes' : 'no', ...(metrics.spacing ?? [null, null])]);
+        }),
+      };
+    }
     const extra = q === "directivity" ? null : quantityGrid(bundle, ff, q);
     const rows: (string | number | null)[][] = [];
     ff.theta.forEach((theta, i) => ff.phi.forEach((phi, j) => {
@@ -254,7 +275,7 @@ export function comparedResultDataTable(runs: { file: string; bundle: Bundle }[]
     // falls back to directivity must not export a reference-only AR column.
     const base = runs[0].bundle, first = base.results?.farfield?.[0];
     const ff = first && nearestFarfield(base, frequencyHz ?? first.f, options.patternPort);
-    options = { ...options, patternQuantity: ff ? effectiveQuantity(base, ff, options.patternQuantity) : "directivity" };
+    options = { ...options, patternQuantity: ff ? effectiveQuantity(base, ff, options.patternQuantity) : "directivity", patternQuantityFixed: true };
   }
   // Comparison uses each run's stored pattern, never a standalone viewer's synthesized overlay.
   const tables = runs.map((r) => resultDataTable(r.bundle, view, frequencyHz, { ...options, patternEntries: undefined }));

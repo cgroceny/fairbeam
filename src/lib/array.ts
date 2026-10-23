@@ -5,6 +5,7 @@
 import type { Bundle, FarField, Vec3 } from "../types";
 import type { ElementPatternSet, SMatrix } from "./sparams.ts";
 import { physicalPortNumber, sAt } from "./sparams.ts";
+import { samplePhi } from "./rf.ts";
 
 export const C0 = 299_792_458;
 
@@ -156,22 +157,29 @@ export function mainBeam(theta: number[], phi: number[], d: number[][], half: bo
   const level = peak - 3;
   // elevation cut through the beam: signed angle along the great circle φ0 / φ0 + 180
   const phi0 = phi[bj];
-  const jOpp = opposite(phi, phi0);
+  const oppositeValues = samplePhi(phi, d, phi0 + 180)?.values;
   const cut: { a: number; v: number }[] = [];
   const tmax = half ? 90.0001 : 180.0001;
-  if (jOpp >= 0) for (let i = theta.length - 1; i > 0; i--) if (theta[i] <= tmax) cut.push({ a: -theta[i], v: d[i][jOpp] });
+  if (oppositeValues) for (let i = theta.length - 1; i > 0; i--) if (theta[i] <= tmax) cut.push({ a: -theta[i], v: oppositeValues[i] });
   for (let i = 0; i < theta.length; i++) if (theta[i] <= tmax) cut.push({ a: theta[i], v: d[i][bj] });
   const k0 = cut.findIndex((c) => Math.abs(c.a - theta[bi]) < 1e-9);
   const width = (pts: { a: number; v: number }[], k: number): number | null => {
+    if (!Number.isFinite(pts[k]?.v)) return null;
     let lo: number | null = null;
     let hi: number | null = null;
-    for (let k1 = k; k1 > 0; k1--) if (pts[k1 - 1].v < level) {
-      lo = crossing(pts[k1].a, pts[k1].v, pts[k1 - 1].a, pts[k1 - 1].v, level);
-      break;
+    for (let k1 = k; k1 > 0; k1--) {
+      if (!Number.isFinite(pts[k1 - 1].v)) return null;
+      if (pts[k1 - 1].v < level) {
+        lo = crossing(pts[k1].a, pts[k1].v, pts[k1 - 1].a, pts[k1 - 1].v, level);
+        break;
+      }
     }
-    for (let k1 = k; k1 < pts.length - 1; k1++) if (pts[k1 + 1].v < level) {
-      hi = crossing(pts[k1].a, pts[k1].v, pts[k1 + 1].a, pts[k1 + 1].v, level);
-      break;
+    for (let k1 = k; k1 < pts.length - 1; k1++) {
+      if (!Number.isFinite(pts[k1 + 1].v)) return null;
+      if (pts[k1 + 1].v < level) {
+        hi = crossing(pts[k1].a, pts[k1].v, pts[k1 + 1].a, pts[k1 + 1].v, level);
+        break;
+      }
     }
     return lo === null || hi === null ? null : Math.abs(hi - lo);
   };

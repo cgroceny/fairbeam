@@ -185,6 +185,10 @@ export interface ElementPatternsSection {
   frequencies: number[];
   /** angular decimation factor applied to the far-field grid (1 = none) */
   decimation: number;
+  /** Original NF2FF angular grid before the embedded-pattern storage limit. */
+  source_shape?: [number, number];
+  /** Requested theta/phi steps in degrees; the pole's final interval can be shorter. */
+  requested_steps?: [number, number];
   mirror_planes: number;
   phase_center: Vec3;
   ports: {
@@ -208,6 +212,8 @@ export interface Param {
 }
 
 export interface FarField {
+  /** Requested theta/phi steps (degrees); coordinate arrays preserve the evaluated grid. */
+  requested_steps?: [number, number];
   f: number;
   theta: number[];
   phi: number[];

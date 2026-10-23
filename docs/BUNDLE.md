@@ -396,11 +396,12 @@ The JSON band fields retain their original meanings. In the [CSV export](EXPORTS
 | Field | Type | Description |
 | --- | --- | --- |
 | `f` | number | Frequency in Hz |
-| `theta` | number[] | θ in degrees: 0 to 180 in 3° steps (61 values) |
-| `phi` | number[] | φ in degrees: 0 to 355 in 5° steps (72 values; 360 is not repeated) |
+| `theta` | number[] | θ in degrees, including 0 and 180. Default: 3° steps (61 values); configurable. A final interval can be shorter |
+| `phi` | number[] | φ in degrees, from 0 up to but not including 360. Default: 5° steps (72 values); configurable |
+| `requested_steps` | [θ, φ]? | Requested angular steps in degrees before endpoint handling. Older bundles omit this; use the coordinate arrays for calculations |
 | `directivity_dbi` | number[][] | Directivity in dBi, indexed **`[theta][phi]`** (shape `len(theta) × len(phi)`). Floored at `dmax_dbi − 60` |
 | `dmax_dbi` | number | Maximum directivity in dBi, mirror-corrected |
-| `dmax_pattern_dbi` | number? | Maximum directivity from the pattern alone, `4π·U_max / ∮U dΩ` over the θ/φ grid, mirror-corrected. openEMS' `dmax_dbi` divides by the power flowing through the NF2FF box instead. The two should agree within ~0.1 dB; a larger gap points at boundary reflections (MUR too close) or a coarse NF2FF surface. Absent in older bundles |
+| `dmax_pattern_dbi` | number? | Independent maximum-directivity diagnostic from the pattern alone, `4π·U_max / ∮U dΩ`, mirror-corrected. Requires a full theta sphere and a uniform phi grid that tiles 360°; omitted for nondivisor phi steps and older bundles. openEMS' `dmax_dbi` divides by power flowing through the NF2FF box instead. Where both diagnostics exist, a gap can reflect angular sampling, boundary reflections or a coarse NF2FF surface; their agreement does not establish convergence |
 | `prad_w` | number | Radiated power in W, mirror-corrected |
 | `pacc_w` | number | Power accepted at the port, `½·Re(u·i*)` interpolated at `f`, in W |
 | `rad_efficiency` | number \| null | `prad_w / pacc_w`. `null` if `pacc_w ≤ 0`. Above 1 is unphysical for a passive antenna (the two powers come from independent numerical measurements); the value is kept and flagged in `qa_warnings`. For a model marked lossless (see below) 1 while `prad_w / pacc_w` is within 5 % of 1 |
@@ -622,6 +623,8 @@ Older bundles used per-run scalar normalization and can contain residual inciden
 | `theta`, `phi` | number[] | Grid in degrees (the far-field grid, possibly decimated) |
 | `frequencies` | number[] | Frequencies in Hz, the same as the far-field entries |
 | `decimation` | number | Angular decimation factor (1 = full far-field grid). θ = 180° is always kept |
+| `source_shape` | [nθ, nφ]? | Evaluated NF2FF angular grid before storage decimation; older bundles omit it |
+| `requested_steps` | [θ, φ]? | Requested angular steps in degrees. Actual stored coordinates are `theta` and `phi`; the final theta interval can be shorter |
 | `mirror_planes` | number | PEC/PMC boundaries. The fields cover the image space; divide sphere integrals by 2^m |
 | `phase_center` | Vec3 | Common phase center of all ports (drawing units) |
 | `ports` | object[] | One per driven port: `{port, position, fields}`. `position` is the port center (drawing units), used as the element position for steering. `fields` is one `{f, scale, e_theta_re, e_theta_im, e_phi_re, e_phi_im}` per frequency (`scale` only with `"i16le-base64-scaled"`) |
