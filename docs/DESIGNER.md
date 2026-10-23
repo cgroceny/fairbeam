@@ -959,6 +959,11 @@ without the dialog.
     Embedded element patterns can be decimated for their storage budget; the run log and Array
     tab warn when this happens. Array synthesis uses the stored grid, while per-port far fields
     retain the evaluated grid. The separate efficiency-over-the-band monitor keeps its own grid.
+    Viewer plot cuts at unsampled azimuths (including the opposite half of an elevation cut) use periodic
+    linear interpolation in the displayed quantity's units; these estimates do not add simulated
+    samples. Beamwidth stays unavailable when a crossing is absent or separated by a data gap.
+    For phi steps that do not tile 360° uniformly, the independent `dmax_pattern_dbi` diagnostic is
+    omitted; openEMS' `dmax_dbi` remains separate.
   - **Far field** (on or off) and its frequencies (empty: the |S11| minimum of each matched band), and an
     optional **Set phase center (mm)**. A design file can also set `far_field.faces`, six true/false
     flags (x−, x+, y−, y+, z−, z+) for the faces of the near-to-far-field box that record; a face

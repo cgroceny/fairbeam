@@ -44,3 +44,4 @@ assert.equal(d.far_field.theta_step, "center_frequency / 2");
 assert.equal(d.far_field.phi_step, "center_frequency");
 assert.deepEqual(designChecks(d), []);
 console.log(`check-pattern-resolution: ${cases.length} TypeScript/Python cases and parameter rename passed`);
+await import("./check-pattern-angular-grid.mjs");

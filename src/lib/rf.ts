@@ -54,23 +54,43 @@ export function nearestIndex(xs: number[], x: number): number {
   return Math.abs(xs[lo] - x) <= Math.abs(xs[hi] - x) ? lo : hi;
 }
 
-/** A φ-cut through the 3D pattern as a signed angle series (-180..180, or -90..90 in half space). */
+/** Samples at an azimuth, interpolating between its periodic neighbours in the supplied
+ * quantity's units (usually dB). This is a plotting estimate, not recovered field resolution.
+ * Invalid coordinates are refused; unavailable neighbouring values stay gaps. */
+export function samplePhi(phi: number[], d: number[][], phiDeg: number): { values: number[]; interpolated: boolean } | null {
+  if (!phi.length || !Number.isFinite(phiDeg)
+    || phi.some((p, i) => !Number.isFinite(p) || p < 0 || p >= 360 || (i > 0 && p <= phi[i - 1]))) return null;
+  const target = ((phiDeg % 360) + 360) % 360;
+  const exact = phi.findIndex(p => Math.abs(p - target) < 1e-9);
+  if (exact >= 0) return { values: d.map(row => Number.isFinite(row[exact]) ? row[exact] : NaN), interpolated: false };
+  if (phi.length < 2) return null;
+  let hi = phi.findIndex(p => p > target);
+  if (hi < 0) hi = 0;
+  const lo = (hi + phi.length - 1) % phi.length;
+  const from = phi[lo], to = phi[hi] + (hi === 0 ? 360 : 0);
+  const mix = ((target < from ? target + 360 : target) - from) / (to - from);
+  return { values: d.map(row => Number.isFinite(row[lo]) && Number.isFinite(row[hi])
+    ? row[lo] + mix * (row[hi] - row[lo]) : NaN), interpolated: true };
+}
+
+/** A φ-cut through the 3D pattern as a signed angle series (-180..180, or -90..90 in half space).
+ * Non-sampled planes use periodic linear interpolation, without altering the stored grid. */
 export function patternCut(theta: number[], phi: number[], d: number[][], phiDeg: number, halfSpace: boolean) {
-  const jp = phi.findIndex((p) => Math.abs(p - phiDeg) < 1e-6);
-  const jm = phi.findIndex((p) => Math.abs(p - ((phiDeg + 180) % 360)) < 1e-6);
+  const positive = samplePhi(phi, d, phiDeg);
+  const negative = samplePhi(phi, d, phiDeg + 180);
   const angle: number[] = [];
   const value: number[] = [];
   const maxTheta = halfSpace ? 90 : 180;
   // negative side: phi + 180, theta descending
   for (let i = theta.length - 1; i > 0; i--) {
-    if (theta[i] > maxTheta || jm < 0) continue;
+    if (theta[i] > maxTheta || !negative) continue;
     angle.push(-theta[i]);
-    value.push(d[i][jm]);
+    value.push(negative.values[i]);
   }
   for (let i = 0; i < theta.length; i++) {
-    if (theta[i] > maxTheta || jp < 0) continue;
+    if (theta[i] > maxTheta || !positive) continue;
     angle.push(theta[i]);
-    value.push(d[i][jp]);
+    value.push(positive.values[i]);
   }
-  return { angle, value };
+  return { angle, value, interpolated: !!(positive?.interpolated || negative?.interpolated) };
 }
