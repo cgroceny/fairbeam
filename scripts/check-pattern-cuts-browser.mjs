@@ -96,7 +96,8 @@ try {
     await s.fill('.dw-result [data-pattern-cut="angle"]','120');
     await s.wait('.dw-result .pattern-analyzer',await s.T('patternCuts.noCoverage'));
     await showDesign(b);
-    await s.click('header.screen.examples',{sel:'.mode-switch button',exact:true}); await s.wait('.example-picker-trigger');
+    // A saved user run labels this destination Results; Examples is the gallery-only label.
+    await s.click('header.screen.results',{sel:'.mode-switch button',exact:true}); await s.wait('.example-picker-trigger');
     await s.ev((b,m)=>m.st.openBundle(m.v.validateBundle(b).bundle,'SYNTHETIC-pattern-cuts.json'),b,{st:'/src/state.ts',v:'/src/lib/validate.ts'});
     await s.clickSel('.dock [data-tab="pattern"]'); await s.wait('.dock .pattern-analyzer');
     await checkControls('.dock .pattern-analyzer');
