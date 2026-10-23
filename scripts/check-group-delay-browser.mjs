@@ -23,7 +23,10 @@ const makeFixture = (name, shift = 0) => {
   b.name = b.model.name = `SYNTHETIC ${name}`; b.run = null;
   b.ports = [{...b.ports[0], number:7, excite:true}]; delete b.ports[0].reference_impedance;
   b.results.frequency = f.map(x => x * 1e9); b.results.bands = []; b.results.farfield = [];
-  b.results.ports = { '7': { s11_re: re, s11_im: im, zin_re: f.map(() => 50), zin_im: f.map(() => 0), z_ref: 50 } };
+  const denominator=re.map((r,i)=>(1-r)**2+im[i]**2);
+  b.results.ports = { '7': { s11_re: re, s11_im: im,
+    zin_re:re.map((r,i)=>50*(1-r*r-im[i]*im[i])/denominator[i]),
+    zin_im:im.map((v,i)=>100*v/denominator[i]), z_ref:50 } };
   b.results.sparams = { ports: [1], port_numbers: [7], z_ref: [50], excited: [1], s: { '1,1': { re, im } } };
   return b;
 };
