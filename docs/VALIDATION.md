@@ -1196,3 +1196,18 @@ infinite directivity remain excluded. The other simulated Chapter 7 applications
 are not qualified; their fixture PRs retain failed, pending and deferred controls.
 The record links pinned source snapshots and reproduction commands. No gallery
 model, generated bundle or textbook content is added.
+
+## 24. Chapter 14 comparison scope
+
+The [Chapter 14 record](benchmarks/pozar-chapter-14.md) reports a sampled
+normalized-pattern, angular-directivity and half-power-beamwidth scope for our
+finite PEC-strip realization associated with Example 14.2. All three meshes,
+both successive mesh changes, four independent controls and seven two-surface
+comparisons meet their frozen limits after source completion and exact -90 dB
+native stops. No asymptotic order is claimed.
+
+Input impedance, complete antenna performance, calibrated absolute power and
+native-directivity convergence remain excluded. Seven other Chapter 14 examples
+have calculation/system scopes and require no native fields. The record preserves
+actual acquisition-source/deadline provenance and links pinned reproduction
+sources. No gallery model, generated bundle or textbook asset is added.
