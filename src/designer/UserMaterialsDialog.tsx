@@ -85,6 +85,20 @@ export function UserMaterialsDialog(props: { onClose: () => void }) {
                       <input autocomplete="off" class="rp-input dz-input" type="text" aria-label={t("userMaterials.rename", { name: m.name })} value={m.name}
                         onChange={(e) => change(m, { name: e.currentTarget.value }, () => { e.currentTarget.value = m.name; })} />
                       <div class="dm-lib-note">{materialKindLabel(m.kind)}</div>
+                      <Show when={m.dispersion}>
+                        <details><summary class="dm-lib-note">{t("props.material.ds")}</summary>
+                          <p class="note">{t("props.material.dsCost")}</p>
+                          <For each={["m1", "m2", "n_poles"] as const}>{(key) => <label class="dz-field">
+                            <span class="dz-label">{t(key === "n_poles" ? "props.material.dsPoles" : `props.material.${key}`)}</span>
+                            <input class="rp-input dz-input mono" type="text" inputmode="decimal" value={m.dispersion?.[key] ?? ""}
+                              placeholder={key === "n_poles" ? t("props.material.dsAuto") : key === "m1" ? "4" : "12"}
+                              onChange={(e) => { const input = e.currentTarget, previous = String(m.dispersion?.[key] ?? "");
+                                const dispersion = { ...m.dispersion! }; const value = input.value.trim();
+                                if (!value) delete dispersion[key]; else dispersion[key] = Number(value);
+                                change(m, { dispersion }, () => { input.value = previous; }); }} />
+                          </label>}</For>
+                        </details>
+                      </Show>
                     </td>
                     <Show when={m.kind === "dielectric"} fallback={<>
                       <td>{numField(m, "conductivity", t("props.material.conductivity"), "PEC")}</td>

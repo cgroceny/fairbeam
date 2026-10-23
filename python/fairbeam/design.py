@@ -537,6 +537,9 @@ def check_design(d: dict) -> None:
         mats.add(name)
         if mt.get("kind") not in ("metal", "dielectric"):
             raise DesignError("kind must be 'metal' or 'dielectric'", f"{w}.kind")
+        from .designer_dispersion import descriptor_problem
+        if problem := descriptor_problem(mt):
+            raise DesignError(problem, f"{w}.dispersion")
         _check_color(mt, w)
         _check_opacity(mt, w)
     parts: set[str] = set()
@@ -2654,6 +2657,7 @@ def thin_metal_limit(d: dict, names: dict, force: bool = False) -> float | None:
     with the largest εr μr product among the materials the parts use. With ``mesh.thin_metal`` "volume" the limit is
     :data:`VOLUME_COST_FACTOR` times larger (only a plate thick enough to cost little in timestep keeps its thickness)
     unless ``force``: the limit of the default "sheet" setting, for the checks that say what "volume" costs. None when the values do not resolve."""
+    from .designer_dispersion import static_permittivity_bound
     m = d.get("mesh") or {}
     factor = VOLUME_COST_FACTOR if m.get("thin_metal", "sheet") == "volume" and not force else 1
     num, _ = _evaluator(names)
@@ -2663,8 +2667,8 @@ def thin_metal_limit(d: dict, names: dict, force: bool = False) -> float | None:
         cpw = num(density.get("cells_per_wavelength", 20), "mesh.cells_per_wavelength")
         used = {pt.get("material") for pt in d.get("parts", [])}
         wavelength_factors = [
-            num(mt.get("eps_r", 1), f"materials.{mt['name']}.eps_r")
-            * num(mt.get("mu_r", 1), f"materials.{mt['name']}.mu_r")
+            static_permittivity_bound(mt, lambda v: evaluate(v, names)) if "dispersion" in mt else
+            num(mt.get("eps_r", 1), f"materials.{mt['name']}.eps_r") * num(mt.get("mu_r", 1), f"materials.{mt['name']}.mu_r")
             for mt in d.get("materials", [])
             if mt.get("kind") != "metal" and mt.get("name") in used
         ]
@@ -2838,6 +2842,13 @@ def build(d: dict, values: dict):
             prop = sim.metal(pt["name"], label=label, color=color, opacity=opacity, conductivity=sigma, thickness=thick)
             if isinstance(prop, LossyMetal):
                 prop.sheet_limit = thin_limit
+        elif "dispersion" in mt:
+            from .designer_dispersion import add_wideband_material, resolved_input
+            try:
+                resolved = resolved_input(mt, lambda value: num(value, f"materials.{mt['name']}.dispersion"))
+                prop = add_wideband_material(sim, pt["name"], resolved, intent=mt, label=label, color=color, opacity=opacity)
+            except ValueError as error:
+                raise DesignError(str(error), f"materials.{mt['name']}.dispersion") from error
         else:
             tan_f = mt.get("tan_d_freq")
             prop = sim.dielectric(pt["name"], num(mt.get("eps_r", 1), f"materials.{mt['name']}.eps_r"),
@@ -3366,6 +3377,13 @@ def to_python(d: dict) -> str:
     """The design as an equivalent Python model file (one-way: for moving on to code). Thin metal
     is written as the sheets the build makes of it (``thin_sheets``, at the default values)."""
     check_design(d)
+    from .designer_dispersion import resolved_input
+    for material in d.get("materials", []):
+        if "dispersion" in material:
+            try:
+                resolved_input(material, lambda value: evaluate(value, resolve_names(d, {})))
+            except ValueError as error:
+                raise DesignError(str(error), f"materials.{material['name']}.dispersion") from error
     if any(p.get("type") == "coaxial" for p in d.get("ports", [])):
         from .coax import resolved_coax
         coax_num, _ = _evaluator(resolve_names(d, {}))
@@ -3467,6 +3485,16 @@ def to_python(d: dict) -> str:
                     loss += f", thickness={e(mt['thickness'])}"
             out.append(f"    {var} = sim.metal({pt['name']!r}{lbl}{col}{loss})")
             dp = 10
+        elif "dispersion" in mt:
+            need.add("dispersion")
+            ds = mt["dispersion"]
+            fields = ", ".join(f"{key!r}: {e(mt.get(key, default))}" for key, default in
+                               (("eps_r", 1), ("tan_d", 0), ("tan_d_freq", None), ("mu_r", 1)))
+            corners = f"'model': 'djordjevic-sarkar', 'm1': {e(ds.get('m1', 4))}, 'm2': {e(ds.get('m2', 12))}"
+            if "n_poles" in ds:
+                corners += f", 'n_poles': {ds['n_poles']!r}"
+            out.append(f"    {var} = add_wideband_material(sim, {pt['name']!r}, {{'kind': 'dielectric', {fields}, 'dispersion': {{{corners}}}}}, intent={mt!r}{lbl}{col})")
+            dp = 0
         else:
             tf = mt.get("tan_d_freq")
             tf = f", tan_d_freq=({e(tf)}) * 1e9" if tf is not None else ""
@@ -3782,6 +3810,8 @@ def to_python(d: dict) -> str:
         helpers += _PY_HELPERS["poly"]
     if "cylinder" in need:
         helpers += _PY_HELPERS["cylinder"]
+    if "dispersion" in need:
+        helpers += ["from fairbeam.designer_dispersion import add_wideband_material", "", ""]
     if "wire" in need:
         helpers += ["from fairbeam.design import add_wire", "", ""]
     if "polyhedron" in need:

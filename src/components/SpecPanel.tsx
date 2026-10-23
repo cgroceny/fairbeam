@@ -9,6 +9,7 @@ import { convergenceTextUi, efficiencyIssue, efficiencyWarningUi } from "../lib/
 import ComparisonCard from "./ComparisonCard";
 import MeasuredTimes from "./MeasuredTimes";
 import { fmt, t } from "../i18n";
+import DispersionInfo from "./DispersionInfo";
 
 // The solver card's terms in plain words: the method and the boundaries are translated where the
 // bundle carries a known value, and each has a tooltip for a newcomer (an unknown value shows as is).
@@ -205,6 +206,7 @@ export default function SpecPanel() {
                           <Show when={p.material} fallback="PEC">
                             εr {num(p.material!.eps_r, 2)}
                             <Show when={p.material!.tan_d}> · tan δ {fmt.num(p.material!.tan_d!, 6)} @ {GHz(p.material!.tan_d_freq ?? 0, 2)}</Show>
+                            <Show when={p.material!.dispersion}>{(model) => <DispersionInfo model={model()} />}</Show>
                           </Show>
                         </dd>
                       </>

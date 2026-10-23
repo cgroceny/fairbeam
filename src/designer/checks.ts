@@ -4,6 +4,7 @@
 // resolved geometry or the preview bundle (a floating feed, a hidden part, the mesh size) come
 // only from the server. scripts/check-designer.mjs compares both sides on shared cases.
 import { evaluate, nameMap, namesIn } from "./expr.ts";
+import { resolvedDatasheet } from "./dispersion.ts";
 import { portFeedEntries, portGroupProblem } from "../lib/portGroups.ts";
 import type { Axis, Design, DesignFieldPlane, DesignPart, DesignPrimitive, Expr } from "./types.ts";
 
@@ -29,7 +30,7 @@ export interface Check {
  * geometry, so the browser keeps the server warning and its conditional explanation intact. */
 export const CHEAP = new Set([
   "coax-port", "coax-mesh", "planar-port", "expr", "param-range", "part-name-duplicate", "part-empty", "brick-flat", "brick-inverted", "radius",
-  "inner-radius", "cylinder-length", "polygon-points", "polygon-area", "polygon-self-intersect",
+  "inner-radius", "cylinder-length", "polygon-points", "polygon-area", "polygon-self-intersect", "dispersion", "dispersion-band",
   "linpoly-length", "polyhedron", "polyhedron-flat", "copies", "mu-r", "eps-r", "tan-d", "tan-d-freq", "f-min", "f-order", "f-ratio", "ff-band", "nf2ff-pec",
   "cells-per-wavelength", "end-criterion", "port-length", "port-volume", "port-r", "port-reference", "port-overlap", "no-port",
   "no-metal", "resistor-r", "resistor-length", "component-path", "cone-radii", "cone-length", "torus-radii",
@@ -39,6 +40,8 @@ export const CHEAP = new Set([
 
 /** Keep CHEAP wording in sync with Python EXPLANATIONS (checked by check-designer). */
 export const EXPLANATIONS: Readonly<Record<string, string>> = {
+  "dispersion": "Use a nonmagnetic dielectric datasheet point with an explicit positive reference frequency. The corner exponents are log10(rad/s), m2 > m1. Calibration must have positive eps_inf and nonnegative strength. The optional 1–32 poles control fit resources, not certified accuracy.",
+  "dispersion-band": "The datasheet reference is outside the simulation band. A one-point causal model is an assumption, not evidence of broadband material accuracy. Check additional measured data; do not move the datasheet frequency just to remove this warning.",
   "planar-port": "A native planar port creates only its center strip. Supply the matching ground and dielectric, resolve its gaps and metal planes, and keep three equally spaced measurement planes outside PML. A real wave reference is independent of the physical feed termination. No fallback port is used.",
   "coax-mesh": "Native openEMS parity was verified on a synthetic air-line control, not every design. Energy decay alone does not prove accuracy. Compare S-parameters and impedance across at least two transverse refinements and check the snapped measurement plane. CUDA/Metal are not qualified.",
   "coax-port": "An axial coaxial TEM port needs concentric PEC conductors, a nondispersive dielectric, ordered radii and feed/probe planes inside its length. Check its radii, material references and offsets before running.",
@@ -208,8 +211,13 @@ export function designChecks(d: Design): Check[] {
   // ---- materials
   const given = (v: Expr | undefined | null) => v !== undefined && v !== null && !(typeof v === "string" && !v.trim());
   const lossAt: { w: string; k: number; tan: number; f: number }[] = []; // tan δ and its frequency, for the band check below
+  const dispersionAt: { w: string; f: number }[] = [];
   for (const [k, m] of (d.materials ?? []).entries()) {
     const w = `materials.${m.name}`;
+    if ("dispersion" in m) {
+      try { const input = resolvedDatasheet(m, (v) => evaluate(v, names)); dispersionAt.push({ w, f: input.tan_d_freq }); }
+      catch (err) { error(`${w}.dispersion`, "dispersion", (err as Error).message); }
+    }
     if (m.kind === "metal") {
       // lossy metal (design.py metal_loss): an empty conductivity is a perfect conductor
       if (given(m.conductivity)) {
@@ -223,16 +231,16 @@ export function designChecks(d: Design): Check[] {
       continue;
     }
     if (m.kind !== "dielectric") continue;
-    const mu = ev(`${w}.mu_r`, m.mu_r ?? 1);
+    const mu = ev(`${w}.mu_r`, m.mu_r === undefined ? 1 : m.mu_r);
     if (mu !== null && mu <= 0) error(`${w}.mu_r`, "mu-r", "relative permeability must be > 0");
-    const eps = ev(`${w}.eps_r`, m.eps_r ?? 1);
+    const eps = ev(`${w}.eps_r`, m.eps_r === undefined ? 1 : m.eps_r);
     if (eps !== null && eps < 1) error(`${w}.eps_r`, "eps-r", `εr = ${g(eps)} is below 1 (vacuum)`);
-    const tan = ev(`${w}.tan_d`, m.tan_d ?? 0);
+    const tan = ev(`${w}.tan_d`, m.tan_d === undefined ? 0 : m.tan_d);
     if (tan !== null && tan < 0) error(`${w}.tan_d`, "tan-d", `tan δ = ${g(tan)} is negative (a material with gain)`);
     if (m.tan_d_freq !== undefined && m.tan_d_freq !== null) {
       const f = ev(`${w}.tan_d_freq`, m.tan_d_freq);
       if (f !== null && f <= 0) error(`${w}.tan_d_freq`, "tan-d-freq", "the loss tangent frequency must be > 0");
-      if (f !== null && f > 0 && tan !== null && tan > 0) lossAt.push({ w, k, tan, f });
+      if (!("dispersion" in m) && f !== null && f > 0 && tan !== null && tan > 0) lossAt.push({ w, k, tan, f });
     }
   }
 
@@ -543,6 +551,9 @@ export function designChecks(d: Design): Check[] {
       band = [f0, f1];
       if (f1 / f0 > 50) warn("simulation.f_max", "f-ratio", `f max / f min = ${Math.round(f1 / f0)}: a band this wide needs a very long run and a fine mesh`);
     }
+  }
+  if (band) for (const { w, f } of dispersionAt) {
+    if (f < band[0] || f > band[1]) warn(`${w}.tan_d_freq`, "dispersion-band", "the datasheet reference frequency is outside the simulation band");
   }
   // a loss tangent given outside the band: openEMS applies it as a constant conductivity, so at f
   // the loss is tan δ · f_ref / f (design_checks.py loss_band)

@@ -427,22 +427,23 @@ def _read_design(module, values: dict, source_path: Path):
         elif typ == "Material":
             m = entry.get("material", {})
             if m.get("dispersion"):
-                # the Design schema has no frequency-dependent dielectric yet: writing the
-                # band-centre eps_r and tan d would drop the model without a word
-                raise ExampleConversionError(
-                    f"material {entry['name']!r} is dispersive ({m['dispersion'].get('model')}); "
-                    "Design materials are constant, so it cannot be converted without losing its frequency dependence")
+                from .designer_dispersion import captured_material
+                try:
+                    item = {"name": entry["name"], **captured_material(m["dispersion"])}
+                except ValueError as error:
+                    raise ExampleConversionError(f"material {entry['name']!r}: {error}; refusing to discard dispersion") from error
             if not m.get("isotropic", True):
                 raise ExampleConversionError(f"material {entry['name']!r} is anisotropic")
             if m.get("tan_d") is None and abs(m.get("kappa", 0.0)) > 1e-15:
                 raise ExampleConversionError(f"material {entry['name']!r} has conductivity not recorded as a loss tangent")
-            item = {"name": entry["name"], "kind": "dielectric", "eps_r": str(m["eps_r"]),
-                    "tan_d": str(m.get("tan_d") or 0)}
-            if abs(m.get("mu_r", 1.0) - 1.0) > 1e-10:
-                item["mu_r"] = str(m["mu_r"])
-            if m.get("tan_d_freq") is not None:
-                item["tan_d_freq"] = str(m["tan_d_freq"] / 1e9)
-            key = ("dielectric", item["eps_r"], item["tan_d"], item.get("tan_d_freq"), m.get("kappa"), item.get("mu_r"))
+            if not m.get("dispersion"):
+                item = {"name": entry["name"], "kind": "dielectric", "eps_r": str(m["eps_r"]),
+                        "tan_d": str(m.get("tan_d") or 0)}
+                if abs(m.get("mu_r", 1.0) - 1.0) > 1e-10:
+                    item["mu_r"] = str(m["mu_r"])
+                if m.get("tan_d_freq") is not None:
+                    item["tan_d_freq"] = str(m["tan_d_freq"] / 1e9)
+            key = ("dielectric", json.dumps({k: v for k, v in item.items() if k != "name"}, sort_keys=True))
         elif typ == "LumpedElement":
             continue
         else:
@@ -570,6 +571,8 @@ def _slot_paths(core: dict) -> list:
     scan(("simulation",), core["simulation"], ("f_min", "f_max"))
     for i, m in enumerate(core["materials"]):
         scan(("materials", i), m, ("eps_r", "mu_r", "tan_d", "tan_d_freq"))
+        if "dispersion" in m:
+            scan(("materials", i, "dispersion"), m["dispersion"], ("m1", "m2"))
     for i, part in enumerate(core["parts"]):
         scan(("parts", i), part, ("transforms",))
         for j, prim in enumerate(part["primitives"]):

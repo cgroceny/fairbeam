@@ -376,11 +376,53 @@ A new dielectric (also one added from the library) gives tan δ at `f0` when the
 parameter inside its band, else at the band center (the frequency left empty), not at a datasheet's
 1 or 10 GHz.
 
-openEMS applies tan δ as a constant conductivity, so the loss is exact at that frequency only and
+In the default **Constant permittivity / conductivity** model, openEMS applies tan δ as a constant conductivity, so the loss is exact at that frequency only and
 scales as f_ref / f elsewhere: a datasheet value at 10 GHz used at 2.45 GHz gives four times the
 loss. Give the frequency the design works at (e.g. `f0`); a check warns when it lies outside the
 band. (A datasheet value taken at 10 GHz and used at 2.45 GHz made the patch starter's radiation
 efficiency 65 % instead of 88 %; the starter now uses a value at its own frequency.)
+
+**Opt-in wideband laminate.** In a dielectric's Properties, choose **Djordjevic–Sarkar wideband**.
+Enter εr and tan δ from the same datasheet point and its explicit positive reference frequency in
+GHz. These are input data, not the band-center values displayed by a completed build. This electric
+model requires μr = 1. Existing library presets and the default constant model are unchanged.
+One point constrains a causal model but cannot establish broadband material accuracy. If the point
+lies outside the simulation band, a warning asks for additional evidence; it never rewrites the
+datasheet frequency.
+
+**Corner frequencies and fit resources** exposes `m1` and `m2` (numbers or parameter expressions).
+They are **log10 of angular frequency in rad/s**, not GHz: the default corners are 10⁴ and 10¹² rad/s,
+with `m2 > m1`. The calibrated high-frequency ε∞ must be positive and relaxation strength nonnegative.
+The optional integer pole request is 1–32; empty uses the existing automatic fit. This is a resource
+control, not an accuracy threshold. The actual number of retained nonzero poles can be smaller.
+
+The build uses the existing `DjordjevicSarkar.from_datasheet` and `Simulation.dispersive` path. It
+fits passive overdamped **Lorentz** poles over the current simulation band, using the fitter's
+existing extended sample band and timestep policy; it does not submit native Debye poles or replace
+the model with constant loss. Changing the band produces a new fit identity. Saved bundle material
+records keep the actual pole coefficients and fit report (band, errors, timestep and resolution
+findings), with the original Designer intent and resolved datasheet inputs separately in
+`dispersion.source.designer_material`. The Materials section shows the recorded fit band, retained
+poles and maximum errors. Errors compare the poles with the assumed model, not with measurements.
+The instant geometry preview is labeled as a band-center appearance only and has no fitted poles.
+
+Each pole increases material state and memory. The existing mesh-cell RAM estimate is approximate
+and does not account separately for every pole's state. The automatic mesher's dispersive bound and
+the solver's actual-timestep resolution checks remain authoritative. The thin-metal sheet heuristic
+uses the assumed passive model's static ε∞ + Δε bound, whose real permittivity decreases from that
+value toward ε∞. This bound is for the input model, not a certified bound on fitting error. Mesh and
+timestep convergence, field propagation and measured broadband agreement still need a dedicated
+study; the Designer integration's software tests do not establish them.
+
+Design save/reopen, My materials (plain numeric values), Python export and capture of those exported
+models preserve the datasheet/corner/pole intent. Arbitrary imported Lorentz/Drude models without
+supported Designer intent are refused rather than flattened. Python export rebuilds the fit for
+the requested band. CST-compatible VBA macro export explicitly warns that its numeric material values
+do **not** preserve dispersive poles; use the Python/Design route when the frequency-dependent model
+must survive. Geometry-only exports do not carry material physics. Coaxial filling, Elmer and
+periodic-cell backends retain their unsupported-material guards. PCB import omits wideband My
+materials entries because that importer currently copies only constant material properties; add
+the model explicitly in the Designer afterward.
 
 A metal is a perfect conductor (PEC) unless it has a **Conductivity** (S/m; presets Copper 5.8e7,
 Aluminum 3.5e7, Gold 4.1e7, PEC = empty) in Properties. A lossy metal's sheets become openEMS
@@ -405,7 +447,7 @@ thickness, and both the color. Saving again under the same name updates that ent
 parameter expressions cannot be saved (the library holds plain numbers). **Add** on a My materials row
 copies its values into the design like a built-in entry does, so a design file always carries a full copy of
 every material it uses and its format does not change. The dielectrics of My materials are also offered as
-the substrate of the PCB import. **My materials…** in the library dialog opens the list to rename, edit
+the substrate of the PCB import when they use the constant model. **My materials…** in the library dialog opens the list to rename, edit
 (εr, tan δ, conductivity, thickness) and delete entries, **Export** it to a JSON file
 (`{"version": 1, "materials": [...]}`) and **Import** a file from a colleague: bad entries are skipped with a
 warning, and a name already in use gets a number. The list is kept in `materials.json` in the workspace
