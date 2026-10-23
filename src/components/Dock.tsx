@@ -5,16 +5,19 @@ import LineChart, { type Series } from "../charts/LineChart";
 import StackedCharts from "../charts/StackedCharts";
 import { quantityDomain, quantityLines } from "../charts/quantityAxes";
 import { useSize } from "../charts/useSize";
-import PolarChart from "../charts/PolarChart";
+import { PatternCutPanel, type PatternEntry } from './PatternCutPanel';
+import { patternCutChoice } from '../lib/patternCutStore';
+import { analyzeCut, cutLabel, cutSpecs } from '../lib/patternMetrics';
+import { nearestFarfield } from '../compare/series';
 import SmithChart from "../charts/SmithChart";
 import FigureMenu from "./FigureMenu";
 import { radioGroupKeys } from "../lib/a11y";
 import { bundle, dockTab, farfieldIndex, setDockTab, setFarfieldIndex, setLayers, source, type DockTab } from "../state";
 import { hasSParameterPhase, sMatrix } from "../lib/sparams";
-import { nearestIndex, patternCut, sweep } from "../lib/rf";
+import { nearestIndex, sweep } from "../lib/rf";
 import { freqText, ghzText, num, withUnit } from "../lib/format";
 import { efficiencyIssue, efficiencyWarningUi } from "../lib/runText";
-import { effectiveQuantity, farfieldSummary, QUANTITY_LABEL, quantityGrid, quantityMax } from "../lib/farfieldQuantity";
+import { effectiveQuantity, farfieldSummary, quantityGrid } from "../lib/farfieldQuantity";
 import { patternQuantity } from "../lib/patternQuantityStore";
 import { PatternQuantitySelect, totalEffText } from "./FarfieldCard";
 import type { Signals } from "../types";
@@ -126,6 +129,7 @@ export default function Dock() {
   // Copy data and CSV follow the plot: the picked S_ij, dB or phase, the Smith chart's port
   const dataOptions = (): ResultDataOptions => ({ format: tableFormat(dataFormat()),
     patternQuantity: shownQuantity(), patternPort: storedFF()?.port,
+    patternCut: patternCutChoice(), patternPrincipalAvailable: !comparing() && !arrayMode(), patternFallbackPhi: cutPhi(),
     // The Pattern plot overlays both grids. The Array/Element toggle selects only the 3D
     // view; copying the plot must retain its array trace as well as the picked element.
     patternEntries: arrayMode() && steeredFarField() && storedFF() ? [
@@ -237,7 +241,7 @@ export default function Dock() {
   const cmpZ = createMemo(() => (cmp() ? compareLines(cmp()!, (s) => (zPart() === "re" ? s.zRe : s.zIm)) : null));
   const cmpCuts = createMemo(() => {
     const q = patternQuantity();
-    return cmp() && ff() ? compareCuts(cmp()!, ff()!.f, cutPhi(), ff(), (b, x) => quantityGrid(b, x, q)) : null;
+    return cmp() && ff() ? compareCuts(cmp()!, ff()!.f, cutSpecs(patternCutChoice(), false, cutPhi())[0], ff(), (b, x) => quantityGrid(b, x, q)) : null;
   });
   /** the quantity the cuts show (directivity for the array overlay and entries without it) */
   const shownQuantity = () => (arrayMode() && steeredFarField() && storedFF()) || !bundle() || !ff() ? "directivity" : effectiveQuantity(bundle()!, ff()!, patternQuantity());
@@ -294,29 +298,29 @@ export default function Dock() {
         ]
       : [];
   };
-  const cuts = () => {
+  const patternEntries = (): PatternEntry[] => {
     const f = ff();
     const b = bundle();
     if (!f || !b) return [];
-    const half = !!b.half_space;
+    const comparison = cmp();
+    if (comparison) return comparison.flatMap((entry, i) => {
+      const field = i === 0 ? f : nearestFarfield(entry.bundle, f.f, f.port);
+      return field ? [{ id: `cmp-${i}`, label: `${entry.label} · ${freqText(field.f)}`, color: SERIES_COLORS[i], bundle: entry.bundle, field, quantity: patternQuantity() }] : [];
+    });
     const arr = steeredFarField();
     const el = storedFF();
     if (arrayMode() && arr && el) {
-      const a = patternCut(arr.theta, arr.phi, arr.directivity_dbi, cutPhi(), half);
-      const e = patternCut(el.theta, el.phi, el.directivity_dbi, cutPhi(), half);
       return [
-        { id: "array", label: `${t("farfield.arrayTag")} · φ = ${cutPhi()}°`, color: "--al-series-1", angle: a.angle, value: a.value },
-        { id: "element", label: `${t("dock.results.element", { port: el.port ?? "?" })} · φ = ${cutPhi()}°`, color: "--al-series-2", angle: e.angle, value: e.value },
+        { id: 'array', label: t('farfield.arrayTag'), color: '--al-series-1', bundle: b, field: arr, quantity: 'directivity' },
+        { id: 'element', label: t('dock.results.element', { port: el.port ?? '?' }), color: '--al-series-2', bundle: b, field: el, quantity: 'directivity' },
       ];
     }
-    const grid = quantityGrid(b, f, patternQuantity());
-    const a = patternCut(f.theta, f.phi, grid, 0, half);
-    const c = patternCut(f.theta, f.phi, grid, 90, half);
-    return [
-      { id: "phi0", label: "φ = 0° (xz)", color: "--al-series-1", angle: a.angle, value: a.value },
-      { id: "phi90", label: "φ = 90° (yz)", color: "--al-series-2", angle: c.angle, value: c.value },
-    ];
+    return [{ id: 'current', label: '', color: '--al-series-1', bundle: b, field: f, quantity: patternQuantity() }];
   };
+  const cuts = () => patternEntries().flatMap(entry => cutSpecs(patternCutChoice(), !comparing() && !arrayMode(), cutPhi()).map(spec => {
+    const cut = analyzeCut(entry.field.theta, entry.field.phi, quantityGrid(entry.bundle, entry.field, entry.quantity), spec, !!entry.bundle.half_space);
+    return { ...cut, id: entry.id, color: entry.color, label: `${entry.label} ${cutLabel(spec)}`.trim() };
+  }));
 
   const compareTableData = (): TableData | null => {
     const tr = cmp();
@@ -353,8 +357,9 @@ export default function Dock() {
         const cuts = cmpCuts();
         if (!cuts?.length) return null;
         const angles = [...new Set(cuts.flatMap((c) => c.angle))].sort((a, b) => a - b);
-        return compareTable("θ (°)", angles, cuts, [
-          { label: `φ = ${cutPhi()}° (dBi)`, values: (i) => interp(cuts[i].angle, cuts[i].value, angles) },
+        const spec = cutSpecs(patternCutChoice(), false, cutPhi())[0];
+        return compareTable(`${spec.kind === 'conical' ? 'φ' : 'θ'} (°)`, angles, cuts, [
+          { label: `${cutLabel(spec)} (dBi)`, values: (i) => interp(cuts[i].angle, cuts[i].value, angles) },
         ]);
       }
       default:
@@ -382,8 +387,8 @@ export default function Dock() {
         const c = cuts();
         if (!c.length) return null;
         return {
-          columns: ["θ (°)", `${c[0].label} (dBi)`, `${c[1].label} (dBi)`],
-          rows: c[0].angle.map((a, i) => [a, c[0].value[i], c[1].value[i] ?? "—"]),
+          columns: [`${c[0].spec.kind === 'conical' ? 'φ' : 'θ'} (°)`, ...c.map(cut => `${cut.label} (dBi)`)],
+          rows: c[0].angle.map((a, i) => [a, ...c.map(cut => Number.isFinite(cut.value[i]) ? cut.value[i] : '—')]),
         };
       }
       case "signals": {
@@ -464,12 +469,6 @@ export default function Dock() {
           </Show>
           <Show when={dockTab() === "pattern" && bundle() && storedFF() && !(arrayMode() && farfieldOverride())}>
             <PatternQuantitySelect bundle={bundle()!} ff={storedFF()!} class="btn btn-ghost btn-sm" />
-          </Show>
-          <Show when={(comparing() || arrayMode()) && dockTab() === "pattern"}>
-            <div class="seg seg-sm" role="radiogroup" aria-label={t("results.pattern.cut")} onKeyDown={radioGroupKeys}>
-              <button class="seg-btn" role="radio" aria-checked={cutPhi() === 0} onClick={() => setCutPhi(0)}>φ 0°</button>
-              <button class="seg-btn" role="radio" aria-checked={cutPhi() === 90} onClick={() => setCutPhi(90)}>φ 90°</button>
-            </div>
           </Show>
           <ComparePicker />
           <FigureMenu />
@@ -584,17 +583,8 @@ export default function Dock() {
               </Match>
               <Match when={dockTab() === "pattern"}>
                 <Show when={ff()} fallback={<div class="panel-empty">{t("dock.results.noFarField")}</div>}>
-                  <div class="pattern-view">
-                    <PolarChart
-                      ariaLabel={cmpCuts() ? t("dock.results.aria.cutCompared", { quantity: QUANTITY_LABEL[shownQuantity()], phi: cutPhi() }) : t("results.pattern.cuts", { quantity: QUANTITY_LABEL[shownQuantity()] })}
-                      series={cmpCuts() ?? cuts()}
-                      directLabels={!!cmpCuts()}
-                      max={Math.ceil(Math.max(...[shownQuantity() === "directivity" ? ff()!.dmax_dbi : quantityMax(bundle()!, ff()!, shownQuantity()), ...(cmpCuts() ?? cuts()).flatMap((c) => c.value)].filter(Number.isFinite), -60))}
-                      range={30}
-                      half={!!bundle()?.half_space && !(cmp() ?? []).some((t) => !t.bundle.half_space)}
-                      unit="dBi"
-                    />
-                    <dl class="kv pattern-stats">
+                  <PatternCutPanel entries={patternEntries()} principalAvailable={!comparing() && !arrayMode()}>
+                    <dl class="kv">
                       <Show
                         when={arrayMode() && steeredFarField() && storedFF()}
                         fallback={<>
@@ -619,7 +609,7 @@ export default function Dock() {
                       </Show>
                       <dt>θ = 0°</dt><dd>{t("dock.results.zenith")}</dd>
                     </dl>
-                  </div>
+                  </PatternCutPanel>
                 </Show>
               </Match>
               <Match when={dockTab() === "signals"}>

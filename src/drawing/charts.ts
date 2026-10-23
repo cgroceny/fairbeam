@@ -5,6 +5,8 @@
 import type { Bundle, FarField } from "../types";
 import { magDb, pairLabel, sMatrix } from "../lib/sparams.ts";
 import { patternCut, sweep } from "../lib/rf.ts";
+import { analyzeCut, cutLabel, cutSpecs, patternMetrics, type PatternCutChoice } from '../lib/patternMetrics.ts';
+import { effectiveQuantity, quantityGrid, type PatternQuantity } from '../lib/farfieldQuantity.ts';
 import { textWidth } from "./metrics.ts";
 import { circle, group, line, n, polygon, polyline, rect, svgDoc, text, type Pt } from "./svg.ts";
 
@@ -138,9 +140,14 @@ export function lineChartSvg(spec: LineChartSpec): string {
   // data
   const nS = spec.series.length;
   spec.series.forEach((s, k) => {
-    const pts: Pt[] = [];
-    for (let i = 0; i < s.x.length; i++) if (Number.isFinite(s.y[i])) pts.push([X(s.x[i]), Y(Math.max(yt.lo, Math.min(yt.hi, s.y[i])))]);
-    out.push(polyline(pts, { stroke: "#000", "stroke-width": LW_DATA, "stroke-dasharray": s.dash, "stroke-linejoin": "round" }));
+    let pts: Pt[] = [];
+    for (let i = 0; i < s.x.length; i++) {
+      if (Number.isFinite(s.y[i])) pts.push([X(s.x[i]), Y(Math.max(yt.lo, Math.min(yt.hi, s.y[i])))]);
+      if ((!Number.isFinite(s.y[i]) || i === s.x.length - 1) && pts.length) {
+        out.push(polyline(pts, { stroke: "#000", "stroke-width": LW_DATA, "stroke-dasharray": s.dash, "stroke-linejoin": "round" }));
+        pts = [];
+      }
+    }
     if (s.marker) {
       const every = Math.max(1, Math.ceil(s.x.length / 11));
       const off = Math.floor((every * (k + 0.5)) / nS);
@@ -257,11 +264,11 @@ export interface PolarCut {
   marker?: Marker;
 }
 
-export function patternFigureFor(b: Bundle, ff: FarField, opt: FigureOptions & { title?: string; cuts?: PolarCut[] } = {}): string | null {
-  const half = !!b.half_space;
+export function patternFigureFor(b: Bundle, ff: FarField, opt: FigureOptions & { title?: string; cuts?: PolarCut[]; half?: boolean; range?: number; peakLabel?: string; topDb?: number; description?: string } = {}): string | null {
+  const half = opt.half ?? !!b.half_space;
   const width = opt.widthMm ?? COLUMN_WIDTH.single;
-  const range = 30;
-  const topDb = Math.ceil(Math.max(ff.dmax_dbi, ...(opt.cuts ?? []).flatMap((c) => c.value.filter(Number.isFinite))) / 5) * 5;
+  const range = opt.range ?? 30;
+  const topDb = Math.ceil((opt.topDb ?? Math.max(ff.dmax_dbi, ...(opt.cuts ?? []).flatMap((c) => c.value.filter(Number.isFinite)))) / 5) * 5;
   // legend rows (wrapped to the figure width)
   const legendItems = opt.cuts?.map((c) => c.label) ?? ["φ = 0° (xz plane)", "φ = 90° (yz plane)"];
   const legendRows: number[][] = [[]];
@@ -362,7 +369,7 @@ export function patternFigureFor(b: Bundle, ff: FarField, opt: FigureOptions & {
     out.push(group(ms));
   });
   out.push(text(1, FS_LABEL + 0.5, opt.title ?? `Directivity (dBi), f = ${ghz(ff.f)} GHz`, { "font-size": FS_LABEL }));
-  out.push(text(width - 1, FS_LABEL + 0.5, `Dmax ${ff.dmax_dbi.toFixed(2)} dBi`, { "font-size": FS_TICK, "text-anchor": "end" }));
+  out.push(text(width - 1, FS_LABEL + 0.5, opt.peakLabel ?? `Dmax ${ff.dmax_dbi.toFixed(2)} dBi`, { "font-size": FS_TICK, "text-anchor": "end" }));
   // legend: rows under the plot
   const itemW = cuts.map((c) => 7 + 1.5 + textWidth(c.label, FS_TICK) + 4);
   const leg: string[] = [];
@@ -379,7 +386,60 @@ export function patternFigureFor(b: Bundle, ff: FarField, opt: FigureOptions & {
     }
   });
   out.push(group(leg, { class: "legend" }));
-  return svgDoc(width, height, group(out), `${b.name} — pattern at ${ghz(ff.f)} GHz`, `θ measured from +z; ${half ? "upper half space (infinite ground)" : "full sphere"}; radius ${range} dB below ${topDb} dBi`);
+  return svgDoc(width, height, group(out), `${b.name} — pattern at ${ghz(ff.f)} GHz`, opt.description ?? `θ measured from +z; ${half ? "upper half space (infinite ground)" : "full sphere"}; radius ${range} dB below ${topDb} dBi`);
+}
+
+/** Current selected cut for publication SVG/PDF. Standard report figures keep their explicit
+ * principal-plane default; callers must pass selection instead of reading UI state here. */
+export function selectedPatternFigure(b: Bundle, ff: FarField, choice: PatternCutChoice, quantity: PatternQuantity,
+  projection: 'polar' | 'cartesian', opt: FigureOptions & { principalAvailable?: boolean; fallbackPhi?: number } = {}): string | null {
+  const q = effectiveQuantity(b, ff, quantity), grid = quantityGrid(b, ff, q);
+  const cuts = cutSpecs(choice, opt.principalAvailable ?? true, opt.fallbackPhi ?? 0).map(spec => ({
+    ...analyzeCut(ff.theta, ff.phi, grid, spec, !!b.half_space), label: cutLabel(spec),
+  }));
+  const values = cuts.flatMap(c => c.value.filter(Number.isFinite));
+  if (!values.length) return null;
+  const metrics = cuts.map(c => ({ cut: c.label, ...patternMetrics(c, ff.theta, ff.phi, grid, !!b.half_space, q) }));
+  const quantityName = { directivity: 'Directivity', gain: 'Gain', realized: 'Realized gain', rhcp: 'RHCP directivity', lhcp: 'LHCP directivity' }[q];
+  const title = `${quantityName} (dBi), ${ghz(ff.f)} GHz · ${cuts.map(c => c.label).join(' / ')}`;
+  const description = `Grid-limited estimates, not exact lobes. HPBW: adjacent -3 dB crossings; SLL: resolved peaks outside the main lobe with a peak -40 dB detection floor. F/B: cut peak versus its 3D antipode (180-theta, phi+180); no half-space mirroring. ${cuts.some(c => c.interpolated) ? 'Adjacent dB interpolation; source angular resolution unchanged.' : 'Stored samples.'} ${JSON.stringify(metrics)}`;
+  const withReadouts = (svg: string) => {
+    const width = opt.widthMm ?? 88;
+    const height = Number(svg.match(/height="([\d.]+)mm"/)?.[1]);
+    const value = (m: { value: number | null; reason?: string }, unit: string) => m.value === null ? `N/A (${m.reason})` : `${m.value.toFixed(2)} ${unit}`;
+    const rows = metrics.flatMap(m => [
+      `${m.cut}: HPBW ${value(m.hpbw, 'deg')}; SLL ${value(m.sll, 'dB')}`,
+      `F/B ${value(m.frontBack, 'dB')}; step ${m.spacing?.map(v => v.toFixed(3)).join('–') ?? 'N/A'} deg`,
+    ]);
+    rows.push('Grid-limited estimates; SLL detection floor: peak -40 dB.', 'F/B: cut peak versus its 3D antipode; no half-space mirroring.');
+    const wrapped = rows.flatMap(row => {
+      const lines: string[] = []; let current = '';
+      for (const word of row.split(' ')) {
+        const next = current ? `${current} ${word}` : word;
+        if (current && textWidth(next, 2.2) > width - 4) { lines.push(current); current = word; }
+        else current = next;
+      }
+      if (current) lines.push(current);
+      return lines;
+    });
+    const extra = wrapped.length * 4 + 4, nextHeight = height + extra;
+    const footer = group([rect(0, height, width, extra, { fill: '#fff', stroke: 'none' }),
+      ...wrapped.map((row, i) => text(2, height + 4 + i * 4, row, { 'font-size': 2.2 }))]);
+    return svg.replace(`height="${n(height)}mm"`, `height="${n(nextHeight)}mm"`)
+      .replace(`viewBox="0 0 ${n(width)} ${n(height)}"`, `viewBox="0 0 ${n(width)} ${n(nextHeight)}"`)
+      .replace('</svg>', `${footer}</svg>`);
+  };
+  if (projection === 'cartesian') {
+    const svg = lineChartSvg({ width: opt.widthMm ?? 88, height: opt.heightMm ?? 65, title,
+      xLabel: `${cuts[0].spec.kind === 'conical' ? 'φ' : 'θ'} (deg)`, yLabel: `${quantityName} (dBi)`,
+      series: cuts.map((c, i) => ({ label: c.label, x: c.angle, y: c.value, dash: i ? '2 1' : undefined })) });
+    // svgDoc performs XML escaping for the numerical/provenance description.
+    const desc = svgDoc(1, 1, '', '', description).match(/<desc>[\s\S]*?<\/desc>/)?.[0] ?? '';
+    return withReadouts(svg.replace('</svg>', `${desc}</svg>`));
+  }
+  const svg = patternFigureFor(b, ff, { ...opt, title, cuts, range: 40, topDb: Math.max(...values), peakLabel: '', description,
+    half: cuts[0].spec.kind === 'elevation' && !!b.half_space });
+  return svg ? withReadouts(svg) : null;
 }
 
 /**

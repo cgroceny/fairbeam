@@ -1,0 +1,13 @@
+.pattern-analyzer { display: flex; flex-direction: column; height: 100%; min-height: 0; min-width: 0; }
+.pattern-cut-controls { padding: var(--al-space-2) var(--al-space-3); border-bottom: 1px solid var(--al-border); }
+.pattern-cut-controls label { display: flex; align-items: center; }
+.pattern-cut-controls input { width: 7ch; }
+.pattern-analyzer-body { flex: 1; min-height: 0; display: grid; grid-template-columns: minmax(0, 1fr) minmax(220px, 280px); }
+.pattern-analyzer-chart { min-width: 0; min-height: 180px; }
+.pattern-analyzer-details { min-width: 0; overflow: auto; padding: var(--al-space-2) var(--al-space-3); border-left: 1px solid var(--al-border); }
+.pattern-analyzer-details .kv dd { white-space: normal; overflow-wrap: anywhere; }
+@media (max-width: 760px) {
+  .pattern-analyzer-body { grid-template-columns: 1fr; overflow: auto; }
+  .pattern-analyzer-chart { height: 280px; }
+  .pattern-analyzer-details { overflow: visible; border-left: 0; border-top: 1px solid var(--al-border); }
+}

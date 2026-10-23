@@ -4,11 +4,12 @@
 import type { Series } from "../charts/LineChart";
 import { plotQuantities, type PlotFormat, type PlotQuantity } from "../charts/plotQuantities.ts";
 import type { PolarSeries } from "../charts/PolarChart";
-import { nearestIndex, patternCut, sweep, type Sweep } from "../lib/rf.ts";
+import { nearestIndex, sweep, type Sweep } from "../lib/rf.ts";
 import { hasSParameterPhase, magDb, mappedPairLabel, pairLabel, phaseDeg, sMatrix } from "../lib/sparams.ts";
 import type { Bundle, FarField } from "../types";
 import { fmt } from "../i18n/index.ts";
 import { drivenPort } from "../lib/farfieldQuantity.ts";
+import { analyzeCut } from '../lib/patternMetrics.ts';
 
 /** The categorical slots in their fixed order (docs/DESIGN.md, Charts): one per compared run or
  * project. Eight validate on the adjacent pairlist that line charts use; past eight, nothing. */
@@ -182,13 +183,14 @@ export function nearestFarfield(b: Bundle, fHz: number, port?: number): FarField
 
 /** One pattern cut per project at the far-field frequency nearest to `fHz`; `grid` picks the plotted
  * quantity of each far field (gain, realized gain: lib/farfieldQuantity.ts), directivity by default. */
-export function compareCuts(ts: Trace[], fHz: number, phi: 0 | 90, current?: FarField, grid?: (b: Bundle, ff: FarField) => number[][]): PolarSeries[] {
+export function compareCuts(ts: Trace[], fHz: number, phi: number | import('../lib/patternMetrics').PatternCutSpec, current?: FarField, grid?: (b: Bundle, ff: FarField) => number[][]): PolarSeries[] {
   const out: PolarSeries[] = [];
   ts.forEach((t, i) => {
     // the open project (trace 0) shows the pattern selected in the dock, e.g. port 3's of an array
     const ff = i === 0 && current ? current : nearestFarfield(t.bundle, fHz, current?.port);
     if (!ff) return;
-    const c = patternCut(ff.theta, ff.phi, grid ? grid(t.bundle, ff) : ff.directivity_dbi, phi, !!t.bundle.half_space);
+    const c = analyzeCut(ff.theta, ff.phi, grid ? grid(t.bundle, ff) : ff.directivity_dbi,
+      typeof phi === 'number' ? { kind: 'elevation', angle: phi } : phi, !!t.bundle.half_space);
     const shifted = Math.abs(ff.f - fHz) / fHz > 0.005;
     out.push({
       id: `cmp-${i}`,

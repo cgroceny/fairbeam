@@ -6,6 +6,9 @@ import { compareBundles, comparing } from "../compare/store";
 import { traces } from "../compare/series";
 import { downloadFailedMessage, downloadMessage, revealDownloadedFile } from "../lib/download";
 import { fmt as nf, t, tEn, type Params } from "../i18n";
+import { patternCutChoice, patternProjection } from '../lib/patternCutStore';
+import { patternQuantity } from '../lib/patternQuantityStore';
+import { cutPhi } from '../compare/store';
 
 // The figure generators and the PDF path (jsPDF, svg2pdf) load on first use, not with the app.
 type Charts = typeof import("../drawing/charts");
@@ -68,7 +71,8 @@ export default function FigureMenu() {
     const ffs = b.results.farfield;
     ffs.forEach((ff, i) => {
       const multi = ffs.some((g, j) => j !== i && g.f === ff.f) && ff.port != null;
-      list.push({ label: multi ? "figure.patternPort" : "figure.pattern", params: { f: ff.f / 1e9, port: ff.port }, name: (C) => `pattern_${C.ffTag(ffs, i)}`, make: (C, w) => C.patternFigure(b, i, { widthMm: w }) });
+      list.push({ label: multi ? "figure.patternPort" : "figure.pattern", params: { f: ff.f / 1e9, port: ff.port }, name: (C) => `pattern_${C.ffTag(ffs, i)}`,
+        make: (C, w) => C.selectedPatternFigure(b, ff, patternCutChoice(), patternQuantity(), patternProjection(), { widthMm: w, principalAvailable: !comparing(), fallbackPhi: cutPhi() }) });
     });
     return list.map((item) => ({ ...item, source: b }));
   };

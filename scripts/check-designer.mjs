@@ -773,6 +773,7 @@ console.log(`check-designer: ${checks} checks, ${failures} failed (${fx.expressi
 await import('./check-result-session-state.mjs');
 await import('./check-planar-ports.mjs');
 await import('./check-pattern-resolution.mjs');
+await import('./check-pattern-cuts.mjs');
 // Keep these focused regressions in the normal designer gate. Isolated processes prevent
 // browser-like globals in other fixtures from affecting their Node/module checks.
 for (const name of ["geometry-cache", "results-tabs", "save-as"]) {

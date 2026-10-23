@@ -8,6 +8,21 @@
 - **Radiation efficiency** = Prad / P_acc. P_acc = ½·Re(u·i*) is the power accepted at the port. It is stored at the far-field frequencies and, with `--efficiency [N]` (a design's `monitors.efficiency`), at N frequencies across the band, with a reliability flag per frequency ([BUNDLE.md](BUNDLE.md#efficiency)). A model declared lossless (`sim.lossless = True`) reports 1 while Prad / P_acc is within 5 % of 1 ([BUNDLE.md](BUNDLE.md#results)).
 - **Gain** = efficiency · Dmax. **Realized gain** = gain · (1 − |S11|²).
 
+## Pattern cut analyzer
+
+The **Pattern** tab in Designs and Examples offers principal planes (φ 0°/90°), an arbitrary fixed-φ elevation plane, and an azimuth/conical cut at fixed θ. The **Azimuth θ 90°** button selects the equatorial plane. Elevation plots use signed θ (negative angles are the opposite φ half-plane); conical plots use signed φ around the chosen θ ring. Polar and Cartesian views use the same samples. Comparison uses one selected cut per run and names each run's actual nearest stored far-field frequency; Array overlays apply the cut to both the synthesized array and selected element.
+
+Unsampled cuts interpolate only adjacent finite samples in dB, using the actual periodic φ seam interval. No theta extrapolation or half-space mirroring is performed. Missing samples remain gaps, including a missing zenith between elevation half-planes; incomplete polar cuts are not closed. The displayed spacing is the actual plotted min/max angular interval, including a shorter seam. Interpolation does not recover angular resolution or establish EM convergence.
+
+- **Cut peak** is a sampled estimate; flat patterns or equal competing maxima have no unique peak.
+- **HPBW** is the separation of the nearest −3 dB crossings on either side of that peak, linearly estimated between adjacent finite samples. A gap or unresolved crossing produces N/A. A gap elsewhere does not erase a locally resolved width.
+- **SLL** is the highest resolved sampled local maximum outside the main lobe, bounded by its first local minima. It requires a complete, finite circular cut and uses an explicit detection floor of peak −40 dB. No resolved sidelobe, sidelobes below that floor, incomplete coverage and gaps are different N/A reasons; none becomes zero dB.
+- **Peak / antipode (F/B)** compares the selected cut's sampled peak with its true 3D antipode, `(180° − θ, φ + 180°)`. For a non-equatorial conical cut the back direction lies on another θ ring, outside the plotted cut. Both directions require stored angular coverage and finite adjacent values. Half-space data or an unavailable antipode give N/A.
+
+Directivity, gain, realized gain and available RHCP/LHCP partial directivities use the same extraction and metric rules. Quantity availability still applies, and each trace names the quantity actually shown. The analyzer does not change solver data, the Array steering weights, or the 3D view. CSV/copied pattern data from the active result include the selected cut coordinates, quantity, metric estimates/statuses and interpolation/spacing metadata; standard report data without a cut selection retain the complete stored grid.
+
+The Examples publication-figure menu uses the selected cut, quantity and projection for the active stored run. Its SVG/PDF source includes visible estimate readouts and qualifications, with detailed numerical metrics in SVG description metadata. On-screen figure export preserves the visible chart. Standard generated report packages retain their explicit principal-plane defaults; they do not silently inherit interactive UI state. All cut controls are verified against deterministic synthetic analytic fields, not a new solver or measurement result.
+
 ## Accuracy notes
 
 - openEMS uses a staircase (Yee) FDTD mesh. Slanted and curved edges snap to mesh lines, and zero-thickness sheets sit on grid planes. Expect resonances to shift by a few percent unless the openEMS mesh is fine on the metal edges.

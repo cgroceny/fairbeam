@@ -82,8 +82,8 @@ export function patternCut(theta: number[], phi: number[], d: number[][], phiDeg
   const value: number[] = [];
   const maxTheta = halfSpace ? 90 : 180;
   // negative side: phi + 180, theta descending
-  for (let i = theta.length - 1; i > 0; i--) {
-    if (theta[i] > maxTheta || !negative) continue;
+  for (let i = theta.length - 1; i >= 0; i--) {
+    if (theta[i] === 0 || theta[i] > maxTheta || !negative) continue;
     angle.push(-theta[i]);
     value.push(negative.values[i]);
   }

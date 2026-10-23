@@ -9,6 +9,7 @@ import { effectiveQuantity, efficiencyData, mismatchAt, quantityGrid, type Patte
 import { phasorColumns } from "../scene/fieldPlaneModel.ts";
 import { t, tEn } from "../i18n/index.ts";
 import { summaryTable } from "./runSummary.ts";
+import { analyzeCut, cutLabel, cutSpecs, patternMetrics, type PatternCutChoice } from '../lib/patternMetrics.ts';
 
 export interface ResultDataTable {
   header: string[];
@@ -33,6 +34,10 @@ export interface ResultDataOptions {
   patternQuantity?: PatternQuantity;
   /** Driven port of the selected pattern; compared runs without that port have no samples. */
   patternPort?: number;
+  /** Selected plotted cut(s). Omitted retains the full stored grid export used in reports. */
+  patternCut?: PatternCutChoice;
+  patternPrincipalAvailable?: boolean;
+  patternFallbackPhi?: number;
   /** Standalone pattern overlay: each displayed grid, including a synthesized array. */
   patternEntries?: { label: string; field: FarField }[];
   /** the summary of several runs: add the Δ columns (the Summary tab's "Δ vs A" view is on) */
@@ -173,6 +178,20 @@ export function resultDataTable(bundle: Bundle | null | undefined, view: ResultV
     const withPort = ffs.some((x) => x.port != null);
     // the shown quantity (gain, realized gain, a circular part) beside the directivity
     const q = options.patternQuantity ? effectiveQuantity(bundle, ff, options.patternQuantity) : "directivity";
+    if (options.patternCut) {
+      const grid = quantityGrid(bundle, ff, q);
+      return {
+        header: [...(withPort ? ['Port'] : []), 'f (GHz)', 'Cut', 'Cut angle (deg)', 'theta (deg)', 'phi (deg)', `${tEn(`farfield.quantity.${q}`)} (dBi)`,
+          'HPBW estimate (deg)', 'HPBW status', 'SLL estimate (dB; floor -40 dB)', 'SLL status', 'Peak / 3D antipode (dB)', 'F/B status', 'Adjacent dB interpolation', 'Cut min spacing (deg)', 'Cut max spacing (deg)'],
+        rows: cutSpecs(options.patternCut, options.patternPrincipalAvailable ?? true, options.patternFallbackPhi ?? 0).flatMap(spec => {
+          const cut = analyzeCut(ff.theta, ff.phi, grid, spec, !!bundle.half_space);
+          const metrics = patternMetrics(cut, ff.theta, ff.phi, grid, !!bundle.half_space, q);
+          return cut.angle.map((a, i) => [...(withPort ? [ff.port ?? null] : []), ff.f / 1e9, cutLabel(spec), a, cut.theta[i], cut.phi[i], finiteCell(cut.value[i]),
+            metrics.hpbw.value, metrics.hpbw.reason ?? 'sampled estimate', metrics.sll.value, metrics.sll.reason ?? 'sampled estimate',
+            metrics.frontBack.value, metrics.frontBack.reason ?? 'sampled estimate', cut.interpolated ? 'yes' : 'no', ...(metrics.spacing ?? [null, null])]);
+        }),
+      };
+    }
     const extra = q === "directivity" ? null : quantityGrid(bundle, ff, q);
     const rows: (string | number | null)[][] = [];
     ff.theta.forEach((theta, i) => ff.phi.forEach((phi, j) => {

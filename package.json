@@ -65,6 +65,7 @@
     "check:designer-feedback": "node scripts/check-designer-feedback.mjs",
     "check:farfield": "node --experimental-strip-types scripts/check-farfield-quantities.mjs",
     "check:pattern-resolution": "node --experimental-strip-types scripts/check-pattern-resolution.mjs",
+    "check:pattern-cuts": "node --experimental-strip-types scripts/check-pattern-cuts.mjs",
     "check:telemetry": "node scripts/check-telemetry-api.mjs && node scripts/check-telemetry-rust.mjs && node scripts/check-telemetry-redis.mjs",
     "check:runtime": "node --experimental-strip-types scripts/check-runtime-feedback.mjs && node scripts/check-runtime-splash.mjs",
     "check:general-settings": "node --experimental-strip-types scripts/check-general-settings.mjs",
