@@ -9,6 +9,10 @@ import puppeteer from 'puppeteer-core';
 import { startStack, chromePath, root } from './scenarios/stack.mjs';
 import { Session, auditInPage } from './scenarios/harness.mjs';
 
+if (process.env.CI !== 'true' && process.env.FAIRBEAM_ALLOW_LOCAL_BROWSER !== '1') {
+  throw new Error('Browser acceptance runs in CI; local use requires explicit user permission.');
+}
+
 const out = resolve(process.env.FAIRBEAM_TEST_ARTIFACTS || join(tmpdir(), `fairbeam-group-delay-${Date.now()}`));
 await mkdir(out, { recursive: true });
 const template = JSON.parse(await readFile(join(root, 'public/projects/patch-antenna.json'), 'utf8'));
@@ -30,6 +34,14 @@ try {
     const context = await browser.createBrowserContext();
     await context.overridePermissions(stack.url, ['clipboard-read', 'clipboard-write', 'clipboard-sanitized-write']);
     const page = await context.newPage();
+    const blockedStarts = [];
+    await page.setRequestInterception(true);
+    page.on('request', req => {
+      const path = new URL(req.url()).pathname;
+      if (req.method() === 'POST' && /^\/api\/(?:runs|sweeps|convergence|optimizations|research\/runs|render-jobs)\/?$/.test(path)) {
+        blockedStarts.push(path); void req.abort();
+      } else void req.continue();
+    });
     await page.setViewport({ width: 1440, height: 1000 });
     await page.evaluateOnNewDocument(language => localStorage.setItem('fairbeam.generalSettings', JSON.stringify({ language })), lang);
     const s = new Session(page, { lang, scenario: 'group-delay', url: stack.url });
@@ -94,7 +106,8 @@ try {
     rows = await readRows(); rows.slice(1).forEach(row => assert.ok(Math.abs(Number(row[1]) - .6) < 1e-10));
     await page.screenshot({ path: join(out, `designer-group-delay-${lang}.png`) });
     assert.deepEqual(await page.evaluate(auditInPage, '.dw-result .chart-stack'), []);
-    outcomes.push({ lang, examples: true, designer: true, comparison: true, table: true, clipboard: true, aperture: true });
+    assert.deepEqual(blockedStarts, [], 'post-processing never starts solver, study or render work');
+    outcomes.push({ lang, examples: true, designer: true, comparison: true, table: true, clipboard: true, aperture: true, attemptedStarts: blockedStarts });
     await context.close();
   }
   await writeFile(join(out, 'result.json'), JSON.stringify(outcomes, null, 2));
