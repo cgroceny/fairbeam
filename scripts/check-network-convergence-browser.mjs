@@ -9,11 +9,14 @@ import puppeteer from "puppeteer-core";
 import { startStack, chromePath } from "./scenarios/stack.mjs";
 import { Session, auditInPage } from "./scenarios/harness.mjs";
 
+if (process.env.CI !== "true" && process.env.FAIRBEAM_ALLOW_LOCAL_BROWSER !== "1") {
+  throw new Error("Local browser acceptance requires explicit user permission.");
+}
 const out = resolve(process.env.FAIRBEAM_TEST_ARTIFACTS
   ? join(process.env.FAIRBEAM_TEST_ARTIFACTS, "network-convergence")
   : join(tmpdir(), `fairbeam-network-convergence-${Date.now()}`));
 await mkdir(out, { recursive: true });
-const results = [];
+const results = [], forbidden = [];
 let stack, browser, activePage;
 
 function report(request, id) {
@@ -67,7 +70,10 @@ try {
           return void request.respond({ status: 200, contentType: "application/json", body: JSON.stringify(savedReport) });
         }
         // Defense in depth: a future dialog regression cannot start a different solver endpoint.
-        if (request.method() === "POST" && /^\/api\/(runs|sweeps|optimizations|research\/runs)(\/|$)/.test(path)) {
+        const job = /^\/api\/(?:runs|sweeps|convergence|optimizations|research\/runs|render-jobs)(?:\/|$)/.test(path);
+        const native = /^\/api\/(?:native-document(?:\/|$)|(?:research\/elmer\/install|blender\/open-download|open-feedback|renders\/[A-Za-z0-9_-]+\/open)\/?$)/.test(path);
+        if (request.method() === "POST" && (job || native)) {
+          forbidden.push(path);
           return void request.respond({ status: 409, contentType: "application/json", body: JSON.stringify({ error: "solver launch forbidden in this UI test" }) });
         }
         void request.continue();
@@ -124,6 +130,7 @@ try {
       assert.deepEqual(await page.evaluate(auditInPage, ".cv-dialog"), [], `${lang}: reopened report geometry`);
       assert.equal(await page.$$eval(".cv-network-report tbody tr", rows => rows.length), 2);
       await page.screenshot({ path: join(out, `${lang}-reopened-report.png`) });
+      assert.deepEqual(forbidden, [], "only the two explicitly intercepted study requests are allowed");
       results.push({ lang, submitted, originalPorts, reportRows: rows, reportSource: "synthetic intercepted API response", solver: "not run" });
     } catch (error) {
       await activePage.screenshot({ path: join(out, `${lang}-failure.png`) }).catch(() => {});
@@ -134,7 +141,7 @@ try {
   assert.equal(actualRuns.runs.length, 0, "isolated server queued no solver jobs");
   console.log("Network convergence: EN/TR opt-out, validation, port selection, request, unavailable results and reopen passed; no solver");
 } finally {
-  await writeFile(join(out, "result.json"), JSON.stringify(results, null, 2));
+  await writeFile(join(out, "result.json"), JSON.stringify({ results, forbidden }, null, 2));
   await browser?.close();
   await stack?.stop();
 }

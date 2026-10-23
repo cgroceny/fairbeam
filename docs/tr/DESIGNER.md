@@ -406,6 +406,20 @@ Pencerenin ayarları:
 | Çalıştırma sınırı | 4 | Listedeki en fazla bu kadar yoğunluk çalışır (liste daha uzunsa not görünür) |
 | Motor | Çalıştırma ayarları | Sunucuda ikisi de varsa CPU veya GPU |
 
+**Ağ büyüklüklerini de denetle** varsayılan olarak kapalıdır. Açıldığında tek bir sabit **Ağ frekansı (GHz)** için bir ile on iki ölçüt eklenebilir. Listedeki sıra numaralarını değil, tasarımda gösterilen fiziksel port numaralarını ve her büyüklük için pozitif değişim toleransını seçin:
+
+| Büyüklük | Port sırası | Ölçülen değer | Tolerans birimi |
+| --- | --- | --- | --- |
+| Kuplaj veya izolasyon | alan, sürülen | −20 log₁₀ \|S(alan, sürülen)\| | dB |
+| Ağ yönlülüğü | alan, referans çıkış, sürülen | 20 log₁₀ \|S(alan, sürülen) / S(referans, sürülen)\| | dB |
+| İletim fazı | alan, sürülen | S(alan, sürülen) fazı | derece |
+| Faz dengesi | alan, referans çıkış, sürülen | S(alan, sürülen) / S(referans, sürülen) fazı | derece |
+| Port yansıması | port | 20 log₁₀ \|S(port, port)\| | dB |
+
+Bu ölçütler rezonans, S11, mevcut uzak alan, enerji ve yerel mesh denetimlerine eklenir; onların yerine geçmez. Ağ yönlülüğü bir S-parametresi oranıdır ve uzak alan Dmax değerinden ayrıdır. Faz değişimleri ±180° üzerinden en kısa açısal farkı kullanır. Ağ ölçütleri açıkken her yoğunlukta **tüm portlar ayrı ayrı sürülür** (`--excite all`); kayıtlı tasarımda devre dışı portlar da buna dahildir. Süre tahmini bu uyarım sayısını içerir; tasarımın port ayarları değişmez. Tekrarlanan ölçütler, eksik port numaraları ve geçersiz frekans/tolerans değerleri Başlat'ı engeller.
+
+Ağ sonuçları tablosu her yoğunluk ve ölçüt için değeri, değişimi, sınırı ve sonucu gösterir. Eksik uyarım sütunları, geçersiz örnekler, örneklenmiş bant dışındaki frekanslar veya 10⁻⁴ ve altındaki genlikler kullanılamaz sayılır ve geçemez. Doğrulanmış enerji ve yerel mesh kanıtı olmadan küçük değişim doğrulanmamış sayılır. İlk çalıştırmanın önceki karşılaştırması yoktur. Bu, seçilen frekansta inceltme denetimidir; bütün bant veya fiziksel doğrulama yerine geçmez. Özellikle S11 minimumu yalnızca bant kenarında olan yanıt, mevcut durma kuralı için hâlâ karşılaştırılabilir bir rezonans sağlamaz.
+
 Çalışma, tüm değişikliklerin toleransların kesin olarak altında kaldığı ilk adımda durur. Ardından **N hücre/λ'da yakınsadı** bildirir; N, o adımın daha kaba yoğunluğudur, daha ince çalıştırma doğrular. Önce yoğunluklar veya sınır tükenirse **Yakınsamadı** der, değişmeye devam eden niceliği belirtir (“30–40 hücre/λ arasında rezonans hâlâ %0,8 değişiyor; sınır %0,5”) ve daha ince yoğunluk veya modeli inceleme önerir. Başarısız/durdurulmuş çalıştırma da çalışmayı bitirir. Tablo **Tolerans içinde** sütununda her çalıştırmanın öncekinden değişiminin tüm toleranslarda olup olmadığını söyler.
 
 Herhangi bir çalıştırmadan önce pencere her yoğunlukta geometri önizlemesi oluşturur (simülasyon yapılmaz); hücreleri, yoğunluk başına tahmini çözücü süresini ve tüm çalıştırmalar gerekirse toplamı gösterir. 10 dakika üzerinde uyarır ve düğme **Yine de başlat** olur. Tahmin [Mesh görünümü](#mesh-view) ile aynıdır.

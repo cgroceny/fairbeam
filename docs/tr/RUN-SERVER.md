@@ -70,6 +70,26 @@ diskteki iş geçmişi değişmez.
 
 Yeni tasarımcı işleri, sunucuya gönderilmiş ve denetlenmiş `.design.json` dosyasını saklar. Kaynağı sonradan düzenlemek, zaten kabul edilmiş çalıştırmayı, taramayı, optimizasyonu veya yakınsama çalışmasını değiştirmez. İşe ait yerel kopya eksikse veya değiştirilmişse iş başlamadan başarısız olur. Python modelleri, içe aktarılan modüller ve eski işler özgün yollarını kullanmaya devam eder. Kaynak takibi ve ayrı istemci ön kontrolünün sınırlaması için [kabul edilen girdiler](QUEUED-DESIGN-INPUTS.md) sayfasına bakın.
 
+### Mesh yakınsaması için isteğe bağlı ağ ölçütleri
+
+`POST /api/convergence`, kayıtlı tasarım, yoğunluklar ve mevcut toleransların yanında isteğe bağlı `network_criteria` nesnesini kabul eder. Mevcut rezonans temelli davranış için alanı göndermeyin; `null`, kapatma değeri değildir. Örneğin fiziksel portları 1, 2 ve 3 olan bir tasarım şunu isteyebilir:
+
+```json
+{
+  "model": "network_design",
+  "densities": [15, 20, 30],
+  "max_runs": 3,
+  "network_criteria": {
+    "frequency_ghz": 2.4,
+    "metrics": ["coupling:2,1:0.2", "isolation:3,1:0.2", "phase:2,3,1:1"]
+  }
+}
+```
+
+Nesne tam olarak `frequency_ghz` (sonlu pozitif JSON sayısı) ve `metrics` (bir ile on iki dize) alanlarını gerektirir. Ölçüt dilbilgisi CLI'daki `KIND:PORTS:TOL` biçimidir: `coupling` ve `isolation`, alan ve sürülen portları; `directivity`, alan, referans çıkış ve sürülen portları alır. `phase` iki biçimi de kabul eder; `s11` tek fiziksel port numarası alır. Tolerans sonlu pozitif dB değişimidir; faz için derecedir. Geçersiz veya tekrarlanan ölçütler ve kabul edilen tasarımda bulunmayan portlar, hiçbir iş kuyruğa alınmadan `fields.network_criteria` ile 422 döndürür. [Büyüklük tanımlarına](DESIGNER.md#mesh-convergence) bakın.
+
+Sunucu standartlaştırılmış ölçütleri çalışma üzerinde Hz cinsinden saklar, tamamlanan her sonucun değerlendirmesine geçirir ve seri iş zinciri boyunca `excite: "all"` değerini korur. Her iş, kayıtlı veya kabul edilmiş tasarımı değiştirmeden `--excite all` kullanır. API raporları standartlaştırılmış ölçütleri, her üyenin ağ ölçümlerini ve her adımın denetimlerini içerir. Önbellekte başarılı görünen ağ çalışmasını yeniden açmak, ölçülen değerleri istenen ölçütlerle yeniden denetler; eksik/tutarsız kanıt, yoğunluğu uygulamaya izin vermez. Saklanan geçmiş değişmez. Design şeması veya çözücü fiziği değişmez; ağ denetimleri mevcut rezonans, enerji ve yerel mesh denetimlerine ek olarak kalır.
+
 ## Çalıştırma hazır ayarları
 
 Tasarımcının Simülasyon ayarlarında **Çalıştırma ayarları**, Hızlı deneme (dalga boyu başına 10 hücre, -40 dB), Dengeli (20, -40 dB) ve Mesh inceltme kontrolü (30, -60 dB) sunar. Bir hazır ayarı seçmek tasarımı düzenlemez: **Ayarları uygula**, otomatik mesh çözünürlüğünü ve enerji durdurma ölçütünü tek bir geri alınabilir işlemle değiştirir. **İptal**, pencere açıldığındaki taslağı ve geçmişini geri getirir. Geometri, frekans bandı, sınırlar, monitör ayarları ve zaman adımı sınırı korunur. Bu hazır ayarlar elle tanımlanmış mesh'i değiştirmez. İyileştirme ayarı, yakınsama denetimleri için bir başlangıçtır; anten performansının doğrulaması değildir.
