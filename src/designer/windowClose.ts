@@ -4,8 +4,8 @@
 // shell asks again every 150 ms while the answer is "pending": the Save / Don't save / Cancel
 // question (CloseProject.tsx) is open. "close" lets the window go, "cancel" keeps it.
 //
-// A fresh server-wide run check precedes the unsaved-work questions, and a final check catches
-// runs submitted while those questions were open. Unknown run status requires explicit consent.
+// A fresh server-wide simulation/render check precedes the unsaved-work questions, and a final
+// check catches work submitted while those questions were open. Unknown status requires consent.
 // With no work at stake the request closes after those checks. The
 // decision itself is the #86 contract: Save must finish cleanly (saveBeforeLeaving), Don't save
 // closes the design and drops its local backup (closeDesign) only after every exit question.
