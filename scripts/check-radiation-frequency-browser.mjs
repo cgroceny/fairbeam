@@ -78,6 +78,9 @@ try{
       outcomes.push({lang,surface,gaps:true,physicalPorts:[7,19],arUnit:'dB',syntheticOnly:true});
     };
     await verify('.dock');
+    // Restore the shared dock size before opening Designer; the preceding End-key
+    // check deliberately expands the viewer and would otherwise shrink its main plot.
+    await page.click('.dock .dock-resize',{clickCount:2});
     await s.click('results.toolbar.copyData',{within:'.dock'});await s.wait('.dock-copy.copied');
     const rows=(await page.evaluate(()=>navigator.clipboard.readText())).trimEnd().split(/\r?\n/).map(r=>r.split('\t'));
     const ar=rows[0].indexOf('ar_boresight_db (dB)'),raw=rows[0].indexOf('ar_boresight_db raw (dB)');
