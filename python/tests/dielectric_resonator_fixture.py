@@ -76,7 +76,7 @@ def identity():
 
 
 def outside(dr, clearance, pml, air_refinement=1):
-    """Subdivide only air; preserve all anchors and uniform 3 mm PML cells."""
+    """Refine coarse air; keep core-scale/sliver intervals, anchors and PML."""
     increments, distance, step = [], 0., dr
     while distance < clearance-1e-12:
         step = min(step*1.25, 3.)
@@ -87,8 +87,13 @@ def outside(dr, clearance, pml, air_refinement=1):
         distance += take
     air = np.r_[0., np.cumsum(increments)]
     if air_refinement != 1:
-        air = np.concatenate([np.linspace(a, b, air_refinement+1)[:-1]
-                              for a, b in zip(air[:-1], air[1:])] + [air[-1:]])
+        parts = []
+        for a, b in zip(air[:-1], air[1:]):
+            count = 1
+            while count*2 <= air_refinement and (b-a)/(count*2) >= dr:
+                count *= 2
+            parts.append(np.linspace(a, b, count+1)[:-1])
+        air = np.concatenate(parts + [air[-1:]])
     return np.r_[air, clearance+np.arange(1, pml+1)*3.]
 
 

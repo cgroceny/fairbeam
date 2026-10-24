@@ -6,6 +6,7 @@ python -m tests.test_dielectric_resonator --preflight --out C:\Temp\dr-plan
 python -m tests.test_dielectric_resonator --fdtd --mesh 8 --case dielectric --cap-ns 190 --rate-mcps 20 --out C:\Temp\dr-pilot
 python -m tests.test_dielectric_resonator --analyse --out C:\Temp\dr-pilot
 Air-only diagnostics: add --air-refinement 2 or 4 to --preflight/--fdtd;
+these are maximum subdivisions; core-scale/smaller air intervals stay fixed.
 use --analyse on each fresh capture, separately from the default --study.
 """
 import argparse
@@ -91,8 +92,9 @@ def acquire_serial(out, n, kind, angular, clearance, pml, cap_s, rate, *, air_re
 
 class References(unittest.TestCase):
     def test_air_refinement_preserves_core_pml_clock_material_and_probe_planes(self):
-        for n, pml, gap in ((8, 8, 30.), (16, 12, 40.)):
+        for n, pml, gap in ((8, 8, 30.), (8, 8, 40.), (16, 12, 40.)):
             base, meta = fixture.build(n, 'dielectric', pml=pml, clearance=gap)
+            previous = base
             for factor in (2, 4):
                 sim, refined = fixture.build(n, 'dielectric', pml=pml, clearance=gap, air_refinement=factor)
                 self.assertGreater(refined['native_cells'], meta['native_cells'])
@@ -107,7 +109,10 @@ class References(unittest.TestCase):
                     self.assertTrue(np.isin(before, after).all())
                     air_before = before[(before >= limit) & (before <= limit+gap)]
                     air_after = after[(after >= limit) & (after <= limit+gap)]
-                    self.assertEqual(len(air_after)-1, factor*(len(air_before)-1))
+                    core_step = limit/n
+                    self.assertGreaterEqual(np.diff(air_after).min()+1e-12, min(np.diff(air_before).min(), core_step))
+                    self.assertLessEqual(np.diff(air_after).max(), max(2*core_step, np.diff(air_before).max()/factor)+1e-12)
+                    self.assertTrue(np.isin(previous.mesh.GetLines(axis), after).all())
                 np.testing.assert_array_equal(base.mesh.GetLines('y'), sim.mesh.GetLines('y'))
                 with tempfile.TemporaryDirectory() as temp:
                     paths = [Path(temp)/f'{i}.xml' for i in range(2)]
@@ -119,6 +124,7 @@ class References(unittest.TestCase):
                             for tag in ('FillColor', 'EdgeColor'):
                                 for color in prop.findall(tag):prop.remove(color)
                     self.assertEqual(*[ET.tostring(group) for group in properties])
+                previous = sim
 
     def test_air_refinement_is_validated_before_dispatch_and_forwarded_to_the_worker(self):
         with tempfile.TemporaryDirectory() as temp, patch(__name__ + '.popen_group') as launch:
@@ -380,7 +386,7 @@ def main():
     parser.add_argument('--clearance-mm', type=float, choices=(30., 40.), default=30.)
     parser.add_argument('--pml', type=int, choices=(8, 12), default=8)
     parser.add_argument('--air-refinement', type=int, choices=(1, 2, 4), default=1,
-                        help='opt-in air-only subdivision; core, PML and clock stay fixed')
+                        help='opt-in maximum air subdivision; core-scale cells, PML and clock stay fixed')
     parser.add_argument('--cap-ns', type=float, default=190.)
     parser.add_argument('--rate-mcps', type=float, default=20.)
     parser.add_argument('--meshes', type=int, nargs=3, default=fixture.COHORT)
