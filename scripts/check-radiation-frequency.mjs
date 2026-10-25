@@ -10,6 +10,8 @@ import {resultDataTable, comparedResultDataTable} from '../src/designer/resultDa
 import {radiationFrequencyCsv, parseCsv} from '../src/export/csv.ts';
 import {packageFiles, PACKAGE_GROUPS} from '../src/export/package.ts';
 import {reportPages} from '../src/export/reportPdf.ts';
+import {postprocessPorts} from '../src/lib/portPostprocess.ts';
+import {portProcessingBrowserFixture} from './fixtures/port-postprocessing-browser.mjs';
 
 const root=fileURLToPath(new URL('..',import.meta.url));
 const python=process.env.FAIRBEAM_PYTHON||(process.platform==='win32'?'python':'python3');
@@ -49,7 +51,7 @@ const lossless=radiationBands(bundle(trusted('lossless')))[0].samples;
 assert.equal(lossless[0].values.gain_peak_dbi,lossless[0].values.d_peak_dbi,'reported lossless eta, not raw eta');
 assert.equal(lossless[1].values.gain_peak_dbi,lossless[1].values.d_peak_dbi);
 const masked=trusted('baseline');masked.radiation.d_boresight_dbi[1]-=.001;
-assert.equal(radiationBands(bundle(masked))[0].samples[1].values.ar_boresight_db,null,'read side enforces Dmax−20 mask');
+assert.equal(radiationBands(bundle(masked))[0].samples[1].values.ar_boresight_db,null,'read side enforces Dmaxâˆ’20 mask');
 assert.equal(radiationBands(bundle(masked))[0].samples[1].raw.ar_boresight_db,0,'raw audit value retained separately');
 const offPole=trusted('baseline');offPole.radiation.theta[0]=5;
 for(const q of RADIATION_QUANTITIES.filter(q=>q.includes('boresight')))assert.equal(radiationBands(bundle(offPole))[0].samples[0].values[q],null,'no implicit boresight on an explicit off-pole grid');
@@ -108,3 +110,34 @@ const svg=reportPages(b,{generated:'synthetic control',date:'2026-10-23'}).join(
 for(const text of ['Radiation versus frequency','band-efficiency-nf2ff','Physical port 7','Separate stored-pattern AR points','unassessed'])assert.ok(svg.includes(text),text);
 assert.ok(!svg.includes('NaN'));assert.ok(!svg.includes('undefined'));
 console.log(`PASS: ${records.length} Python fixtures; eight quantities; same-grid/missing/reliability/port/mask/interval/CSV/compare/package/report contracts. Synthetic, no EM accuracy claim.`);
+
+// Combined feature regression: changing network coordinates must not relabel or
+// recompute stored radiation samples, including comparisons and exported columns.
+const circuitControl=JSON.parse(readFileSync(new URL('./fixtures/port-postprocess-circuit.json',import.meta.url),'utf8'));
+const geometryControl=JSON.parse(readFileSync(new URL('../public/projects/branchline-coupler.json',import.meta.url),'utf8'));
+const rawRadiation=portProcessingBrowserFixture(geometryControl,circuitControl);
+rawRadiation.results.efficiency=[structuredClone(baseline)];
+rawRadiation.results.farfield=[];
+const rawSnapshot=structuredClone(rawRadiation);
+for(const settings of [
+  {referenceOhm:75,delayPs:{7:10,2:20,19:30}},
+  {referenceOhm:75,referenceImagOhm:25,delayPs:{7:0,2:0,19:0}},
+  {referenceOhm:75,mixedPairs:[[7,19]],delayPs:{7:0,2:0,19:0}},
+]) {
+  const projection=postprocessPorts(rawRadiation,settings);
+  assert.equal(projection.error,null);
+  assert.deepEqual(radiationBands(projection.bundle),radiationBands(rawRadiation));
+  assert.equal(radiationBands(projection.bundle)[0].port,7,'radiation keeps physical P7 under modal network coordinates');
+  for(const quantity of RADIATION_QUANTITIES) {
+    const options={radiationQuantity:quantity};
+    const rawTable=resultDataTable(rawRadiation,'efficiency',undefined,options);
+    const projectedTable=resultDataTable(projection.bundle,'efficiency',undefined,options);
+    assert.ok(rawTable.rows.length>0,'nonempty independent synthetic radiation samples');
+    assert.deepEqual(projectedTable.header.slice(0,-1),rawTable.header);
+    assert.deepEqual(projectedTable.rows.map(row=>row.slice(0,-1)),rawTable.rows,'only the explicit processing provenance column may be added');
+    const compared=comparedResultDataTable([{file:'raw',bundle:rawRadiation},{file:'projected',bundle:projection.bundle}],'efficiency',undefined,options);
+    assert.equal(compared.rows.length,2*rawTable.rows.length);
+  }
+}
+assert.deepEqual(rawRadiation,rawSnapshot,'network views never mutate stored radiation');
+console.log('PASS combined radiation/port controls: real, complex and modal references preserve all eight stored radiation quantities, physical P7, CSV and comparison rows.');

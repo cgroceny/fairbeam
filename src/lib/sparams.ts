@@ -19,6 +19,7 @@
 //                       encoding "f32le-base64" (older bundles): little-endian float32
 
 import type { Bundle } from "../types";
+import { channelLabel, channelPairLabel, hasMixedPortCoordinates, portProcessingInfo, type PortChannel } from "./portProcessingMetadata.ts";
 
 /** Magnitude-only imports use synthetic complex samples solely to retain |S|. Their phase,
  * real/imaginary parts and derived impedance must never be treated as measured data. */
@@ -37,7 +38,10 @@ export interface SMatrix {
   ports: number[];
   /** Matrix order → physical model IDs; omitted means identity, null means invalid metadata. */
   physicalPorts?: number[] | null;
+  /** Session-only modal coordinates are not physical model port numbers. */
+  modalChannels?: PortChannel[];
   zRef: number[];
+  zRefImag?: number[];
   excited: number[];
   /** S_ij (receiving port i, driven port j); null when not stored */
   get(i: number, j: number): Complex | null;
@@ -100,7 +104,9 @@ export function sMatrix(b: Bundle | null | undefined): SMatrix | null {
       for (const i of ports) for (const j of ports) if (map.has(`${i},${j}`)) pairs.push([i, j]);
       return {
         f, ports, zRef,
-        physicalPorts: physicalMapping(raw.port_numbers, ports),
+        ...(portProcessingInfo(b) ? { zRefImag: portProcessingInfo(b)!.channels.map(c => c.referenceIm) } : {}),
+        ...(hasMixedPortCoordinates(b) ? { modalChannels: portProcessingInfo(b)!.channels } : {}),
+        physicalPorts: hasMixedPortCoordinates(b) ? null : physicalMapping(raw.port_numbers, ports),
         excited: nums(raw.excited) ?? b.ports.filter((p) => p.excite).map((p) => p.number),
         get: (i, j) => map.get(`${i},${j}`) ?? null,
         pairs,
@@ -144,15 +150,24 @@ function physicalMapping(value: unknown, ports: number[]): number[] | null | und
 
 export function physicalPortNumber(m: SMatrix, index: number): number | null {
   const k = m.ports.indexOf(index);
+  if (m.modalChannels) return m.modalChannels[k]?.kind === "single" ? m.modalChannels[k].physical[0] : null;
   return k < 0 || m.physicalPorts === null ? null : m.physicalPorts?.[k] ?? index;
 }
 
 /** Preserve S matrix indices while disambiguating physical model IDs in plots and exports. */
 export function mappedPairLabel(m: SMatrix, pair: [number, number]): string {
+  if (m.modalChannels) {
+    const a = m.modalChannels[m.ports.indexOf(pair[0])], b = m.modalChannels[m.ports.indexOf(pair[1])];
+    return a && b ? channelPairLabel(a, b) : `${pairLabel(pair)} [unknown modal coordinate]`;
+  }
   const [i, j] = pair, pi = physicalPortNumber(m, i), pj = physicalPortNumber(m, j);
   const label = pairLabel(pair);
   if (pi === i && pj === j) return label;
   return `${label} [${i === j ? `P${pi ?? "?"}` : `P${pi ?? "?"} <- P${pj ?? "?"}`}]`;
+}
+export function matrixPortLabel(m: SMatrix, index: number): string {
+  const channel = m.modalChannels?.[m.ports.indexOf(index)];
+  return channel ? channelLabel(channel) : `P${physicalPortNumber(m, index) ?? "?"}`;
 }
 
 export const pairLabel = ([i, j]: [number, number]) => (i < 10 && j < 10 ? `S${i}${j}` : `S${i},${j}`);
@@ -177,6 +192,11 @@ export function zFromGamma(c: Complex, z0: number | readonly number[]): Complex 
   });
   return { re, im };
 }
+/** For Kurokawa Γ=(Z-conj(Zref))/(Z+Zref), Z=R(1+Γ)/(1-Γ)-jX. */
+export function zFromPowerGamma(c: Complex, re: number, im: number): Complex {
+  const z = zFromGamma(c, re);
+  return { re: z.re, im: z.im.map(v => v - im) };
+}
 
 /** Older imports stored a false zero impedance at the exact open-circuit singularity. */
 export const isFalseOpenImpedance = (gr: number, gi: number, zr: number, zi: number) =>
@@ -189,13 +209,14 @@ export function reflectionAtPort(b: Bundle | null | undefined, port: number) {
   const m = sMatrix(b), g = m?.get(port, port);
   if (!m || !g) return null;
   const z0 = m.zRef[m.ports.indexOf(port)] ?? 50;
+  const zRefImag = m.zRefImag?.[m.ports.indexOf(port)] ?? 0;
   // Matrix indices are not necessarily physical model port IDs (e.g. after a port deletion).
   const physicalPort = physicalPortNumber(m, port);
   const pr = physicalPort === null ? undefined : b.results?.ports[String(physicalPort)];
   // A renormalized matrix must not inherit an old port's reference or measured impedance.
-  const sameReference = pr?.z_ref === z0;
+  const sameReference = !portProcessingInfo(b) && pr?.z_ref === z0;
   const zRefF = sameReference && pr.z_ref_f?.length === m.f.length ? pr.z_ref_f : undefined;
-  const z = zFromGamma(g, zRefF ?? z0);
+  const z = zRefImag !== 0 ? zFromPowerGamma(g, z0, zRefImag) : zFromGamma(g, zRefF ?? z0);
   if (sameReference) g.re.forEach((re, k) => {
     // B A^-1 multiport entries need not equal the single driven-run reflection. Only
     // preserve U/I where it belongs to precisely this reflection/reference sample.
@@ -204,7 +225,7 @@ export function reflectionAtPort(b: Bundle | null | undefined, port: number) {
       z.re[k] = pr.zin_re[k]; z.im[k] = pr.zin_im[k];
     }
   });
-  return { f: m.f, re: g.re, im: g.im, zRe: z.re, zIm: z.im, z0, zRefF };
+  return { f: m.f, re: g.re, im: g.im, zRe: z.re, zIm: z.im, z0, zRefF, zRefImag };
 }
 
 /** S_ij interpolated linearly at frequency fHz. */

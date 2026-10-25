@@ -100,7 +100,7 @@ export function arrayWeightsCsv(b: Bundle, weights: Map<number, Weight>, fHz: nu
 /** Minimal CSV reader for the checks (no quoted newlines needed for these files). */
 export function parseCsv(text: string): string[][] {
   return text
-    .split("\n")
+    .split(/\r?\n/)
     .filter((l) => l.length)
     .map((l) => {
       const out: string[] = [];

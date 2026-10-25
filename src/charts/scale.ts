@@ -13,6 +13,9 @@ export function niceDomain(min: number, max: number, count = 5): [number, number
   const t = ticks(min, max, count);
   if (t.length < 2) return [min - 1, max + 1];
   const step = t[1] - t[0];
+  // Sub-display-precision variation can round adjacent ticks to the same value.
+  // Use the existing constant-range padding, never divide by that zero tick step.
+  if (!(step > 0) || !Number.isFinite(step)) return [min - 1, max + 1];
   return [Math.floor(min / step) * step, Math.ceil(max / step) * step];
 }
 

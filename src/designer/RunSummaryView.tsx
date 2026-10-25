@@ -14,6 +14,8 @@ import { columnDecimals, compact, ghzText, num, seconds } from "../lib/format";
 import { efficiencyWarningUi } from "../lib/runText";
 import { farfieldSummary } from "../lib/farfieldQuantity";
 import { designResult } from "../runner/designRun";
+import { displayedPortResult } from "./portProcessingSession";
+import { hasMixedPortCoordinates, portProcessingInfo, primaryPortLabel, samePortProcessing } from "../lib/portProcessingMetadata";
 import type { Bundle } from "../types";
 import { radioGroupKeys } from "../lib/a11y";
 import { fmt, t } from "../i18n";
@@ -61,7 +63,7 @@ function RunCard(props: { b: Bundle }) {
           <Show when={metrics().noResonance} fallback={<Tile label={t("summary.f0")} value={ghz(metrics().f0)} unit="GHz" title={t("summary.f0.title")} />}>
             <Tile label={t("summary.f0")} value="—" caption={t("summary.noResonance")} title={t("summary.noResonance.title", { f: ghz(metrics().f0) })} warn />
           </Show>
-          <Tile label="|S11| min" value={signed(metrics().s11MinDb, 1)} unit="dB" />
+          <Tile label={`|${primaryPortLabel(props.b)}| min`} value={signed(metrics().s11MinDb, 1)} unit="dB" />
           <Tile label={t("summary.bandwidth")} value={mhz(metrics().bwHz)} unit={metrics().bwHz != null ? "MHz" : undefined}
             caption={metrics().bwHz != null ? `${percent(metrics().fractionalBw)} %${metrics().bwAtEdge ? ` · ${t("results.sparams.atEdge")}` : ""}` : t("summary.noBandShort")} title={t("summary.bandwidth.title")} />
           <Show when={metrics().farfield}>{(ff) => (
@@ -83,7 +85,7 @@ function RunCard(props: { b: Bundle }) {
               <th scope="col">#</th>
               <th scope="col" class="num" title={t("spec.centre.title")}>{t("spec.centre")}<span class="th-unit">GHz</span></th>
               <th scope="col" class="num" title={t("spec.bestMatch.title")}>{t("spec.bestMatch")}<span class="th-unit">GHz</span></th>
-              <th scope="col" class="num">|S11| min<span class="th-unit">dB</span></th>
+              <th scope="col" class="num">|{primaryPortLabel(props.b)}| min<span class="th-unit">dB</span></th>
               <th scope="col" class="num">{t("summary.bandwidth")}<span class="th-unit">MHz</span></th>
               <th scope="col" class="num">{t("spec.bw")}<span class="th-unit">%</span></th>
               <th scope="col" class="num">{t("summary.range")}<span class="th-unit">GHz</span></th>
@@ -180,7 +182,12 @@ function RunsCompare(props: { runs: { file: string; bundle: Bundle }[] }) {
   // the reference run: the chosen one while it is compared, else the oldest (not the first row, which
   // is the newest run in focus); the differences of every other run from it, computed once per row
   const refIdx = createMemo(() => referenceIndex(rows(), summaryReference()));
-  const deltas = createMemo(() => rows().map((r, i) => (i === refIdx() ? null : metricDeltas(rows()[refIdx()].m, r.m))));
+  const deltas = createMemo(() => rows().map((r, i) => {
+    const values = i === refIdx() ? null : metricDeltas(rows()[refIdx()].m, r.m);
+    if (!values) return null;
+    const reference = rows()[refIdx()];
+    return samePortProcessing(reference.bundle, r.bundle) ? values : { ...values, f0: null, s11: null, bw: null };
+  }));
   // a parameter column with one number of decimals (the most precise value's, at most 4), as in the Runs table
   const paramValue = (b: Bundle, key: string) => b.model.params.find((p) => p.key === key)?.value;
   const paramDigits = createMemo(() => new Map(columns().map((p) => [p.key, columnDecimals(rows().map((r) => paramValue(r.bundle, p.key)))])));
@@ -221,7 +228,7 @@ function RunsCompare(props: { runs: { file: string; bundle: Bundle }[] }) {
             <th scope="col">{t("runDock.runs.col.name")}</th>
             <For each={columns()}>{(p) => <th scope="col" class="num">{p.key}{p.unit ? <span class="th-unit">{p.unit}</span> : ""}</th>}</For>
             <th scope="col" class="num" title={t("summary.f0.title")}>{t("summary.f0")}<span class="th-unit">GHz</span></th>
-            <th scope="col" class="num">|S11| min<span class="th-unit">dB</span></th>
+            <th scope="col" class="num">{rows().some(r => hasMixedPortCoordinates(r.bundle)) ? t("portProcessing.primaryReflection") : "|S11| min"}<span class="th-unit">dB</span></th>
             <th scope="col" class="num" title={t("summary.bandwidth.title")}>{t("spec.bw")}<span class="th-unit">MHz</span></th>
             <Show when={any((m) => m.farfield)}><th scope="col" class="num">Dmax<span class="th-unit">dBi</span></th></Show>
             <Show when={any((m) => m.farfield?.realizedDbi)}><th scope="col" class="num" title={t("summary.realized.title")}>{t("farfield.quantity.realized")}<span class="th-unit">dBi</span></th></Show>
@@ -233,13 +240,13 @@ function RunsCompare(props: { runs: { file: string; bundle: Bundle }[] }) {
               <td class="rs-name" title={row.name}>
                 {/* the badge is an icon (its words in its title and for screen readers): the name keeps the width */}
                 <div class="rs-name-in">
-                  <span class="rs-name-text">{row.name}</span>
+                  <span class="rs-name-text">{row.name}<Show when={portProcessingInfo(row.bundle)}> · {t("portProcessing.badge")}</Show></span>
                   <RunQualityBadge compact q={bundleQuality(row.bundle)} />
                 </div>
               </td>
               <For each={columns()}>{(p) => <td class="num">{paramText(row.bundle, p.key)}</td>}</For>
               <MetricCell k="f0" value={row.m?.noResonance ? t("summary.noResonanceShort") : ghz(row.m?.f0)} title={row.m?.noResonance ? t("summary.noResonance") : undefined} delta={deltas()[i()]?.f0} mode={summaryMode()} />
-              <MetricCell k="s11" value={signed(row.m?.s11MinDb, 1)} delta={deltas()[i()]?.s11} mode={summaryMode()} />
+              <MetricCell k="s11" title={primaryPortLabel(row.bundle)} value={signed(row.m?.s11MinDb, 1)} delta={deltas()[i()]?.s11} mode={summaryMode()} />
               <MetricCell k="bw" value={mhz(row.m?.bwHz)} delta={deltas()[i()]?.bw} mode={summaryMode()} />
               <Show when={any((m) => m.farfield)}><MetricCell k="dmax" value={num(row.m?.farfield?.dmaxDbi, 2)} delta={deltas()[i()]?.dmax} mode={summaryMode()} /></Show>
               <Show when={any((m) => m.farfield?.realizedDbi)}><MetricCell k="realized" value={num(row.m?.farfield?.realizedDbi, 2)} delta={deltas()[i()]?.realized} mode={summaryMode()} /></Show>
@@ -256,7 +263,7 @@ function RunsCompare(props: { runs: { file: string; bundle: Bundle }[] }) {
 export function ResultSummary(props: { b: Bundle }) {
   const runs = createMemo(() => {
     const current = designResult();
-    const others = comparedRuns();
+    const others = comparedRuns().map(run => ({ ...run, bundle: displayedPortResult(run.bundle) }));
     return others.length && current ? [{ file: current.file, bundle: props.b }, ...others] : [];
   });
   return (

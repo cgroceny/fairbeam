@@ -13,7 +13,7 @@ import SmithChart from "../charts/SmithChart";
 import FigureMenu from "./FigureMenu";
 import { radioGroupKeys } from "../lib/a11y";
 import { bundle, dockTab, farfieldIndex, setDockTab, setFarfieldIndex, setLayers, source, type DockTab } from "../state";
-import { hasSParameterPhase, sMatrix } from "../lib/sparams";
+import { hasSParameterPhase, mappedPairLabel, sMatrix } from "../lib/sparams";
 import { nearestIndex, sweep } from "../lib/rf";
 import { freqText, ghzText, num, withUnit } from "../lib/format";
 import { efficiencyIssue, efficiencyWarningUi } from "../lib/runText";
@@ -24,15 +24,15 @@ import type { Signals } from "../types";
 import ComparePicker from "../compare/ComparePicker";
 import { compareBundles, comparing, cutPhi, pinned, setCutPhi, setZPart, zPart } from "../compare/store";
 import { compareCuts, compareLines, compareSParams, compareTable, interp, pairQuantity, SERIES_COLORS, traces, type GroupedTable } from "../compare/series";
-import { examplesSParams, multiPort, SParamChart, SParamSmith, SParamSmithCompare, SParamTools, sparamTable } from "./SParamView";
+import { examplesSParams, GroupDelayControls, multiPort, SParamChart, SParamSmith, SParamSmithCompare, SParamTools, sparamTable } from "./SParamView";
 import { compareSParamQuantities } from "../compare/series";
 import { plotQuantities } from "../charts/plotQuantities";
 import PanelBoundary from "./PanelBoundary";
 // the Array tab (beam steering) only loads when opened
 const ArrayPanel = lazy(() => import("./ArrayPanel"));
 import { arrayActive, farfieldOverride, hasArray, scanPhi, setArrayActive, steeredFarField } from "../lib/arrayStore";
-import { activeResultDataTable, copyResultData, exportResultCsv, resultDataTable, type ResultDataOptions } from "../designer/resultData";
-import { resultDataFormat, tableFormat, writeResultDataFormat, type ResultDataFormat } from "../designer/resultDataPreference";
+import { activeResultDataTable, comparedResultDataTable, copyResultData, exportResultCsv, resultDataTable, type ResultDataOptions } from "../designer/resultData";
+import { formatForView, groupDelayAperture, resultDataFormat, tableFormat, writeResultDataFormat, type ResultDataFormat } from "../designer/resultDataPreference";
 import { exportResultTouchstone } from "../designer/resultTouchstone";
 import type { ResultView } from "../designer/resultFocus";
 import type { DownloadResult } from "../lib/download";
@@ -100,7 +100,7 @@ const every = <T,>(arr: T[], maxRows = 201) => {
 };
 
 export default function Dock() {
-  const dataFormat = resultDataFormat;
+  const dataFormat = () => formatForView(resultDataFormat(), dockTab() === "reflection");
   // a narrow dock folds its labelled tool buttons to icons (a class, not a container query: the
   // Figure menu is position: fixed inside the dock, and size containment would re-anchor it)
   let dockEl: HTMLElement | undefined;
@@ -130,7 +130,7 @@ export default function Dock() {
       ...pinned().filter((p) => p.bundle?.results && p.file !== source()).map((p) => ({ file: p.file, bundle: p.bundle! }))];
   };
   // Copy data and CSV follow the plot: the picked S_ij, dB or phase, the Smith chart's port
-  const dataOptions = (): ResultDataOptions => ({ format: tableFormat(dataFormat()),
+  const dataOptions = (): ResultDataOptions => ({ format: tableFormat(dataFormat()), aperturePoints: groupDelayAperture(),
     patternQuantity: shownQuantity(), patternPort: storedFF()?.port,
     radiationQuantity: dockTab() === "radiation" ? radiationQuantity() : undefined,
     patternCut: patternCutChoice(), patternPrincipalAvailable: !comparing() && !arrayMode(), patternFallbackPhi: cutPhi(),
@@ -251,16 +251,16 @@ export default function Dock() {
   });
   const ffSummary = createMemo(() => (bundle() && ff() ? farfieldSummary(bundle()!, ff()!) : null));
   const cmpSpData = createMemo(() => (spCompare() && cmp() ? compareSParams(cmp()!, examplesSParams.selectedPairs(), examplesSParams.mode()) : null));
-  const cmpSp = createMemo(() => (spCompare() && cmp() ? compareSParamQuantities(cmp()!, examplesSParams.selectedPairs(), dataFormat(), examplesSParams.mode()) : null));
+  const cmpSp = createMemo(() => (spCompare() && cmp() ? compareSParamQuantities(cmp()!, examplesSParams.selectedPairs(), dataFormat(), examplesSParams.mode(), { aperturePoints: groupDelayAperture() }) : null));
   const cmpSingleNamed = createMemo(() => {
     if (multiPort() || dataFormat() === "plot" || !cmp()) return null;
-    const groups = compareSParamQuantities(cmp()!, [[1, 1]], dataFormat());
+    const groups = compareSParamQuantities(cmp()!, [[1, 1]], dataFormat(), "db", { aperturePoints: groupDelayAperture() });
     return groups.some((g) => g.series.length) ? groups : null;
   });
   const singleNamed = createMemo(() => {
     if (dataFormat() === "plot" || multiPort()) return [];
     const m = examplesSParams.S();
-    if (m?.pairs.length) return plotQuantities(m.pairs.flatMap((p, k) => { const v = m.get(p[0], p[1]); return v ? [{ id: `${p[0]},${p[1]}`, label: `S${p[0]}${p[1]}`, color: `--al-series-${k + 1}`, x: m.f.map(f => f / 1e9), re: v.re, im: v.im }] : []; }), dataFormat());
+    if (m?.pairs.length) return plotQuantities(m.pairs.flatMap((p, k) => { const v = m.get(p[0], p[1]); return v ? [{ id: `${p[0]},${p[1]}`, label: mappedPairLabel(m, p), color: `--al-series-${k + 1}`, x: m.f.map(f => f / 1e9), re: v.re, im: v.im, phaseKnown: hasSParameterPhase(bundle()) }] : []; }), dataFormat(), "db", { aperturePoints: groupDelayAperture() });
     const s = sw();
     return dataFormat() === "db" && s ? [{ key: "db", title: t("chart.q.magnitudeDb"), yLabel: t("chart.q.magnitudeDb"), kind: "reflection" as const, series: [{ id: "s11", label: "|S11|", color: "--al-series-1", x: s.f.map(f => f / 1e9), y: s.s11Db }] }] : [];
   });
@@ -376,6 +376,11 @@ export default function Dock() {
       const data = activeResultDataTable(bundle(), "efficiency", undefined, selectedDataRuns(), dataOptions());
       return { columns: data.header, rows: data.rows.map(row => row.map(cell => cell ?? "—")) };
     }
+    if (dockTab() === "reflection" && (dataFormat() === "gd" || dataFormat() === "phase_unwrapped")) {
+      const runs = selectedDataRuns();
+      const data = runs ? comparedResultDataTable(runs, "sparams", undefined, dataOptions()) : resultDataTable(bundle(), "sparams", undefined, dataOptions());
+      return { columns: data.header, rows: every(data.rows).map(i => data.rows[i].map(v => v ?? "—")) };
+    }
     const s = sw();
     const c = compareTableData();
     if (c) return c;
@@ -444,6 +449,7 @@ export default function Dock() {
           <Show when={multiPort() && (dockTab() === "reflection" || dockTab() === "smith")}>
             <SParamTools smith={dockTab() === "smith"} format={dataFormat()} />
           </Show>
+          <Show when={!multiPort() && dockTab() === "reflection"}><GroupDelayControls format={dataFormat()} /></Show>
           <Show when={(dockTab() === "pattern" || dockTab() === "reflection" || dockTab() === "array") && ffs().length}>
             <div class="freq-chips" role="radiogroup" aria-label={t("farfield.frequency")} onKeyDown={radioGroupKeys}>
               {/* one frequency with a pattern per driven port: name the frequency once, chips are ports */}
@@ -486,6 +492,7 @@ export default function Dock() {
                 writeResultDataFormat(value);
             }}>
               <option value="plot">{t("results.format.plot")}</option><option value="db">dB</option><option value="db_phase">{t("results.format.dbPhase")}</option><option value="re_im">Re/Im</option><option value="mag_phase">{t("results.format.magPhase")}</option><option value="all">{t("results.format.all")}</option>
+              <Show when={dockTab() === "reflection"}><option value="phase_unwrapped">{t("chart.q.unwrappedPhase")}</option><option value="gd">{t("chart.q.groupDelay")}</option></Show>
             </select>
             <button class="btn btn-ghost btn-sm dock-copy" classList={{ copied: copied() }} onClick={copyData} title={t("dock.results.copyDataTitle")}
               aria-live="polite">

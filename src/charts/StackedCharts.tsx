@@ -5,7 +5,7 @@
 // pane), the |S11| axis reaches above 0 dB when the data do (an unphysical part stays visible), and the
 // stack has one Markers button: the panes share the marker mode, the markers and the table
 // (markerMode.ts, by the chart key).
-import { Index } from "solid-js";
+import { For, Index, Show } from "solid-js";
 import LineChart, { type LineChartProps } from "./LineChart";
 import type { PlotQuantity } from "./plotQuantities";
 import { PHASE_TICKS, quantityDomain, quantityLines } from "./quantityAxes";
@@ -26,6 +26,14 @@ export default function StackedCharts(props: {
   const extras = (g: PlotQuantity): PaneExtras => props.pane?.(g) ?? {};
   return (
     <div class="chart-stack" classList={{ "is-stacked": props.groups.length > 1 }}>
+      <Show when={props.groups.some(g => g.phaseWarnings !== undefined)}>
+        <div class="chart-phase-notes" role="note">
+          <p>{t("sparams.phaseAssumption")}</p>
+          <For each={[...new Set(props.groups.flatMap(g => g.phaseWarnings ?? []))]}>{warning =>
+            <p>{t(`sparams.phaseWarning.${warning}`)}</p>
+          }</For>
+        </div>
+      </Show>
       {/* Index: a pane keeps its chart while its quantity changes (dB to phase) */}
       <Index each={props.groups}>{(g, i) => (
         <div class="chart-stack-pane">

@@ -652,3 +652,14 @@ Bildirimler ve fikirler, tarayıcıda açılan herkese açık [fairbeam-releases
 - Üst bölümdeki konuşma balonu (**Geri bildirim gönder**), iki formun listesini açar.
 
 Uygulama kendiliğinden hiçbir şey göndermez, bağlantıya başka bilgi koymaz. Yardımcı olacaksa tasarım dosyasını/günlüğü ekleyin; önce özel bilgileri çıkarın. Masaüstünde uygulama penceresi web sayfası açmadığından sistem tarayıcısını yerel çalıştırma sunucusu açar.
+
+Tasarım sonuç sekmelerindeki **Port son işlemesi**, tam karmaşık S matrisi için ortak
+gerçek veya karmaşık Kurokawa referansı, fiziksel port başına ideal uyumlu kayıpsız
+tek yönlü besleme gecikmesi ve sıralı diferansiyel/ortak çiftler sunar. Uygula/Sıfırla
+yalnızca gösterilen sonucu ve sonuç dışa aktarımlarını etkiler; kayıtlı tasarım, ham
+paket ve eniyileyici değişmez. Son işlem etiketi görünür kalır; ışıma, güç ve çözücü
+kanıtları özgündür. [Sonuçlar](RESULTS.md#designer-port-postprocessing) sayfası işlem
+sırasını, referansları ve eksik veri kurallarını açıklar. Karmaşık referansta standart
+Smith/VSWR ve Touchstone kullanılamaz; CSV kullanılabilir. Gerçek referanslı mod dışa
+aktarımı açık mod bilgisiyle Touchstone 2.0'dır. Karma mod içe aktarımı desteklenmez;
+bu dışa aktarım değişikliği içe aktarıcının reddetme davranışını değiştirmez.

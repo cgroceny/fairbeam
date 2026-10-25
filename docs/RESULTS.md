@@ -23,6 +23,70 @@ Directivity, gain, realized gain and available RHCP/LHCP partial directivities u
 
 The Examples publication-figure menu uses the selected cut, quantity and projection for the active stored run. Its SVG/PDF source includes visible estimate readouts and qualifications, with detailed numerical metrics in SVG description metadata. On-screen figure export preserves the visible chart. Standard generated report packages retain their explicit principal-plane defaults; they do not silently inherit interactive UI state. All cut controls are verified against deterministic synthetic analytic fields, not a new solver or measurement result.
 
+## Unwrapped phase and group delay
+
+In the S-parameters result view or the Examples reflection view, choose **Unwrapped phase**
+or **Group delay** from the data-format selector. Both use the selected complex S-parameters;
+magnitude-only reference imports cannot supply phase. Group delay is
+`τg = −dφ/df / 360` in ns when phase is in degrees and frequency is in GHz.
+The **Aperture** control selects a local least-squares linear phase fit over 3, 5, 11 or 21
+samples. Wider apertures suppress noise but also smooth narrow dispersive features. At an
+endpoint the fit uses a one-sided window; a short valid segment uses all its available samples
+(at least two). Changing the aperture does not alter the unwrapped phase or stored results.
+
+Each original frequency grid must be finite, nonnegative and strictly increasing; invalid
+grids are rejected rather than sorted or deduplicated. Zero complex amplitude, nonfinite
+samples and an exactly ambiguous 180° step leave gaps. Neither interpolation nor the
+derivative crosses a gap. Unwrapping starts independently after each gap, so the absolute
+phase branch is arbitrary by whole turns. The warning for an observed phase wrap or 180°
+step is not proof of aliasing: recovering the true delay assumes adjacent true phase
+increments below 180°. Extra complete turns are indistinguishable from the sampled complex
+data. Refine the frequency sampling when this assumption is uncertain. Delay near deep
+reflection nulls may be noisy even when the complex amplitude is nonzero.
+
+Comparisons unwrap each run on its original grid, interpolate continuous phase onto the
+shared frequency grid, then fit the derivative there. The aperture therefore counts samples
+on the displayed comparison grid, not on each original grid; adding a valid comparison can
+change the smoothing bandwidth. No values are extrapolated beyond a run's range, and
+invalid frequency grids and magnitude-only runs do not contribute grid points. Copy data and CSV use the
+same grid, units, aperture and unsampled numeric values as the plot; missing values are empty
+cells. The Examples data table uses those values too (long tables may be visually sampled).
+Exports that request phase from a magnitude-only reference are explicitly rejected.
+The existing **All** format remains the magnitude, wrapped phase and real/imaginary views.
+These formats are display analysis only; they do not add TDR/time-domain results.
+
+## Ideal matching estimate
+
+The Designer's single-run **Impedance** and **Smith** views offer an opt-in ideal
+matching circuit. Pick an existing frequency sample and one of the admissible
+L-sections (series or shunt at the source, with either algebraic sign). Reactive
+loads can admit four solutions. Values are positive inductances in nH or
+capacitances in pF; zero elements are omitted. The displayed order is from source
+to load. A purely resistive load also admits a lossless 90-degree transformer,
+with `Zt = sqrt(Rload * Zref)`. Its electrical length varies linearly with frequency;
+no substrate, dispersion or physical line length is inferred.
+
+The original and ideal matched |S11| curves use the stored load impedance at every
+frequency, with constant ideal component values. Smith also overlays the ideal
+reflection locus. This is a circuit what-if, **not** a re-simulated or measured
+matched antenna: losses, parasitics and layout are absent. The original bundle,
+model and exported CSV/Touchstone data are unchanged. The estimate resets when
+changing result or view. Matching uses the existing stored reference plane; it
+does not de-embed a feed or insert elements into the Design.
+
+Any session port-postprocessing projection disables this estimate, including a
+real-reference change or ideal feed removal. Choose **Show original result** in
+**Port postprocessing** first; the matching tool never silently returns to a
+different plane. Unwrapped phase and group-delay plots and CSV instead follow
+the active processed matrix and retain its port-processing provenance.
+
+Only one-port complex data with a constant positive real reference is supported.
+Magnitude-only references, complex or frequency-varying references and multiport
+or run-comparison matching are unavailable. Missing/nonpassive load samples stay
+gaps. Synthesis uses the selected stored sample without interpolating an unknown
+load or extrapolating outside the recorded band. Analytic circuit controls check
+the equations; they do not establish electromagnetic or manufacturing accuracy.
+
 ## Accuracy notes
 
 - openEMS uses a staircase (Yee) FDTD mesh. Slanted and curved edges snap to mesh lines, and zero-thickness sheets sit on grid planes. Expect resonances to shift by a few percent unless the openEMS mesh is fine on the metal edges.
@@ -33,3 +97,78 @@ The Examples publication-figure menu uses the selected cut, quantity and project
 - Half-wave dipole: resonance 1.3-1.4 % below the closed-form induced-EMF resonance, R_in 72-73 Ω, Dmax 2.13-2.15 dBi, efficiency 0.999. Full tables, the end-criterion study and recommended settings are in [VALIDATION.md](VALIDATION.md).
 
 The [RunHistory sweep CSV](STUDIES.md#runhistory-sweep-csv) follows the same band definitions with lowercase column names: `band_lo_ghz` and `band_hi_ghz` are the edges, `band_center_ghz` is their middle, and `band_best_ghz` is the |S11| minimum frequency. It uses the first band of each job; missing edges leave the center blank. RunHistory labels the minimum frequency **Best match**.
+
+
+## Designer port postprocessing
+
+In a Designer result's S-parameters, impedance, VSWR, Smith, table or summary tab,
+open **Port postprocessing**. Choose one common reference `R + jX` in ohms (`R > 0`) and
+a signed, one-way delay in picoseconds for each **physical** port. The matrix index
+is shown beside the physical ID. Apply changes explicitly; **Show original result**
+resets only that loaded result. Settings are held in memory by loaded result identity,
+not a filename, and are never saved into the bundle, design or optimizer inputs.
+
+The operation removes an ideal matched lossless feed at each original port reference
+first, then renormalizes the full power-wave matrix. With the exp(+jωt) convention,
+`S'_ij = S_ij exp(+j 2π f (τ_i + τ_j))` before renormalization. Positive delay moves
+toward the device; negative delay adds line. The feed must be matched to the original
+reference; reflection receives twice its one-way phase. No material, propagation
+velocity, length, loss or dispersion is inferred. Phase arguments exceeding 1,000,000
+radians at any port are refused to bound floating-point phase precision.
+
+The persistent **Postprocessed** label identifies this result view. S, Z,
+the matched bands and summary, Copy/CSV, Touchstone and exported plot titles use the
+same projection. Comparison retains each run's own settings and identifies processed
+traces/rows. CSV includes processing provenance; Touchstone includes source references,
+physical IDs, delay signs/units and the transform order in comments. The matched bands
+are contiguous stored samples below the result's threshold (default −10 dB), without
+invented crossing frequencies; a band ending at missing data is a lower bound. A missing
+or singular coupled matrix sample stays a gap, with a displayed count. Touchstone refuses
+gaps rather than inventing complex values. Smith and VSWR use the same projection when
+the target reference is real. For complex targets, these two views and Touchstone are
+unavailable, with an explanation; CSV retains the complex samples and provenance.
+
+Complex targets use Kurokawa power waves:
+`a = (V + Zref I)/(2 sqrt(Re Zref))`, `b = (V - conj(Zref) I)/(2 sqrt(Re Zref))`.
+Consequently `Gamma = (Zin - conj(Zref))/(Zin + Zref)` and
+`Zin = Re(Zref) (1 + Gamma)/(1 - Gamma) - j Im(Zref)`; the other ports are terminated
+in `Zref`. A conjugately matched load has zero power reflection; a short at complex
+reference does **not** generally have Gamma = −1. Standard Smith impedance circles and
+the traveling-wave standing-wave ratio do not describe these complex-reference power
+waves. No non-passive value is clipped, and an exact open retains S = 1 with undefined
+finite impedance. See the [scikit-rf complex-reference discussion](https://scikit-rf.readthedocs.io/en/latest/examples/networktheory/Working%20with%20Complex%20Characteristic%20Impedances.html).
+
+For mixed mode, enter disjoint ordered pairs of **physical** port IDs, such as `7,19; 2,5`.
+The first number is positive polarity. The complete wave basis contains every differential
+channel, every common channel, then the unpaired single-ended channels. With equal target
+references, `aD = (ap-an)/sqrt(2)` and `aC = (ap+an)/sqrt(2)` (and likewise for b), so
+`Smodal = T S T^T`. References are `2Z` for differential, `Z/2` for common and `Z` for
+unpaired channels. Labels retain both mode and physical IDs; reversing a pair changes
+its differential coupling signs. Bands, the impedance/table view and summary refer to
+the **first differential pair**, explicitly labelled Sdd11; the S/Smith selectors expose
+other channels. Comparing different reference/plane/modal settings suppresses network
+metric improvement deltas. Radiation remains the original physical-port evidence.
+
+Real-reference modal Touchstone uses **Touchstone 2.0**, extension `.ts`, explicit
+`[Mixed-Mode Order]`, Full matrix data, and `[Two-Port Data Order] 12_21` for two channels.
+The D/C/S descriptors use canonical original single-ended indices, not physical IDs;
+comments retain the index-to-physical-ID mapping. `[Reference]` lists the underlying
+single-ended resistances, not `2R` and `R/2`. Complex-reference Touchstone is refused
+because its reference field cannot encode these complex power-wave references. This
+export does not add mixed-mode import support; Fairbeam's importer still refuses that
+format. The [ratified Touchstone 2.0 specification](https://www.ibis.org/touchstone_ver2.0/)
+defines the modal ordering and reference convention.
+
+Far-field, efficiency, power, solver, run-list and optimizer evidence remain at the
+original reference. Port analysis does not recompute radiated/accepted power or the
+original solver's passivity/reciprocity QA. Those matrix QA values are unavailable on
+the projection, rather than copied as new measurements. In a summary, a far-field sample
+chosen near a newly located match still contains the original radiation measurement.
+
+The **original** complete matrix must have known phase and explicit, constant, positive
+real references (including a single-port legacy result with a valid reference). Invalid
+port mapping, incomplete multiport data, native complex or waveguide/per-frequency
+references and invalid frequency grids are refused. Complex target chip references and
+mixed mode are supported; this is not launch-discontinuity removal, a TRL calibration,
+or a dispersive feed model. The standalone Examples viewer continues to
+show original data; this control is scoped to Designer result tabs.

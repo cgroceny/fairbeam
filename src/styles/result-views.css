@@ -4,6 +4,8 @@
 /* the result data format select: as wide as its longest choice ("Linear magnitude + phase"), not cut */
 .dock-tools > select.btn.result-format, .dw-result-bar > select.btn.result-format,
 .dock-narrow .dock-tools > select.btn.result-format { width: auto; min-width: 7rem; max-width: 16rem; text-overflow: clip; }
+.group-delay-aperture { display: inline-flex; align-items: center; gap: var(--al-space-1); color: var(--al-text-2); font-size: var(--al-text-xs); white-space: nowrap; }
+.group-delay-aperture select.btn { width: auto; }
 
 /* CSV and Touchstone keep a short label ("CSV", ".s2p") beside their icons when the bar folds its
    labelled buttons to icons: the two downloads never look alike */
@@ -50,3 +52,20 @@
 .radiation-select { display: flex; align-items: center; flex-wrap: wrap; gap: var(--al-space-2); padding: var(--al-space-2); font-size: var(--al-text-xs); }
 .radiation-select select { max-width: 100%; }
 .radiation-view .rdk-details > summary { width: auto; }
+
+/* Session-only port analysis follows existing result fields and disclosure styling. */
+.port-result-body { display: flex; flex-direction: column; min-height: 0; height: 100%; overflow: auto; }
+.port-result-body > .rdk-split { flex: 1; min-height: 240px; }
+.port-processing-panel { margin: 8px 12px; flex: none; }
+.port-processing-panel > summary { cursor: pointer; }
+.port-processing-fields { display: flex; flex-wrap: wrap; gap: 12px; margin: 8px 0; }
+.port-processing-fields .rdk-field { min-width: 160px; flex: 1 1 160px; }
+.port-processing-fields input { width: 100%; }
+.port-processing-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.port-processing-notice { margin: 8px 12px 0; flex: none; }
+.matching-panel { display: flex; flex-direction: column; gap: var(--al-space-2); min-width: 0; }
+.matching-panel h3, .matching-panel p { margin: 0; }
+.matching-field { display: flex; flex-direction: column; gap: var(--al-space-1); min-width: 0; }
+.matching-field :is(select,input) { width: 100%; min-width: 0; }
+.matching-enable { display: flex; align-items: center; gap: var(--al-space-2); }
+.matching-chart { height: 210px; min-height: 210px; }

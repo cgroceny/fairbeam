@@ -2,6 +2,27 @@
 import { createSignal, untrack } from "solid-js";
 import { activateTab, closeTab, cycleTab, isMainResultView, ONLY_3D, openResultTab, type MainResultView, type MainTabId, type MainTabs } from "./resultTabs.ts";
 import type { ResultFocus, ResultTarget, ResultView } from "./resultFocus.ts";
+import type { Bundle } from "../types.ts";
+import { postprocessPorts } from "../lib/portPostprocess.ts";
+import { originalPortResult, type PortProcessingSettings } from "../lib/portProcessingMetadata.ts";
+
+/** In-memory view projections keyed by the actual loaded result, never a reused filename.
+ * No app store, run cache, optimizer or persistence adapter can see these copies. */
+export function createPortProcessingSession() {
+  let projections = new WeakMap<Bundle, Bundle>();
+  const [revision, setRevision] = createSignal(0);
+  return {
+    revision,
+    project(bundle: Bundle): Bundle { revision(); const raw = originalPortResult(bundle); return projections.get(raw) ?? raw; },
+    apply(bundle: Bundle, settings: PortProcessingSettings) {
+      const raw = originalPortResult(bundle), result = postprocessPorts(raw, settings);
+      if (result.bundle) { projections.set(raw, result.bundle); setRevision(v => v + 1); }
+      return result.error;
+    },
+    reset(bundle: Bundle): void { projections.delete(originalPortResult(bundle)); setRevision(v => v + 1); },
+    dispose(): void { projections = new WeakMap(); setRevision(v => v + 1); },
+  };
+}
 
 export const IN_3D = new Set<ResultView>(["pattern3d", "currents", "fieldplane"]);
 

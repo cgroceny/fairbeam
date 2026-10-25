@@ -79,6 +79,7 @@ jobs:
         run: |
           node --experimental-strip-types scripts/check-result-data.mjs
           node --experimental-strip-types scripts/check-result-touchstone.mjs
+          node --experimental-strip-types scripts/check-result-compare.mjs
       - run: npm run -s check:docs-translations
       - run: npm run -s check:docs-highlight
       - if: needs.plan.outputs.full == 'true'
@@ -211,6 +212,12 @@ jobs:
           node scripts/check-circular-browser.mjs
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           node scripts/check-radiation-frequency-browser.mjs
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          node scripts/check-group-delay-browser.mjs
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          node scripts/check-matching-browser.mjs
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          node --experimental-strip-types scripts/check-port-postprocessing-browser.mjs
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           node scripts/check-toast-announcements-browser.mjs
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
