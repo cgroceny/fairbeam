@@ -107,9 +107,11 @@ Do not deploy a new copy merely to investigate a quota warning.
    Start with the largest contributor; a team-wide warning does not prove Fairbeam caused it.
    Record the project's current retention settings, live deployment ID, domain aliases and
    known-good rollback IDs. An access error is an incomplete audit, not an empty inventory.
-2. **Review retention for this project only.** Fairbeam's proposed starting policy is seven
-   days for canceled/errored builds, fourteen days for pre-production and ninety days for
-   production. Confirm the offered durations, incident-history needs and protected deployments
+2. **Review retention for this project only.** Fairbeam's Hobby policy is seven days for
+   canceled/errored builds, fourteen days for pre-production and thirty days for production.
+   These values were applied and read back on October 25, 2026. Hobby does not offer the
+   previously proposed ninety-day production window. Confirm the offered durations,
+   incident-history needs and protected deployments
    before applying it. Keep the live deployment and at least two verified production rollback
    candidates, plus deployments still needed for an open PR or release investigation. If the
    available policy cannot preserve that set, retain the longer period and review candidates
@@ -132,9 +134,12 @@ Do not deploy a new copy merely to investigate a quota warning.
    do not claim space was freed just because a deletion request succeeded. If usage stays high,
    inspect remaining aliases, retained previews and large output before changing the plan.
 
-The durations above are repository policy proposals, not a receipt that settings have been
-changed. Vercel's [retention rules](https://vercel.com/docs/deployment-retention) include
-protected recent deployments and aliases; deletion and storage accounting are asynchronous.
+Recheck the live policy before each maintenance batch; the dated values above do not prove
+that a future project still has the same settings. Vercel's
+[retention rules](https://vercel.com/docs/deployment-retention) include protected recent
+deployments and aliases; deletion and storage accounting are asynchronous. Hobby's protected
+deployment counts can differ from paid plans, so do not assume an old default count still
+describes the platform's complete protection rules. Preserve the reviewed rollback set explicitly.
 Retain investigation evidence separately before cleanup. Production website publication and
 promotion still follow the release owner's responsibilities in [RELEASES.md](RELEASES.md).
 
