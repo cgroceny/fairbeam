@@ -87,7 +87,11 @@ try {
     });
     await page.waitForSelector('[data-mesh-source="synthetic_saved_mesh"]');
     const text = key => page.evaluate(async key => (await import("/src/i18n/index.ts")).t(key), key);
-    assert.ok((await page.$eval(".mv-panel", e => e.textContent)).includes("0.035"), "shown mesh, not the different draft preview, supplies intervals");
+    // The fixture is 0.035 mm in both languages; display follows the locale.
+    // Inspect the selected axis row, not an unrelated number elsewhere in the panel.
+    const shownX = await page.$eval('[data-mesh-jump="x"]', e => e.closest(".mv-bottleneck-row").querySelector(".mono").textContent);
+    assert.equal(shownX, lang === "tr" ? "x: 0,035000 mm" : "x: 0.035000 mm",
+      "shown mesh, not the different draft preview, supplies the localized interval");
     await page.evaluate(() => {
       const { camera, controls } = window.__fairbeam;
       camera.position.add({ x: 10000, y: -10000, z: 10000 });
