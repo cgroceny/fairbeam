@@ -58,6 +58,10 @@ answers 503 and does nothing. The static build ignores `api/`.
 
 ## Check locally before deploying
 
+Use the [deployment storage maintenance procedure](CI.md#deployment-storage-maintenance)
+for quota warnings, retention reviews and output-size checks. Complete local validation before
+one reviewed publication batch; a quota audit does not require a new deployment.
+
 ```bash
 npm ci
 npm run build:site                          # writes site-dist/
