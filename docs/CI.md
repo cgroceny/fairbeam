@@ -149,8 +149,13 @@ foreach ($outputPath in @('site-dist', '.vercel/output')) {
   }
   $outputFiles = @(Get-ChildItem -LiteralPath $outputPath -File -Recurse -Force)
   $outputBytes = ($outputFiles | Measure-Object -Property Length -Sum).Sum
-  [pscustomobject]@{ Output = $outputPath; Files = $outputFiles.Count; Bytes = $outputBytes }
-  $outputFiles | Sort-Object Length -Descending | Select-Object -First 20 FullName, Length
+  [pscustomobject]@{
+    Output = $outputPath
+    Files = $outputFiles.Count
+    Bytes = $outputBytes
+    Largest = @($outputFiles | Sort-Object Length -Descending |
+      Select-Object -First 20 FullName, Length)
+  } | ConvertTo-Json -Depth 4
 }
 ```
 
