@@ -179,7 +179,7 @@ class Job:
     PUBLIC = ("id", "model", "model_id", "model_path", "params", "overrides", "threads", "name", "status",
               "phase", "created", "started", "finished", "exit_code", "bundle", "error", "end_criteria_db",
               "requested_end_criteria_db", "engine", "label", "sweep", "kind", "optimize", "last_progress",
-              "stats", "info", "pid", "proc_start", "command", "sim_dir", "points", "mesh_density", "input_snapshot", "research", "result")
+              "stats", "info", "pid", "proc_start", "command", "sim_dir", "points", "mesh_density", "excite", "input_snapshot", "research", "result")
     MEMORY_EVENTS = 500  # events a finished job keeps in memory (the file keeps all of them)
     TRIMMED_TYPES = ("log", "progress")  # the bulky kinds; every other event is always kept
 
@@ -214,6 +214,7 @@ class Job:
         self.points: int | None = kw.get("points")  # frequency points (`fairbeam run --points`)
         # a design's automatic mesh density for this run (`fairbeam run --mesh-density`, mesh convergence)
         self.mesh_density: float | None = kw.get("mesh_density")
+        self.excite: str | None = kw.get("excite")  # opt-in network convergence drives all ports
         self.label: str | None = kw.get("label")  # display name given by the user
         # {id, name, index, total, values: {key: value}} when the job is part of a sweep
         self.sweep: dict | None = kw.get("sweep")
@@ -627,6 +628,8 @@ class JobManager:
             cmd += ["--points", str(job.points)]
         if job.mesh_density:
             cmd += ["--mesh-density", f"{float(job.mesh_density):g}"]
+        if job.excite == "all":
+            cmd += ["--excite", "all"]
         if job.requested_end_criteria_db is not None:  # absent: the model's/design's own threshold
             cmd.append(end_db_arg(job.requested_end_criteria_db))
         return cmd
@@ -667,6 +670,7 @@ class JobManager:
                end_criteria_db: float | None = None, engine: str | None = None, label: str | None = None,
                sweep: dict | None = None, kind: str = "run", optimize: dict | None = None,
                points: int | None = None, mesh_density: float | None = None, design_input: str | None = None,
+               excite: str | None = None,
                research_input: dict | None = None) -> Job:
         research_bytes = None
         if kind == "research":
@@ -699,7 +703,7 @@ class JobManager:
         job = Job(self.root, id=job_id, model=model, model_id=model_id, model_path=str(model_path),
                   params=params or {}, overrides={k: str(v) for k, v in (overrides or {}).items()},
                   threads=threads, name=name, requested_end_criteria_db=end_criteria_db, engine=engine,
-                  label=label, sweep=sweep, kind=kind, optimize=optimize, points=points, mesh_density=mesh_density,
+                  label=label, sweep=sweep, kind=kind, optimize=optimize, points=points, mesh_density=mesh_density, excite=excite,
                   sim_dir=str(self.sim_root / "runs" / job_id) if self.sim_root else None)
         job.dir.mkdir(parents=True, exist_ok=True)
         if snapshot_bytes is not None:

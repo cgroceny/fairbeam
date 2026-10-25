@@ -1637,6 +1637,7 @@ class App:
         """A mesh convergence study of a saved design (fairbeam.convergence): the first density is
         queued now, each next one when the previous run is done and the stopping rule says so."""
         from . import convergence as cv
+        from .study import network_criteria_request
 
         m, resolved, overrides = self._validated(body)
         if m.get("kind") != "design":
@@ -1669,6 +1670,14 @@ class App:
             tol = cv.check_tolerances(tolerances)
         except ValueError as e:
             errors["tolerances"] = str(e)
+        network = None
+        if "network_criteria" in body:
+            try:
+                design = json.loads(m["_queued_design"])
+                network = network_criteria_request(body["network_criteria"],
+                                                   [p["number"] for p in design.get("ports", [])])
+            except ValueError as e:
+                errors["network_criteria"] = str(e)
         if errors:
             raise ApiError(422, "invalid convergence study", fields=errors)
         self._refuse_by_preflight(body, st)
@@ -1679,9 +1688,11 @@ class App:
                   "params": resolved, "overrides": overrides, "threads": st["threads"], "engine": st["engine"],
                   "end_criteria_db": st["end_criteria_db"], "label": st["label"], "points": st["points"],
                   "name": st["name"]}
+        if network:
+            job_kw["excite"] = "all"
         _, job = self.studies.start(study_id=study_id, name=name, model=model, job_kw=job_kw, planned=planned,
                                     tol=tol, settings={"threads": st["threads"], "engine": st["engine"],
-                                                       "end_criteria_db": st["end_criteria_db"]})
+                                                       "end_criteria_db": st["end_criteria_db"]}, network_criteria=network)
         return {"study": self.studies.get(study_id), "runs": [job.to_dict()]}
 
     def convergence(self, study_id: str) -> dict:

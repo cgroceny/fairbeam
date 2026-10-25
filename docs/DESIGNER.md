@@ -1055,6 +1055,33 @@ The dialog sets:
 | Run limit | 4 | The study runs at most this many densities from the list (a note appears when the list is longer) |
 | Engine | the Run settings | CPU or GPU, when the server has both |
 
+**Also check network quantities** is off by default. Enable it to add one to twelve criteria at
+one fixed **Frequency (GHz)**. Choose the physical port numbers shown in the design, not their
+position in a list, and a positive change tolerance for each quantity:
+
+| Quantity | Port order | Measured value | Tolerance unit |
+| --- | --- | --- | --- |
+| Coupling or isolation | receiving, driven | −20 log₁₀ \|S(receiving, driven)\| | dB |
+| Network directivity | receiving, reference output, driven | 20 log₁₀ \|S(receiving, driven) / S(reference, driven)\| | dB |
+| Transmission phase | receiving, driven | Phase of S(receiving, driven) | degrees |
+| Phase balance | receiving, reference output, driven | Phase of S(receiving, driven) / S(reference, driven) | degrees |
+| Port reflection | port | 20 log₁₀ \|S(port, port)\| | dB |
+
+These criteria add to the resonance, S11, available far-field, energy and local-mesh checks;
+they do not replace them. Network directivity is an S-parameter ratio, separate from far-field
+Dmax. Phase changes use the shortest angular difference across ±180°. With network criteria on,
+each density drives **every port separately** (`--excite all`), even ports disabled in the saved
+design. The time estimate includes that excitation count; the design's port settings are unchanged.
+Duplicate criteria, missing port numbers and invalid frequency/tolerance values block Start.
+
+The network results table shows the value, change, limit and outcome for each density and
+criterion. Missing excitation columns, invalid samples, a frequency outside the sampled band,
+or amplitudes at or below 10⁻⁴ are unavailable and cannot pass. A small change without verified
+energy and local-mesh evidence is unverified. The first run has no preceding comparison.
+This is a refinement check at the selected frequency, not validation across the whole band or
+a replacement for physical validation. In particular, a response whose S11 minimum is only at
+the band edge still lacks a comparable resonance for the existing stopping rule.
+
 The study stops at the first step whose changes are all strictly below their tolerances. It then
 reports **converged at N cells/λ**, where N is the coarser density of that step: the finer run
 confirms it. When the densities or the run limit are used up first, it reports **Not converged**
