@@ -5,6 +5,7 @@ import assert from "node:assert/strict";
 import { mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import puppeteer from "puppeteer-core";
+import { withStartupDiagnostics } from "./scenarios/startup-diagnostics.mjs";
 import { chromePath, startStack } from "./scenarios/stack.mjs";
 
 if (process.env.CI !== "true" && process.env.FAIRBEAM_ALLOW_LOCAL_BROWSER !== "1") {
@@ -16,7 +17,7 @@ let stack, browser, page;
 const starts = [], errors = [], outcomes = [];
 try {
   stack = await startStack({ log: console.log, niceSolver: false });
-  browser = await puppeteer.launch({ executablePath: await chromePath(), headless: true, args: ["--no-sandbox", "--enable-unsafe-swiftshader"] });
+  browser = await puppeteer.launch({ executablePath: await chromePath(), headless: true, args: ["--no-sandbox", "--mute-audio", "--enable-unsafe-swiftshader"] });
   for (const lang of ["en", "tr"]) {
     const context = await browser.createBrowserContext();
     page = await context.newPage();
@@ -33,8 +34,10 @@ try {
     page.on("pageerror", error => errors.push(String(error)));
     await page.setViewport({ width: 1440, height: 1000 });
     await page.evaluateOnNewDocument(language => localStorage.setItem("fairbeam.generalSettings", JSON.stringify({ language })), lang);
-    await page.goto(stack.url, { waitUntil: "domcontentloaded" });
-    await page.waitForSelector(".home", { timeout: 45000 });
+    await withStartupDiagnostics(page, { directory: join(out, `startup-${lang}`), stack }, async () => {
+      await page.goto(stack.url, { waitUntil: "domcontentloaded" });
+      await page.waitForSelector(".home", { timeout: 45000 });
+    });
     await page.evaluate(async lang => {
       const store = await import("/src/designer/store.ts");
       await store.createDesign({ id: `wideband_${lang}`, name: `Wideband ${lang}`, template: "dipole" });

@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import { mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import puppeteer from "puppeteer-core";
+import { withStartupDiagnostics } from "./scenarios/startup-diagnostics.mjs";
 import { chromePath, startStack } from "./scenarios/stack.mjs";
 if (process.env.CI !== "true" && process.env.FAIRBEAM_ALLOW_LOCAL_BROWSER !== "1")
   throw new Error("Browser acceptance runs in CI; local use requires explicit root scheduling.");
@@ -12,7 +13,7 @@ const errors = [];
 const forbiddenStarts = [];
 try {
   stack = await startStack({ log: console.log, niceSolver: false });
-  browser = await puppeteer.launch({ headless: true, executablePath: await chromePath(), args: ["--no-sandbox", "--enable-unsafe-swiftshader"] });
+  browser = await puppeteer.launch({ headless: true, executablePath: await chromePath(), args: ["--no-sandbox", "--mute-audio", "--enable-unsafe-swiftshader"] });
   for (const lang of ["en", "tr"]) {
     const context = await browser.createBrowserContext();
     page = await context.newPage();
@@ -34,8 +35,10 @@ try {
     });
     await page.setViewport({ width: lang === "en" ? 1440 : 760, height: 900 });
     await page.evaluateOnNewDocument(lang => localStorage.setItem("fairbeam.generalSettings", JSON.stringify({ language: lang })), lang);
-    await page.goto(stack.url, { waitUntil: "domcontentloaded" });
-    await page.waitForSelector(".home");
+    await withStartupDiagnostics(page, { directory: join(out, `startup-${lang}`), stack }, async () => {
+      await page.goto(stack.url, { waitUntil: "domcontentloaded" });
+      await page.waitForSelector(".home");
+    });
     await page.evaluate(async lang => {
       const store = await import("/src/designer/store.ts");
       await store.createDesign({ id: `mesh_inspector_${lang}`, name: `Mesh inspector ${lang}`, template: "dipole" });

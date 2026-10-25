@@ -7,7 +7,7 @@ import { tmpdir } from 'node:os';
 import puppeteer from 'puppeteer-core';
 import { startStack, chromePath } from './scenarios/stack.mjs';
 import { Session, auditInPage } from './scenarios/harness.mjs';
-import { safeDiagnosticText } from './scenarios/startup-diagnostics.mjs';
+import { safeDiagnosticText, withStartupDiagnostics } from './scenarios/startup-diagnostics.mjs';
 
 if (process.env.GITHUB_ACTIONS !== 'true' && process.env.FAIRBEAM_ALLOW_BROWSER_TEST !== '1') {
   throw new Error('Browser test requires remote CI or explicit user permission (FAIRBEAM_ALLOW_BROWSER_TEST=1).');
@@ -20,7 +20,7 @@ const forbidden = [];
 try {
   stack = await startStack({ log: console.log });
   browser = await puppeteer.launch({ headless: true, executablePath: await chromePath(),
-    args: ['--no-sandbox', '--enable-unsafe-swiftshader', '--use-angle=swiftshader'] });
+    args: ['--no-sandbox', '--mute-audio', '--enable-unsafe-swiftshader', '--use-angle=swiftshader'] });
   for (const lang of ['en', 'tr']) {
     activeLang = lang;
     const context = await browser.createBrowserContext();
@@ -40,7 +40,9 @@ try {
       } else void request.continue();
     });
     const s = session = new Session(page, { lang, scenario: 'inset-patch', url: stack.url, artifactDirectory: out });
-    await page.goto(stack.url, { waitUntil: 'domcontentloaded' }); await s.wait('.home');
+    await withStartupDiagnostics(page, { directory: join(out, `startup-${lang}`), stack }, async () => {
+      await page.goto(stack.url, { waitUntil: 'domcontentloaded' }); await s.wait('.home');
+    });
     await s.wait('.home-templates .nm-option', await s.T('templates.insetPatch.name'));
     await s.wait('.home-templates .nm-option', await s.T('templates.insetPatch.sub'));
     assert.deepEqual(await page.evaluate(auditInPage, '.home-templates'), []);

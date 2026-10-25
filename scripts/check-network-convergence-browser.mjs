@@ -6,6 +6,7 @@ import { mkdir, writeFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import { tmpdir } from "node:os";
 import puppeteer from "puppeteer-core";
+import { withStartupDiagnostics } from "./scenarios/startup-diagnostics.mjs";
 import { startStack, chromePath } from "./scenarios/stack.mjs";
 import { Session, auditInPage } from "./scenarios/harness.mjs";
 
@@ -79,8 +80,10 @@ try {
         void request.continue();
       });
       const s = new Session(page, { lang, scenario: "network-convergence", url: stack.url });
-      await page.goto(stack.url, { waitUntil: "domcontentloaded" });
-      await s.wait(".home");
+      await withStartupDiagnostics(page, { directory: join(out, `startup-${lang}`), stack }, async () => {
+        await page.goto(stack.url, { waitUntil: "domcontentloaded" });
+        await s.wait(".home");
+      });
       await s.ev(async language => {
         const store = await import("/src/designer/store.ts");
         await store.createDesign({ id: `network_browser_${language}`, name: "Network criteria", template: "microstrip" });
