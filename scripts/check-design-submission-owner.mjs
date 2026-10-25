@@ -23,7 +23,7 @@ const compile = (source, deps, expression) => new Function(...Object.keys(deps),
 const deferred = () => { let resolve, reject; const promise = new Promise((a, b) => { resolve = a; reject = b; }); return {promise, resolve, reject}; };
 const design = id => ({schema: 'fairbeam.design/1', model: {id, name: id}, params: [{key: 'W', default: 32}], materials: [], parts: [], ports: [], resistors: [], simulation: {}, mesh: {}, parameter_sweep: {schema: 'fairbeam.parameter-sweep/1', sequences: []}});
 const file = (id, hash = 'base', scope = id) => ({id, hash, backup_scope: scope, file: `${id}.design.json`, readonly: false, design: design(id)});
-function fixture({dirty = true, native = true, waitRefresh = false, waitResearch = null} = {}) {
+function fixture({dirty = true, native = true, waitRefresh = false, waitResearch = null, networkRequest = undefined} = {}) {
   const core = createDesignerSession(), external = deferred(), refreshed = deferred();
   const researchBoundary = deferred();
   const writes = [], selected = [], submitted = [], errors = [];
@@ -73,6 +73,7 @@ function fixture({dirty = true, native = true, waitRefresh = false, waitResearch
     values: () => ({f_min_hz: '1.5', f_max_hz: '3.2', farfield_hz: '2.45', points: '11', cell_mm: '12'}),
     hasDocumentResultScope: f => f?.id.startsWith('fb_'),
     followInDesigner: job => followed.push(job.id), openResearch: id => followed.push(id),
+    network: () => ({request: networkRequest}),
     setupError: () => null, planned: () => [15, 20], largestNodes: () => undefined, tol: () => ({}), runs: () => 2,
     runSettings: () => ({threads: 2}), setStudyId() {}, setStudy() {}, refreshRuns: async () => {}, attachDesignOptimize() {}, setBottomDockCollapsed() {},
     plan: () => ({error: null, sequences: [{name: 'Test', sweep: [{key: 'W', values: [32, 33]}]}]}), names: () => ({names: {W: core.draft.params[0].default}}),
@@ -98,7 +99,7 @@ function fixture({dirty = true, native = true, waitRefresh = false, waitResearch
       `{invoke:${kind === 'run' ? 'run' : 'start'}, close:()=>{dialogActive=false}}`);
   }
   return {core, io, prepare, external, refreshed, refreshedCalled: () => refreshedCalled, writes, selected, submitted, errors, handler,
-    researchBoundary, researchCalled: () => researchCalled, followed,
+    researchBoundary, researchCalled: () => researchCalled, followed, setNetwork: value => {networkRequest = value;},
     live: () => live, cancel: () => { live = false; }, sourceUnchanged: () => assert.equal(JSON.stringify(original.design), originalBytes),
     dispose: () => {io.dispose(); core.dispose();}};
 }
@@ -164,7 +165,28 @@ if (baseline) {
     x.external.resolve('save'); await p;
     assert.equal(x.core.file().id, 'fb_new'); assert.equal(x.selected.at(-1), 'fb_new', action);
     if (action !== 'optimize') assert.equal(x.submitted[0].model, 'fb_new', action);
+    if (action === 'convergence') assert.ok(!('network_criteria' in x.submitted[0]), 'opt-out remains absent');
     assert.equal(x.writes.length, 0, 'first native Save does not overwrite the legacy JSON'); x.sourceUnchanged(); x.dispose(); cases++;
+  }
+  // Opt-in criteria are captured at the initiating click and stay attached to its saved target.
+  // Changing form criteria while native Save waits must not substitute another request.
+  for (const outcome of ['saved', 'cancel', 'open', 'edit', 'close']) {
+    const criteria = {frequency_ghz: 2.4, metrics: ['isolation:7,19:0.2']};
+    const x = fixture({networkRequest: structuredClone(criteria)}), h = x.handler('convergence');
+    const p = h.invoke();
+    await tick(() => x.core.saving());
+    x.setNetwork({frequency_ghz: 3, metrics: ['phase:19,7:1']});
+    if (outcome === 'open') x.core.takeFile(file('other'));
+    if (outcome === 'edit') x.core.edit(d => d.params[0].default = 34);
+    if (outcome === 'close') h.close();
+    x.external.resolve(outcome === 'cancel' ? 'cancel' : 'save');
+    await p;
+    if (outcome === 'saved') {
+      assert.equal(x.submitted.length, 1);
+      assert.equal(x.submitted[0].model, 'fb_new');
+      assert.deepEqual(x.submitted[0].network_criteria, criteria);
+    } else assert.deepEqual(x.submitted, [], `network criteria/${outcome}`);
+    x.sourceUnchanged(); x.dispose(); cases++;
   }
   // Picker cancel, failure, concurrent Open and edits must never select or submit an old/new stranger.
   for (const action of ['optimize', 'run', 'sweep', 'convergence']) for (const outcome of ['cancel', 'failure', 'open', 'edit']) {
