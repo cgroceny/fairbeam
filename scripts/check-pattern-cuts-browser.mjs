@@ -6,6 +6,7 @@ import { tmpdir } from 'node:os';
 import puppeteer from 'puppeteer-core';
 import { startStack, chromePath, root } from './scenarios/stack.mjs';
 import { Session, auditInPage } from './scenarios/harness.mjs';
+import { withStartupDiagnostics } from './scenarios/startup-diagnostics.mjs';
 if (process.env.GITHUB_ACTIONS !== 'true' && process.env.FAIRBEAM_ALLOW_BROWSER_TEST !== '1') throw new Error('Browser test requires remote CI or explicit user permission.');
 const out = resolve(process.env.FAIRBEAM_TEST_ARTIFACTS || join(tmpdir(), 'fairbeam-scenario-failures'), 'pattern-cuts');
 await mkdir(out, { recursive: true });
@@ -38,7 +39,9 @@ try {
     await page.setViewport({ width: 1440, height: 1000 });
     await page.evaluateOnNewDocument(language => localStorage.setItem('fairbeam.generalSettings', JSON.stringify({language})), lang);
     const s = session = new Session(page, {lang, scenario:'pattern-cuts', url:stack.url, artifactDirectory:out});
-    await page.goto(stack.url, {waitUntil:'domcontentloaded'}); await s.wait('.home');
+    await withStartupDiagnostics(page, {directory:join(out, `startup-${lang}`), stack}, async () => {
+      await page.goto(stack.url, {waitUntil:'domcontentloaded'}); await s.wait('.home');
+    });
     await s.fill(await s.field(await s.T('home.newProject.name')), `Pattern cuts ${lang}`, {blur:false});
     await s.click('home.newProject.create'); await s.wait('.rb');
     const own = await s.store((_, m) => JSON.parse(JSON.stringify(m.s.file())));

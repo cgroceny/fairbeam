@@ -7,6 +7,7 @@ import { tmpdir } from 'node:os';
 import puppeteer from 'puppeteer-core';
 import { startStack, chromePath, root } from './scenarios/stack.mjs';
 import { Session, auditInPage } from './scenarios/harness.mjs';
+import { withStartupDiagnostics } from './scenarios/startup-diagnostics.mjs';
 
 if (process.env.GITHUB_ACTIONS !== 'true' && process.env.FAIRBEAM_ALLOW_BROWSER_TEST !== '1') {
   throw new Error('Browser test requires remote CI or explicit user permission (FAIRBEAM_ALLOW_BROWSER_TEST=1).');
@@ -66,8 +67,10 @@ try {
     });
     const s = new Session(page, { lang, scenario: 'pattern-resolution', url: stack.url, artifactDirectory: out });
     session = s;
-    await page.goto(stack.url, { waitUntil: 'domcontentloaded' });
-    await s.wait('.home');
+    await withStartupDiagnostics(page, { directory: join(out, `startup-${lang}`), stack }, async () => {
+      await page.goto(stack.url, { waitUntil: 'domcontentloaded' });
+      await s.wait('.home');
+    });
     const openDesign = async () => {
       await s.clickSel(`[data-home-design="${id}"] .home-item`);
       await s.waitFor(async id => { const m = await import('/src/designer/store.ts'); return !m.loading() && m.file()?.id === id; }, id);

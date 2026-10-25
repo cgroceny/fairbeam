@@ -8,7 +8,7 @@ import {tmpdir} from 'node:os';
 import puppeteer from 'puppeteer-core';
 import {root, startStack, chromePath, pythonPath} from './scenarios/stack.mjs';
 import {Session, auditInPage} from './scenarios/harness.mjs';
-import {safeDiagnosticText} from './scenarios/startup-diagnostics.mjs';
+import {safeDiagnosticText, withStartupDiagnostics} from './scenarios/startup-diagnostics.mjs';
 if(process.env.GITHUB_ACTIONS!=='true'&&process.env.FAIRBEAM_ALLOW_BROWSER_TEST!=='1')
   throw new Error('Browser test requires remote CI or explicit user permission (FAIRBEAM_ALLOW_BROWSER_TEST=1).');
 const out=resolve(process.env.FAIRBEAM_TEST_ARTIFACTS||join(tmpdir(),`fairbeam-radiation-${Date.now()}`),'radiation-frequency');
@@ -50,7 +50,9 @@ try{
       if(request.method()==='POST'&&(job||native)){forbidden.push(request.url());void request.abort();}else void request.continue();
     });
     const s=session=new Session(page,{lang,scenario:'radiation-frequency',url:stack.url,artifactDirectory:out});
-    await page.goto(stack.url,{waitUntil:'domcontentloaded'});await s.wait('.home',undefined,{timeout:45000});
+    await withStartupDiagnostics(page, {directory:join(out, `startup-${lang}`), stack}, async () => {
+      await page.goto(stack.url,{waitUntil:'domcontentloaded'});await s.wait('.home',undefined,{timeout:45000});
+    });
     const b=fixture(),file=join(out,`synthetic-${lang}.json`);await writeFile(file,JSON.stringify(b));
     await (await page.$('.app-header input[type=file]')).uploadFile(file);
     await s.waitFor(async()=>(await import('/src/state.ts')).bundle()?.model.id==='synthetic-radiation');

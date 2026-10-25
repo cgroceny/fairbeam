@@ -8,7 +8,7 @@ import {tmpdir} from 'node:os';
 import puppeteer from 'puppeteer-core';
 import {root, startStack, chromePath, pythonPath} from './scenarios/stack.mjs';
 import {Session, auditInPage} from './scenarios/harness.mjs';
-import {safeDiagnosticText} from './scenarios/startup-diagnostics.mjs';
+import {safeDiagnosticText, withStartupDiagnostics} from './scenarios/startup-diagnostics.mjs';
 
 if(process.env.GITHUB_ACTIONS!=='true'&&process.env.FAIRBEAM_ALLOW_BROWSER_TEST!=='1')
   throw new Error('Browser test requires remote CI or explicit user permission (FAIRBEAM_ALLOW_BROWSER_TEST=1).');
@@ -35,7 +35,9 @@ try {
       if(request.method()==='POST'&&(job||native)){forbidden.push(request.url());void request.abort();}else void request.continue();
     });
     const s=session=new Session(page,{lang,scenario:'circular',url:stack.url,artifactDirectory:out});
-    await page.goto(stack.url,{waitUntil:'domcontentloaded'});await s.wait('.home',undefined,{timeout:45000});
+    await withStartupDiagnostics(page, {directory:join(out, `startup-${lang}`), stack}, async () => {
+      await page.goto(stack.url,{waitUntil:'domcontentloaded'});await s.wait('.home',undefined,{timeout:45000});
+    });
     await page.locator('input[name="home-template"][value="patch"]').click();
     await s.fill(await s.field(await s.T('home.newProject.name')),`Circular settings ${lang}`,{blur:false});
     await s.click('home.newProject.create');await s.wait('.rb');
