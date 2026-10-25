@@ -82,10 +82,12 @@ export async function startStack({ log = () => {}, niceSolver = true } = {}) {
     const dependencies = await realpath(join(root, 'node_modules'));
     await writeFile(config, `import solid from ${JSON.stringify(join(root, 'node_modules/vite-plugin-solid/dist/esm/index.mjs'))};
 export default { root: ${JSON.stringify(root)}, publicDir: ${JSON.stringify(pub)}, plugins: [solid()], clearScreen: false, cacheDir: ${JSON.stringify(join(dir, 'vite-cache'))},
+  // Match the app's compiled Lucide entry: no thousands-of-JSX-modules cold-load waterfall.
+  resolve: { alias: [{ find: /^lucide-solid$/, replacement: ${JSON.stringify(join(root, 'node_modules/lucide-solid/dist/esm/lucide-solid.mjs'))} }] },
   // Pre-optimize lazy workspace/editor/export imports so first use does not trigger Vite's
   // "optimized dependencies changed" reload or split CodeMirror across optimizer generations.
   // Scenarios serve the app; scanning other HTML entries can require unbuilt site assets.
-  optimizeDeps: { entries: ['index.html'], include: ['three', 'three/addons/controls/OrbitControls.js', 'three/addons/environments/RoomEnvironment.js', 'three/addons/renderers/CSS2DRenderer.js', 'three/addons/exporters/GLTFExporter.js', 'three/addons/exporters/STLExporter.js', 'fflate', 'jspdf',
+  optimizeDeps: { entries: ['index.html'], include: ['lucide-solid', 'three', 'three/addons/controls/OrbitControls.js', 'three/addons/environments/RoomEnvironment.js', 'three/addons/renderers/CSS2DRenderer.js', 'three/addons/exporters/GLTFExporter.js', 'three/addons/exporters/STLExporter.js', 'fflate', 'jspdf',
     '@codemirror/state', '@codemirror/view', '@codemirror/commands', '@codemirror/lang-python', '@codemirror/language', '@codemirror/search', '@codemirror/lint', '@lezer/highlight'] },
   server: { host: '127.0.0.1', port: ${vitePort}, strictPort: true, fs: { allow: ${JSON.stringify([root, dependencies])} }, watch: { ignored: ['**/.sim/**', '**/python/**', '**/src-tauri/target/**'] },
     proxy: { '/api': { target: 'http://127.0.0.1:${apiPort}', changeOrigin: false } } } };\n`);

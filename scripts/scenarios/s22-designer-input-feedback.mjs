@@ -85,6 +85,9 @@ export default {
    assert.equal(await l.evaluate(el=>el.getAttribute('aria-invalid')),'false');
    assert.equal(await s.store((_,m)=>Object.hasOwn(m.s.draft.resistors[0],'L')),false);
    await s.fill(l,'unknown_inductance');assert.equal(await l.evaluate(el=>el.getAttribute('aria-invalid')),'true');
+   // Force the server-error state before correcting it: otherwise fast typing can miss
+   // the stale-diagnostic bug and leave this assertion dependent on preview timing.
+   await s.waitFor(async()=>Boolean((await import('/src/designer/store.ts')).serverErrors()['resistors[0].L']));
    await s.fill(l,'1e-9');assert.equal(await l.evaluate(el=>el.getAttribute('aria-invalid')),'false');
   });
   await s.step('RLC symbol selection is visual, undoable and persists',async()=>{
