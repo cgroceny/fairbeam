@@ -65,12 +65,32 @@ try {
       assert.notEqual(now.inset, old.inset, `${lang}: ${key} changes inset`);
       assert.ok(now.feed_w + 2 * now.gap < now.W && now.inset > 0 && now.inset < now.L / 2);
     }
-    // The displayed model must acquire the edited geometry; no synthetic fixture.
+    // Wait for the canonical server preview of these exact inputs, not the transient
+    // full-precision browser preview. geometry.py serializes coordinates to 6 decimals.
+    // Comparing that wire value with an unrounded expression at 1e-8 was timing-dependent.
     await s.waitFor(async () => {
+      const st = await import('/src/state.ts'), r = await import('/src/runner/store.ts');
+      const params = st.bundle()?.model.params ?? [];
+      return r.previewState() === 'ready' && [['f0', 1.8], ['eps_r', 3.38], ['h', 0.8]]
+        .every(([key, value]) => params.find(p => p.key === key)?.value === value);
+    }, null, { what: 'canonical server preview of edited inset inputs' });
+    const geometry = await s.ev(async () => {
       const d = await import('/src/designer/store.ts'), st = await import('/src/state.ts');
-      const n = d.names().names, p = st.bundle()?.parts.find(p => p.name === 'patch')?.primitives;
-      return p?.length === 4 && Math.abs(p[0].start[0] - n.x_in) < 1e-8 && Math.abs(p[0].start[2] - n.h) < 1e-8;
-    }, null, { what: 'edited inset geometry in displayed preview' });
+      return { names: { ...d.names().names }, primitives: st.bundle()?.parts.find(p => p.name === 'patch')?.primitives };
+    });
+    const n = geometry.names;
+    // These fixture values are not rounding ties. Check every serialized endpoint
+    // exactly instead of increasing a tolerance or accepting an earlier quick preview.
+    const wire = v => Number(v.toFixed(6));
+    assert.notEqual(wire(n.x_in), n.x_in, 'fixture must exercise server coordinate serialization');
+    const expected = [
+      [[n.x_in, -n.W / 2, n.h], [n.L / 2, n.W / 2, n.h]],
+      [[-n.L / 2, n.slot_y, n.h], [n.x_in, n.W / 2, n.h]],
+      [[-n.L / 2, -n.W / 2, n.h], [n.x_in, -n.slot_y, n.h]],
+      [[n.x_feed, -n.feed_w / 2, n.h], [n.x_in, n.feed_w / 2, n.h]],
+    ].map(([start, stop]) => ({ kind: 'box', start: start.map(wire), stop: stop.map(wire) }));
+    assert.deepEqual(geometry.primitives?.map(({ kind, start, stop }) => ({ kind, start, stop })), expected,
+      `${lang}: all four displayed server boxes must exactly match edited inset geometry`);
     const wanted = await s.store((_, m) => JSON.parse(JSON.stringify(m.s.draft)));
     await page.screenshot({ path: join(out, `edited-${lang}.png`) });
     assert.deepEqual(await page.evaluate(auditInPage, '.param-dock'), []);
