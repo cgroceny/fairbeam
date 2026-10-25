@@ -19,6 +19,13 @@ Failure artifacts and smoke bundles are retained for seven days.
 
 ## Publish the website once per reviewed batch
 
+Finish a focused change locally before pushing it for review. Run the required checks and
+the checks covering the changed behavior against the final commit, and retain their logs,
+source SHA and limitations. Do not push intermediate fixes just to discover failures on hosted
+CI. When a hosted check fails, inspect its saved evidence and reproduce or diagnose the failure
+locally before another push or an explicitly justified rerun. This does not waive required
+checks, reuse results from a different source tree, or combine unrelated changes into one PR.
+
 Git-triggered Vercel deployments are disabled in `vercel.json`. The existing live site stays
 online; merging application/backend work no longer creates a deployment. Vercel's ignored
 build command is deliberately not used: skipped builds still count toward deployment quotas.
@@ -83,3 +90,71 @@ later chooses automatic publishing again.
 
 Before pushing, run `node scripts/check-ci-scope.mjs`. Workflow changes still require a full
 remote qualification once; a green path-classification test alone is not enough.
+
+## Deployment storage maintenance
+
+Deployment Storage measures retained deployment output. Reducing build minutes or using
+`--prebuilt` does not by itself remove stored output. GitHub Actions artifacts, Vercel build
+caches and deployment output have separate retention controls. See Vercel's
+[storage overview](https://vercel.com/docs/deployment-storage) and
+[optimization guide](https://vercel.com/docs/deployment-storage/optimize).
+
+Use this procedure when a storage warning arrives and before a website publication batch.
+Do not deploy a new copy merely to investigate a quota warning.
+
+1. **Record the baseline.** Confirm the team and project. In the team's Usage view, record
+   the Deployment Storage and Functions Storage totals, date range and per-project breakdown.
+   Start with the largest contributor; a team-wide warning does not prove Fairbeam caused it.
+   Record the project's current retention settings, live deployment ID, domain aliases and
+   known-good rollback IDs. An access error is an incomplete audit, not an empty inventory.
+2. **Review retention for this project only.** Fairbeam's proposed starting policy is seven
+   days for canceled/errored builds, fourteen days for pre-production and ninety days for
+   production. Confirm the offered durations, incident-history needs and protected deployments
+   before applying it. Keep the live deployment and at least two verified production rollback
+   candidates, plus deployments still needed for an open PR or release investigation. If the
+   available policy cannot preserve that set, retain the longer period and review candidates
+   individually. Do not apply a team-wide policy to unrelated projects.
+3. **Prepare a cleanup manifest.** For each candidate, save its project, deployment ID, URL,
+   commit, state, creation time, aliases and reason it is no longer needed. Recheck aliases and
+   active review links immediately before deletion. Prefer the platform's retention policy;
+   do not run an age-only bulk-delete script. Missing evidence or unresolved ownership keeps
+   the deployment out of the deletion list. Close PRs only after their work is resolved, not
+   to make their previews eligible for cleanup.
+4. **Review local output before the next upload.** Inspect `site-dist/` and the complete
+   `.vercel/output/`, including function bundles. Keep installers, solver outputs, raw research
+   data, logs and environment files out of the website artifact. Preserve required demo files
+   and the ping schema. Compare output size and the largest files with the previous reviewed
+   batch; investigate unexpected growth before publishing. Local file bytes are a useful
+   comparison, not Vercel's billed storage measurement.
+5. **Verify the result.** Save the applied policy or exact deleted IDs and timestamps. Verify
+   that the live domain and retained rollback deployments still work. Compare Usage again
+   after it refreshes, using the same team, project and date range. Record measured reduction;
+   do not claim space was freed just because a deletion request succeeded. If usage stays high,
+   inspect remaining aliases, retained previews and large output before changing the plan.
+
+The durations above are repository policy proposals, not a receipt that settings have been
+changed. Vercel's [retention rules](https://vercel.com/docs/deployment-retention) include
+protected recent deployments and aliases; deletion and storage accounting are asynchronous.
+Retain investigation evidence separately before cleanup. Production website publication and
+promotion still follow the release owner's responsibilities in [RELEASES.md](RELEASES.md).
+
+Use this read-only PowerShell inventory after a local build. It does not upload, delete or
+read file contents, and does not replace the live Usage audit:
+
+```powershell
+foreach ($outputPath in @('site-dist', '.vercel/output')) {
+  if (-not (Test-Path -LiteralPath $outputPath -PathType Container)) {
+    Write-Output "$outputPath : not built"
+    continue
+  }
+  $outputFiles = @(Get-ChildItem -LiteralPath $outputPath -File -Recurse -Force)
+  $outputBytes = ($outputFiles | Measure-Object -Property Length -Sum).Sum
+  [pscustomobject]@{ Output = $outputPath; Files = $outputFiles.Count; Bytes = $outputBytes }
+  $outputFiles | Sort-Object Length -Descending | Select-Object -First 20 FullName, Length
+}
+```
+
+Each batch receipt records source SHA, local checks, output bytes, usage baseline, protected
+deployment IDs, cleanup actions (or an explicit skip), the single uploaded deployment ID,
+smoke-check results and any promotion. Never store tokens or downloaded environment files in
+that receipt. A build or smoke failure stops the batch; it does not trigger automatic redeploys.
