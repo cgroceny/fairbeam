@@ -3,6 +3,7 @@
 // bundle parts the viewer draws. The server preview replaces it a moment later with the real build
 // (mesh, checks); this only removes the round-trip delay from what you see.
 import { resolveOpacity, validColor } from "./colors.ts";
+import { datasheetAppearance } from "./dispersion.ts";
 import type { Bundle, Matrix4Rows, Part, Port } from "../types";
 import type { CircleCut, Design, DesignCut, DesignPart, DesignPrimitive, DesignTransform, PolygonCut, RectCut } from "./types";
 import { evaluate, namesIn } from "./expr.ts";
@@ -713,7 +714,9 @@ export function quickBundle(d: Design, names: Record<string, number>, previous: 
         name: part.name, type: metal ? "Metal" : "Material", label: part.label, color: validColor(part.color) ?? validColor(mt.color),
         ...(resolveOpacity(part, mt) !== undefined ? { opacity: resolveOpacity(part, mt) } : {}),
         primitives: bp, bbox: pb,
-        ...(metal ? {} : { material: { eps_r: mt.eps_r === undefined ? 1 : evaluate(mt.eps_r, names), mu_r: evaluate(mt.mu_r ?? 1, names) } }),
+        ...(metal ? {} : { material: "dispersion" in mt
+          ? datasheetAppearance(mt, (v) => evaluate(v, names), (evaluate(d.simulation.f_min, names) + evaluate(d.simulation.f_max, names)) / 2)
+          : { eps_r: mt.eps_r === undefined ? 1 : evaluate(mt.eps_r, names), mu_r: evaluate(mt.mu_r ?? 1, names) } }),
       } as unknown as Part);
       if (perVoid.length) {
         const vb: [V3, V3] = [[Infinity, Infinity, Infinity], [-Infinity, -Infinity, -Infinity]];

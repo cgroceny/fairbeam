@@ -19,6 +19,7 @@ import re
 from pathlib import Path
 
 from .modelfiles import _write_atomic
+from .designer_dispersion import resolved_input
 
 FILE_NAME = "materials.json"
 MAX_ENTRIES = 500
@@ -75,6 +76,11 @@ def clean_entry(raw) -> tuple[dict | None, str]:
                 return None, "thickness must be a positive number"
             out["thickness"] = th
     color = raw.get("color")
+    if "dispersion" in raw:
+        try:
+            out["dispersion"] = resolved_input(raw)["dispersion"]
+        except ValueError as error:
+            return None, str(error)
     if color is not None:
         if not isinstance(color, str) or not _COLOR.match(color):
             return None, "color must be #rrggbb"

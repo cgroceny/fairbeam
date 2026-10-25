@@ -7,6 +7,7 @@
 // The library is only a source for new copies: a design always carries the full copy of each
 // material it uses, and the .design.json format is unchanged.
 import type { DesignMaterial } from "./types.ts";
+import { resolvedDatasheet, type DatasheetDispersion } from "./dispersion.ts";
 
 /** One saved material. Plain numbers: tan_d_freq in GHz, conductivity in S/m, thickness in mm. */
 export interface UserMaterial {
@@ -17,6 +18,7 @@ export interface UserMaterial {
   mu_r?: number;
   tan_d?: number;
   tan_d_freq?: number;
+  dispersion?: DatasheetDispersion;
   conductivity?: number;
   thickness?: number;
   color?: string;
@@ -62,6 +64,16 @@ export function cleanUserMaterial(raw: unknown): { entry: UserMaterial } | { why
       if (th === null || th <= 0) return { why: "thickness must be a positive number" };
       out.thickness = th;
     }
+  }
+  if ("dispersion" in r) {
+    try {
+      const input = resolvedDatasheet(r as unknown as DesignMaterial, (v) => {
+        if (typeof v !== "number") throw new Error("dispersion inputs must resolve to finite numbers");
+        return v;
+      });
+      const d = r.dispersion as DatasheetDispersion;
+      out.dispersion = { model: "djordjevic-sarkar", m1: input.m1, m2: input.m2, ...("n_poles" in d ? { n_poles: d.n_poles } : {}) };
+    } catch (err) { return { why: (err as Error).message }; }
   }
   if (r.color !== undefined && r.color !== null) {
     if (typeof r.color !== "string" || !COLOR.test(r.color)) return { why: "color must be #rrggbb" };
@@ -110,12 +122,22 @@ export function userMaterialFromDesign(m: DesignMaterial, id: string): { entry: 
     raw[k] = v;
   }
   if (m.kind === "dielectric" && raw.tan_d === undefined) raw.tan_d = 0;
+  if (m.dispersion !== undefined) {
+    const d = { ...m.dispersion };
+    for (const key of ["m1", "m2"] as const) {
+      const v = plain(d[key]);
+      if (v === null) return { why: `dispersion.${key}` };
+      if (v === undefined) delete d[key]; else d[key] = v;
+    }
+    raw.dispersion = d;
+  }
   return cleanUserMaterial(raw);
 }
 
 /** A design material with a copy of the entry's values (the counterpart of materials.ts designMaterial). */
 export function designMaterialFromUser(u: UserMaterial, name = u.name): DesignMaterial {
   const out: DesignMaterial = { name, kind: u.kind };
+  if (u.dispersion) out.dispersion = { ...u.dispersion };
   if (u.kind === "dielectric") {
     out.eps_r = u.eps_r;
     if (u.mu_r !== undefined) out.mu_r = u.mu_r;

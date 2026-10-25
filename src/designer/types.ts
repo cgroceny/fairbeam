@@ -3,6 +3,7 @@
 // the parameters ("W/2", "wavelength(f0) / 4").
 
 import type { ElementSymbol } from "../types";
+import type { DatasheetDispersion } from "./dispersion.ts";
 
 export type Expr = number | string;
 export type Vec3 = [Expr, Expr, Expr];
@@ -31,6 +32,8 @@ export interface DesignMaterial {
   tan_d?: Expr;
   /** GHz */
   tan_d_freq?: Expr;
+  /** Opt-in causal datasheet model, fitted over the actual simulation band. */
+  dispersion?: DatasheetDispersion;
   /** metal only: S/m; empty = a perfect conductor (PEC) */
   conductivity?: Expr;
   /** metal with a conductivity: mm, the thickness of its sheets drawn with zero thickness (0.035 if empty) */

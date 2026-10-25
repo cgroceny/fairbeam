@@ -182,7 +182,7 @@ export default function PcbImportDialog() {
   // a "My materials" dielectric picked as the substrate: its values go into the custom fields
   const [mineId, setMineId] = createSignal("");
   void ensureUserMaterials();
-  const myDielectrics = () => userMaterials().filter((m) => m.kind === "dielectric");
+  const myDielectrics = () => userMaterials().filter((m) => m.kind === "dielectric" && !m.dispersion);
   const setField = (patch: Partial<PcbForm>) => { setMineId(""); setForm({ ...form(), ...patch }); schedule(400); };
   const chooseSubstrate = (idValue: string) => {
     const mine = idValue.startsWith("u:") ? myDielectrics().find((m) => `u:${m.id}` === idValue) : undefined;
@@ -376,6 +376,7 @@ export default function PcbImportDialog() {
                 {numberField(t("pcbImport.f0"), "f0", "GHz")}
               </div>
               <p class="rp-hint">{t("pcbImport.substrateNote")}</p>
+              <Show when={userMaterials().some((m) => !!m.dispersion)}><p class="rp-hint">{t("props.material.dsPcb")}</p></Show>
               <details class="pi-advanced">
                 <summary>{t("pcbImport.advanced")}</summary>
                 <div class="pi-grid">

@@ -1,0 +1,33 @@
+{
+  "about": "Shared Designer DS input controls; GHz, log10(rad/s). Numerical checks validate model/fit software only, not EM or measured laminate accuracy.",
+  "base": {"name": "Laminate", "kind": "dielectric", "eps_r": 4.3, "tan_d": 0.02, "tan_d_freq": 1, "dispersion": {"model": "djordjevic-sarkar"}},
+  "cases": [
+    {"name": "default corners", "patch": {}, "valid": true},
+    {"name": "parameter corners", "patch": {"eps_r": "er", "tan_d_freq": "fref", "dispersion": {"model": "djordjevic-sarkar", "m1": "lower", "m2": "lower + 8", "n_poles": 8}}, "valid": true},
+    {"name": "zero loss", "patch": {"tan_d": 0}, "valid": true},
+    {"name": "one pole", "patch": {"dispersion": {"model": "djordjevic-sarkar", "n_poles": 1}}, "valid": true},
+    {"name": "32 poles", "patch": {"dispersion": {"model": "djordjevic-sarkar", "n_poles": 32}}, "valid": true},
+    {"name": "missing explicit reference", "patch": {"tan_d_freq": null}, "valid": false},
+    {"name": "negative reference", "patch": {"tan_d_freq": -1}, "valid": false},
+    {"name": "magnetic input", "patch": {"mu_r": 2}, "valid": false},
+    {"name": "gain", "patch": {"tan_d": -0.02}, "valid": false},
+    {"name": "negative infinity permittivity", "patch": {"tan_d": 10}, "valid": false},
+    {"name": "equal corners", "patch": {"dispersion": {"model": "djordjevic-sarkar", "m1": 4, "m2": 4}}, "valid": false},
+    {"name": "overflow corner", "patch": {"dispersion": {"model": "djordjevic-sarkar", "m2": 400}}, "valid": false},
+    {"name": "underflow corner", "patch": {"dispersion": {"model": "djordjevic-sarkar", "m1": -400}}, "valid": false},
+    {"name": "zero poles", "patch": {"dispersion": {"model": "djordjevic-sarkar", "n_poles": 0}}, "valid": false},
+    {"name": "excess poles", "patch": {"dispersion": {"model": "djordjevic-sarkar", "n_poles": 33}}, "valid": false},
+    {"name": "fractional poles", "patch": {"dispersion": {"model": "djordjevic-sarkar", "n_poles": 2.5}}, "valid": false},
+    {"name": "boolean poles", "patch": {"dispersion": {"model": "djordjevic-sarkar", "n_poles": true}}, "valid": false},
+    {"name": "unknown model", "patch": {"dispersion": {"model": "drude"}}, "valid": false},
+    {"name": "extra fit band", "patch": {"dispersion": {"model": "djordjevic-sarkar", "f_max": 10}}, "valid": false},
+    {"name": "metal model", "patch": {"kind": "metal"}, "valid": false},
+    {"name": "null descriptor", "patch": {"dispersion": null}, "valid": false},
+    {"name": "unresolved corner expression", "patch": {"dispersion": {"model": "djordjevic-sarkar", "m1": "missing_parameter"}}, "valid": false},
+    {"name": "boolean reference", "patch": {"tan_d_freq": true}, "valid": false},
+    {"name": "null permittivity", "patch": {"eps_r": null}, "valid": false},
+    {"name": "null loss tangent", "patch": {"tan_d": null}, "valid": false},
+    {"name": "null permeability", "patch": {"mu_r": null}, "valid": false}
+  ],
+  "names": {"er": 4.3, "fref": 1, "lower": 4}
+}
