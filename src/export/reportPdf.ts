@@ -17,6 +17,7 @@ import { svgPagesToPdf, type PdfFonts } from "../drawing/pdfdoc.ts";
 import { engineText, meshText, reproduceCommand, reproduceNote, simulated, type ModelFileRef } from "./report.ts";
 import { APP_VERSION, bundleWriter } from "../lib/appVersion.ts";
 import { bandTexts } from "../lib/bands.ts";
+import { radiationBands, radiationPatternPoints } from "../lib/radiationFrequency.ts";
 import { modelMmText, modelToMm } from "../lib/modelUnits.ts";
 
 const W = 210;
@@ -302,6 +303,29 @@ export function reportPages(bundle: Bundle, opt: ReportOptions): string[] {
     if (r.farfield.some((x) => (x.mirror_planes ?? 0) > 0))
       d.para("Directivity, gain and efficiency refer to the physical half space above the infinite PEC ground (mirror-corrected by 2^m); patterns are defined for θ ≤ 90°.", FS_S * 0.95, "#333");
   });
+
+  // The same stored scalars as the graph/CSV, never a resampled or merged pattern pass.
+  const radiation = radiationBands(b);
+  if (radiation.length) {
+    d.newPage(); d.h2("Radiation versus frequency — coarse NF2FF samples");
+    d.para("Same band-efficiency pass; no additional NF2FF transform. Six angle pairs currently represent four distinct directions. Sampled peaks may miss the true peak. Values require the existing accepted-power error check (≤10%); gaps are not zero. This is not angular, gain or polarization convergence evidence.", FS_S);
+    for (const band of radiation) {
+      d.h2(`Physical port ${band.port ?? "unknown"}`);
+      d.para(`Source: ${band.sweep.radiation.source}; theta = ${band.sweep.radiation.theta.join(", ")} deg; phi = ${band.sweep.radiation.phi.join(", ")} deg. Boresight is theta=0 at the first stored phi.`, FS_S);
+      d.table(["f (GHz)", "D peak dBi", "D bore dBi", "G peak dBi", "G bore dBi", "RG peak dBi", "RG bore dBi"], band.samples.map(p => [f3(p.f), ...[p.values.d_peak_dbi,p.values.d_boresight_dbi,p.values.gain_peak_dbi,p.values.gain_boresight_dbi,p.values.realized_peak_dbi,p.values.realized_boresight_dbi].map(v => v === null ? "—" : fx(v))]), [1,1,1,1,1,1,1], ["r","r","r","r","r","r","r"]);
+      if (band.sweep.radiation.cp_requested) {
+        d.para("Axial ratio (AR): dB, 0 circular, ≥60 capped; masked below sampled Dmax−20 dB. Peak AR means AR at the sampled directivity peak, not minimum AR. Passing frequency samples do not establish interpolated or converged 3 dB AR bandwidth.", FS_S);
+        const ar = (v: number | null) => v === null ? "—" : `${v >= 60 ? "≥" : ""}${fx(v)}`;
+        d.table(["f (GHz)", "AR at peak dB", "AR bore dB", "Pacc relative error", "Accepted-power status"], band.samples.map(p => [f3(p.f), ar(p.values.ar_peak_db), ar(p.values.ar_boresight_db), p.paccError === null ? "—" : fx(p.paccError,4), p.reliability]), [1,1,1,1,1.6], ["r","r","r","r","l"]);
+      }
+    }
+    const stored = radiationPatternPoints(b);
+    if (stored.length) {
+      d.h2("Separate stored-pattern AR points");
+      d.para("Own stored angular grids; accepted-power reliability unassessed here. These points never fill a coarse-curve gap.", FS_S);
+      d.table(["Port", "f (GHz)", "AR at D peak (dB)", "AR boresight (dB)"], stored.map(p => [String(p.port ?? "unknown"), f3(p.f), ...[p.values.ar_peak_db,p.values.ar_boresight_db].map(v => v === null ? "—" : `${v >= 60 ? "≥" : ""}${fx(v)}`)]), [1,1,1.5,1.5], ["r","r","r","r"]);
+    }
+  }
 
   // at a glance: |S11| and the first pattern
   const glance = [s11Figure(b, { widthMm: 88, heightMm: 64 }), r?.farfield.length ? patternFigure(b, 0, { widthMm: 80 }) : null].filter((x): x is string => !!x);

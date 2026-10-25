@@ -22,6 +22,8 @@ import { setBottomDockCollapsed } from "./layoutState";
 import type { Design } from "./types";
 import { fmt, t } from "../i18n";
 import NumberField from "../components/NumberField";
+import { NetworkFields, NetworkReport } from "./NetworkConvergenceControls";
+import { networkRequest, newNetworkDraft } from "./networkConvergence";
 
 /** open: null closed; studyId null shows the setup, else that study's progress and report */
 const [open, setOpen] = createSignal<{ studyId: string | null } | null>(null);
@@ -53,6 +55,12 @@ function Content(props: { studyId: string | null }) {
   const [busy, setBusy] = createSignal(false);
 
   // ---- setup
+  const ports = () => (draft.ports ?? []).map(p => p.number);
+  const [networkEnabled, setNetworkEnabled] = createSignal(false);
+  const initialFrequency = (Number(draft.simulation.f_min) + Number(draft.simulation.f_max)) / 2;
+  const [networkFrequency, setNetworkFrequency] = createSignal(Number.isFinite(initialFrequency) && initialFrequency > 0 ? String(initialFrequency) : "");
+  const [networkRows, setNetworkRows] = createSignal([newNetworkDraft(ports())]);
+  const network = createMemo(() => networkRequest(networkEnabled(), networkFrequency(), networkRows(), ports()));
   const parsed = createMemo(() => parseDensities(densText()));
   const runs = () => Number(maxRuns());
   const tol = () => ({ f_pct: Number(tolF()), s11_db: Number(tolS()), dmax_db: Number(tolD()) });
@@ -66,14 +74,15 @@ function Content(props: { studyId: string | null }) {
     if (runsBad()) return t("conv.err.maxRuns");
     if (Object.values(tol()).some((v) => !Number.isFinite(v) || v <= 0)) return t("conv.err.tolerances");
     if (planned().length < 2) return t("conv.err.twoDensities");
+    if (network().error) return network().error!;
     return null;
   };
   const engines = () => health()?.engines ?? ["cpu"];
-  const excited = () => Math.max(1, (draft.ports ?? []).filter((p) => p.excite !== false).length);
+  const excited = () => Math.max(1, networkEnabled() ? ports().length : (draft.ports ?? []).filter((p) => p.excite !== false).length);
   const [estimates, setEstimates] = createSignal<Estimate[]>([]);
   const [estimating, setEstimating] = createSignal(false);
   // one geometry preview per density (nothing is simulated): the mesh size and the time estimate
-  createEffect(on(() => [studyId(), setupError(), planned().join(","), engine(), JSON.stringify(draft.mesh), JSON.stringify(draft.simulation)] as const, ([id, err]) => {
+  createEffect(on(() => [studyId(), setupError(), planned().join(","), engine(), excited(), JSON.stringify(draft.mesh), JSON.stringify(draft.simulation)] as const, ([id, err]) => {
     if (id || err) { setEstimates([]); return; }
     const ctl = new AbortController();
     const snapshot = JSON.parse(JSON.stringify(draft)) as Design;
@@ -104,6 +113,7 @@ function Content(props: { studyId: string | null }) {
 
   const start = async () => {
     if (setupError() || busy()) return;
+    const networkCriteria = network().request;
     setBusy(true);
     setNotice("");
     try {
@@ -112,7 +122,7 @@ function Content(props: { studyId: string | null }) {
       if (prepared.error) throw new Error(prepared.error);
       if (!prepared.target?.isCurrent()) throw new Error(t("conv.err.noDesign"));
       const f = prepared.target.file;
-      const res = await api.submitConvergence({ model: f.id, params: {}, densities: planned(), ...(largestNodes() ? { cells: largestNodes() } : {}), tolerances: tol(), max_runs: runs(), ...runSettings() });
+      const res = await api.submitConvergence({ model: f.id, params: {}, densities: planned(), ...(largestNodes() ? { cells: largestNodes() } : {}), tolerances: tol(), max_runs: runs(), ...runSettings(), ...(networkCriteria ? { network_criteria: networkCriteria } : {}) });
       setStudyId(res.study.id);
       setStudy(res.study);
       await refreshRuns();
@@ -201,6 +211,8 @@ function Content(props: { studyId: string | null }) {
                 </label>
               </Show>
             </div>
+            <NetworkFields enabled={networkEnabled()} frequency={networkFrequency()} rows={networkRows()} ports={ports()} error={network().error}
+              enabledChange={setNetworkEnabled} frequencyChange={setNetworkFrequency} rowsChange={setNetworkRows} />
             <Show when={!setupError() && planned().length < parsed().values.length}>
               <p class="note" role="status">{t("conv.cappedNote", { runs: planned().length, total: parsed().values.length })}</p>
             </Show>
@@ -267,6 +279,7 @@ function Content(props: { studyId: string | null }) {
                   <p class="note">
                     {t("conv.tolerances", { f: fmt.num(s().convergence.tolerances.f_pct, 4), s11: fmt.num(s().convergence.tolerances.s11_db, 4), dmax: fmt.num(s().convergence.tolerances.dmax_db, 4) })}
                   </p>
+                  <NetworkReport study={s()} />
                 </Show>
                 <Show when={convergedAt() != null}>
                   <div class="cluster-sm">

@@ -578,7 +578,7 @@ export const api = {
     call<{ sweep: { id: string; name: string; axes: SweepAxis[]; total: number }; runs: Job[] }>("POST", "/sweeps", withThreads(body)),
   cancelSweep: (id: string) => call<{ runs: Job[] }>("POST", `/sweeps/${encodeURIComponent(id)}/cancel`, {}),
   /** a mesh convergence study of a saved design; stop it with cancelSweep(study.id) */
-  submitConvergence: (body: { model: string; params: Record<string, ParamValue>; threads: number; engine?: string; name?: string; densities: number[]; cells?: number; tolerances: { f_pct: number; s11_db: number; dmax_db: number }; max_runs: number }) =>
+  submitConvergence: (body: { model: string; params: Record<string, ParamValue>; threads: number; engine?: string; name?: string; densities: number[]; cells?: number; tolerances: { f_pct: number; s11_db: number; dmax_db: number }; max_runs: number; network_criteria?: import("../designer/networkConvergence").NetworkRequest }) =>
     call<{ study: ConvergenceStudy; runs: Job[] }>("POST", "/convergence", withThreads(body)),
   convergence: (id: string) => call<ConvergenceStudy>("GET", `/convergence/${encodeURIComponent(id)}`),
   deleteRun: (id: string, deleteBundle: boolean) =>

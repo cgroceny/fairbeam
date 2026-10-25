@@ -10,7 +10,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from fairbeam.design import blank_design  # noqa: E402
+from fairbeam.design import DesignError, blank_design  # noqa: E402
 from fairbeam.fem_geometry import (FEMGeometryError, mesh_design, write_elmer_mesh)  # noqa: E402
 
 
@@ -168,7 +168,8 @@ class EvaluatedDesignGeometry(unittest.TestCase):
     def test_loss_dispersion_tensor_and_nonbox_geometry_are_rejected(self):
         unsupported_materials = [
             {"name": "lossy", "kind": "dielectric", "eps_r": 4, "tan_d": 0.01},
-            {"name": "dispersive", "kind": "dielectric", "eps_r": 4, "dispersion": {"type": "debye"}},
+            {"name": "dispersive", "kind": "dielectric", "eps_r": 4, "tan_d": 0.01,
+             "tan_d_freq": 1, "dispersion": {"model": "djordjevic-sarkar"}},
             {"name": "tensor", "kind": "dielectric", "eps_r": 4, "epsilon_tensor": [4, 3, 2]},
             {"name": "conductive", "kind": "dielectric", "eps_r": 4, "conductivity": 1},
             {"name": "lossy-copper", "kind": "metal", "conductivity": 5.8e7},
@@ -178,6 +179,14 @@ class EvaluatedDesignGeometry(unittest.TestCase):
                 design = design_with([block("part", material["name"], [0, 0, 0], [1, 1, 1])], [material])
                 with self.assertRaises(FEMGeometryError):
                     mesh_design(design, domain_mm=(0, 0, 0, 1, 1, 1), max_cell_mm=1)
+
+        # Invalid descriptors now fail Design admission before the FEM material guard.
+        # Preserve that earlier negative case as well as the valid-but-unsupported one above.
+        invalid = {"name": "invalid-dispersion", "kind": "dielectric", "eps_r": 4,
+                   "dispersion": {"type": "debye"}}
+        design = design_with([block("part", invalid["name"], [0, 0, 0], [1, 1, 1])], [invalid])
+        with self.assertRaisesRegex(DesignError, "dispersion model"):
+            mesh_design(design, domain_mm=(0, 0, 0, 1, 1, 1), max_cell_mm=1)
 
         design = design_with([{
             "name": "cylinder", "material": "substrate", "primitives": [

@@ -12,6 +12,26 @@ const code=(Array.isArray(built)?built[0]:built).output[0].code;
 const {createDesignerSession,createRoot,createMemo}=await import('data:text/javascript;base64,'+Buffer.from(code).toString('base64'));
 const design=()=>({schema:'fairbeam.design/1',model:{id:'same-id',name:'Original',description:''},params:[],materials:[{name:'copper',kind:'metal'}],parts:[{name:'part',material:'copper',primitives:[{kind:'box',start:[0,0,0],stop:[1,1,1]}]}],ports:[],resistors:[],simulation:{f_min:1,f_max:2,boundaries:'MUR'},mesh:{},far_field:{enabled:false}});
 const saved=()=>({id:'same-id',file:'same-id.design.json',hash:'base',readonly:false,design:design()});
+// A server error belongs to the previewed draft. Correcting an expression must remove it
+// immediately, even when the replacement preview has not returned yet.
+const validation=createDesignerSession();
+const invalidElement=design();invalidElement.resistors=[{name:'RLC',R:50,L:'missing_L',start:[0,0,0],stop:[0,0,1],direction:'z'}];
+validation.takeFile({...saved(),design:invalidElement});
+const seedValidation=()=>{
+ const ticket=validation.asyncState.ticket();
+ validation.setServerErrors({'resistors[0].L':'Unknown name missing_L'});
+ validation.setServerChecks([{code:'expr',severity:'error',path:'resistors[0].L',message:'Unknown name missing_L'}]);
+ validation.setChecksTicket(ticket);return ticket;
+};
+const expectRetired=()=>{assert.deepEqual(validation.serverErrors(),{});assert.deepEqual(validation.serverChecks(),[]);assert.equal(validation.checksTicket(),null);};
+const previousValidation=seedValidation();
+validation.edit(d=>d.resistors[0].symbol='inductor','symbol');
+assert.equal(validation.serverChecks().length,1,'display-only edits retain applicable validation');
+validation.edit(d=>d.resistors[0].L=1e-9,'L');expectRetired();
+assert.equal(validation.asyncState.isPreviewCurrent(previousValidation),false,'a late invalid preview remains inadmissible');
+seedValidation();validation.undo();expectRetired();
+seedValidation();validation.redo();expectRetired();
+validation.dispose();
 const symbolEdits=[];
 const symbols=createDesignerSession({edited:changed=>symbolEdits.push(changed)});
 const withElement=design();

@@ -8,9 +8,14 @@ import type { Bundle, EfficiencySweep, FarField, PortResult } from "../types";
 import { mainBeam } from "./array.ts";
 import { efficiencyWarningUi } from "./runText.ts";
 import { t } from "../i18n/index.ts";
+import { axialRatioGrid, AXIAL_RATIO_MAX_DB } from "./circular.ts";
 
-export type PatternQuantity = "directivity" | "gain" | "realized" | "rhcp" | "lhcp";
-export const PATTERN_QUANTITIES: readonly PatternQuantity[] = ["directivity", "gain", "realized", "rhcp", "lhcp"];
+import { originalPortResult } from "./portProcessingMetadata.ts";
+
+export type PatternQuantity = "directivity" | "gain" | "realized" | "rhcp" | "lhcp" | "axial_ratio";
+export const PATTERN_QUANTITIES: readonly PatternQuantity[] = ["directivity", "gain", "realized", "rhcp", "lhcp", "axial_ratio"];
+export const quantityUnit = (q: PatternQuantity) => q === "axial_ratio" ? "dB" : "dBi";
+export const quantityRange = (q: PatternQuantity) => q === "axial_ratio" ? AXIAL_RATIO_MAX_DB : 30;
 /** The quantity's name in the UI language, read at render time (exported data use the English
  * name, tEn(`farfield.quantity.${q}`)). */
 export const QUANTITY_LABEL: Record<PatternQuantity, string> = {
@@ -19,6 +24,7 @@ export const QUANTITY_LABEL: Record<PatternQuantity, string> = {
   get realized() { return t("farfield.quantity.realized"); },
   get rhcp() { return t("farfield.quantity.rhcp"); },
   get lhcp() { return t("farfield.quantity.lhcp"); },
+  get axial_ratio() { return t("farfield.quantity.axial_ratio"); },
 };
 export const isPatternQuantity = (v: unknown): v is PatternQuantity => (PATTERN_QUANTITIES as readonly unknown[]).includes(v);
 
@@ -33,6 +39,8 @@ export function drivenPort(b: Bundle, ff?: Pick<FarField, "port"> | null): numbe
 
 /** The reflection of a driven port (each driven port has its own from the run that drove it). */
 export function portReflection(b: Bundle, port: number | null): PortResult | null {
+  // Port postprocessing is a view-only network operation, not a new radiation measurement.
+  b = originalPortResult(b);
   const ports = b.results?.ports ?? {};
   if (port != null && ports[String(port)]) return ports[String(port)];
   const own = drivenPort(b);
@@ -86,7 +94,10 @@ export interface Availability { ok: boolean; reason: string }
 /** Whether a quantity can be drawn for a far-field entry, and why not. */
 export function quantityAvailability(b: Bundle, ff: FarField, q: PatternQuantity): Availability {
   if (q === "directivity") return { ok: true, reason: t("farfield.reason.directivity") };
-  if (q === "rhcp" || q === "lhcp") return ff.cp ? { ok: true, reason: t(`farfield.reason.${q}`) } : { ok: false, reason: t("farfield.reason.noCp") };
+  if (q === "rhcp" || q === "lhcp") return ff.cp?.[q === "rhcp" ? "rhcp_dbi" : "lhcp_dbi"].some(row => row.some(Number.isFinite))
+    ? { ok: true, reason: t(`farfield.reason.${q}`) } : { ok: false, reason: t("farfield.reason.noCp") };
+  if (q === "axial_ratio") return axialRatioGrid(ff).some(row => row.some(Number.isFinite))
+    ? { ok: true, reason: t("farfield.reason.axial_ratio") } : { ok: false, reason: t("farfield.reason.noAr") };
   if (radEfficiency(ff) === null) {
     return { ok: false, reason: ff.rad_efficiency === null ? t("farfield.reason.noRadEff") : t("farfield.reason.radEffNotPositive") };
   }
@@ -104,6 +115,7 @@ export const effectiveQuantity = (b: Bundle, ff: FarField, q: PatternQuantity): 
 /** The dB offset of the gain patterns from the directivity (0 for the others; null when unavailable). */
 export function quantityOffsetDb(b: Bundle, ff: FarField, q: PatternQuantity): number | null {
   if (q === "directivity" || q === "rhcp" || q === "lhcp") return 0;
+  if (q === "axial_ratio") return null; // a ratio, never a directivity/gain offset
   const eff = radEfficiency(ff);
   if (eff === null) return null;
   if (q === "gain") return toDb(eff);
@@ -111,18 +123,21 @@ export function quantityOffsetDb(b: Bundle, ff: FarField, q: PatternQuantity): n
   return mis !== null && mis > 0 ? toDb(eff * mis) : null;
 }
 
-/** The [theta][phi] grid (dBi) of a quantity; directivity when the quantity is unavailable. */
+/** The [theta][phi] grid in quantityUnit(q). AR always keeps missing data as gaps;
+ * callers choose effectiveQuantity for a single-field fallback, never mix dBi into an AR comparison. */
 export function quantityGrid(b: Bundle, ff: FarField, q: PatternQuantity): number[][] {
+  if (q === "axial_ratio") return axialRatioGrid(ff);
+  if (q === "rhcp" || q === "lhcp") return ff.cp?.[q === "rhcp" ? "rhcp_dbi" : "lhcp_dbi"]
+    ?? ff.theta.map(() => ff.phi.map(() => NaN));
   const eq = effectiveQuantity(b, ff, q);
-  if (eq === "rhcp") return ff.cp!.rhcp_dbi;
-  if (eq === "lhcp") return ff.cp!.lhcp_dbi;
   const off = quantityOffsetDb(b, ff, eq) ?? Number.NaN;
   return off === 0 ? ff.directivity_dbi : ff.directivity_dbi.map((row) => row.map((v) => v + off));
 }
 
-/** The top of the quantity's colour scale and polar axis (dBi): Dmax plus the gain offset. The
- * circular parts share Dmax as their top, so RHCP and LHCP compare on one scale. */
+/** The scale top: AR is 60 dB; other quantities are Dmax plus the gain offset in dBi.
+ * Circular parts share Dmax as their top, so RHCP and LHCP compare on one scale. */
 export function quantityMax(b: Bundle, ff: FarField, q: PatternQuantity): number {
+  if (q === "axial_ratio") return AXIAL_RATIO_MAX_DB;
   return ff.dmax_dbi + (quantityOffsetDb(b, ff, effectiveQuantity(b, ff, q)) ?? Number.NaN);
 }
 

@@ -238,7 +238,7 @@ def parse_excite(spec: str | None, port_numbers: list[int], excitable: list[int]
 def run_model(module, values: dict, *, excite: str | None = None, sim_path: str, threads: int = 0,
               echo: bool = False, engine: str = "cpu", exact: bool = True, end_db: float | None = None,
               n_freq: int = 801, pattern_freqs=None, element_patterns: bool | None = None,
-              before_run=None, log=print, efficiency_points: int | None = None):
+              before_run=None, log=print, efficiency_points: int | None = None, pattern_steps: tuple[float, float] | None = None):
     """Build and run ``module`` once per excited port and merge the results.
 
     Returns the primary (first excited port) :class:`~fairbeam.simulation.Simulation`, whose
@@ -246,6 +246,7 @@ def run_model(module, values: dict, *, excite: str | None = None, sim_path: str,
     ``before_run(sim)`` is called on every build before it runs (e.g. to attach field dumps).
     ``efficiency_points`` sets ``sim.efficiency_points`` on every build (efficiency over the band)
     and adds the NF2FF box to a model that has none.
+    ``pattern_steps=(theta, phi)`` overrides the model's angular steps in degrees on every run.
     """
     probe = module.build(values)
     numbers = [p["number"] for p in probe.ports]
@@ -270,12 +271,18 @@ def run_model(module, values: dict, *, excite: str | None = None, sim_path: str,
                     sim.add_nf2ff_box()
             if before_run:
                 before_run(sim)
+            steps = pattern_steps if pattern_steps is not None else getattr(sim, "pattern_steps", None)
+            angular = {}
+            if steps is not None:
+                from .pattern_grid import pattern_steps as validate_steps
+                theta_step, phi_step = validate_steps(*steps)
+                angular = {"theta_step": theta_step, "phi_step": phi_step}
             path = sim_path if len(ports_to_run) == 1 else str(Path(sim_path) / f"excite-{pn}")
             if len(ports_to_run) > 1:
                 log(f"fairbeam: run {k + 1}/{len(ports_to_run)}: port {pn} excited, "
                     f"{len(numbers) - 1} terminated")
             sim.run(path, threads=threads, echo=echo, engine=engine, exact=exact)
-            sim.evaluate(n_freq=n_freq, pattern_freqs=pattern_freqs)
+            sim.evaluate(n_freq=n_freq, pattern_freqs=pattern_freqs, **angular)
             if pattern_freqs is None and sim.results.get("farfield"):
                 pattern_freqs = [ff["f"] for ff in sim.results["farfield"]]  # same frequencies for all runs
             sims.append((pn, sim))
@@ -339,6 +346,14 @@ def merge(primary, sims, numbers: list[int], element_patterns: bool):
     if element_patterns and all(getattr(sim, "_nf2ff", None) for _, sim in sims):
         try:
             res["element_patterns"] = element_pattern_section(primary, sims, f)
+            section = res["element_patterns"]
+            if section["decimation"] > 1:
+                import sys
+                source, stored = section["source_shape"], section["shape"]
+                print(f"fairbeam: warning: embedded element patterns reduced from {source[0]} x {source[1]} "
+                      f"to {stored[0]} x {stored[1]} angular samples for the storage budget; array synthesis "
+                      "uses this coarser grid and can miss narrow beams. Per-port far fields retain their grid.",
+                      file=sys.stderr, flush=True)
         except ValueError as exc:
             res.pop("element_patterns", None)
             res["element_patterns_unavailable"] = str(exc)
@@ -386,12 +401,20 @@ def element_pattern_section(primary, sims, f, max_bytes: float = 2.5e6, encoding
         transformed.append(fields)
     # decimate the angular grid if the section would get too large (4 arrays x 4 bytes x 4/3 base64;
     # the float32 budget is kept for int16 too, so the default grid does not change with the encoding)
-    step = 1
-    while (len(theta[::step]) * len(phi[::step]) * 4 * 4 * 4 / 3 * len(freqs) * len(sims)) > max_bytes:
-        step += 1
-    ti, pi = np.arange(0, len(theta), step), np.arange(0, len(phi), step)
-    if step > 1 and ti[-1] != len(theta) - 1:
-        ti = np.r_[ti, len(theta) - 1]  # keep theta = 180 for the sphere integral
+    if not len(theta) or not len(phi):
+        raise ValueError("Element patterns require a nonempty angular grid")
+    if not np.isfinite(max_bytes) or max_bytes <= 0:
+        raise ValueError("Element-pattern storage budget must be finite and positive")
+    # Count the retained endpoint in the budget too. Bound the search even if a caller supplies
+    # a budget too small for the poles, one phi sample and all port/frequency fields.
+    for step in range(1, max(len(theta), len(phi)) + 1):
+        ti, pi = np.arange(0, len(theta), step), np.arange(0, len(phi), step)
+        if ti[-1] != len(theta) - 1:
+            ti = np.r_[ti, len(theta) - 1]  # keep theta = 180 for the sphere integral
+        if len(ti) * len(pi) * 4 * 4 * 4 / 3 * len(freqs) * len(sims) <= max_bytes:
+            break
+    else:
+        raise ValueError("Element-pattern storage budget cannot retain both theta poles")
     mirrors = mirror_planes(primary.boundaries)
     out_ports = []
     for pn, sim in sims:
@@ -413,8 +436,10 @@ def element_pattern_section(primary, sims, f, max_bytes: float = 2.5e6, encoding
                          "(a = U_inc / sqrt(Z_ref), peak phasor); all other incident waves zero; F = E A^-1",
         "basis": "matched-incident-waves",
         "radius_m": radius, "encoding": enc, "shape": [int(len(ti)), int(len(pi))],
-        "theta": _r(theta[ti], 3), "phi": _r(phi[pi], 3), "frequencies": [float(v) for v in freqs],
+        "theta": theta[ti].tolist(), "phi": phi[pi].tolist(), "frequencies": [float(v) for v in freqs],
         "decimation": step, "mirror_planes": mirrors,
+        "source_shape": [int(len(theta)), int(len(phi))],
+        **({"requested_steps": list(nf["requested_steps"])} if "requested_steps" in nf else {}),
         "phase_center": [float(v) for v in (primary.nf2ff_center if primary.nf2ff_center is not None
                                             else _center(primary))],
         "ports": out_ports,

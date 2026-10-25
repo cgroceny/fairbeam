@@ -3,11 +3,13 @@
 // bundle parts the viewer draws. The server preview replaces it a moment later with the real build
 // (mesh, checks); this only removes the round-trip delay from what you see.
 import { resolveOpacity, validColor } from "./colors.ts";
+import { datasheetAppearance } from "./dispersion.ts";
 import type { Bundle, Matrix4Rows, Part, Port } from "../types";
 import type { CircleCut, Design, DesignCut, DesignPart, DesignPrimitive, DesignTransform, PolygonCut, RectCut } from "./types";
 import { evaluate, namesIn } from "./expr.ts";
 import { wgCutoffGHz, wgMode } from "./checks.ts";
 import { clipPolygons, type Ring } from "./polygonClip.ts";
+import { markCarriedMesh } from "./meshBottlenecks.ts";
 
 type V3 = [number, number, number];
 type M3 = [[number, number, number], [number, number, number], [number, number, number]];
@@ -713,7 +715,9 @@ export function quickBundle(d: Design, names: Record<string, number>, previous: 
         name: part.name, type: metal ? "Metal" : "Material", label: part.label, color: validColor(part.color) ?? validColor(mt.color),
         ...(resolveOpacity(part, mt) !== undefined ? { opacity: resolveOpacity(part, mt) } : {}),
         primitives: bp, bbox: pb,
-        ...(metal ? {} : { material: { eps_r: mt.eps_r === undefined ? 1 : evaluate(mt.eps_r, names), mu_r: evaluate(mt.mu_r ?? 1, names) } }),
+        ...(metal ? {} : { material: "dispersion" in mt
+          ? datasheetAppearance(mt, (v) => evaluate(v, names), (evaluate(d.simulation.f_min, names) + evaluate(d.simulation.f_max, names)) / 2)
+          : { eps_r: mt.eps_r === undefined ? 1 : evaluate(mt.eps_r, names), mu_r: evaluate(mt.mu_r ?? 1, names) } }),
       } as unknown as Part);
       if (perVoid.length) {
         const vb: [V3, V3] = [[Infinity, Infinity, Infinity], [-Infinity, -Infinity, -Infinity]];
@@ -792,7 +796,7 @@ export function quickBundle(d: Design, names: Record<string, number>, previous: 
     const same = previous && previous.model.id === d.model.id && previous.mesh.x.length > 1;
     const f0 = evaluate(d.simulation.f_min, names) * 1e9, f1 = evaluate(d.simulation.f_max, names) * 1e9;
     for (const [part, entry] of pending) expanded.set(part, entry);
-    return {
+    const result = {
       // the design's own name: exports of a preview (drawings, reports, macros, file names) are deliverables; `preview`
       // marks it as not simulated for the UI
       schema: "fairbeam.project/1", name: d.model.name, preview: true,
@@ -804,6 +808,7 @@ export function quickBundle(d: Design, names: Record<string, number>, previous: 
       focus: { min: lo, max: hi },
       lumped_elements: (previous && same ? previous.lumped_elements : undefined) ?? [],
     } as unknown as Bundle;
+    return same ? markCarriedMesh(result) : result;
   } catch {
     return null;
   }

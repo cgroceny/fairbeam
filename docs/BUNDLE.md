@@ -396,11 +396,12 @@ The JSON band fields retain their original meanings. In the [CSV export](EXPORTS
 | Field | Type | Description |
 | --- | --- | --- |
 | `f` | number | Frequency in Hz |
-| `theta` | number[] | θ in degrees: 0 to 180 in 3° steps (61 values) |
-| `phi` | number[] | φ in degrees: 0 to 355 in 5° steps (72 values; 360 is not repeated) |
+| `theta` | number[] | θ in degrees, including 0 and 180. Default: 3° steps (61 values); configurable. A final interval can be shorter |
+| `phi` | number[] | φ in degrees, from 0 up to but not including 360. Default: 5° steps (72 values); configurable |
+| `requested_steps` | [θ, φ]? | Requested angular steps in degrees before endpoint handling. Older bundles omit this; use the coordinate arrays for calculations |
 | `directivity_dbi` | number[][] | Directivity in dBi, indexed **`[theta][phi]`** (shape `len(theta) × len(phi)`). Floored at `dmax_dbi − 60` |
 | `dmax_dbi` | number | Maximum directivity in dBi, mirror-corrected |
-| `dmax_pattern_dbi` | number? | Maximum directivity from the pattern alone, `4π·U_max / ∮U dΩ` over the θ/φ grid, mirror-corrected. openEMS' `dmax_dbi` divides by the power flowing through the NF2FF box instead. The two should agree within ~0.1 dB; a larger gap points at boundary reflections (MUR too close) or a coarse NF2FF surface. Absent in older bundles |
+| `dmax_pattern_dbi` | number? | Independent maximum-directivity diagnostic from the pattern alone, `4π·U_max / ∮U dΩ`, mirror-corrected. Requires a full theta sphere and a uniform phi grid that tiles 360°; omitted for nondivisor phi steps and older bundles. openEMS' `dmax_dbi` divides by power flowing through the NF2FF box instead. Where both diagnostics exist, a gap can reflect angular sampling, boundary reflections or a coarse NF2FF surface; their agreement does not establish convergence |
 | `prad_w` | number | Radiated power in W, mirror-corrected |
 | `pacc_w` | number | Power accepted at the port, `½·Re(u·i*)` interpolated at `f`, in W |
 | `rad_efficiency` | number \| null | `prad_w / pacc_w`. `null` if `pacc_w ≤ 0`. Above 1 is unphysical for a passive antenna (the two powers come from independent numerical measurements); the value is kept and flagged in `qa_warnings`. For a model marked lossless (see below) 1 while `prad_w / pacc_w` is within 5 % of 1 |
@@ -410,7 +411,7 @@ The JSON band fields retain their original meanings. In the [CSV export](EXPORTS
 | `realized_gain_dbi` | number? | `10·log10(efficiency · Dmax · (1 − \|S11\|²))`. Present only if efficiency > 0 |
 | `mirror_planes` | number | Number of PEC/PMC boundaries used for the correction. See above |
 | `port` | number? | Port that was driven for this entry (bundles since multi-port support). Multi-port runs have one entry per excited port and pattern frequency, all at the same frequencies |
-| `cp` | object? | Circular polarisation, for models that set `sim.cp_outputs = True`. See below |
+| `cp` | object? | Circular polarization, for models that set `sim.cp_outputs = True` or Designer projects with `far_field.circular: true`. See below |
 
 **cp.** With the IEEE convention and openEMS' e^{jωt} phasors, the right- and left-hand circular
 components of the far field are E_R = (E_θ + jE_φ)/√2 and E_L = (E_θ − jE_φ)/√2 (for a wave along +z,
@@ -419,12 +420,24 @@ RHCP rotates from x to y). Grids are indexed `[theta][phi]` like `directivity_db
 | Field | Type | Description |
 | --- | --- | --- |
 | `rhcp_dbi`, `lhcp_dbi` | number[][] | Partial directivities D·\|E_R\|²/\|E\|² and D·\|E_L\|²/\|E\|² in dBi (they add up to `directivity_dbi` in linear units), floored at `dmax_dbi − 60` |
-| `axial_ratio_db` | number[][] | Axial ratio (\|E_R\| + \|E_L\|) / \|\|E_R\| − \|E_L\|\| in dB: 0 = circular, capped at 60 dB (linear) |
+| `axial_ratio_db` | (number or null)[][] | 20·log10((\|E_R\| + \|E_L\|) / \|\|E_R\| − \|E_L\|\|): 0 dB = circular; 60 dB is a saturation cap, including linear polarization |
 | `peak` | object | `{theta, phi, rhcp_dbi, lhcp_dbi, axial_ratio_db}` at the directivity maximum |
 | `boresight` | object | `{theta: 0, rhcp_dbi, lhcp_dbi, axial_ratio_db}` at θ = 0 |
 
 The pattern CSV export adds `rhcp_dBi`, `lhcp_dBi` and `axial_ratio_dB` columns and the far-field
 CSV the boresight values.
+
+Zero or nonfinite complex-field pairs have no defined polarization; their CP scalars are JSON
+`null`, including peak/boresight scalars when applicable. Readers retain the other valid grid
+samples and treat nulls as gaps. The partial-directivity floor is a storage convention, not a
+measurement of the weak component. The viewer's Axial ratio quantity and selected-quantity
+table apply a **D ≥ Dmax − 20 dB** mask, use a separate 0–60 dB scale and leave unavailable
+samples empty. This display mask does not alter the stored CP grid or the raw pattern CSV.
+Raw numerical CSV exports use their existing `nan` marker for unavailable normalized numbers;
+the selected-quantity data/CSV table uses an empty cell. Neither means zero AR.
+Peak AR is at the maximum stored total directivity; boresight means θ = 0° (+z), not the first
+row of an angular grid that starts elsewhere. These sampled values do not qualify bandwidth,
+gain or efficiency and require angular/frequency/mesh/time-convergence checks.
 
 `prad_w` and `pacc_w` are absolute values for the unit-amplitude excitation. They are typically very small numbers, and only their ratio is meaningful.
 
@@ -452,7 +465,7 @@ snaps such coordinates back).
 **EfficiencySweep.** Optional (absent unless requested): the radiation efficiency as a 1D result
 over frequency. The NF2FF box records time-domain dumps, so after the
 run openEMS transforms them at `N` frequencies spread evenly from `f_min` to `f_max` (default 21,
-3 to 201). Only the powers are kept, no patterns. One entry per driven port, with `port` set as for
+3 to 201). Powers and optional scalar radiation summaries are kept, not angular field grids. One entry per driven port, with `port` set as for
 `farfield[].port` (a 1-port run has one entry).
 
 | Field | Type | Description |
@@ -466,11 +479,46 @@ run openEMS transforms them at `N` frequencies spread evenly from `f_min` to `f_
 | `pacc_error` | (number \| null)[]? | Estimated relative error of `pacc_w` from where the run stopped (below). `null` where `pacc_w ≤ 0` |
 | `reliable` | boolean[]? | `false` where `pacc_error` exceeds 0.1 (10 %) or `pacc_w ≤ 0`: the value is kept, but it is not trustworthy. The viewer leaves these out of the curves and draws them as flagged points. Absent in older bundles (every value counts as reliable) |
 | `mirror_planes` | number | PEC/PMC boundaries used for the correction |
-| `theta_step`, `phi_step` | number | Angular grid of the transform in degrees (90 and 180: θ 0/90/180, φ 0/180). openEMS' Prad is the Poynting flux through the NF2FF box surface and does not depend on this grid (bit-identical from 3°/5° to 90°/180° on the patch example, and at all 11 frequencies across the patch starter's band), so the coarsest grid is used; it only sets the cost |
+| `theta_step`, `phi_step` | number | Angular grid of the transform in degrees (90 and 180: θ 0/90/180, φ 0/180). openEMS' Prad is the Poynting flux through the NF2FF box surface and does not depend on this grid (bit-identical from 3°/5° to 90°/180° on the patch example, and at all 11 frequencies across the patch starter's band), so the coarsest grid is used; it sets directional resolution and cost, but not that surface-flux integral |
 | `qa_warnings` | string[]? | Summary notes: the frequencies marked unreliable, and reliable ones whose efficiency exceeds 1 |
 
 Total efficiency is `rad_efficiency · (1 − |S11|²)` with S11 from `ports[port]` at `f` (interpolated
 on `frequency`). At a pattern frequency the sweep's Prad equals `farfield[].prad_w`.
+
+**Radiation scalars (`radiation`, optional).** New results retain scalar summaries from the
+*same* `CalcNF2FF` call and `nf2ff_efficiency.h5` result used for the efficiency pass. No extra
+transform, finer angular capture or solver run is performed. Old bundles remain valid without it.
+The object contains `source: "band-efficiency-nf2ff"`, the actual `theta` and `phi` degree axes,
+`cp_requested`, and `ar_mask_db: 20`. Every numeric array below aligns exactly to the containing
+`efficiency[].f`; missing values are JSON `null`, never zero. A malformed frequency grid, provenance
+or array shape rejects this object without discarding legacy efficiency data.
+
+| Array | Unit / meaning |
+| --- | --- |
+| `d_peak_dbi`, `d_boresight_dbi` | dBi; sampled peak and θ=0 at the first stored φ |
+| `peak_theta_deg`, `peak_phi_deg` | Actual sampled directivity-peak direction; may change with frequency |
+| `gain_peak_dbi`, `gain_boresight_dbi` | dBi; D + 10 log10 of the final reported radiation efficiency (including the existing lossless normalization) |
+| `mismatch_efficiency` | 1 − \|uf_ref/uf_inc\|² from this driven port; adjacent finite samples only, no extrapolation or bridging invalid samples |
+| `realized_peak_dbi`, `realized_boresight_dbi` | dBi; gain + 10 log10 mismatch efficiency; missing for nonpositive/unknown factors |
+| `ar_peak_db`, `ar_boresight_db` | Only when `cp_requested`; AR at the sampled **directivity** peak and boresight, from the same complex fields and #228 convention; null when fields/direction are absent or D < sampled Dmax −20 dB |
+
+The current θ=[0,90,180], φ=[0,180] Cartesian product has six angle pairs but **four distinct
+directions** (+z,+x,−x,−z); ±y and other possible lobes are absent. `Dmax` is the maximum of these
+supplied angular samples, not a continuous-sphere peak. Mirrors use the existing 2^m correction.
+No angular, gain or CP convergence is implied. AR is dB (0 circular, ≥60 backend saturation).
+
+The radiation graph uses a sample only if `reliable` is true, `pacc_error` is finite and ≤0.1,
+and `pacc_w` is positive. Missing reliability is **unassessed** for these new quantities; it does
+not change the legacy efficiency graph's behavior. Excluded raw scalars remain separate audit
+columns in CSV. Values above unity remain qualified by the existing efficiency QA notes.
+Detailed `farfield[]` patterns appear as separate points with their own grid and unassessed
+accepted-power status here; they never fill a coarse curve gap. Their missing gain/CP scalars are
+not reconstructed from another port or frequency. CSV includes physical port, source, actual axes,
+peak direction, mask and reliability beside plotted and raw values; PDF uses the same gated data.
+
+AR ≤3 dB intervals list only consecutive passing stored samples. A single point has no established
+bandwidth. Band edges and missing/unreliable neighbors are open/unknown boundaries; a neighbor
+above 3 dB only brackets an unsampled crossing. There is **no interpolated or converged AR bandwidth**.
 
 **Reliability.** Away from the match the port reflects almost all of the incident power, and
 `pacc_w` = P_inc (1 − |S11|²) is a small difference of two large numbers. Stopping the run at the end
@@ -575,6 +623,8 @@ Older bundles used per-run scalar normalization and can contain residual inciden
 | `theta`, `phi` | number[] | Grid in degrees (the far-field grid, possibly decimated) |
 | `frequencies` | number[] | Frequencies in Hz, the same as the far-field entries |
 | `decimation` | number | Angular decimation factor (1 = full far-field grid). θ = 180° is always kept |
+| `source_shape` | [nθ, nφ]? | Evaluated NF2FF angular grid before storage decimation; older bundles omit it |
+| `requested_steps` | [θ, φ]? | Requested angular steps in degrees. Actual stored coordinates are `theta` and `phi`; the final theta interval can be shorter |
 | `mirror_planes` | number | PEC/PMC boundaries. The fields cover the image space; divide sphere integrals by 2^m |
 | `phase_center` | Vec3 | Common phase center of all ports (drawing units) |
 | `ports` | object[] | One per driven port: `{port, position, fields}`. `position` is the port center (drawing units), used as the element position for steering. `fields` is one `{f, scale, e_theta_re, e_theta_im, e_phi_re, e_phi_im}` per frequency (`scale` only with `"i16le-base64-scaled"`) |

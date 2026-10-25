@@ -60,3 +60,7 @@ assert.deepEqual(realImag[1].y, [0, 0, 0], "complex imaginary samples interpolat
 assert.notEqual(realImag[0].dash, realImag[1].dash, "Re and Im have distinct strokes within a run");
 assert.equal(realImag[4].color, "--al-series-2", "run colors remain stable through Re/Im charts");
 console.log("result comparison labels and multi-port S_ij overlays: ok");
+
+// These checks are pure command-line math/integration; the optional browser script is separate.
+await import("./check-sparam-phase.mjs");
+await import("./check-sparam-phase-integration.mjs");

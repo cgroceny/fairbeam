@@ -60,6 +60,12 @@ export default function ArrayPanel() {
   return (
     <Show when={set()} fallback={<div class="panel-empty">{t("array.noPatterns")}</div>}>
       <div class="array-wrap"><div class="array-panel">
+        <Show when={(bundle()?.results?.element_patterns?.decimation ?? 1) > 1}>
+          <p class="note" role="note">{t("array.decimated", {
+            theta: bundle()!.results!.element_patterns!.theta.length,
+            phi: bundle()!.results!.element_patterns!.phi.length,
+          })}</p>
+        </Show>
         <section class="array-block" aria-labelledby="array-weights">
           <h3 class="section-label" id="array-weights">
             {t("array.weights")}

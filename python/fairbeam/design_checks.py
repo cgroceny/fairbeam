@@ -25,12 +25,14 @@ import copy
 import math
 import os
 import re
+from .designer_dispersion import resolved_input
 
 from .design import (AXES, DT_SAFETY, auto_timesteps, ringdown_steps, EFFICIENCY_POINTS_DEFAULT, EFFICIENCY_POINTS_MAX, EFFICIENCY_POINTS_MIN, FIELD_PLANE_FREQS_MAX,
                      FIELD_PLANES_MAX, IDENTITY,
                      MAX_PRIMITIVES, DesignError, polyhedron_faces, apply_cuts, cut_pieces, sheet_plane, check_design, evaluate, in_plane, live_primitives, map_primitive, names_in, on_plane, prim_bbox, prim_contains, resolve_cuts,
                      port_feeds, resolve_primitive, sheet_transform_issues, thin_metal_limit, thin_sheets, transform_maps, wg_cutoff_ghz,
                      wg_mode)
+from .pattern_grid import PATTERN_STEP_MIN, PATTERN_STEP_MAX
 
 EPS = 1e-9
 # the Gaussian-derivative excitation (fairbeam.excitation, which needs numpy): -20 dB at f max, the
@@ -55,12 +57,15 @@ CHEAP = frozenset({
     "cells-per-wavelength", "end-criterion", "port-length", "port-volume", "port-r", "port-reference", "port-overlap", "no-port",
     "no-metal", "resistor-r", "resistor-length", "component-path", "cone-radii", "cone-length", "torus-radii",
     "wire-points", "wg-mode", "wg-size", "wg-cutoff", "wg-aperture", "cut-sheet", "boolean-transform-angle", "sheet-transform-angle", "scale", "mesh-lines",
-    "monitor-efficiency", "field-plane", "conductivity", "metal-thickness", "tan-d-band",
+    "monitor-efficiency", "field-plane", "conductivity", "metal-thickness", "tan-d-band", "ff-step", "dispersion", "dispersion-band",
 })
 
 
 # Plain-language guidance shared by server checks and the live CHEAP checks.
 EXPLANATIONS = {
+    "ff-step": "Use an angular step from 0.25 to 90 degrees. Smaller steps resolve narrower beams but increase far-field processing time and bundle size; they do not establish solver or mesh convergence.",
+    "dispersion": "Use a nonmagnetic dielectric datasheet point with an explicit positive reference frequency. The corner exponents are log10(rad/s), m2 > m1. Calibration must have positive eps_inf and nonnegative strength. The optional 1–32 poles control fit resources, not certified accuracy.",
+    "dispersion-band": "The datasheet reference is outside the simulation band. A one-point causal model is an assumption, not evidence of broadband material accuracy. Check additional measured data; do not move the datasheet frequency just to remove this warning.",
     "planar-port": "A native planar port creates only its center strip. Supply the matching ground and dielectric, resolve its gaps and metal planes, and keep three equally spaced measurement planes outside PML. A real wave reference is independent of the physical feed termination. No fallback port is used.",
     "port-reference": 'A complex power-wave reference is supported only on lumped ports and must contain exactly real and imag expressions. It is separate from the physical source resistance.',
     "boolean-transform-angle": "A live Boolean needs axis-aligned operands so its result stays exact. Use quarter-turn rotations for its operands, or materialise the Boolean before applying an arbitrary angle.",
@@ -193,6 +198,7 @@ class _Lint:
         self.thin_volume: list[dict] = []   # thin metal kept as a volume (mesh.thin_metal volume)
         self._boxes: dict[int, tuple] = {}   # id(resolved primitive) -> prim_bbox, for this run
         self.partial = False   # some geometry did not resolve (see _resolve)
+        self.dispersion_valid: set[str] = set()
         self.endpoint_contacts = endpoint_contacts
 
     def _bbox(self, p: dict):
@@ -284,6 +290,12 @@ class _Lint:
     def materials(self):
         for m in self.d.get("materials", []):
             w = f"materials.{m['name']}"
+            if "dispersion" in m:
+                try:
+                    resolved_input(m, lambda value: evaluate(value, self.names))
+                    self.dispersion_valid.add(m["name"])
+                except (ValueError, DesignError) as error:
+                    self.error(f"{w}.dispersion", "dispersion", str(error))
             if m["kind"] == "metal":
                 # lossy metal (design.metal_loss): empty conductivity = PEC
                 if _given(m.get("conductivity")):
@@ -555,6 +567,10 @@ class _Lint:
         for m in self.d.get("materials", []):
             w = f"materials.{m['name']}"
             f_ref, tan = self.V.get(f"{w}.tan_d_freq"), self.V.get(f"{w}.tan_d")
+            if "dispersion" in m:
+                if m["name"] in self.dispersion_valid and f_ref is not None and f_ref > 0 and not f0 <= f_ref <= f1:
+                    self.warn(f"{w}.tan_d_freq", "dispersion-band", "the datasheet reference frequency is outside the simulation band")
+                continue
             if m["kind"] != "dielectric" or f_ref is None or f_ref <= 0 or not tan or tan <= 0 or f0 <= f_ref <= f1:
                 continue
             # the one-click fix: the design frequency when the design has an f0 parameter inside the
@@ -652,7 +668,14 @@ class _Lint:
                 self.error("mesh.air_cells_per_wavelength", "cells-per-wavelength",
                            "air cells per wavelength must be > 0 and no greater than the metal and dielectric setting")
         ff = self.d.get("far_field", {})
+        if "circular" in ff and not isinstance(ff["circular"], bool):
+            self.error("far_field.circular", "expr", "circular must be true or false")
         if ff.get("enabled", True):
+            for axis, default in (("theta", 3), ("phi", 5)):
+                path = f"far_field.{axis}_step"
+                step = self.ev(path, ff.get(f"{axis}_step", default))
+                if step is not None and not PATTERN_STEP_MIN <= step <= PATTERN_STEP_MAX:
+                    self.error(path, "ff-step", f"angular step must be from {PATTERN_STEP_MIN:g} to {PATTERN_STEP_MAX:g} degrees")
             if ff.get("phase_center") is not None:
                 center = self.vec("far_field.phase_center", ff["phase_center"])
                 if center is not None and not all(math.isfinite(v) for v in center):
@@ -1808,7 +1831,10 @@ class _Lint:
         try:
             check_design(d)
         except DesignError as e:
-            code = "expr" if ".group" in (e.where or "") or e.where == "mesh.refine_features" else "structure"
+            code = "expr" if ".group" in (e.where or "") or e.where in ("mesh.refine_features", "far_field.circular") else "structure"
+            if match := re.fullmatch(r"materials\[(\d+)\]\.dispersion", e.where or ""):
+                self.error(f"materials.{d['materials'][int(match[1])]['name']}.dispersion", "dispersion", e.detail)
+                return self.out
             if (e.where or "").startswith("resistors[") and (e.where or "").endswith(".symbol"):
                 code = "resistor-r"
             self.error(e.where or "", code, e.detail)

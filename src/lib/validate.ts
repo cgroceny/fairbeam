@@ -8,6 +8,7 @@ import type { Bundle } from "../types";
 import { ENC_F32, ENC_I16 } from "./sparams.ts";
 import { currentSchema, schemaFamily } from "./legacy.ts";
 import { portGroupProblem } from "./portGroups.ts";
+import { validRadiationSweep } from "./radiationFrequency.ts";
 // messages shown in the UI (load errors and warnings), in the language of the moment
 import { t as msg } from "../i18n/index.ts";
 
@@ -325,6 +326,12 @@ export function validateBundle(raw: unknown): Validation {
       r.ports = ports;
       if (!good && Object.keys(isObj(r.ports) ? r.ports : {}).length === 0 && !isObj(r.sparams)) dropResults(msg("validate.noPortData"));
       else {
+        if (Array.isArray(r.efficiency)) for (const [i, s] of r.efficiency.entries()) {
+          if (isObj(s) && s.radiation !== undefined && !validRadiationSweep(s)) {
+            delete s.radiation;
+            warnings.push(msg("validate.radiationSweep", { n: i + 1 }));
+          }
+        }
         if (!Array.isArray(r.bands)) r.bands = [];
         r.bands = (r.bands as unknown[]).filter((x) => isObj(x) && isNum(x.f_center) && isNum(x.f_lo) && isNum(x.f_hi));
         if (!Array.isArray(r.farfield)) r.farfield = [];
@@ -346,11 +353,16 @@ export function validateBundle(raw: unknown): Validation {
             const cp = ff.cp;
             const grid = (g: unknown) => Array.isArray(g) && g.length === (ff.theta as unknown[]).length &&
               g.every((row) => Array.isArray(row) && row.length === (ff.phi as unknown[]).length);
-            const pt = (x: unknown) => isObj(x) && isNum(x.rhcp_dbi) && isNum(x.lhcp_dbi) && isNum(x.axial_ratio_db);
+            // A zero-field boresight/peak is serialized as null. It must not
+            // discard otherwise useful CP grid samples or become ideal 0 dB AR.
+            const pt = (x: unknown) => isObj(x) && isNum(x.theta) && (x.phi === undefined || isNum(x.phi));
             if (!(isObj(cp) && grid(cp.rhcp_dbi) && grid(cp.lhcp_dbi) && grid(cp.axial_ratio_db) && pt(cp.peak) && pt(cp.boresight))) {
               warnings.push(msg("validate.ffCircular", { n: i + 1 }));
               delete ff.cp;
-            } else for (const k of ["rhcp_dbi", "lhcp_dbi", "axial_ratio_db"]) for (const row of cp[k] as unknown[][]) numeric(row);
+            } else for (const k of ["rhcp_dbi", "lhcp_dbi", "axial_ratio_db"]) {
+              for (const row of cp[k] as unknown[][]) numeric(row);
+              for (const point of [cp.peak, cp.boresight] as Obj[]) if (!isNum(point[k])) point[k] = NaN;
+            }
           }
           return true;
         });

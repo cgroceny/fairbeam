@@ -4,6 +4,7 @@ import { hasSParameterPhase, physicalPortNumber, sMatrix } from "../lib/sparams.
 import { saveDownload, type DownloadResult } from "../lib/download.ts";
 import { resultExportStem } from "../lib/resultExportNames.ts";
 import { t } from "../i18n/index.ts";
+import { hasComplexPortReference, hasMixedPortCoordinates } from "../lib/portProcessingMetadata.ts";
 
 type Run = { file: string; bundle: Bundle };
 
@@ -15,6 +16,7 @@ function safeBase(value: string): string {
 }
 
 function checkedText(bundle: Bundle, label: string): { text: string; ports: number[] } {
+  if (hasComplexPortReference(bundle)) throw new Error(t("portProcessing.touchstoneComplex"));
   if (!hasSParameterPhase(bundle)) throw new Error(t("results.data.phaseRequired", { label: bundle.name || label }));
   const matrix = sMatrix(bundle);
   if (!matrix || !bundle.results || !matrix.f.length || matrix.f.some((f) => !Number.isFinite(f))) {
@@ -71,14 +73,14 @@ async function writeResultTouchstone(bundle: Bundle, filenameBase: string, runs?
   const base = safeBase(filenameBase);
   if (!runs || runs.length < 2) {
     const { text, ports } = checkedText(bundle, t("results.touchstone.result"));
-    const ext = ports.length === 1 ? ".s1p" : `.s${ports.length}p`;
+    const ext = hasMixedPortCoordinates(bundle) ? ".ts" : ports.length === 1 ? ".s1p" : `.s${ports.length}p`;
     return saveDownload(`${base}${ext}`, text, "text/plain;charset=utf-8");
   }
   const members: Record<string, Uint8Array> = Object.create(null);
   const used = new Set<string>();
   for (const run of runs) {
     const { text, ports } = checkedText(run.bundle, run.file || t("results.touchstone.run"));
-    const suffix = ports.length === 1 ? ".s1p" : `.s${ports.length}p`;
+    const suffix = hasMixedPortCoordinates(run.bundle) ? ".ts" : ports.length === 1 ? ".s1p" : `.s${ports.length}p`;
     const stem = resultExportStem(run.bundle, "sparams");
     let uniqueStem = stem;
     for (let n = 2; used.has(`${uniqueStem}${suffix}`.toLowerCase()); n++) uniqueStem = `${stem}_${n}`;

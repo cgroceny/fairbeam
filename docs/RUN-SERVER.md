@@ -82,6 +82,41 @@ study. Missing or altered job-local copies fail before launch. Python models, im
 and legacy jobs still use their original paths. See [admitted inputs](QUEUED-DESIGN-INPUTS.md)
 for provenance and the separate client-preflight limitation.
 
+### Optional network criteria for mesh convergence
+
+`POST /api/convergence` accepts an optional `network_criteria` object alongside the saved design,
+densities and existing tolerances. Omit the field for the existing resonance-based behavior;
+`null` is not an opt-out value. For example, a design with physical ports 1, 2 and 3 can request:
+
+```json
+{
+  "model": "network_design",
+  "densities": [15, 20, 30],
+  "max_runs": 3,
+  "network_criteria": {
+    "frequency_ghz": 2.4,
+    "metrics": ["coupling:2,1:0.2", "isolation:3,1:0.2", "phase:2,3,1:1"]
+  }
+}
+```
+
+The object requires exactly `frequency_ghz` (a finite positive JSON number) and `metrics`
+(one to twelve strings). The metric grammar is the CLI's `KIND:PORTS:TOL`: `coupling` and
+`isolation` take receiving, driven ports; `directivity` takes receiving, reference output,
+driven ports; `phase` accepts either form; and `s11` takes one physical port number. The
+tolerance is a positive finite dB change, or degrees for phase. Invalid or duplicate criteria
+and ports absent from the admitted design return 422 with `fields.network_criteria`, before
+any job is queued. See [the quantity definitions](DESIGNER.md#mesh-convergence).
+
+The server stores canonical criteria in Hz on the study, passes them to every completed result's
+evaluation, and persists `excite: "all"` through the serial job chain. Each job uses `--excite all`
+without changing the saved or admitted design. API reports include the canonical criteria,
+per-member network measurements and per-step checks. Reopening a cached successful network
+study rechecks its measured values against the requested criteria; missing/inconsistent evidence
+cannot authorize applying its density. Stored history remains unchanged. No Design schema or
+solver physics changes are involved, and network checks remain additional to the existing
+resonance, energy and local-mesh checks.
+
 ## Explicit run setup
 
 In the designer's Simulation settings, **Run setup** offers Quick exploration (10 cells per

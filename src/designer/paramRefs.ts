@@ -56,7 +56,12 @@ function part(p: DesignPart, path: string, visit: ExprVisit) {
 export function mapExpressions(d: Design, visit: ExprVisit): void {
   (d.params ?? []).forEach((p, i) => scan(p, `params[${i}]`, ["expr"], visit));
   scan(d.simulation, "simulation", ["f_min", "f_max"], visit);
-  (d.materials ?? []).forEach((m, k) => scan(m, `materials[${k}]`, MATERIAL, visit));
+  (d.materials ?? []).forEach((m, k) => {
+    scan(m, `materials[${k}]`, MATERIAL, visit);
+    // Only DS corners are expressions: the model discriminant and integer pole request are not.
+    if (m.dispersion?.model === "djordjevic-sarkar")
+      scan(m.dispersion, `materials[${k}].dispersion`, ["m1", "m2"], visit);
+  });
   (d.parts ?? []).forEach((p, i) => part(p, `parts[${i}]`, visit));
   (d.ports ?? []).forEach((p, i) => {
     scan(p, `ports[${i}]`, ["R", "a", "b", "start", "stop", "reference_impedance"], visit);
@@ -65,7 +70,7 @@ export function mapExpressions(d: Design, visit: ExprVisit): void {
   (d.resistors ?? []).forEach((r, i) => scan(r, `resistors[${i}]`, ["R", "L", "C", "start", "stop"], visit));
   scan(d.mesh, "mesh", MESH, visit);
   scan(d.mesh?.automatic, "mesh.automatic", ["overrides"], visit);
-  scan(d.far_field, "far_field", ["frequencies", "phase_center"], visit);
+  scan(d.far_field, "far_field", ["frequencies", "phase_center", "theta_step", "phi_step"], visit);
   const monitors = (d as Design & { monitors?: { field_planes?: unknown[]; currents?: unknown } }).monitors;
   (monitors?.field_planes ?? []).forEach((pl, k) => scan(pl, `monitors.field_planes[${k}]`, ["position", "frequencies"], visit));
   scan(monitors, "monitors", ["currents"], visit);

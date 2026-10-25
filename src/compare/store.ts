@@ -19,7 +19,7 @@ export interface Pinned {
 
 export const [pinned, setPinned] = createSignal<Pinned[]>([]);
 export const [zPart, setZPart] = createSignal<"re" | "im">("re");
-export const [cutPhi, setCutPhi] = createSignal<0 | 90>(0);
+export const [cutPhi, setCutPhi] = createSignal<number>(0);
 export const [compareOpen, setCompareOpen] = createSignal(false);
 
 // Entries already own their loaded bundles. Keep only request identity, never an extra cache.

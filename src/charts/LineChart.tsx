@@ -7,6 +7,7 @@ import { chartMarkers, markSeries, nextMarkId, toggleMarkerMode, type ChartMarke
 import { ghzPlain } from "../lib/format";
 import { t, tEn } from "../i18n";
 import NumberField from "../components/NumberField";
+import { nearestStoredIndex } from "./storedSamples";
 import "../styles/charts.css";
 
 export interface Series {
@@ -47,6 +48,8 @@ export interface Marker {
 }
 
 export interface LineChartProps {
+  /** Frequency-sampled data: hover missing values as gaps, with no extrapolation. */
+  preserveSampleGaps?: boolean;
   series: Series[];
   xLabel: string;
   yLabel: string;
@@ -95,7 +98,11 @@ export default function LineChart(props: LineChartProps) {
   const [selectedId, setSelectedId] = createSignal<number | null>(null);
   const saveMarks = (marks: UserMark[]) => change((s) => ({ ...s, marks }));
   const seriesOf = (m: UserMark) => markSeries(props.series, m.seriesId);
-  const nearestFinite = (s: Series, x: number) => nearestFiniteSample(s.x, s.y, x)?.index ?? -1;
+  const nearestFinite = (s: Series, x: number) => {
+    if (!props.preserveSampleGaps) return nearestFiniteSample(s.x, s.y, x)?.index ?? -1;
+    const i = nearestStoredIndex(s.x, x);
+    return i >= 0 && Number.isFinite(s.y[i]) ? i : -1;
+  };
   // the legend strip wraps (many compared runs): the plot starts below its measured height
   const [legendH, setLegendH] = createSignal(16);
   let legendObserver: ResizeObserver | undefined;
@@ -239,7 +246,8 @@ export default function LineChart(props: LineChartProps) {
     const x = xDom()[0] + ((px - M.l) / (W() || 1)) * (xDom()[1] - xDom()[0]);
     if (px < M.l - 4 || px > M.l + W() + 4) return setHover(null);
     const first = props.series[0];
-    setHover(first ? nearestFiniteSample(first.x, first.y, x)?.index ?? null : null);
+    const index = first && props.preserveSampleGaps ? nearestStoredIndex(first.x, x) : first ? nearestFiniteSample(first.x, first.y, x)?.index ?? -1 : -1;
+    setHover(index >= 0 ? index : null);
   };
   const reflection = (s: Series) => props.inspection?.kind === "reflection" && isReflectionTrace(s.id.replace(/:(db|phase|re|im|mag)$/, ""));
   const autoRows = createMemo(() => props.series.flatMap(s => {

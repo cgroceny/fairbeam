@@ -82,6 +82,7 @@ export function createDesignerSession(effects: DesignerSessionEffects = {}) {
     const asyncState = new DesignerAsyncState(sessionId);
     createEffect(on(selection, () => retireMessage(["good", "warn"]), { defer: true }));
     const [checksTicket, setChecksTicket] = createSignal<ReturnType<typeof asyncState.ticket> | null>(null);
+    const retireValidation = () => { setServerErrors({}); setServerChecks([]); setChecksTicket(null); };
     const canUndo = () => undoStack().length > 0;
     const canRedo = () => redoStack().length > 0;
 
@@ -239,6 +240,9 @@ export function createDesignerSession(effects: DesignerSessionEffects = {}) {
         // Compare the actual result (including derived geometry), not the caller's history key.
         previewChanged = previewContent(beforeText) !== previewContent(snapshot());
         asyncState.editDraft(previewChanged);
+        // Server diagnostics describe the previous draft, not the expression just corrected.
+        // Live checks remain active; a new server validation is required for the new ticket.
+        if (previewChanged) retireValidation();
       });
       const target = historyTarget(key), next = { text: snapshot(), label: label ?? inferLabel(JSON.parse(beforeText) as Design, JSON.parse(snapshot()) as Design, key), at: now, target };
       if (coalesced && historyPosition === history.length - 1) history[historyPosition] = next;
@@ -262,6 +266,7 @@ export function createDesignerSession(effects: DesignerSessionEffects = {}) {
       batch(() => {
         asyncState.editDraft(previewChanged);
         setDraft(reconcile(JSON.parse(text) as Design));
+        if (previewChanged) retireValidation();
       });
       retireSaveNote();
       lastKey = "";

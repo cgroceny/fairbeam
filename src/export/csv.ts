@@ -5,6 +5,12 @@ import { bandCentre } from "../lib/bands.ts";
 import { sweep } from "../lib/rf.ts";
 import { magDb, mappedPairLabel, phaseDeg, sMatrix } from "../lib/sparams.ts";
 import { activeReflection, gammaDb, type Weight } from "../lib/array.ts";
+import { radiationTable } from "../lib/radiationFrequency.ts";
+
+export function radiationFrequencyCsv(b: Bundle): string | null {
+  const table = radiationTable(b);
+  return table.rows.length ? toCsv(table.header, table.rows) : null;
+}
 
 const cell = (v: string | number | boolean | null | undefined): string => {
   if (v === null || v === undefined) return "";
@@ -94,7 +100,7 @@ export function arrayWeightsCsv(b: Bundle, weights: Map<number, Weight>, fHz: nu
 /** Minimal CSV reader for the checks (no quoted newlines needed for these files). */
 export function parseCsv(text: string): string[][] {
   return text
-    .split("\n")
+    .split(/\r?\n/)
     .filter((l) => l.length)
     .map((l) => {
       const out: string[] = [];

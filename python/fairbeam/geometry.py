@@ -222,6 +222,9 @@ def read_structure(csx, materials: dict, length_unit: float = 1e-3) -> tuple[lis
                     "eps_r": float(eps[0]), "kappa": float(kappa[0]), "mu_r": float(mue[0]),
                     "tan_d": meta.get("tan_d"), "tan_d_freq": meta.get("tan_d_freq"),
                     "isotropic": bool(np.allclose(eps, eps[0]) and np.allclose(kappa, kappa[0])),
+                    # A zero-loss DS fit can have no poles and become a plain
+                    # native Material. Its input/fit identity must still survive.
+                    **({"dispersion": meta["dispersion"]} if meta.get("dispersion") else {}),
                 }
             elif ptype == "ConductingSheet":
                 # Unlike Simulation.metal, direct CSXCAD AddConductingSheet calls do not register

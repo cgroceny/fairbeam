@@ -125,7 +125,7 @@
   .workspace.design-mode > .dw-strip:focus-visible { outline: 2px solid var(--al-focus); outline-offset: -2px; }
   .nt-collapse, .dw-panel-head > .icon-btn { display: inline-flex; }
   .app .workspace.design-mode .center { grid-template-rows: auto minmax(180px, 1fr) minmax(72px, clamp(100px, 22dvh, 150px)) auto; }
-  .app .workspace:not(.design-mode) .center { grid-template-rows: minmax(200px, 1fr) minmax(96px, clamp(110px, 24dvh, 180px)); }
+  .app .workspace:not(.design-mode) .center { grid-template-rows: minmax(200px, 1fr) var(--al-dock-user-h, minmax(96px, clamp(110px, 24dvh, 180px))); }
   .app .workspace:not(.design-mode) .panel { overflow: auto; }
 }
 

@@ -144,6 +144,7 @@ class Simulation:
         # default far-field frequencies (Hz) when evaluate() gets none; None = band centres. For
         # broadband antennas (horns, helices) the S11 minimum says little about the design frequency.
         self.pattern_freqs = None
+        self.pattern_steps = (3.0, 5.0)
         # surface-current maps (Hz) that `fairbeam run` records when no --fields flag is given
         # (fairbeam.fields; a design's monitors.currents); None = none
         self.current_freqs = None
@@ -760,11 +761,12 @@ class Simulation:
 
     # ------------------------------------------------------------------ post-processing
 
-    def evaluate(self, n_freq: int = 801, pattern_freqs=None, theta_step: float = 3.0,
-                 phi_step: float = 5.0, s11_band_db: float = -10.0, efficiency_points: int | None = None) -> dict:
+    def evaluate(self, n_freq: int = 801, pattern_freqs=None, theta_step: float | None = None,
+                 phi_step: float | None = None, s11_band_db: float = -10.0, efficiency_points: int | None = None) -> dict:
         """Port quantities, bands and far field of the finished run. ``efficiency_points``
         (default ``self.efficiency_points``) adds ``efficiency``: Prad / Pacc at that many
-        frequencies across the band (:meth:`_band_efficiency`)."""
+        frequencies across the band (:meth:`_band_efficiency`). Angular steps default to
+        ``self.pattern_steps`` (3, 5 degrees); explicit arguments override each axis."""
         if self.sim_path is None:
             raise RuntimeError("run() first")
         f = np.linspace(self.f_min, self.f_max, n_freq)
@@ -816,17 +818,22 @@ class Simulation:
         out["s11_band_db"] = float(s11_band_db)
 
         if self.nf2ff is not None:
+            from .pattern_grid import angular_grid, pattern_steps
+
+            defaults = self.pattern_steps
+            theta_step, phi_step = pattern_steps(defaults[0] if theta_step is None else theta_step,
+                                                  defaults[1] if phi_step is None else phi_step)
             if pattern_freqs is None:
                 pattern_freqs = self.pattern_freqs
             if pattern_freqs is None:
                 pattern_freqs = [b["f_center"] for b in out["bands"]][:4] or [float(f[np.argmin(s11_db)])]
             pattern_freqs = [float(v) for v in pattern_freqs]
-            theta = np.arange(0.0, 180.0 + 1e-9, theta_step)
-            phi = np.arange(0.0, 360.0, phi_step)
+            theta, phi = angular_grid(theta_step, phi_step)
             center = np.array(self.nf2ff_center if self.nf2ff_center is not None else _center(self))
             res = self.nf2ff.CalcNF2FF(self.sim_path, pattern_freqs, theta, phi, center=center * self.unit)
             # kept for the embedded element patterns of multi-port runs (fairbeam.multiport)
-            self._nf2ff = {"res": res, "freqs": pattern_freqs, "theta": theta, "phi": phi}
+            self._nf2ff = {"res": res, "freqs": pattern_freqs, "theta": theta, "phi": phi,
+                           "requested_steps": [theta_step, phi_step]}
             # With PEC/PMC boundaries openEMS mirrors the recording surface, so Prad (and the Dmax
             # derived from it) cover the full image space. Undo that for the physical half space.
             mirrors = mirror_planes(self.boundaries)
@@ -843,7 +850,10 @@ class Simulation:
                 gamma2 = float(np.interp(fp, f, np.abs(s11) ** 2))
                 raw = prad / pacc if pacc > 0 else None
                 eff, note = self._lossless_efficiency(raw, fp, p_meta.get("type"), lossless)
-                entry = {"f": fp, "theta": _r(theta, 2), "phi": _r(phi, 2),
+                # Keep coordinates at full precision: a short final theta interval must not
+                # round onto the appended 180-degree pole.
+                entry = {"f": fp, "theta": theta.tolist(), "phi": phi.tolist(),
+                         "requested_steps": [theta_step, phi_step],
                          "directivity_dbi": [_r(row, 2) for row in d_dbi],
                          "dmax_dbi": round(10 * np.log10(d_max), 3), "prad_w": prad, "pacc_w": pacc,
                          "rad_efficiency": None if eff is None else round(eff, 4),
@@ -1006,6 +1016,10 @@ class Simulation:
                                 f"{LOSSLESS_TOLERANCE * 100:.0f} % from 1: reported as measured there")
         elif (w := _band_efficiency_warning(fe, [e if k else None for e, k in zip(eff, ok)], port_type)) is not None:
             warnings.append(w)
+        # Reuse this transform's sampled fields; do not request another NF2FF pass.
+        # Keep the original powers, lossless policy and Pacc reliability flags intact.
+        entry["radiation"] = _band_radiation(res, fe, theta, phi, mirrors, eff, f, port,
+                                             bool(getattr(self, "cp_outputs", False)))
         if warnings:
             entry["qa_warnings"] = warnings
             for w in warnings:
@@ -1192,29 +1206,142 @@ class LossyMetal:
 
 # ---------------------------------------------------------------------- helpers
 
+def _finite_interpolation(x, y, queries):
+    """Interpolate adjacent finite samples only; exact samples survive adjacent gaps.
+
+    Missing, unordered or duplicate source frequencies do not define a usable
+    interpolation grid. No endpoint extrapolation or interpolation across a gap.
+    """
+    out = np.full(len(queries), np.nan)
+    try:
+        x, y = np.asarray(x, float), np.asarray(y, float)
+    except (TypeError, ValueError):
+        return out
+    if (x.ndim != 1 or y.shape != x.shape or not len(x) or
+            not np.all(np.isfinite(x)) or np.any(np.diff(x) <= 0)):
+        return out
+    for i, q in enumerate(queries):
+        if not np.isfinite(q) or q < x[0] or q > x[-1]:
+            continue
+        hi = int(np.searchsorted(x, q))
+        if hi < len(x) and x[hi] == q:
+            if np.isfinite(y[hi]):
+                out[i] = y[hi]
+        elif 0 < hi < len(x) and np.isfinite(y[hi - 1]) and np.isfinite(y[hi]):
+            t = (q - x[hi - 1]) / (x[hi] - x[hi - 1])
+            out[i] = (1 - t) * y[hi - 1] + t * y[hi]
+    return out
+
+
+def _band_radiation(res, frequencies, theta, phi, mirrors, efficiency, source_f, port, cp_requested):
+    """Scalar radiation samples from the existing coarse efficiency NF2FF pass.
+
+    Dmax is the maximum of the supplied angular samples, not a continuous-sphere
+    maximum. Pacc reliability flags do not establish angular or CP convergence.
+    """
+    n = len(frequencies)
+    fields = ("d_peak_dbi", "d_boresight_dbi", "peak_theta_deg", "peak_phi_deg",
+              "gain_peak_dbi", "gain_boresight_dbi", "realized_peak_dbi", "realized_boresight_dbi")
+    out = {"source": "band-efficiency-nf2ff", "theta": [float(t) for t in theta],
+           "phi": [float(p) for p in phi], "cp_requested": cp_requested, "ar_mask_db": 20,
+           **{key: [None] * n for key in fields}}
+    if cp_requested:
+        out.update(ar_peak_db=[None] * n, ar_boresight_db=[None] * n)
+    mismatch = np.full(n, np.nan)
+    if port is not None:
+        try:
+            inc, ref = np.asarray(port.uf_inc, complex), np.asarray(port.uf_ref, complex)
+            if inc.shape == ref.shape:
+                with np.errstate(divide="ignore", invalid="ignore", over="ignore"):
+                    gamma2 = np.abs(ref / inc) ** 2
+                mismatch = 1 - _finite_interpolation(source_f, gamma2, frequencies)
+        except (AttributeError, TypeError, ValueError):
+            pass
+    out["mismatch_efficiency"] = [float(v) if np.isfinite(v) else None for v in mismatch]
+    shape = (len(theta), len(phi))
+    boresight_i = next((j for j, t in enumerate(theta) if np.isfinite(t) and abs(t) < 1e-9), None)
+    for i in range(n):
+        d = np.full(shape, np.nan)
+        try:
+            e = np.asarray(res.E_norm[i], float)
+            dmax = float(res.Dmax[i]) * 2.0 ** mirrors
+            good = np.isfinite(e) & (e > 0)
+            if e.shape == shape and np.any(good) and np.isfinite(dmax) and dmax > 0:
+                # Log differences avoid underflow of e / e.max() for small fields.
+                peak_log_e = np.log10(np.max(e[good]))
+                d[good] = 20 * (np.log10(e[good]) - peak_log_e) + 10 * np.log10(dmax)
+        except (AttributeError, IndexError, TypeError, ValueError):
+            pass
+        good_d = np.isfinite(d)
+        k = np.unravel_index(int(np.argmax(np.where(good_d, d, -np.inf))), shape) if np.any(good_d) else None
+        peak = float(d[k]) if k is not None else np.nan
+        bore = float(d[boresight_i, 0]) if boresight_i is not None else np.nan
+        if k is not None:
+            out["peak_theta_deg"][i], out["peak_phi_deg"][i] = float(theta[k[0]]), float(phi[k[1]])
+        eta = efficiency[i]
+        eta_ok = eta is not None and np.isfinite(eta) and eta > 0
+        for label, value in (("peak", peak), ("boresight", bore)):
+            if not np.isfinite(value):
+                continue
+            out[f"d_{label}_dbi"][i] = round(value, 3)
+            if eta_ok:
+                gain = value + 10 * np.log10(eta)
+                out[f"gain_{label}_dbi"][i] = round(float(gain), 3)
+                if np.isfinite(mismatch[i]) and mismatch[i] > 0:
+                    out[f"realized_{label}_dbi"][i] = round(float(gain + 10 * np.log10(mismatch[i])), 3)
+        if cp_requested:
+            try:
+                cp = _circular(res, i, d, theta, phi)
+                for label, value in (("peak", peak), ("boresight", bore)):
+                    ar = cp[label]["axial_ratio_db"]
+                    if np.isfinite(value) and np.isfinite(peak) and value >= peak - 20 and np.isfinite(ar):
+                        out[f"ar_{label}_db"][i] = float(ar)
+            except (AttributeError, IndexError, TypeError, ValueError):
+                pass
+    return out
+
+
 def _circular(res, i, d_dbi, theta, phi) -> dict:
     """Circular-polarisation split of the far field (IEEE, e^{jwt}): E_R = (E_theta + j E_phi)/sqrt 2,
     E_L = (E_theta - j E_phi)/sqrt 2 (openEMS' E_cprh / E_cplh up to a phase). The partial
     directivities are D * |E_R|^2 / |E|^2 and D * |E_L|^2 / |E|^2; the axial ratio is
-    (|E_R| + |E_L|) / | |E_R| - |E_L| | (0 dB = circular, large = linear)."""
-    et, ep = np.asarray(res.E_theta[i]), np.asarray(res.E_phi[i])
-    er, el = np.abs(et + 1j * ep) / np.sqrt(2), np.abs(et - 1j * ep) / np.sqrt(2)
+    (|E_R| + |E_L|) / | |E_R| - |E_L| | (0 dB = circular, large = linear).
+    Zero/nonfinite fields or directivity are missing samples (NaN, written as JSON null).
+    Scale each complex pair before taking ratios, so the result does not depend
+    on the absolute field amplitude overflowing or underflowing its square."""
+    et, ep = np.asarray(res.E_theta[i], complex), np.asarray(res.E_phi[i], complex)
+    d = np.asarray(d_dbi, float)
+    shape = (len(theta), len(phi))
+    if not all(shape) or et.shape != shape or ep.shape != shape or d.shape != shape:
+        raise ValueError("circular fields and directivity need the nonempty theta/phi grid")
+    scale = np.maximum.reduce([np.abs(et.real), np.abs(et.imag), np.abs(ep.real), np.abs(ep.imag)])
+    valid = np.isfinite(et) & np.isfinite(ep) & np.isfinite(d) & (scale > 0)
+    normalized = [np.divide(v, scale, out=np.zeros(shape), where=valid)
+                  for v in (et.real, et.imag, ep.real, ep.imag)]
+    tr, ti, pr, pi = normalized
+    er = np.hypot(tr - pi, ti + pr) / np.sqrt(2)
+    el = np.hypot(tr + pi, ti - pr) / np.sqrt(2)
     tot = er ** 2 + el ** 2
     with np.errstate(divide="ignore", invalid="ignore"):
-        d_lin = 10 ** (np.asarray(d_dbi) / 10)
-        dr = 10 * np.log10(np.maximum(d_lin * er ** 2 / tot, 1e-12))
-        dl = 10 * np.log10(np.maximum(d_lin * el ** 2 / tot, 1e-12))
-        ar = 20 * np.log10(np.minimum((er + el) / np.maximum(np.abs(er - el), 1e-30), 1e6))
-    floor = float(np.max(d_dbi)) - 60
-    k = np.unravel_index(int(np.argmax(d_dbi)), np.shape(d_dbi))
+        dr = np.where(valid, np.maximum(d + 10 * np.log10(er ** 2 / tot), -120), np.nan)
+        dl = np.where(valid, np.maximum(d + 10 * np.log10(el ** 2 / tot), -120), np.nan)
+        ar = np.where(valid, np.minimum(20 * np.log10((er + el) / np.abs(er - el)), 60), np.nan)
+    finite_d = np.isfinite(d)
+    floor = float(np.max(d[finite_d])) - 60 if np.any(finite_d) else np.nan
+    k = np.unravel_index(int(np.argmax(np.where(finite_d, d, -np.inf))), shape)
+    # An explicit angular grid need not contain +z, nor put it in the first row.
+    # Without a theta=0 sample, boresight is unavailable rather than interpolated.
+    boresight_i = next((j for j, t in enumerate(theta) if np.isfinite(t) and abs(t) < 1e-9), None)
+    boresight = {"theta": 0.0}
+    for key, values in (("rhcp_dbi", dr), ("lhcp_dbi", dl), ("axial_ratio_db", ar)):
+        boresight[key] = np.nan if boresight_i is None else round(float(values[boresight_i, 0]), 3)
     return {
         "rhcp_dbi": [_r(row, 2) for row in np.maximum(dr, floor)],
         "lhcp_dbi": [_r(row, 2) for row in np.maximum(dl, floor)],
-        "axial_ratio_db": [_r(row, 2) for row in np.minimum(ar, 60)],
+        "axial_ratio_db": [_r(row, 2) for row in ar],
         "peak": {"theta": float(theta[k[0]]), "phi": float(phi[k[1]]), "rhcp_dbi": round(float(dr[k]), 3),
-                 "lhcp_dbi": round(float(dl[k]), 3), "axial_ratio_db": round(float(min(ar[k], 60)), 3)},
-        "boresight": {"theta": 0.0, "rhcp_dbi": round(float(dr[0, 0]), 3), "lhcp_dbi": round(float(dl[0, 0]), 3),
-                      "axial_ratio_db": round(float(min(ar[0, 0], 60)), 3)},
+                 "lhcp_dbi": round(float(dl[k]), 3), "axial_ratio_db": round(float(ar[k]), 3)},
+        "boresight": boresight,
     }
 
 

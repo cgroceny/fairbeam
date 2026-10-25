@@ -24,7 +24,9 @@ The geometry maps one to one onto CSXCAD primitives, the same ones Python models
                  "start": [...], "stop": [...], "direction": "z"}],
       "resistors": [{"name": "r1", "R": "100", "start": [...], "stop": [...], "direction": "y"}],
       "mesh": {"mode": "auto", "cells_per_wavelength": 20, "refine_features": false},
-      "far_field": {"enabled": true, "frequencies": ["f0"]},   # optional "faces": 6 flags x- x+ y- y+ z- z+
+      "far_field": {"enabled": true, "frequencies": ["f0"], "theta_step": 3, "phi_step": 5},
+      # angular steps are optional expressions in degrees (0.25..90); optional "circular": bool
+      # optional "faces": x- x+ y- y+ z- z+
       "monitors": {"currents": ["f0"],              # optional: surface-current maps (GHz)
                    "efficiency": {"points": 21},     # optional: radiation efficiency over the band
                    "field_planes": [{"quantity": "E", "normal": "z", "position": "h + 1",
@@ -203,9 +205,11 @@ from pathlib import Path
 
 from .legacy import is_reserved_name, schema_is
 from .materials import design_material
+from .pattern_grid import PATTERN_STEP_MIN, PATTERN_STEP_MAX
 from .boolean_curved import (FACETS, INTERSECT_MESSAGE, INTERSECT_WHY, B_HAS_CUT, FLAT_CARVER, HAS_CUT, SHEET_VOLUME, coaxial_rects, cylinder_cell,
                              design_bounds, facet_ring, flat_axis, is_p, is_tube, is_void, kind_name, same_ring, snap_to_sheet, unresolve)
 from .polyclip import clip_polygons, clip_tolerance
+from .patch_seed import microstrip_width, patch_inset
 
 DESIGN_SCHEMA = "fairbeam.design/1"
 DESIGN_SUFFIX = ".design.json"
@@ -286,7 +290,10 @@ FUNCS = {
 }
 CONSTANTS = {"pi": math.pi, "c0": C0, "eps0": 8.8541878128e-12, "mu0": 1.25663706212e-6}
 RESERVED = set(FUNCS) | set(CONSTANTS)
-# A parameter key: an ASCII identifier that is not a function, a constant or a Python keyword
+# New call spellings do not reserve old legal parameter names. A call and a bare
+# name remain distinct, including when both occur in the same expression.
+FUNCS.update(microstrip_width=microstrip_width, patch_inset=patch_inset)
+# A parameter key: an ASCII identifier not in the historical reserved set or Python keywords
 # (src/designer/expr.ts paramKeyError refuses the same keys in the designer).
 _KEY = re.compile(r"[A-Za-z_][A-Za-z0-9_]*")
 
@@ -345,8 +352,8 @@ def parse_expr(text) -> ast.Expression:
 def names_in(text) -> set[str]:
     """Parameter names an expression refers to (functions and constants excluded)."""
     tree = parse_expr(text)
-    called = {n.func.id for n in ast.walk(tree) if isinstance(n, ast.Call)}
-    return {n.id for n in ast.walk(tree) if isinstance(n, ast.Name)} - called - set(CONSTANTS)
+    called = {n.func for n in ast.walk(tree) if isinstance(n, ast.Call)}
+    return {n.id for n in ast.walk(tree) if isinstance(n, ast.Name) and n not in called} - set(CONSTANTS)
 
 
 class _NotFinite(Exception):
@@ -537,6 +544,9 @@ def check_design(d: dict) -> None:
         mats.add(name)
         if mt.get("kind") not in ("metal", "dielectric"):
             raise DesignError("kind must be 'metal' or 'dielectric'", f"{w}.kind")
+        from .designer_dispersion import descriptor_problem
+        if problem := descriptor_problem(mt):
+            raise DesignError(problem, f"{w}.dispersion")
         _check_color(mt, w)
         _check_opacity(mt, w)
     parts: set[str] = set()
@@ -641,6 +651,11 @@ def check_design(d: dict) -> None:
             raise DesignError("topology must be parallel or series", f"resistors[{i}].topology")
         if r.get("direction") not in AXES:
             raise DesignError("direction must be x, y or z", f"resistors[{i}].direction")
+    ff = d.get("far_field", {})
+    if not isinstance(ff, dict):
+        raise DesignError("far_field must be an object", "far_field")
+    if "circular" in ff and not isinstance(ff["circular"], bool):
+        raise DesignError("circular must be true or false", "far_field.circular")
     mesh = d.get("mesh", {})
     if not isinstance(mesh, dict):
         raise DesignError("mesh must be an object", "mesh")
@@ -736,6 +751,18 @@ def _check_monitors(d: dict) -> None:
             raise DesignError('component is "abs", "x", "y" or "z"', f"{w}.component")
         if not isinstance(pl.get("frequencies", []), list):
             raise DesignError("frequencies is a list of frequencies in GHz", f"{w}.frequencies")
+
+
+def design_pattern_steps(ff: dict, num) -> tuple[float, float]:
+    """Resolve Design angular steps in degrees before building or exporting a model."""
+    steps = []
+    for axis, default in (("theta", 3), ("phi", 5)):
+        path = f"far_field.{axis}_step"
+        value = num(ff.get(f"{axis}_step", default), path)
+        if not PATTERN_STEP_MIN <= value <= PATTERN_STEP_MAX:
+            raise DesignError(f"angular step must be from {PATTERN_STEP_MIN:g} to {PATTERN_STEP_MAX:g} degrees", path)
+        steps.append(value)
+    return tuple(steps)
 
 
 def field_plane_monitors(d: dict, num) -> list[dict]:
@@ -2654,6 +2681,7 @@ def thin_metal_limit(d: dict, names: dict, force: bool = False) -> float | None:
     with the largest εr μr product among the materials the parts use. With ``mesh.thin_metal`` "volume" the limit is
     :data:`VOLUME_COST_FACTOR` times larger (only a plate thick enough to cost little in timestep keeps its thickness)
     unless ``force``: the limit of the default "sheet" setting, for the checks that say what "volume" costs. None when the values do not resolve."""
+    from .designer_dispersion import static_permittivity_bound
     m = d.get("mesh") or {}
     factor = VOLUME_COST_FACTOR if m.get("thin_metal", "sheet") == "volume" and not force else 1
     num, _ = _evaluator(names)
@@ -2663,8 +2691,8 @@ def thin_metal_limit(d: dict, names: dict, force: bool = False) -> float | None:
         cpw = num(density.get("cells_per_wavelength", 20), "mesh.cells_per_wavelength")
         used = {pt.get("material") for pt in d.get("parts", [])}
         wavelength_factors = [
-            num(mt.get("eps_r", 1), f"materials.{mt['name']}.eps_r")
-            * num(mt.get("mu_r", 1), f"materials.{mt['name']}.mu_r")
+            static_permittivity_bound(mt, lambda v: evaluate(v, names)) if "dispersion" in mt else
+            num(mt.get("eps_r", 1), f"materials.{mt['name']}.eps_r") * num(mt.get("mu_r", 1), f"materials.{mt['name']}.mu_r")
             for mt in d.get("materials", [])
             if mt.get("kind") != "metal" and mt.get("name") in used
         ]
@@ -2789,6 +2817,24 @@ def metal_loss(mt: dict, num) -> tuple[float | None, float | None]:
     return sigma, thick
 
 
+def _configure_far_field(sim, ff: dict, num, vec) -> None:
+    """Apply requested output settings; circular output never enables an absent NF2FF box."""
+    sim.cp_outputs = ff.get("circular", False)
+    if not ff.get("enabled", True):
+        return
+    sim.pattern_steps = design_pattern_steps(ff, num)
+    faces = ff.get("faces")
+    if faces is not None and (not isinstance(faces, list) or len(faces) != 6 or not any(faces)):
+        raise DesignError("faces is 6 true/false flags (x-, x+, y-, y+, z-, z+), at least one true", "far_field.faces")
+    skip = {"directions": [bool(v) for v in faces]} if faces is not None and not all(faces) else {}
+    if ff.get("phase_center") is not None:
+        sim.add_nf2ff_box(center=vec(ff["phase_center"], "far_field.phase_center"), **skip)
+    else:
+        sim.add_nf2ff_box(**skip)
+    if ff.get("frequencies"):
+        sim.pattern_freqs = [num(f, f"far_field.frequencies[{k}]") * 1e9 for k, f in enumerate(ff["frequencies"])]
+
+
 def build(d: dict, values: dict):
     """A configured :class:`fairbeam.Simulation` from a design and resolved parameter values."""
     import numpy as np
@@ -2838,6 +2884,13 @@ def build(d: dict, values: dict):
             prop = sim.metal(pt["name"], label=label, color=color, opacity=opacity, conductivity=sigma, thickness=thick)
             if isinstance(prop, LossyMetal):
                 prop.sheet_limit = thin_limit
+        elif "dispersion" in mt:
+            from .designer_dispersion import add_wideband_material, resolved_input
+            try:
+                resolved = resolved_input(mt, lambda value: num(value, f"materials.{mt['name']}.dispersion"))
+                prop = add_wideband_material(sim, pt["name"], resolved, intent=mt, label=label, color=color, opacity=opacity)
+            except ValueError as error:
+                raise DesignError(str(error), f"materials.{mt['name']}.dispersion") from error
         else:
             tan_f = mt.get("tan_d_freq")
             prop = sim.dielectric(pt["name"], num(mt.get("eps_r", 1), f"materials.{mt['name']}.eps_r"),
@@ -3090,17 +3143,7 @@ def build(d: dict, values: dict):
         apply_auto_timesteps(sim, f_max)
 
     ff = d.get("far_field", {"enabled": True})
-    if ff.get("enabled", True):
-        faces = ff.get("faces")
-        if faces is not None and (not isinstance(faces, list) or len(faces) != 6 or not any(faces)):
-            raise DesignError("faces is 6 true/false flags (x-, x+, y-, y+, z-, z+), at least one true", "far_field.faces")
-        skip = {"directions": [bool(v) for v in faces]} if faces is not None and not all(faces) else {}
-        if ff.get("phase_center") is not None:
-            sim.add_nf2ff_box(center=vec(ff["phase_center"], "far_field.phase_center"), **skip)
-        else:
-            sim.add_nf2ff_box(**skip)
-        if ff.get("frequencies"):
-            sim.pattern_freqs = [num(f, f"far_field.frequencies[{k}]") * 1e9 for k, f in enumerate(ff["frequencies"])]
+    _configure_far_field(sim, ff, num, vec)
     cur = (d.get("monitors") or {}).get("currents") or []
     if cur:  # fairbeam run records surface currents at these frequencies (cli._field_request)
         sim.current_freqs = [num(f, f"monitors.currents[{k}]") * 1e9 for k, f in enumerate(cur)]
@@ -3258,7 +3301,7 @@ _PY_FUNCS = {"sqrt": "np.sqrt", "sin": "np.sin", "cos": "np.cos", "tan": "np.tan
 _PY_CONST = {"pi": "np.pi", "c0": "C0", "eps0": "8.8541878128e-12", "mu0": "1.25663706212e-6"}
 
 
-def _py(text, independent: set[str]) -> str:
+def _py(text, independent: set[str], synthesis_namespace: str = "_patch_seed", need: set[str] | None = None) -> str:
     """An expression as Python source: independent parameters become ``p["key"]``."""
     if isinstance(text, (int, float)) and not isinstance(text, bool):
         return repr(float(text)) if isinstance(text, float) else str(text)
@@ -3266,8 +3309,13 @@ def _py(text, independent: set[str]) -> str:
 
     class T(ast.NodeTransformer):
         def visit_Call(self, node):
-            self.generic_visit(node)
-            node.func = ast.parse(_PY_FUNCS[node.func.id], mode="eval").body
+            name = node.func.id
+            node.args = [self.visit(arg) for arg in node.args]
+            if name in ("microstrip_width", "patch_inset") and need is not None:
+                need.add("synthesis")
+            target = (f"{synthesis_namespace}.{name}" if name in ("microstrip_width", "patch_inset")
+                      else _PY_FUNCS[name])
+            node.func = ast.parse(target, mode="eval").body
             return node
 
         def visit_Name(self, node):
@@ -3366,6 +3414,13 @@ def to_python(d: dict) -> str:
     """The design as an equivalent Python model file (one-way: for moving on to code). Thin metal
     is written as the sheets the build makes of it (``thin_sheets``, at the default values)."""
     check_design(d)
+    from .designer_dispersion import resolved_input
+    for material in d.get("materials", []):
+        if "dispersion" in material:
+            try:
+                resolved_input(material, lambda value: evaluate(value, resolve_names(d, {})))
+            except ValueError as error:
+                raise DesignError(str(error), f"materials.{material['name']}.dispersion") from error
     if any(p.get("type") == "coaxial" for p in d.get("ports", [])):
         from .coax import resolved_coax
         coax_num, _ = _evaluator(resolve_names(d, {}))
@@ -3397,7 +3452,10 @@ def to_python(d: dict) -> str:
     guard_design = {"params": d.get("params", []), "materials": guard_materials, "parts": guard_parts}
     indep = {p["key"] for p in d.get("params", []) if "expr" not in p}
     need: set[str] = set()
-    e = lambda v: _py(v, indep)  # noqa: E731
+    synthesis_namespace = "_patch_seed"
+    while synthesis_namespace in {p["key"] for p in d.get("params", [])}:
+        synthesis_namespace = "_" + synthesis_namespace
+    e = lambda v: _py(v, indep, synthesis_namespace, need)  # noqa: E731
     vec = lambda v: "[" + ", ".join(e(x) for x in v) + "]"  # noqa: E731
     faces, sheets, thin_names = _thin_faces(d, e)
     flat = {(i, j): (n, f) for i, j, n, f, _at in faces}
@@ -3467,6 +3525,16 @@ def to_python(d: dict) -> str:
                     loss += f", thickness={e(mt['thickness'])}"
             out.append(f"    {var} = sim.metal({pt['name']!r}{lbl}{col}{loss})")
             dp = 10
+        elif "dispersion" in mt:
+            need.add("dispersion")
+            ds = mt["dispersion"]
+            fields = ", ".join(f"{key!r}: {e(mt.get(key, default))}" for key, default in
+                               (("eps_r", 1), ("tan_d", 0), ("tan_d_freq", None), ("mu_r", 1)))
+            corners = f"'model': 'djordjevic-sarkar', 'm1': {e(ds.get('m1', 4))}, 'm2': {e(ds.get('m2', 12))}"
+            if "n_poles" in ds:
+                corners += f", 'n_poles': {ds['n_poles']!r}"
+            out.append(f"    {var} = add_wideband_material(sim, {pt['name']!r}, {{'kind': 'dielectric', {fields}, 'dispersion': {{{corners}}}}}, intent={mt!r}{lbl}{col})")
+            dp = 0
         else:
             tf = mt.get("tan_d_freq")
             tf = f", tan_d_freq=({e(tf)}) * 1e9" if tf is not None else ""
@@ -3745,13 +3813,18 @@ def to_python(d: dict) -> str:
     if s.get("max_timesteps") in (None, "auto"):
         out.append(f"    apply_auto_timesteps(sim, ({e(s.get('f_max', 3))}) * 1e9)")
     ff = d.get("far_field", {"enabled": True})
+    if "circular" in ff:
+        out.append(f"    sim.cp_outputs = {ff['circular']!r}")
     if ff.get("enabled", True):
+        design_pattern_steps(ff, _evaluator(resolve_names(d, {}))[0])
         args = []
         if ff.get("phase_center") is not None:
             args.append("center=[" + ", ".join(e(v) for v in ff["phase_center"]) + "]")
         if ff.get("faces") is not None and not all(ff["faces"]):
             args.append(f"directions={[bool(v) for v in ff['faces']]}")
         out.append(f"    sim.add_nf2ff_box({', '.join(args)})")
+        out.append("    from fairbeam.pattern_grid import pattern_steps")
+        out.append(f"    sim.pattern_steps = pattern_steps({e(ff.get('theta_step', 3))}, {e(ff.get('phi_step', 5))})")
         if ff.get("frequencies"):
             out.append("    sim.pattern_freqs = [" + ", ".join(f"({e(f)}) * 1e9" for f in ff["frequencies"]) + "]")
     cur = (d.get("monitors") or {}).get("currents") or []
@@ -3782,6 +3855,8 @@ def to_python(d: dict) -> str:
         helpers += _PY_HELPERS["poly"]
     if "cylinder" in need:
         helpers += _PY_HELPERS["cylinder"]
+    if "dispersion" in need:
+        helpers += ["from fairbeam.designer_dispersion import add_wideband_material", "", ""]
     if "wire" in need:
         helpers += ["from fairbeam.design import add_wire", "", ""]
     if "polyhedron" in need:
@@ -3799,6 +3874,8 @@ def to_python(d: dict) -> str:
         helpers += _PY_HELPERS["rotpoly"]
     if "torus" in need:
         helpers += _PY_HELPERS["torus"]
+    if "synthesis" in need:
+        helpers += [f"import fairbeam.patch_seed as {synthesis_namespace}", "", ""]
     at = out.index("MODEL = " + json.dumps({k: v for k, v in m.items() if isinstance(v, str)}, ensure_ascii=False))
     return "\n".join(out[:at] + helpers + out[at:])
 
@@ -3978,7 +4055,8 @@ def empty_design(id_: str, name: str) -> dict:
 # other than these two are in fairbeam.starters
 TEMPLATES = {"empty": "empty_design", "patch": "blank_design", "dipole": "starters.dipole_design",
              "monopole": "starters.monopole_design", "sleeve-dipole": "starters.sleeve_dipole_design",
-             "open-waveguide": "starters.open_waveguide_design", "microstrip": "starters.microstrip_design"}
+             "open-waveguide": "starters.open_waveguide_design", "microstrip": "starters.microstrip_design",
+             "inset-patch": "starters.inset_patch_design"}
 
 
 def template_design(template: str, id_: str, name: str) -> dict:

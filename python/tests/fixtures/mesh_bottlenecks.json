@@ -1,0 +1,6 @@
+[
+  {"lines": [-2, -1, 0, 0.035, 1], "min_index": 2, "min_interval": [0, 0.035], "ratio_index": 1, "ratio_coordinates": [-1, 0, 0.035], "ratio": 28.57142857142857},
+  {"lines": [0, 2, 4], "min_index": 0, "min_interval": [0, 2], "ratio_index": 0, "ratio_coordinates": [0, 2, 4], "ratio": 1},
+  {"lines": [-1, 1], "min_index": 0, "min_interval": [-1, 1], "ratio_index": null, "ratio_coordinates": null, "ratio": 1},
+  {"lines": [0, 1, 4, 5], "min_index": 0, "min_interval": [0, 1], "ratio_index": 0, "ratio_coordinates": [0, 1, 4], "ratio": 3}
+]

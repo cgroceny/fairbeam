@@ -185,6 +185,10 @@ export interface ElementPatternsSection {
   frequencies: number[];
   /** angular decimation factor applied to the far-field grid (1 = none) */
   decimation: number;
+  /** Original NF2FF angular grid before the embedded-pattern storage limit. */
+  source_shape?: [number, number];
+  /** Requested theta/phi steps in degrees; the pole's final interval can be shorter. */
+  requested_steps?: [number, number];
   mirror_planes: number;
   phase_center: Vec3;
   ports: {
@@ -208,6 +212,8 @@ export interface Param {
 }
 
 export interface FarField {
+  /** Requested theta/phi steps (degrees); coordinate arrays preserve the evaluated grid. */
+  requested_steps?: [number, number];
   f: number;
   theta: number[];
   phi: number[];
@@ -235,6 +241,8 @@ export interface FarField {
 /** Radiation efficiency Prad / Pacc at N frequencies from f_min to f_max (results.efficiency). Total
  * efficiency is rad_efficiency · (1 − |S11|²) with S11 of `port` at `f`. */
 export interface EfficiencySweep {
+  /** Scalars from the SAME coarse NF2FF pass as prad_w, aligned exactly to f. */
+  radiation?: RadiationSweep;
   port?: number; f: number[]; prad_w: number[]; pacc_w: number[]; rad_efficiency: (number | null)[]; mirror_planes: number; theta_step: number; phi_step: number; qa_warnings?: string[];
   /** estimated relative error of pacc_w from where the run stopped (docs/BUNDLE.md#efficiency) */
   pacc_error?: (number | null)[];
@@ -242,6 +250,18 @@ export interface EfficiencySweep {
   reliable?: boolean[];
   /** lossless models: the measured prad_w / pacc_w */
   rad_efficiency_raw?: (number | null)[];
+}
+
+export interface RadiationSweep {
+  source: "band-efficiency-nf2ff";
+  theta: number[]; phi: number[];
+  cp_requested: boolean; ar_mask_db: 20;
+  mismatch_efficiency: (number | null)[];
+  d_peak_dbi: (number | null)[]; d_boresight_dbi: (number | null)[];
+  peak_theta_deg: (number | null)[]; peak_phi_deg: (number | null)[];
+  gain_peak_dbi: (number | null)[]; gain_boresight_dbi: (number | null)[];
+  realized_peak_dbi: (number | null)[]; realized_boresight_dbi: (number | null)[];
+  ar_peak_db?: (number | null)[]; ar_boresight_db?: (number | null)[];
 }
 
 export interface CPPoint { theta: number; phi?: number; rhcp_dbi: number; lhcp_dbi: number; axial_ratio_db: number }
@@ -366,6 +386,12 @@ export interface Bundle {
       min_cell: number;
       max_cell: number;
       max_neighbour_ratio: number;
+      /** Optional diagnostic locations. Indices and coordinates refer to the original mesh lines. */
+      axis_bottlenecks?: Record<"x" | "y" | "z", {
+        min_interval_index: number; min_interval: [number, number]; min_cell: number;
+        max_neighbour_ratio: number; max_neighbour_ratio_index: number | null;
+        max_neighbour_ratio_coordinates: [number, number, number] | null;
+      }>;
       res_air: number;
       res_dielectric: number;
       timestep_s: number;

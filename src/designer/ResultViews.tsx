@@ -13,43 +13,59 @@ import LineChart, { type PointSeries, type Series } from "../charts/LineChart";
 import StackedCharts from "../charts/StackedCharts";
 import { useSize } from "../charts/useSize";
 import { plotQuantities } from "../charts/plotQuantities";
-import PolarChart from "../charts/PolarChart";
+import { PatternCutPanel, type PatternEntry } from '../components/PatternCutPanel';
+import { patternCutChoice } from '../lib/patternCutStore';
+import { nearestFarfield } from '../compare/series';
 import SmithChart from "../charts/SmithChart";
 import { DataTable } from "../components/Dock";
-import { compareCuts, compareLines, compareSParamQuantities, compareTable, SERIES_COLORS, traces, traceLabels, type GroupedTable } from "../compare/series";
+import { compareLines, compareSParamQuantities, compareTable, SERIES_COLORS, traces, traceLabels, type GroupedTable } from "../compare/series";
 import { createSParamSelection, SParamSmithCompare, SParamTools } from "../components/SParamView";
-import { cutPhi, setCutPhi, setZPart, zPart } from "../compare/store";
+import { cutPhi, setZPart, zPart } from "../compare/store";
 import { radioGroupKeys } from "../lib/a11y";
 import { bandTexts } from "../lib/bands";
 import { freqText, ghzText, num, withUnit } from "../lib/format";
-import { nearestIndex, patternCut, sweep } from "../lib/rf";
-import { mappedPairLabel, pairLabel, sMatrix } from "../lib/sparams";
+import { nearestIndex, sweep } from "../lib/rf";
+import { hasSParameterPhase, mappedPairLabel, pairLabel, sMatrix } from "../lib/sparams";
 import { efficiencyIssue, efficiencyWarningUi } from "../lib/runText";
-import { efficiencyData, effectiveQuantity, farfieldSummary, QUANTITY_LABEL, quantityGrid, quantityMax, toDb, type PortEfficiency } from "../lib/farfieldQuantity";
-import { efficiencyUnit, patternQuantity, setEfficiencyUnit } from "../lib/patternQuantityStore";
-import { lobeText, PatternQuantitySelect, quantityFallbackNote, totalEffText } from "../components/FarfieldCard";
+import { efficiencyData, effectiveQuantity, farfieldSummary, toDb, type PortEfficiency } from "../lib/farfieldQuantity";
+import { efficiencyQuantity, radiationQuantity, efficiencyUnit, patternQuantity, setEfficiencyUnit } from "../lib/patternQuantityStore";
+import { CircularReadouts, lobeText, PatternQuantitySelect, quantityFallbackNote, totalEffText } from "../components/FarfieldCard";
 import type { DownloadResult } from "../lib/download";
 import { downloadToast } from "../lib/toast";
 import { isTerminal } from "../runner/api";
-import { clearDesignResult, designJob, designResult } from "../runner/designRun";
+import { clearDesignResult, designJob, designResult as rawDesignResult } from "../runner/designRun";
 import type { Bundle } from "../types";
 import { resultFocus } from "./resultFocus";
 import { MAX_COMPARE } from "./navModel";
-import { comparedLoadState, comparisonReady, retryComparedRuns, comparedRuns, designRunBundle, designRuns, otherProjectRuns, ensureDesignRunBundles, loadRunBundle, runLabel, runShortLabel, selectedRuns, selectRun, showView } from "./runResults";
+import { comparedLoadState, comparisonReady, retryComparedRuns, comparedRuns as rawComparedRuns, designRunBundle, designRuns, otherProjectRuns, ensureDesignRunBundles, loadRunBundle, runLabel, runShortLabel, selectedRuns, selectRun, showView } from "./runResults";
 import { MAIN_TAB_LABELS, type MainResultView } from "./resultTabs";
 import { copyResultData, exportResultCsv, resultDataTable, type ResultDataOptions } from "./resultData";
 import { summaryMode, summaryReference } from "./summaryMode";
-import { resultDataFormat, tableFormat, writeResultDataFormat, type ResultDataFormat } from "./resultDataPreference";
+import { formatForView, groupDelayAperture, resultDataFormat, tableFormat, writeResultDataFormat, type ResultDataFormat } from "./resultDataPreference";
 import { exportResultTouchstone } from "./resultTouchstone";
 import { exportNotice, registerSurfaceExports } from "../components/exportContext";
 import { saveVisibleFigure, visibleFigureSvgs } from "../components/visibleFigure";
 import ResultFigureMenu from "../components/ResultFigureMenu";
+import MatchingPanel, { createMatching } from "../components/MatchingPanel";
 import { resultExportStem, resultFrequencyTag } from "../lib/resultExportNames";
 import FieldMapView from "./FieldMapView";
+import RadiationFrequencyView, { RadiationQuantitySelect } from "../components/RadiationFrequencyView";
 import { ResultSummary } from "./RunSummaryView";
 import { fmt, t, tEn } from "../i18n";
 import "../styles/designer-sim.css";
 import "../styles/result-views.css";
+
+import PortProcessingPanel from "../components/PortProcessingPanel";
+import { displayedPortResult, portProcessingSession } from "./portProcessingSession";
+import { hasComplexPortReference, hasMixedPortCoordinates, originalPortResult, portProcessingInfo, primaryPortLabel } from "../lib/portProcessingMetadata";
+
+// Local presentation boundary: the runner/cache and its consumers keep their raw objects.
+const designResult = createRoot(() => createMemo(() => {
+  const raw = rawDesignResult();
+  return raw ? { ...raw, bundle: displayedPortResult(raw.bundle) } : null;
+}));
+const comparedRuns = () => rawComparedRuns().map(run => ({ ...run, bundle: displayedPortResult(run.bundle) }));
+const processingLabel = (b: Bundle) => portProcessingInfo(b) ? ` · ${t("portProcessing.badge")}` : "";
 
 const COLORS = SERIES_COLORS;
 
@@ -61,15 +77,16 @@ const designSParams = createRoot(() => createSParamSelection(() => {
 
 /** The focused run with the runs compared with it (null: no comparison), each labelled by its short
  * run label (A, B, ...), which the dock's Runs tab explains: legends stay short enough to read. */
-function useCompare(b: () => Bundle) {
+function useCompare(b: () => Bundle, original = false) {
   return createMemo(() => {
-    const others = comparedRuns();
+    const others = comparedRuns().map(run => original ? { ...run, bundle: originalPortResult(run.bundle) } : run);
     if (!others.length) return null;
     const current = designResult();
     const files = new Map<Bundle, string>(others.map((o) => [o.bundle, o.file]));
-    if (current?.bundle === b()) files.set(b(), current.file);
-    return traces(b(), others.map((o) => o.bundle), [current?.bundle === b() ? runLabel(current.file) : undefined, ...others.map((o) => runLabel(o.file))])
-      .map((t) => { const file = files.get(t.bundle); return file ? { ...t, label: runShortLabel(file) } : t; });
+    const sameCurrent = current && (original ? originalPortResult(current.bundle) : current.bundle) === b();
+    if (sameCurrent) files.set(b(), current.file);
+    return traces(b(), others.map((o) => o.bundle), [sameCurrent ? runLabel(current.file) : undefined, ...others.map((o) => runLabel(o.file))])
+      .map((t) => { const file = files.get(t.bundle); return file ? { ...t, label: runShortLabel(file) + processingLabel(t.bundle) } : t; });
   });
 }
 
@@ -88,17 +105,17 @@ function ResultSParams(props: { b: Bundle; format: ResultDataFormat }) {
   const mp = () => (S()?.pairs.length ?? 0) >= 1;
   const groups = createMemo(() => {
     const c = cmp();
-    if (c && (mp() || c.some((t) => sMatrix(t.bundle)?.get(1, 1)))) return compareSParamQuantities(c, mp() ? designSParams.selectedPairs() : [[1, 1]], props.format, designSParams.mode());
+    if (c && (mp() || c.some((t) => sMatrix(t.bundle)?.get(1, 1)))) return compareSParamQuantities(c, mp() ? designSParams.selectedPairs() : [[1, 1]], props.format, designSParams.mode(), { aperturePoints: groupDelayAperture() });
     if (c) {
-      const inputs = c.flatMap((t, i) => { const m = sMatrix(t.bundle), v = m?.get(1, 1); return m && v ? [{ id: `cmp-${i}-1,1`, label: "S11", suffix: t.label, color: SERIES_COLORS[i], x: m.f.map(f => f / 1e9), re: v.re, im: v.im }] : []; });
-      return plotQuantities(inputs, props.format, designSParams.mode());
+      const inputs = c.flatMap((t, i) => { const m = sMatrix(t.bundle), v = m?.get(1, 1); return m && v ? [{ id: `cmp-${i}-1,1`, label: "S11", suffix: t.label, color: SERIES_COLORS[i], x: m.f.map(f => f / 1e9), re: v.re, im: v.im, phaseKnown: hasSParameterPhase(t.bundle) }] : []; });
+      return plotQuantities(inputs, props.format, designSParams.mode(), { aperturePoints: groupDelayAperture() });
     }
     const m = S();
     const inputs = mp() && m ? designSParams.selectedPairs().flatMap((p, k) => {
         const v = m.get(p[0], p[1]);
-        return v ? [{ id: pairLabel(p), label: mappedPairLabel(m, p), color: COLORS[k], x: m.f.map((f) => f / 1e9), re: v.re, im: v.im }] : [];
+        return v ? [{ id: pairLabel(p), label: mappedPairLabel(m, p), color: COLORS[k], x: m.f.map((f) => f / 1e9), re: v.re, im: v.im, phaseKnown: hasSParameterPhase(props.b) }] : [];
       }) : [];
-    if (inputs.length) return plotQuantities(inputs, props.format, designSParams.mode());
+    if (inputs.length) return plotQuantities(inputs, props.format, designSParams.mode(), { aperturePoints: groupDelayAperture() });
     const s = sw();
     return s && (props.format === "plot" || props.format === "db") ? [{ key: "db", title: t("chart.q.magnitudeDb"), yLabel: "|S11| (dB)", kind: "reflection" as const, series: [{ id: "s11", label: "|S11|", color: COLORS[0], x: s.f.map((f) => f / 1e9), y: s.s11Db }] }] : [];
   });
@@ -130,7 +147,7 @@ function ResultSParams(props: { b: Bundle; format: ResultDataFormat }) {
                   {/* the resonance is the band's best match (the |S11| minimum); its centre is the middle of the edges */}
                   <dt title={t("spec.bestMatch.title")}>{bands().length > 1 ? t("results.sparams.bandN", { n: i() + 1 }) : t("results.sparams.band")}</dt>
                   <dd class="mono">{withUnit(c.best, "GHz")}</dd>
-                  <dt>|S11| min</dt><dd class="mono">{withUnit(minusSign(num(b.s11_min_db, 1)), "dB")}</dd>
+                  <dt>|{primaryPortLabel(props.b)}| min</dt><dd class="mono">{withUnit(minusSign(num(b.s11_min_db, 1)), "dB")}</dd>
                   <dt title={t("spec.centre.title")}>{t("spec.centre")}</dt><dd class="mono">{withUnit(c.centre, "GHz")}</dd>
                   <dt>{t("summary.range")}</dt><dd class="mono">{withUnit(c.range, "GHz")}</dd>
                   <dt>{t("results.sparams.bandwidth")}</dt><dd class="mono">{withUnit(c.bwMhz, "MHz")}<Show when={c.open}><span class="kv-sub">{t("spec.bandOpen")}</span></Show></dd>
@@ -152,7 +169,8 @@ function SpTools(props: { show: boolean; smith?: boolean; format?: ResultDataFor
 
 
 function ResultImpedance(props: { b: Bundle }) {
-  const reference = () => (props.b.ports.find((p) => p.excite) ?? props.b.ports[0])?.reference_impedance;
+  const ideal = createMatching(() => props.b);
+  const reference = () => portProcessingInfo(props.b) ? undefined : (props.b.ports.find((p) => p.excite) ?? props.b.ports[0])?.reference_impedance;
   const matching = createMemo(() => {
     const ref = reference(), s = sweep(props.b);
     if (!ref || !s || !s.f.length) return null;
@@ -177,7 +195,7 @@ function ResultImpedance(props: { b: Bundle }) {
           inspection={{ key: `designer:${designResult()?.file ?? ""}:impedance:${zPart()}`, chart: `designer:${designResult()?.file ?? ""}:impedance`, kind: "other" }}
           series={series()} {...ghzAxis} yLabel={cmp() ? `${zPart() === "re" ? "Re" : "Im"} Zin (Ω)` : "Zin (Ω)"} yFormat={(v) => v.toFixed(1)}
           hlines={cmp() && zPart() === "im" ? [{ y: 0, label: "" }] : [{ y: sw()!.zRef, label: t("results.impedance.referenceLine", { z: num(sw()!.zRef, sw()!.zRef >= 100 ? 0 : 1) }) }, { y: 0, label: "" }]} />
-        <Show when={cmp()} fallback={<div class="rdk-side"><dl class="kv"><dt>{t("results.impedance.reference")}</dt><dd class="mono">{num(sw()!.zRef, 1)} Ω</dd></dl><Show when={matching()}>{(m) => <><h3>{t("feed.complexReference")}</h3><dl class="kv"><dt>Zref</dt><dd class="mono">{m().ref.real} + j({m().ref.imag}) Ω</dd><dt>f</dt><dd class="mono">{num(m().f / 1e9, 4)} GHz</dd><dt>|Γ|</dt><dd class="mono">{num(m().magnitude, 4)}</dd><dt>{t("feed.transfer")}</dt><dd class="mono">{num(m().transfer * 100, 2)} %</dd></dl><p class="note">{t("feed.referenceNote")}</p></>}</Show></div>}>
+        <Show when={cmp()} fallback={<div class="rdk-side"><dl class="kv"><dt>{t("results.impedance.reference")}</dt><dd class="mono">{num(sw()!.zRef, 1)} Ω</dd></dl><Show when={matching()}>{(m) => <><h3>{t("feed.complexReference")}</h3><dl class="kv"><dt>Zref</dt><dd class="mono">{m().ref.real} + j({m().ref.imag}) Ω</dd><dt>f</dt><dd class="mono">{num(m().f / 1e9, 4)} GHz</dd><dt>|Γ|</dt><dd class="mono">{num(m().magnitude, 4)}</dd><dt>{t("feed.transfer")}</dt><dd class="mono">{num(m().transfer * 100, 2)} %</dd></dl><p class="note">{t("feed.referenceNote")}</p></>}</Show><MatchingPanel state={ideal} /></div>}>
           <div class="rdk-side">
             <div class="seg seg-sm" role="radiogroup" aria-label={t("results.impedance.part")} onKeyDown={radioGroupKeys}>
               <button class="seg-btn" role="radio" aria-checked={zPart() === "re"} onClick={() => setZPart("re")}>Re</button>
@@ -226,15 +244,19 @@ function ResultVswr(props: { b: Bundle }) {
 }
 
 function ResultSmith(props: { b: Bundle }) {
+  const ideal = createMatching(() => props.b);
   const sw = createMemo(() => sweep(props.b));
   const cmp = useCompare(() => props.b);
   // two or more ports: the port picked beside the chart (S_pp of every compared run)
   const mp = () => (sMatrix(props.b)?.ports.length ?? 0) >= 2;
   const marks = () => (props.b.results?.farfield ?? []).map((f) => ({ f: f.f, label: freqText(f.f) }));
-  const overlays = () => (cmp() ?? []).slice(1).map((t, i) => ({ label: t.label, color: COLORS[i + 1], re: t.sweep.s11Re, im: t.sweep.s11Im }));
+  const overlays = () => [
+    ...(cmp() ?? []).slice(1).map((t, i) => ({ label: t.label, color: COLORS[i + 1], re: t.sweep.s11Re, im: t.sweep.s11Im })),
+    ...(!cmp() && ideal.trace() ? [{ label: `${t("matching.matched")} [P${ideal.port()}]`, color: COLORS[1], re: ideal.trace()!.re, im: ideal.trace()!.im }] : []),
+  ];
   return (
     <Show when={sw()} fallback={<div class="panel-empty">{t("results.noPortResult")}</div>}>
-      <div class={mp() ? "rdk-split" : "rdk-fill"}>
+      <div class={mp() || !cmp() ? "rdk-split" : "rdk-fill"}>
         <Show when={mp()} fallback={
           <SmithChart ariaLabel={t("results.aria.smith")} f={sw()!.f} re={sw()!.s11Re} im={sw()!.s11Im} zRe={sw()!.zRe} zIm={sw()!.zIm}
             zRef={sw()!.zRef} zRefF={sw()!.zRefF} markers={marks()} label={cmp()?.[0]?.label} overlays={overlays()} />
@@ -242,6 +264,7 @@ function ResultSmith(props: { b: Bundle }) {
           <SParamSmithCompare store={designSParams} traces={cmp() ?? [{ label: runLabel(designResult()?.file ?? ""), bundle: props.b, sweep: sw()! }]} markers={marks()} />
         </Show>
         <Show when={mp()}><div class="rdk-side"><SpTools show smith /></div></Show>
+        <Show when={!mp() && !cmp()}><div class="rdk-side"><MatchingPanel state={ideal} /></div></Show>
       </div>
     </Show>
   );
@@ -252,7 +275,14 @@ function ResultSmith(props: { b: Bundle }) {
  * a band-wide radiation efficiency (results.efficiency). One colour per quantity for a single driven
  * port; per port (dashes for the quantity) for multi-port runs; per run when runs are compared. */
 function ResultEfficiency(props: { b: Bundle }) {
-  const cmp = useCompare(() => props.b);
+  const cmp = useCompare(() => originalPortResult(props.b), true);
+  return <div class="radiation-view"><RadiationQuantitySelect efficiency />
+    <Show when={efficiencyQuantity() === "efficiency"} fallback={<RadiationFrequencyView b={props.b} runs={cmp()} hideSelector />}><EfficiencyRatioView b={props.b} /></Show>
+  </div>;
+}
+
+function EfficiencyRatioView(props: { b: Bundle }) {
+  const cmp = useCompare(() => originalPortResult(props.b), true);
   const data = createMemo(() => efficiencyData(props.b));
   const db = () => efficiencyUnit() === "db";
   const val = (eta: number | null) => (eta === null || !Number.isFinite(eta) ? Number.NaN : db() ? toDb(eta) : eta * 100);
@@ -393,44 +423,31 @@ function ResultPattern(props: { b: Bundle }) {
   };
   const ff = () => ffs()[Math.min(k(), ffs().length - 1)];
   const cmp = useCompare(() => props.b);
-  const qLabel = () => QUANTITY_LABEL[ff() ? effectiveQuantity(props.b, ff()!, patternQuantity()) : "directivity"];
+  const shownQuantity = () => ff() ? effectiveQuantity(props.b, ff()!, patternQuantity()) : "directivity";
   const summary = createMemo(() => (ff() ? farfieldSummary(props.b, ff()!) : null));
-  const cuts = () => {
+  const patternEntries = (): PatternEntry[] => {
     const f = ff();
     if (!f) return [];
     const c = cmp();
-    const q = patternQuantity();
-    if (c) return compareCuts(c, f.f, cutPhi(), f, (b, x) => quantityGrid(b, x, q));
-    const half = !!props.b.half_space;
-    const grid = quantityGrid(props.b, f, q);
-    const a = patternCut(f.theta, f.phi, grid, 0, half);
-    const b = patternCut(f.theta, f.phi, grid, 90, half);
-    return [
-      { id: "phi0", label: "φ = 0° (xz)", color: COLORS[0], angle: a.angle, value: a.value },
-      { id: "phi90", label: "φ = 90° (yz)", color: COLORS[1], angle: b.angle, value: b.value },
-    ];
+    const q = shownQuantity();
+    if (c) return c.flatMap((entry, i) => {
+      const field = i === 0 ? f : nearestFarfield(entry.bundle, f.f, f.port);
+      return field ? [{ id: `cmp-${i}`, label: `${entry.label} · ${freqText(field.f)}`, color: COLORS[i], bundle: entry.bundle, field, quantity: q }] : [];
+    });
+    return [{ id: 'current', label: '', color: COLORS[0], bundle: props.b, field: f, quantity: q }];
   };
   return (
     <Show when={ff()} fallback={<div class="panel-empty">{t("results.pattern.none")}</div>}>
-      <div class="rdk-split">
-        <PolarChart ariaLabel={cmp() ? t("results.pattern.cutCompared", { quantity: qLabel(), phi: cutPhi() }) : t("results.pattern.cuts", { quantity: qLabel() })} series={cuts()} directLabels={!!cmp()}
-          half={!!props.b.half_space} unit="dBi" range={30}
-          max={Math.ceil(Math.max(quantityMax(props.b, ff()!, patternQuantity()), ...cuts().flatMap((c) => c.value).filter(Number.isFinite)))} />
-        <div class="rdk-side">
+      <PatternCutPanel entries={patternEntries()} principalAvailable={!cmp()}>
           <FreqChips label={t("farfield.frequency")} freqs={[...new Set(ffs().map((f) => f.f))]} active={ff()!.f} />
           <label class="rdk-field"><span>{t("results.pattern.quantity")}</span><PatternQuantitySelect bundle={props.b} ff={ff()!} /></label>
           <Show when={quantityFallbackNote(props.b, ff()!, patternQuantity())}>{(note) => <p class="rdk-note" role="note">{note()}</p>}</Show>
-          <Show when={cmp()}>
-            <div class="seg seg-sm" role="radiogroup" aria-label={t("results.pattern.cut")} onKeyDown={radioGroupKeys}>
-              <button class="seg-btn" role="radio" aria-checked={cutPhi() === 0} onClick={() => setCutPhi(0)}>φ 0°</button>
-              <button class="seg-btn" role="radio" aria-checked={cutPhi() === 90} onClick={() => setCutPhi(90)}>φ 90°</button>
-            </div>
-          </Show>
           <dl class="kv">
             <dt>{t("results.pattern.frequency")}</dt><dd class="mono">{freqText(ff()!.f)}</dd>
             <dt>Dmax</dt><dd class="mono">{withUnit(num(ff()!.dmax_dbi, 2), "dBi")}</dd>
             <dt>{t("farfield.quantity.gain")}</dt><dd class="mono">{ff()!.gain_dbi !== undefined ? withUnit(num(ff()!.gain_dbi, 2), "dBi") : "—"}</dd>
             <dt>{t("farfield.quantity.realized")}</dt><dd class="mono">{ff()!.realized_gain_dbi !== undefined ? withUnit(num(ff()!.realized_gain_dbi, 2), "dBi") : "—"}</dd>
+            <CircularReadouts ff={ff()!} />
             <dt>{t("farfield.radEff")}</dt>
             <dd class="mono" classList={{ "cell-warn": !!efficiencyIssue(ff()!) }} title={efficiencyWarningUi(ff()!) ?? undefined}>{ff()!.rad_efficiency !== null ? t("format.percent", { value: num(ff()!.rad_efficiency! * 100, 1) }) : "—"}</dd>
             <dt title={t("farfield.totalTitlePort")}>{t("farfield.total")}</dt>
@@ -439,8 +456,7 @@ function ResultPattern(props: { b: Bundle }) {
             <Show when={new Set(ffs().map((f) => f.port)).size > 1}><dt>{t("farfield.drivenPort")}</dt><dd class="mono">P{summary()?.port ?? "?"}</dd></Show>
             <dt>θ = 0°</dt><dd>+z</dd>
           </dl>
-        </div>
-      </div>
+      </PatternCutPanel>
     </Show>
   );
 }
@@ -458,15 +474,15 @@ function ResultTable(props: { b: Bundle }) {
       const s11 = compareLines(c, (s) => s.s11Db);
       const vswr = compareLines(c, (s) => s.vswr.map(finite));
       return compareTable("f (GHz)", s11.x, c, [
-        { label: "|S11| (dB)", values: (i) => s11.series[i].y },
+        { label: c.some(trace => hasMixedPortCoordinates(trace.bundle)) ? t("portProcessing.primaryReflection") : "|S11| (dB)", values: (i) => s11.series[i].y },
         { label: "VSWR", values: (i) => vswr.series[i].y },
       ]);
     }
     const s = sweep(props.b);
     if (!s) return null;
     return {
-      columns: ["f (GHz)", "|S11| (dB)", "VSWR", "Re Zin (Ω)", "Im Zin (Ω)"],
-      rows: everyRow(s.f.length).map((i) => [s.f[i] / 1e9, s.s11Db[i], Number.isFinite(s.vswr[i]) ? s.vswr[i] : "∞", s.zRe[i], s.zIm[i]]),
+      columns: ["f (GHz)", `|${primaryPortLabel(props.b)}| (dB)`, "VSWR", "Re Zin (Ω)", "Im Zin (Ω)"],
+      rows: everyRow(s.f.length).map((i) => [s.f[i] / 1e9, s.s11Db[i], Number.isFinite(s.vswr[i]) ? s.vswr[i] : s.vswr[i] === Infinity ? "∞" : "", s.zRe[i], s.zIm[i]]),
     };
   });
   return (
@@ -478,6 +494,19 @@ function ResultTable(props: { b: Bundle }) {
 
 /** One result view of the shown run: MainArea.tsx fills a main-area tab with it. */
 export function ResultBody(props: { view: MainResultView; b: Bundle; format: ResultDataFormat }) {
+  const shown = () => displayedPortResult(props.b);
+  return <div class="port-result-body">
+    <Show when={portProcessingInfo(shown())}><p class="note port-processing-notice">{t("portProcessing.badge")} · {t("portProcessing.originalContext")}</p></Show>
+    <Show when={["sparams", "impedance", "vswr", "smith", "table", "summary"].includes(props.view)}><PortProcessingPanel bundle={shown()} /></Show>
+    <Show when={hasMixedPortCoordinates(shown())}><p class="note">{t("portProcessing.modalPrimary", { label: primaryPortLabel(shown()) })}</p></Show>
+    <Show when={!(["smith", "vswr"].includes(props.view) && [shown(), ...comparedRuns().map(r => r.bundle)].some(hasComplexPortReference))}
+      fallback={<p class="note">{t("portProcessing.complexLimits")}</p>}>
+      <ResultBodyContent view={props.view} b={shown()} format={props.format} />
+    </Show>
+  </div>;
+}
+
+function ResultBodyContent(props: { view: MainResultView; b: Bundle; format: ResultDataFormat }) {
   return (
     <Switch>
       <Match when={props.view === "sparams"}><ResultSParams b={props.b} format={props.format} /></Match>
@@ -557,27 +586,32 @@ export function ResultToolbar(props: { view: MainResultView }) {
   // Copy data and CSV follow the plot (the picked S_ij, dB or phase, the Smith port) and name
   // compared runs by their full run labels
   const dataOptions = (runs?: { file: string }[]): ResultDataOptions => ({
-    format: tableFormat(resultDataFormat()),
-    ...((designSParams.S()?.ports.length ?? 0) >= 2
+    format: tableFormat(formatForView(resultDataFormat(), props.view === "sparams")), aperturePoints: groupDelayAperture(),
+    ...((designSParams.S()?.pairs.length ?? 0) >= 1
       ? { pairs: designSParams.selectedPairs(), sparamMode: designSParams.mode(), smithPort: designSParams.smithPort() }
       : {}),
     runNames: runs?.map((r) => runLabel(r.file)),
     patternQuantity: patternQuantity(),
+    radiationQuantity: props.view === "efficiency" && efficiencyQuantity() !== "efficiency" ? radiationQuantity() : undefined,
+    patternCut: patternCutChoice(),
+    patternPrincipalAvailable: !comparedRuns().length,
+    patternFallbackPhi: cutPhi(),
     fieldPlane: resultFocus()?.map,
     summaryDeltas: summaryMode() === "delta",
     summaryReference: summaryReference(),
   });
   const comparedBundles = async (run: { file: string; bundle: Bundle }) => {
+    const processingRevision = portProcessingSession.revision();
     const files = selectedRuns();
     if (resultFocus() && resultFocus()?.file !== run.file) throw new Error(t("results.compare.changed"));
     // the summary lists its runs, one included (its rows carry the file name)
     if (files.length < 2) return props.view === "summary" ? [{ file: run.file, bundle: run.bundle }] : undefined;
-    const loaded = await Promise.all(files.map(async (file) => ({ file, bundle: file === run.file ? run.bundle : await loadRunBundle(file) })));
-    if (designResult()?.file !== run.file || designResult()?.bundle !== run.bundle || (resultFocus() && resultFocus()?.file !== run.file) || selectedRuns().join("\n") !== files.join("\n")) throw new Error(t("results.compare.changed"));
+    const loaded = await Promise.all(files.map(async (file) => ({ file, bundle: file === run.file ? run.bundle : displayedPortResult(await loadRunBundle(file)) })));
+    if (portProcessingSession.revision() !== processingRevision || designResult()?.file !== run.file || designResult()?.bundle !== run.bundle || (resultFocus() && resultFocus()?.file !== run.file) || selectedRuns().join("\n") !== files.join("\n")) throw new Error(t("results.compare.changed"));
     return loaded;
   };
   const exportFrequency = () => props.view === "pattern" ? resultFocus()?.f ?? designResult()?.bundle.results?.farfield[0]?.f : undefined;
-  const exportBase = (b: Bundle) => resultExportStem(b, props.view, exportFrequency());
+  const exportBase = (b: Bundle) => resultExportStem(b, props.view, exportFrequency()) + (portProcessingInfo(b) ? "_postprocessed" : "");
   const plot = () => bar.closest(".dw-result")?.querySelector<HTMLElement>(".dw-result-plot") ?? null;
   const ready = () => !!designResult()?.bundle.results && (!resultFocus() || resultFocus()?.file === designResult()?.file);
   const figureReady = () => ready() && comparisonReady() && !["table", "summary", "fieldmap"].includes(props.view);
@@ -585,7 +619,7 @@ export function ResultToolbar(props: { view: MainResultView }) {
     const run = designResult();
     if (!run || !figureReady()) return;
     try {
-      const title = [run.bundle.name, tEn(`results.tab.${props.view}`), resultFrequencyTag(run.bundle, exportFrequency())].filter(Boolean).join(" — ");
+      const title = [run.bundle.name, tEn(`results.tab.${props.view}`), resultFrequencyTag(run.bundle, exportFrequency()), ...[run, ...comparedRuns()].flatMap(r => portProcessingInfo(r.bundle) ? [`${runShortLabel(r.file)}: ${portProcessingInfo(r.bundle)!.description}`] : [])].filter(Boolean).join(" — ");
       await saveVisibleFigure(plot(), exportBase(run.bundle), format, title);
     } catch (error) { feedback(t("results.figure.failed", { error: String(error) }), true); }
   };
@@ -614,7 +648,7 @@ export function ResultToolbar(props: { view: MainResultView }) {
     if (!run?.bundle.results) return;
     try {
       const runs = await comparedBundles(run);
-      saved(await exportResultTouchstone(run.bundle, resultExportStem(run.bundle, "sparams"), runs));
+      saved(await exportResultTouchstone(run.bundle, resultExportStem(run.bundle, "sparams") + (portProcessingInfo(run.bundle) ? "_postprocessed" : ""), runs));
     } catch (error) { feedback(t("results.toolbar.touchstoneFailed", { error: error instanceof Error ? error.message : String(error) }), true); }
   };
   onMount(()=> {
@@ -652,6 +686,7 @@ export function ResultToolbar(props: { view: MainResultView }) {
   return (
     <div class="dw-result-bar" classList={{ "is-narrow": barSize().w > 0 && barSize().w < 1000 }} ref={bar} role="toolbar" aria-label={t("results.toolbar.aria", { tab: MAIN_TAB_LABELS[props.view] })}>
       <span class="dock-hint rdk-shown" title={designResult()?.file}>{shown()}</span>
+      <Show when={[designResult(), ...comparedRuns()].some(run => run && portProcessingInfo(run.bundle))}><span class="chip" title={t("portProcessing.originalContext")}>{t("portProcessing.badge")}</span></Show>
       {/* a field map belongs to one run: no comparison, and no S-parameter data format */}
       <Show when={props.view !== "fieldmap"}>
       <div class="rdk-compare-control">
@@ -712,8 +747,9 @@ export function ResultToolbar(props: { view: MainResultView }) {
         </button>
       </Show>
       <Show when={props.view !== "summary" && props.view !== "fieldmap"}>
-      <select class="btn btn-ghost btn-sm result-format" aria-label={t("results.toolbar.formatAria")} value={resultDataFormat()} onChange={(event) => writeResultDataFormat(event.currentTarget.value as ResultDataFormat)}>
+      <select class="btn btn-ghost btn-sm result-format" aria-label={t("results.toolbar.formatAria")} value={formatForView(resultDataFormat(), props.view === "sparams")} onChange={(event) => writeResultDataFormat(event.currentTarget.value as ResultDataFormat)}>
         <option value="plot">{t("results.format.plot")}</option><option value="db">dB</option><option value="db_phase">{t("results.format.dbPhase")}</option><option value="re_im">Re/Im</option><option value="mag_phase">{t("results.format.magPhase")}</option><option value="all">{t("results.format.all")}</option>
+        <Show when={props.view === "sparams"}><option value="phase_unwrapped">{t("chart.q.unwrappedPhase")}</option><option value="gd">{t("chart.q.groupDelay")}</option></Show>
       </select>
       </Show>
       <button class="btn btn-ghost btn-sm rdk-copy" classList={{ copied: copied() }} onClick={() => void copyData()} title={t("results.toolbar.copyDataTitle")} aria-live="polite">

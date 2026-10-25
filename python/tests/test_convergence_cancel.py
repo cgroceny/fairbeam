@@ -25,10 +25,11 @@ class ConvergenceCancellationTest(unittest.TestCase):
         self.studies = cv.ServerStudies(self.manager, self.root)
         self.manager.on_finished = self.studies.on_finished
 
-    def start(self, study_id="study", *, planned=None):
+    def start(self, study_id="study", *, planned=None, network_criteria=None):
         return self.studies.start(study_id=study_id, name="Mesh", model={"id": "patch"},
             job_kw={"model": "patch", "model_path": "patch.design.json", "threads": 1},
-            planned=planned or [15, 20, 30], tol=dict(cv.DEFAULT_TOL), settings={})[1]
+            planned=planned or [15, 20, 30], tol=dict(cv.DEFAULT_TOL), settings={},
+            network_criteria=network_criteria)[1]
 
     def result(self, job, f_res=2.4e9):
         job.bundle = f"{job.id}.json"
@@ -96,7 +97,14 @@ class ConvergenceCancellationTest(unittest.TestCase):
         self.assertEqual(first.sweep["reason"], "cancelled")
 
     def test_stop_is_seen_while_result_metrics_hold_the_study_lock(self):
-        first = self.start()
+        self.assert_stop_during_metrics(None)
+
+    def test_network_stop_is_seen_while_result_metrics_hold_the_study_lock(self):
+        from fairbeam.study import parse_network_criteria
+        self.assert_stop_during_metrics(parse_network_criteria(["s11:1:0.2"], 2.4))
+
+    def assert_stop_during_metrics(self, network_criteria):
+        first = self.start(network_criteria=network_criteria)
         self.result(first)
         reading, resume, requested = threading.Event(), threading.Event(), threading.Event()
         class ObservedSet(set):
@@ -105,12 +113,12 @@ class ConvergenceCancellationTest(unittest.TestCase):
                 requested.set()
         self.studies._stop_requested = ObservedSet()
         original = cv.metrics
-        def metrics(bundle):
+        def metrics(bundle, *, network_criteria=None):
             reading.set()
             if not resume.wait(5):
                 raise TimeoutError("test metrics barrier")
-            return original(bundle)
-        with mock.patch.object(cv, "metrics", side_effect=metrics):
+            return original(bundle, network_criteria=network_criteria)
+        with mock.patch.object(cv, "metrics", side_effect=metrics) as measured:
             completing = self.thread(lambda: self.manager._finish(first, "done", error=None))
             stopping = None
             try:
@@ -120,6 +128,7 @@ class ConvergenceCancellationTest(unittest.TestCase):
             finally:
                 resume.set()
                 self.join(completing, stopping)
+            self.assertEqual(measured.call_args.kwargs, {"network_criteria": network_criteria})
         self.assertEqual(len(self.manager.jobs), 1)
         self.assertEqual(self.studies.get("study")["convergence"]["reason"], "cancelled")
 
@@ -204,9 +213,9 @@ class ConvergenceCancellationTest(unittest.TestCase):
             if not resume.wait(5):
                 raise TimeoutError("test terminal-verdict barrier")
         original_metrics = cv.metrics
-        def paused_metrics(bundle):
+        def paused_metrics(bundle, *, network_criteria=None):
             wait_at_terminal()
-            return original_metrics(bundle)
+            return original_metrics(bundle, network_criteria=network_criteria)
         def finished(job):
             if not during_metrics:
                 wait_at_terminal()

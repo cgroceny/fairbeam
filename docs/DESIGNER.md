@@ -127,8 +127,9 @@ inner control handles it first.
 Every starter has a design frequency `f0`, PML boundaries (8 cells, except the patch: MUR), the
 automatic mesh at 20 cells per wavelength, end criterion −60 dB, the far field at f0 for the
 antennas, and every loss tangent given at f0 (openEMS applies tan δ as a constant conductivity, so
-it is exact at one frequency only). Each one simulates in seconds and has no check errors or
-warnings. The numbers below are from one run of each at its defaults (GPU engine):
+it is exact at one frequency only). The measured numbers below belong to the older starters at
+their defaults (one GPU run each). The new f0-driven inset patch has analytical and geometry
+checks only; its runtime, resonance, matching and radiation have not been simulated or validated:
 
 | Starter | What it is | Result at the defaults |
 | --- | --- | --- |
@@ -136,8 +137,35 @@ warnings. The numbers below are from one run of each at its defaults (GPU engine
 | Quarter-wave monopole | A 1 mm strip `k` = 0.233 wavelengths tall on a finite square ground plane (0.8 λ), probe-fed at its base by a 50 Ω port; 2.4 GHz | S11 −17.7 dB at 2.393 GHz, Dmax 3.12 dBi (the small ground tilts the beam up) |
 | Open-ended waveguide | A WR-90 guide (22.86 × 10.16 mm, 50 mm long) radiating from its open end, fed by a TE10 waveguide port a quarter guide wavelength in front of a back short; 10 GHz, band 8-12 GHz | S11 −9.9 dB at 10 GHz, −11.5 dB at 12 GHz, Dmax 6.60 dBi |
 | Patch antenna starter | A probe-fed patch on RO4003C-like substrate (tan δ 0.0027) over a 60 mm ground plane, 2.45 GHz | −41 dB S11 and about 88 % radiation efficiency at 2.45 GHz (the patch example's 96.5 % comes from its lower tan δ, 0.001) |
+| Inset-fed patch from f0 | Set `f0` (1–3 GHz), `eps_r` (2–6) and `h` (0.4–1.6 mm). Derived patch dimensions, quasi-static 50 Ω feed width and slot-model inset; default 2.4 GHz / 4.4 / 1.6 mm | Analytical starting point only. Run mesh and domain convergence; no full-wave result or accuracy percentage is claimed. |
 | Printed sleeve dipole | [examples/designs/sleeve_dipole_867.design.json](../examples/designs/sleeve_dipole_867.design.json), parametrized as in that file: a coax-fed sleeve dipole on a slim FR-4 strip, no ground plane, for a UAV; 30 cells per wavelength as tuned, efficiency over the band | S11 −19.6 dB at 0.877 GHz (1.1 % high, for a radome), Dmax 2.10 dBi, radiation efficiency 0.977-0.990 over the band |
 | Microstrip line (two-port) | A 3.1 mm, 40 mm line on 1.6 mm FR-4 (εr 4.3, tan δ 0.02) with a 50 Ω port at each end; the parameters show the Hammerstad Z0 (50.4 Ω) and ε_eff. Both ports are excited, one run each, for the full S-matrix; no far field | S11 −29.7 dB and S21 −0.3 dB at 2.4 GHz |
+
+The inset starter leaves the older **Patch antenna starter** and saved projects unchanged.
+Its visible `W`, `eps_eff`, `delta_l` and `L` expressions follow the transmission-line equations
+in `fairbeam.analytic.patch_design` (Balanis, *Antenna Theory*, section 14.2; Hammerstad's
+quasi-static line/fringing model). `microstrip_width(50, eps_r, h)` numerically inverts that
+line model. `patch_inset(50, L, W, f0)` uses the two-slot self/mutual conductance estimate and
+`R(y) = R_edge cos²(πy/L)`. Both expression helpers use mm and Ω; `patch_inset` takes GHz.
+Python and TypeScript use the same fixed quadrature and a bounded Bessel series, checked
+against the independent, slower reference in `fairbeam.analytic`. These formula checks do
+not establish electromagnetic equivalence or a 50 Ω match for the finished finite board.
+
+`gap = h/2`, `feed_len = max(6h, 0.1λ₀)` and `margin = max(6h, 0.08λ₀)` are explicit layout
+choices, not matching corrections. The port is at the board edge and includes the feed line
+in its reference plane. The model omits finite-board, inset-loading, conductor-loss and
+dispersion corrections (the metal is PEC); the chosen loss tangent holds at f0 only.
+The suggested independent ranges keep the substrate electrically thin. Arbitrary edits
+outside them are not certified by the formulas; the synthesis helpers refuse nonphysical
+or unsupported inputs rather than silently clipping them. Run mesh/domain convergence,
+check energy decay and inspect S11 and radiation before using the design. The historical
+2.4 GHz inset example has different geometry and supplies no validation for this starter.
+
+Design JSON and the Python model export retain the synthesis expressions. The CST-compatible VBA macro
+export has no native equivalent for `microstrip_width` or `patch_inset`: those two derived values are
+exported as numbers with explicit fallback notes. Re-export after changing `f0`, `eps_r` or `h` in
+Fairbeam; editing only those parameters after macro import does not resynthesize the feed and inset. Gerber/DXF
+exports describe the current geometry and do not establish fabrication or RF performance.
 
 A pyramidal horn is not among them: its flared walls are plates in planes that are not normal to
 an axis, which the design format cannot hold (polygons lie in axis planes, and a zero-thickness
@@ -330,7 +358,11 @@ expression that does not evaluate.
 - Operators: `+ - * / // % **` and parentheses. Constants: `pi`, `c0`, `eps0`, `mu0`. Functions:
   `sqrt`, `sin`, `cos`, `tan`, `asin`, `acos`, `atan`, `atan2`, `exp`, `log`, `log10`, `abs`,
   `min`, `max`, `round`, `floor`, `ceil`, `radians`, `degrees` and `wavelength(f_GHz)` (free-space
-  wavelength in mm). The rules are Python's, and the run server's evaluator stays the authority.
+  wavelength in mm). The synthesis helpers `microstrip_width(Z0, eps_r, h)` and
+  `patch_inset(R, L, W, f_GHz)` are documented under [Starters](#starters); they return mm.
+  They reject inputs outside their model domain. Their spellings remain legal as bare
+  parameter names for older files; a function call is distinguished by its parentheses.
+  The rules are Python's, and the run server's evaluator stays the authority.
 - Numbers are doubles (IEEE-754 binary64) on both sides: a number is read as the nearest double, as
   JSON reads it, and every step of an expression is a double, so the browser and the server give the
   same value (`9007199254740993 - 9007199254740992` is `0`; Python's exact whole numbers are not
@@ -376,11 +408,53 @@ A new dielectric (also one added from the library) gives tan δ at `f0` when the
 parameter inside its band, else at the band center (the frequency left empty), not at a datasheet's
 1 or 10 GHz.
 
-openEMS applies tan δ as a constant conductivity, so the loss is exact at that frequency only and
+In the default **Constant permittivity / conductivity** model, openEMS applies tan δ as a constant conductivity, so the loss is exact at that frequency only and
 scales as f_ref / f elsewhere: a datasheet value at 10 GHz used at 2.45 GHz gives four times the
 loss. Give the frequency the design works at (e.g. `f0`); a check warns when it lies outside the
 band. (A datasheet value taken at 10 GHz and used at 2.45 GHz made the patch starter's radiation
 efficiency 65 % instead of 88 %; the starter now uses a value at its own frequency.)
+
+**Opt-in wideband laminate.** In a dielectric's Properties, choose **Djordjevic–Sarkar wideband**.
+Enter εr and tan δ from the same datasheet point and its explicit positive reference frequency in
+GHz. These are input data, not the band-center values displayed by a completed build. This electric
+model requires μr = 1. Existing library presets and the default constant model are unchanged.
+One point constrains a causal model but cannot establish broadband material accuracy. If the point
+lies outside the simulation band, a warning asks for additional evidence; it never rewrites the
+datasheet frequency.
+
+**Corner frequencies and fit resources** exposes `m1` and `m2` (numbers or parameter expressions).
+They are **log10 of angular frequency in rad/s**, not GHz: the default corners are 10⁴ and 10¹² rad/s,
+with `m2 > m1`. The calibrated high-frequency ε∞ must be positive and relaxation strength nonnegative.
+The optional integer pole request is 1–32; empty uses the existing automatic fit. This is a resource
+control, not an accuracy threshold. The actual number of retained nonzero poles can be smaller.
+
+The build uses the existing `DjordjevicSarkar.from_datasheet` and `Simulation.dispersive` path. It
+fits passive overdamped **Lorentz** poles over the current simulation band, using the fitter's
+existing extended sample band and timestep policy; it does not submit native Debye poles or replace
+the model with constant loss. Changing the band produces a new fit identity. Saved bundle material
+records keep the actual pole coefficients and fit report (band, errors, timestep and resolution
+findings), with the original Designer intent and resolved datasheet inputs separately in
+`dispersion.source.designer_material`. The Materials section shows the recorded fit band, retained
+poles and maximum errors. Errors compare the poles with the assumed model, not with measurements.
+The instant geometry preview is labeled as a band-center appearance only and has no fitted poles.
+
+Each pole increases material state and memory. The existing mesh-cell RAM estimate is approximate
+and does not account separately for every pole's state. The automatic mesher's dispersive bound and
+the solver's actual-timestep resolution checks remain authoritative. The thin-metal sheet heuristic
+uses the assumed passive model's static ε∞ + Δε bound, whose real permittivity decreases from that
+value toward ε∞. This bound is for the input model, not a certified bound on fitting error. Mesh and
+timestep convergence, field propagation and measured broadband agreement still need a dedicated
+study; the Designer integration's software tests do not establish them.
+
+Design save/reopen, My materials (plain numeric values), Python export and capture of those exported
+models preserve the datasheet/corner/pole intent. Arbitrary imported Lorentz/Drude models without
+supported Designer intent are refused rather than flattened. Python export rebuilds the fit for
+the requested band. CST-compatible VBA macro export explicitly warns that its numeric material values
+do **not** preserve dispersive poles; use the Python/Design route when the frequency-dependent model
+must survive. Geometry-only exports do not carry material physics. Coaxial filling, Elmer and
+periodic-cell backends retain their unsupported-material guards. PCB import omits wideband My
+materials entries because that importer currently copies only constant material properties; add
+the model explicitly in the Designer afterward.
 
 A metal is a perfect conductor (PEC) unless it has a **Conductivity** (S/m; presets Copper 5.8e7,
 Aluminum 3.5e7, Gold 4.1e7, PEC = empty) in Properties. A lossy metal's sheets become openEMS
@@ -405,7 +479,7 @@ thickness, and both the color. Saving again under the same name updates that ent
 parameter expressions cannot be saved (the library holds plain numbers). **Add** on a My materials row
 copies its values into the design like a built-in entry does, so a design file always carries a full copy of
 every material it uses and its format does not change. The dielectrics of My materials are also offered as
-the substrate of the PCB import. **My materials…** in the library dialog opens the list to rename, edit
+the substrate of the PCB import when they use the constant model. **My materials…** in the library dialog opens the list to rename, edit
 (εr, tan δ, conductivity, thickness) and delete entries, **Export** it to a JSON file
 (`{"version": 1, "materials": [...]}`) and **Import** a file from a colleague: bad entries are skipped with a
 warning, and a name already in use gets a number. The list is kept in `materials.json` in the workspace
@@ -948,11 +1022,33 @@ without the dialog.
     thinner plates (35 µm copper) stay sheets there too, because cells across them make the timestep 30 to 60 times smaller
     and the run last 5 to 25 minutes or never converge.
 - **Monitors**:
+  - **θ angular step / φ angular step** under Far field control NF2FF angular sampling, in
+    degrees (`far_field.theta_step` and `far_field.phi_step`, expressions allowed). Defaults are
+    3° and 5°; accepted values are 0.25° through 90°. Both theta poles (0° and 180°) are retained,
+    and phi runs from 0° up to but not including the duplicate 360° seam. The last interval may
+    be shorter when a step does not divide the span. The settings survive save, parameter sweeps,
+    multi-port runs and Python export as `sim.pattern_steps`. Smaller steps sample narrow beams
+    more densely; they do not prove mesh or solver convergence. Halving both steps uses roughly
+    four times as many angular samples, increasing post-processing cost and bundle size.
+    Embedded element patterns can be decimated for their storage budget; the run log and Array
+    tab warn when this happens. Array synthesis uses the stored grid, while per-port far fields
+    retain the evaluated grid. The separate efficiency-over-the-band monitor keeps its own grid.
+    Viewer plot cuts at unsampled azimuths (including the opposite half of an elevation cut) use periodic
+    linear interpolation in the displayed quantity's units; these estimates do not add simulated
+    samples. Beamwidth stays unavailable when a crossing is absent or separated by a data gap.
+    For phi steps that do not tile 360° uniformly, the independent `dmax_pattern_dbi` diagnostic is
+    omitted; openEMS' `dmax_dbi` remains separate.
   - **Far field** (on or off) and its frequencies (empty: the |S11| minimum of each matched band), and an
     optional **Set phase center (mm)**. A design file can also set `far_field.faces`, six true/false
     flags (x−, x+, y−, y+, z−, z+) for the faces of the near-to-far-field box that record; a face
     a feed waveguide crosses is left out, as in the pyramidal horn example. There is no dialog
     field for it yet.
+  - **Circular polarization (RHCP/LHCP and axial ratio)** requests the complex-field CP
+    postprocessing at the far-field frequencies. This saves `far_field.circular: true`; absent or
+    `false` keeps the existing default. It does not turn a disabled Far field monitor on.
+    The IEEE e^(+jωt) convention is E_R = (E_θ + jE_φ)/√2 and E_L = (E_θ − jE_φ)/√2.
+    Saving a request does not qualify the antenna as circularly polarized: run and check angular,
+    frequency, mesh and time convergence before drawing a bandwidth or efficiency conclusion.
   - **Surface current**: frequencies at which surface-current maps are recorded on the metal
     sheets, as `fairbeam run --fields` does. After a run they are under the run's 2D/3D Results in
     the navigation tree. Ribbon Simulation › Monitors › **Surface current** opens this field; when
@@ -997,12 +1093,40 @@ without the dialog.
 ## Mesh view
 
 Ribbon Simulation › **Mesh view** (or a click on the cell count in the status bar) shows the FDTD mesh
-lines of the current preview on one plane and fades the solids so the lines show through. The mesh
+lines of the displayed model on one plane and fades the solids so the lines show through. The mesh
 comes from the same mesher the run uses. The panel over the 3D view has:
 
 - the plane controls: x/y/z and a slider through the mesh lines;
 - the lines per axis, the cell count, the smallest and largest cell, and the timestep;
 - a **solver-time estimate**.
+
+**Timestep and grading** finds the first smallest interval on each axis and the worst adjacent
+cell-width ratio. **Show interval** or **Show pair** selects a perpendicular mesh plane, centers
+the view on the interval and highlights its exact boundary lines (three lines for a pair), even
+when the background mesh is thinned for display. Coordinates and widths are shown in mm using
+the bundle's unit. The smallest intervals on all three axes contribute to the timestep.
+
+All numbers, source candidates and highlights use the same **Shown mesh**. Selecting an older
+run does not substitute the draft's current mesh. A new preview/result clears the visible
+highlight until an interval is selected again. The run dialog and status bar still estimate a
+new run from the draft's preview.
+
+During an instant browser preview, geometry can change before the server returns its new mesh.
+Carried mesh lines and numbers are labelled as the last successful preview, including after a
+failed request; source-part attribution is withheld until the matching server preview succeeds.
+The initial placeholder bounds have no cells and are not offered as a mesh to inspect. This live
+preview qualification is not persistent mesher provenance in exported project files.
+
+**Likely source** matches nearby world-space bounding-box faces, not a record of which mesher
+rule created a line. Multiple matches are listed as ambiguous; an unmatched interval may come
+from a port, a custom mesh line or grading. Rotated and transformed parts receive an explicit
+bounding-box qualification. Lines span the whole domain: the inspector reports the number of
+cells added by one new line on that axis, before smoothing adds any other lines.
+
+**Review Thin metal = sheets…** opens and focuses the current draft's setting without changing
+it. Changing it requires a deliberate selection and a new preview/run; saved results retain
+their original mesh. Thin-sheet approximations and mesh convergence still need appropriate
+validation for the model.
 
 The estimate is cells × timesteps divided by a conservative throughput from
 [BENCHMARKS.md](BENCHMARKS.md): the M5 Pro CPU engine with 4 threads measured 318–329 MCells/s and
@@ -1032,6 +1156,33 @@ The dialog sets:
 | Dmax change below | 0.2 dB | Tolerance of Dmax |
 | Run limit | 4 | The study runs at most this many densities from the list (a note appears when the list is longer) |
 | Engine | the Run settings | CPU or GPU, when the server has both |
+
+**Also check network quantities** is off by default. Enable it to add one to twelve criteria at
+one fixed **Frequency (GHz)**. Choose the physical port numbers shown in the design, not their
+position in a list, and a positive change tolerance for each quantity:
+
+| Quantity | Port order | Measured value | Tolerance unit |
+| --- | --- | --- | --- |
+| Coupling or isolation | receiving, driven | −20 log₁₀ \|S(receiving, driven)\| | dB |
+| Network directivity | receiving, reference output, driven | 20 log₁₀ \|S(receiving, driven) / S(reference, driven)\| | dB |
+| Transmission phase | receiving, driven | Phase of S(receiving, driven) | degrees |
+| Phase balance | receiving, reference output, driven | Phase of S(receiving, driven) / S(reference, driven) | degrees |
+| Port reflection | port | 20 log₁₀ \|S(port, port)\| | dB |
+
+These criteria add to the resonance, S11, available far-field, energy and local-mesh checks;
+they do not replace them. Network directivity is an S-parameter ratio, separate from far-field
+Dmax. Phase changes use the shortest angular difference across ±180°. With network criteria on,
+each density drives **every port separately** (`--excite all`), even ports disabled in the saved
+design. The time estimate includes that excitation count; the design's port settings are unchanged.
+Duplicate criteria, missing port numbers and invalid frequency/tolerance values block Start.
+
+The network results table shows the value, change, limit and outcome for each density and
+criterion. Missing excitation columns, invalid samples, a frequency outside the sampled band,
+or amplitudes at or below 10⁻⁴ are unavailable and cannot pass. A small change without verified
+energy and local-mesh evidence is unverified. The first run has no preceding comparison.
+This is a refinement check at the selected frequency, not validation across the whole band or
+a replacement for physical validation. In particular, a response whose S11 minimum is only at
+the band edge still lacks a comparable resonance for the existing stopping rule.
 
 The study stops at the first step whose changes are all strictly below their tolerances. It then
 reports **converged at N cells/λ**, where N is the coarser density of that step: the finer run
@@ -1181,13 +1332,28 @@ frequency of its band's |S11| minimum from the project index):
 - **Table**: frequency, |S11|, VSWR and the impedance.
 - **Log** (dock): the openEMS output (the end of it for an earlier run), with a link to the full log.
 
-The far-field **quantity** (Directivity, Gain, Realized gain, and RHCP/LHCP directivity when the
+The far-field **quantity** (Directivity, Gain, Realized gain, RHCP/LHCP directivity and Axial ratio when the
 run has circular-polarisation data) is chosen in the Pattern tab's side panel, in the far-field card
 of the 3D view, or under **Post-processing › Farfield › Quantity** while a pattern is shown; the
 choice holds for the session. Gain is the directivity plus 10·log10(η_rad), realized gain the directivity plus
 10·log10(η_rad·(1 − |S11(f)|²)) with the driven port's S11 at the far-field frequency, so their
 maxima are the bundle's `gain_dbi` and `realized_gain_dbi`. Without a radiation efficiency the
 gain options are disabled (the tooltip says why) and the pattern stays directivity.
+
+**Axial ratio** uses its own **0–60 dB** scale, never dBi. 0 dB is ideal circular polarization;
+60 dB is the backend cap, including the linear-polarization limit. The peak and +z boresight
+readouts show **≥ 60 dB** at that cap and **—** when unavailable. Lower AR is more circular;
+the polar/3D radius encodes AR, not radiated strength or gain. Samples with total directivity
+below **Dmax − 20 dB** are hidden, including in the selected-quantity data/CSV table. Equality
+at the threshold is included. Zero/nonfinite fields and missing CP stay gaps; they are never
+turned into 0 dB. A comparison uses each run's own Dmax mask, and a run without CP contributes
+no AR samples. The raw pattern CSV still preserves the stored, unmasked CP grid.
+The mask suppresses weak-field ratios; it is not an accuracy or convergence test. A low AR at
+one sampled direction/frequency does not establish CP bandwidth, realized gain or efficiency.
+The CST-compatible VBA macro export lists `far_field.circular` as omitted: configure circular
+components and axial-ratio postprocessing after importing that macro.
+
+The selected-cut analyzer also supports axial ratio when circular outputs are present. Its polar and Cartesian axes use the fixed 0–60 dB ratio scale (lower is more circular), with the same stored Dmax − 20 dB display mask applied before adjacent-angle interpolation. Masked or missing neighbors stay gaps. HPBW, SLL, and F/B are unavailable for axial ratio because it is not radiation strength. Selected-cut CSV and publication SVG/PDF retain dB units, missing values, and this qualification. A comparison resolves its quantity from the base result once: a reference without that circular quantity stays empty; an unavailable base quantity falls back consistently to directivity. Angular step settings and the circular-output checkbox are independent and both survive Design configuration and export.
 
 While the **3D pattern** is shown, a card at the top right of the 3D view holds its color scale,
 the quantity, the far-field frequency chips (and driven port for multi-port runs), Dmax, gain,
@@ -1200,6 +1366,28 @@ and Post-processing › PDF report / Package take the run shown. The ✕ at the 
 tab's toolbar closes the shown run (its result tabs and the dock's Runs and Log tabs); the ✕ on a
 tab closes that tab only. Each tab's toolbar also has **Compare**, the data-format menu, **Copy
 data**, **CSV** and **Touchstone**.
+
+### Radiation versus frequency
+
+Enable **Efficiency over the band** before a run. The Efficiency result tab's **Quantity** menu
+selects sampled peak or boresight directivity, gain, realized gain, or axial ratio. The standalone
+viewer provides the same data in **Radiation vs f**. Each physical driven port and each compared
+run retains its own recorded frequency grid; no patterns, efficiency or CP values are invented
+between frequencies. Old bundles without these optional scalars show an explicit unavailable state.
+
+The existing coarse NF2FF pass supplies the scalars without another transform: currently six angle
+pairs represent four distinct directions, so the sampled peak can miss the actual peak. Boresight
+is θ=0 at the first stored φ. D/gain/realized gain use dBi; AR has its own 0–60 dB scale and a 3 dB
+reference. AR at the peak follows the sampled directivity peak, not the best CP direction. The
+Dmax−20 dB mask, absent fields, and accepted-power reliability failures produce gaps. Open Details
+for exact samples, actual angles and QA notes. Stored detailed patterns are separate diamond points;
+their reliability is unassessed here and they never fill the coarse curve. Copy/CSV includes the same
+plotted values plus separately labelled raw audit values, source, physical port and reliability.
+The package includes `data/radiation_frequency.csv`; the report includes qualified scalar tables.
+
+Consecutive AR ≤3 dB samples are listed with edge/gap/above-threshold neighbor qualifiers. A single
+passing sample does not establish bandwidth; these are not interpolated or converged AR bandwidths.
+Accepted-power reliability does not prove angular, radiation-pattern, gain or CP convergence.
 
 ### Working with more than one project
 
@@ -1584,3 +1772,14 @@ browser:
 The app sends nothing by itself and puts nothing else into the link. Attach the design file or a log
 if they help, and remove anything private first. In the desktop app the local run server opens the
 system browser, since the app window does not open web pages itself.
+
+
+Designer result tabs offer session-only **Port postprocessing** for a complete complex
+S matrix: a common real or complex Kurokawa reference, ideal matched lossless one-way
+feed delays per physical port, and ordered differential/common pairs. Apply/Reset
+affect the shown result and its result exports, never the
+saved design, raw bundle or optimizer. Processed results carry a persistent label;
+radiation, power and solver evidence remain original. See [Results](RESULTS.md#designer-port-postprocessing)
+for the transform order, supported references, missing-data rules and limitations.
+Complex references disable the standard Smith/VSWR views and Touchstone; CSV remains
+available. Real-reference modal Touchstone uses explicit version 2.0 mode metadata.

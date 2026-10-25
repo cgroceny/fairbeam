@@ -4,6 +4,22 @@
 import { t } from "../i18n/index.ts";
 
 const DEFAULT_LABELS: Readonly<Record<string, string>> = {
+  "Substrate permittivity": "params.defaultLabel.insetPermittivity",
+  "Substrate thickness": "params.defaultLabel.insetThickness",
+  "Loss tangent at f0": "params.defaultLabel.insetLossTangent",
+  "Free-space wavelength": "params.defaultLabel.insetWavelength",
+  "Estimated patch width (y)": "params.defaultLabel.insetPatchWidth",
+  "Patch effective permittivity": "params.defaultLabel.insetPermittivityEffective",
+  "Edge length extension": "params.defaultLabel.insetEdgeExtension",
+  "Estimated patch length (x)": "params.defaultLabel.insetPatchLength",
+  "Estimated 50 ohm feed width": "params.defaultLabel.insetFeedWidth",
+  "Estimated 50 ohm inset": "params.defaultLabel.insetDepth",
+  "Slot gap (layout choice)": "params.defaultLabel.insetGap",
+  "External feed length (layout choice)": "params.defaultLabel.insetFeedLength",
+  "Board margin (layout choice)": "params.defaultLabel.insetMargin",
+  "Feed-side board edge": "params.defaultLabel.insetBoardEdge",
+  "Inset contact position": "params.defaultLabel.insetContact",
+  "Outer slot edge": "params.defaultLabel.insetSlotEdge",
   "Design frequency": "params.defaultLabel.designFrequency",
   "New parameter": "params.defaultLabel.newParameter",
 };

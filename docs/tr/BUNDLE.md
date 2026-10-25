@@ -338,11 +338,12 @@ JSON bant alanları özgün anlamlarını korur. [CSV dışa aktarımında](EXPO
 | Alan | Tür | Açıklama |
 | --- | --- | --- |
 | `f` | number | Frekans, Hz |
-| `theta` | number[] | Derece cinsinden θ: 0–180, 3° adım (61 değer) |
-| `phi` | number[] | Derece cinsinden φ: 0–355, 5° adım (72 değer; 360 tekrarlanmaz) |
+| `theta` | number[] | Derece cinsinden θ, 0 ve 180 dahil. Varsayılan: 3° adım (61 değer); ayarlanabilir. Son aralık daha kısa olabilir |
+| `phi` | number[] | Derece cinsinden φ, 0 dahil 360 hariç. Varsayılan: 5° adım (72 değer); ayarlanabilir |
+| `requested_steps` | [θ, φ]? | Uç noktalar işlenmeden önce istenen açısal adımlar, derece. Eski paketlerde yoktur; hesaplamalarda koordinat dizilerini kullanın |
 | `directivity_dbi` | number[][] | dBi cinsinden yönlülük, **`[theta][phi]`** indisli (`len(theta) × len(phi)`). Alt sınır `dmax_dbi − 60` |
 | `dmax_dbi` | number | Maksimum yönlülük, dBi, ayna düzeltmeli |
-| `dmax_pattern_dbi` | number? | Yalnızca örüntüden maksimum yönlülük: θ/φ ızgarasında `4π·U_max / ∮U dΩ`, ayna düzeltmeli. openEMS `dmax_dbi`, NF2FF kutusundan geçen güce böler. İkisi yaklaşık 0,1 dB içinde uyuşmalıdır; daha büyük fark sınır yansımalarını (MUR çok yakın) veya kaba NF2FF yüzeyini düşündürür. Eski paketlerde yok |
+| `dmax_pattern_dbi` | number? | Yalnızca örüntüden bağımsız maksimum yönlülük tanısı: `4π·U_max / ∮U dΩ`, ayna düzeltmeli. Tam θ küresi ve 360°'yi eşit aralıklarla bölen φ ızgarası gerektirir; tam bölmeyen φ adımlarında ve eski paketlerde yoktur. openEMS `dmax_dbi`, NF2FF kutusundan geçen güce böler. İki tanı da varsa fark; açısal örnekleme, sınır yansımaları veya kaba NF2FF yüzeyinden kaynaklanabilir; uyuşmaları yakınsamayı kanıtlamaz |
 | `prad_w` | number | Işınan güç, W, ayna düzeltmeli |
 | `pacc_w` | number | Portta kabul edilen güç: `f` frekansında enterpole edilmiş `½·Re(u·i*)`, W |
 | `rad_efficiency` | number \| null | `prad_w / pacc_w`. `pacc_w ≤ 0` ise `null`. Pasif antende 1 üstü fiziksel değildir (iki güç bağımsız sayısal ölçümlerdir); değer korunur ve `qa_warnings` içinde işaretlenir. Kayıpsız modelde (aşağıya bakın), `prad_w / pacc_w`, 1'in %5 yakınındayken 1 |
@@ -352,18 +353,20 @@ JSON bant alanları özgün anlamlarını korur. [CSV dışa aktarımında](EXPO
 | `realized_gain_dbi` | number? | `10·log10(efficiency · Dmax · (1 − \|S11\|²))`. Yalnızca verimlilik > 0 ise |
 | `mirror_planes` | number | Düzeltmede kullanılan PEC/PMC sınır sayısı. Yukarıya bakın |
 | `port` | number? | Bu kayıt için uyarılan port (çok port desteğinden sonraki paketler). Çok portlu çalıştırmalarda her uyarılan port/örüntü frekansı için kayıt, hepsi aynı frekanslarda |
-| `cp` | object? | `sim.cp_outputs = True` modellerinde dairesel polarizasyon. Aşağıya bakın |
+| `cp` | object? | `sim.cp_outputs = True` modellerinde veya `far_field.circular: true` Tasarımcı projelerinde dairesel polarizasyon. Aşağıya bakın |
 
 **cp.** IEEE düzeni ve openEMS'in e^{jωt} fazörleriyle, uzak alanın sağ/sol dairesel bileşenleri E_R = (E_θ + jE_φ)/√2 ve E_L = (E_θ − jE_φ)/√2'dir (+z yönlü dalgada RHCP, x'ten y'ye döner). Izgaralar `directivity_dbi` gibi `[theta][phi]` indislenir.
 
 | Alan | Tür | Açıklama |
 | --- | --- | --- |
 | `rhcp_dbi`, `lhcp_dbi` | number[][] | dBi cinsinden kısmi yönlülükler D·\|E_R\|²/\|E\|² ve D·\|E_L\|²/\|E\|² (doğrusal toplamları `directivity_dbi`); alt sınır `dmax_dbi − 60` |
-| `axial_ratio_db` | number[][] | Eksenel oran (\|E_R\| + \|E_L\|) / \|\|E_R\| − \|E_L\|\|, dB: 0 = dairesel, üst sınır 60 dB (doğrusal polarizasyon) |
+| `axial_ratio_db` | (number or null)[][] | 20·log10((\|E_R\| + \|E_L\|) / \|\|E_R\| − \|E_L\|\|): 0 dB = dairesel; 60 dB, doğrusal polarizasyon dahil doyum üst sınırıdır |
 | `peak` | object | Yönlülük maksimumunda `{theta, phi, rhcp_dbi, lhcp_dbi, axial_ratio_db}` |
 | `boresight` | object | θ = 0'da `{theta: 0, rhcp_dbi, lhcp_dbi, axial_ratio_db}` |
 
 Örüntü CSV çıktısı `rhcp_dBi`, `lhcp_dBi`, `axial_ratio_dB` sütunlarını; uzak alan CSV'si ana eksen değerlerini ekler.
+
+Sıfır veya sonlu olmayan karmaşık alan çiftlerinin polarizasyonu tanımlı değildir; ilgili tepe/ana eksen skalerleri dahil CP skalerleri JSON `null` olur. Okuyucular diğer geçerli ızgara örneklerini korur, null değerleri boşluk sayar. Kısmi yönlülük tabanı bir depolama düzenidir; zayıf bileşenin ölçümü değildir. Görüntüleyicinin Eksen oranı niceliği ve seçili nicelik tablosu **D ≥ Dmax − 20 dB** maskesini uygular, ayrı 0–60 dB ölçeği kullanır ve kullanılamayan örnekleri boş bırakır. Bu görüntü maskesi kayıtlı CP ızgarasını veya ham örüntü CSV'sini değiştirmez. Ham sayısal CSV dışa aktarımları, kullanılamayan normalize edilmiş sayılar için mevcut `nan` işaretini; seçili niceliğin veri/CSV tablosu boş hücreyi kullanır. Hiçbiri sıfır AR anlamına gelmez. Tepe AR, kayıtlı toplam yönlülüğün maksimumundadır; ana eksen θ = 0° (+z) demektir, başka açıdan başlayan ızgaranın ilk satırı değildir. Bu örneklenmiş değerler bant genişliğini, kazancı veya verimliliği doğrulamaz; açısal/frekans/mesh/zaman yakınsaması denetimleri gerekir.
 
 `prad_w` ve `pacc_w`, birim genlikli uyarım için mutlak değerlerdir. Genellikle çok küçüktürler; yalnızca oranları anlamlıdır.
 
@@ -371,7 +374,7 @@ JSON bant alanları özgün anlamlarını korur. [CSV dışa aktarımında](EXPO
 
 ### efficiency
 
-**EfficiencySweep.** İsteğe bağlıdır (istenmezse bulunmaz): frekansa bağlı 1B ışıma verimliliği sonucu. NF2FF kutusu zaman alanı dökümleri kaydeder; çalıştırma sonrası openEMS bunları `f_min`–`f_max` arasında eşit aralıklı `N` frekansta dönüştürür (varsayılan 21, aralık 3–201). Yalnızca güçler tutulur, örüntüler tutulmaz. Uyarılan port başına bir kayıt; `port`, `farfield[].port` ile aynı şekilde ayarlanır (tek portlu çalıştırmada tek kayıt).
+**EfficiencySweep.** İsteğe bağlıdır (istenmezse bulunmaz): frekansa bağlı 1B ışıma verimliliği sonucu. NF2FF kutusu zaman alanı dökümleri kaydeder; çalıştırma sonrası openEMS bunları `f_min`–`f_max` arasında eşit aralıklı `N` frekansta dönüştürür (varsayılan 21, aralık 3–201). Güçler ve isteğe bağlı skaler ışınım özetleri tutulur, açısal alan ızgaraları tutulmaz. Uyarılan port başına bir kayıt; `port`, `farfield[].port` ile aynı şekilde ayarlanır (tek portlu çalıştırmada tek kayıt).
 
 | Alan | Tür | Açıklama |
 | --- | --- | --- |
@@ -384,10 +387,27 @@ JSON bant alanları özgün anlamlarını korur. [CSV dışa aktarımında](EXPO
 | `pacc_error` | (number \| null)[]? | Çalıştırmanın durma noktasından kaynaklanan tahmini `pacc_w` göreli hatası (aşağıda). `pacc_w ≤ 0` ise `null` |
 | `reliable` | boolean[]? | `pacc_error` 0,1'i (%10) aşarsa veya `pacc_w ≤ 0` ise `false`: değer korunur ancak güvenilir değildir. Görüntüleyici bunları eğriden çıkarır, işaretli nokta olarak çizer. Eski paketlerde yoktur (tüm değerler güvenilir sayılır) |
 | `mirror_planes` | number | Düzeltmede kullanılan PEC/PMC sınırları |
-| `theta_step`, `phi_step` | number | Dönüşümün açısal ızgarası, derece (90 ve 180: θ 0/90/180, φ 0/180). openEMS Prad, NF2FF kutusu yüzeyinden geçen Poynting akısıdır; bu ızgaraya bağlı değildir (yama örneğinde 3°/5° ile 90°/180° arasında, ayrıca yama şablonunun bandındaki 11 frekansta bit düzeyinde aynı). Bu nedenle en kaba ızgara kullanılır; yalnızca maliyeti belirler |
+| `theta_step`, `phi_step` | number | Dönüşümün açısal ızgarası, derece (90 ve 180: θ 0/90/180, φ 0/180). openEMS Prad, NF2FF kutusu yüzeyinden geçen Poynting akısıdır; bu ızgaraya bağlı değildir (yama örneğinde 3°/5° ile 90°/180° arasında, ayrıca yama şablonunun bandındaki 11 frekansta bit düzeyinde aynı). Bu nedenle en kaba ızgara kullanılır; yön çözünürlüğünü ve maliyeti belirler, yüzey akısı integralini belirlemez |
 | `qa_warnings` | string[]? | Özet notları: güvenilmez frekanslar ve güvenilir olduğu hâlde verimliliği 1'i aşanlar |
 
 Toplam verimlilik `rad_efficiency · (1 − |S11|²)` olur; S11, `ports[port]` içinden `f` frekansında (`frequency` üzerinde enterpolasyonla) alınır. Örüntü frekansında taramanın Prad değeri `farfield[].prad_w` ile aynıdır.
+
+**Işınım skalerleri (`radiation`, isteğe bağlı).** Yeni sonuçlar, verimlilik geçişinin kullandığı *aynı* `CalcNF2FF` çağrısı ve `nf2ff_efficiency.h5` sonucundan skaler özetler saklar. Ek dönüşüm, daha sık açısal kayıt veya çözücü çalıştırması yapılmaz. Bu alanı taşımayan eski paketler geçerliliğini korur. Nesne; `source: "band-efficiency-nf2ff"`, derece cinsinden gerçek `theta`/`phi` eksenleri, `cp_requested` ve `ar_mask_db: 20` içerir. Aşağıdaki her sayısal dizi, kapsayıcı `efficiency[].f` ile birebir hizalıdır; eksikler sıfır değil JSON `null` olur. Bozuk frekans ızgarası, kaynak bilgisi veya dizi şekli, eski verimlilik verisini atmadan bu nesnenin reddedilmesine yol açar.
+
+| Dizi | Birim / anlam |
+| --- | --- |
+| `d_peak_dbi`, `d_boresight_dbi` | dBi; örneklenmiş tepe ve ilk kayıtlı φ'de θ=0 |
+| `peak_theta_deg`, `peak_phi_deg` | Gerçek örneklenmiş yönlülük tepesi yönü; frekansla değişebilir |
+| `gain_peak_dbi`, `gain_boresight_dbi` | dBi; D + son bildirilen ışıma verimliliğinin 10 log10 değeri (mevcut kayıpsız normalizasyonu dahil) |
+| `mismatch_efficiency` | Bu uyarılan porttan 1 − \|uf_ref/uf_inc\|²; yalnızca bitişik sonlu örnekler, dışa uzatma veya geçersiz örnekler üzerinden köprüleme yok |
+| `realized_peak_dbi`, `realized_boresight_dbi` | dBi; kazanç + uyumsuzluk verimliliğinin 10 log10 değeri; pozitif olmayan/bilinmeyen çarpanlarda eksik |
+| `ar_peak_db`, `ar_boresight_db` | Yalnızca `cp_requested` durumunda; aynı karmaşık alanlardan ve #228 düzeninden, örneklenmiş **yönlülük** tepesindeki ve ana eksendeki AR; alan/yön eksikse veya D < örneklenmiş Dmax −20 dB ise null |
+
+Şimdiki θ=[0,90,180], φ=[0,180] Kartezyen çarpımı altı açı çifti, fakat **dört farklı yön** (+z,+x,−x,−z) içerir; ±y ve başka olası loblar yoktur. `Dmax`, sürekli küredeki tepe değil, bu açısal örneklerin maksimumudur. Aynalar mevcut 2^m düzeltmesini kullanır. Açısal, kazanç veya CP yakınsaması sonucu çıkarılamaz. AR dB'dir (0 dairesel, ≥60 arka uç doyumu).
+
+Işınım grafiği bir örneği yalnızca `reliable` true, `pacc_error` sonlu ve ≤0,1, `pacc_w` pozitif olduğunda kullanır. Eksik güvenilirlik, bu yeni nicelikler için **değerlendirilmemiş** demektir; eski verimlilik grafiğinin davranışını değiştirmez. Dışlanan ham skalerler CSV'de ayrı denetim sütunlarında korunur. Birden büyük değerler mevcut verimlilik kalite notlarıyla birlikte değerlendirilir. Ayrıntılı `farfield[]` örüntüleri kendi ızgaraları ve burada değerlendirilmemiş kabul edilen güç durumlarıyla ayrı noktalar görünür; kaba eğri boşluklarını doldurmazlar. Eksik kazanç/CP skalerleri başka port veya frekanstan yeniden üretilmez. CSV; çizilen ve ham değerlerin yanında fiziksel port, kaynak, gerçek eksenler, tepe yönü, maske ve güvenilirliği içerir; PDF aynı koşullarla seçilmiş veriyi kullanır.
+
+AR ≤3 dB aralıkları yalnızca koşulu sağlayan ardışık kayıtlı örnekleri listeler. Tek nokta bant genişliğini belirlemez. Bant kenarları ve eksik/güvenilmez komşular açık/bilinmeyen sınırlardır; 3 dB üstündeki komşu yalnızca örneklenmemiş geçişi iki örnek arasına sınırlar. **Enterpole edilmiş veya yakınsamış AR bant genişliği yoktur.**
 
 **Güvenilirlik.** Uyumdan uzak frekanslarda port gelen gücün neredeyse tamamını yansıtır; `pacc_w` = P_inc (1 − |S11|²), iki büyük sayının küçük farkıdır. Durdurma ölçütünde durmak port sinyallerinin sönüm kuyruğunu keser; her frekansta yaklaşık aynı mutlak büyüklükte hata bırakır. Küçük `pacc_w` değerine göre bu hata büyüktür; oran zikzak yapar. `pacc_error`, uyarım darbesi sonrasındaki sönümün son onda biri DFT dışında bırakıldığında ½·Re(U·I*) değişimini hesaplayarak tahmin eder. Sinyaller sönerken kaydedilmeyen bölüm bu mertebede veya daha küçüktür. Yama şablonunda ölçüm (11 frekans, 1,47–3,19 GHz, GPU):
 
@@ -460,6 +480,8 @@ Antenlerde (NF2FF kutulu modeller), her port için bir uyarım çalıştırması
 | `theta`, `phi` | number[] | Derece cinsinden ızgara (uzak alan ızgarası, seyreltilmiş olabilir) |
 | `frequencies` | number[] | Hz cinsinden frekanslar; uzak alan kayıtlarıyla aynı |
 | `decimation` | number | Açısal seyreltme katsayısı (1 = tam uzak alan ızgarası). θ = 180° daima korunur |
+| `source_shape` | [nθ, nφ]? | Depolama seyreltmesinden önce değerlendirilen NF2FF açısal ızgarası; eski paketlerde yoktur |
+| `requested_steps` | [θ, φ]? | İstenen açısal adımlar, derece. Gerçek kayıtlı koordinatlar `theta` ve `phi` dizileridir; son θ aralığı daha kısa olabilir |
 | `mirror_planes` | number | PEC/PMC sınırları. Alanlar görüntü uzayını kapsar; küre integrallerini 2^m'ye bölün |
 | `phase_center` | Vec3 | Tüm portların ortak faz merkezi (çizim birimleri) |
 | `ports` | object[] | Uyarılan port başına `{port, position, fields}`. `position`, yönlendirmede eleman konumu olarak kullanılan port merkezi (çizim birimleri). `fields`, frekans başına `{f, scale, e_theta_re, e_theta_im, e_phi_re, e_phi_im}` (`scale` yalnızca `"i16le-base64-scaled"` ile) |

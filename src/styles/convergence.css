@@ -21,6 +21,12 @@
 .cv-axis { display: flex; justify-content: space-between; gap: var(--al-space-2); font-size: var(--al-text-xs); }
 .cv-empty { margin: 0; }
 .cv-actions { display: flex; justify-content: flex-end; gap: var(--al-space-2); }
+.cv-network { border-top: 1px solid var(--al-border); padding-top: var(--al-space-3); }
+.cv-network-row { min-width: 0; margin: 0; border: 1px solid var(--al-border); padding: var(--al-space-2); }
+.cv-network-row legend { font-size: var(--al-text-xs); color: var(--al-text-2); }
+.cv-network-row .btn { align-self: end; }
+.cv-network-reason { white-space: normal; max-width: 32ch; }
+.cv-network-report caption { text-align: left; padding-bottom: var(--al-space-2); }
 @media (max-width: 520px) {
   .cv-body { padding: var(--al-space-2); }
   .cv-plot, .cv-plot svg { width: 100%; }

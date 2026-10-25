@@ -1,38 +1,53 @@
+import { hasComplexPortReference, portProcessingInfo, primaryPortLabel } from "../lib/portProcessingMetadata.ts";
 import { powerWaveReflection } from "../lib/powerWaves.ts";
 import type { Bundle, FarField } from "../types";
 import { complexDb, complexMagnitude, complexPhase } from "../charts/plotQuantities.ts";
+import { analyzeSParameterPhase } from "../lib/sparamPhase.ts";
 import { sweep } from "../lib/rf.ts";
-import { hasSParameterPhase, magDb, mappedPairLabel, physicalPortNumber, pairLabel, phaseDeg, reflectionAtPort, sMatrix } from "../lib/sparams.ts";
+import { hasSParameterPhase, magDb, mappedPairLabel, matrixPortLabel, physicalPortNumber, pairLabel, phaseDeg, reflectionAtPort, sMatrix } from "../lib/sparams.ts";
 import type { ResultView } from "./resultFocus.ts";
-import { nearestFarfield, traceLabels } from "../compare/series.ts";
-import { effectiveQuantity, efficiencyData, mismatchAt, quantityGrid, type PatternQuantity } from "../lib/farfieldQuantity.ts";
+import { nearestFarfield, phaseComparisonGrid, traceLabels } from "../compare/series.ts";
+import { effectiveQuantity, efficiencyData, mismatchAt, quantityGrid, quantityUnit, type PatternQuantity } from "../lib/farfieldQuantity.ts";
 import { phasorColumns } from "../scene/fieldPlaneModel.ts";
 import { t, tEn } from "../i18n/index.ts";
 import { summaryTable } from "./runSummary.ts";
+import { radiationTable, type RadiationQuantity } from "../lib/radiationFrequency.ts";
+import { analyzeCut, cutLabel, cutSpecs, patternMetrics, type PatternCutChoice } from '../lib/patternMetrics.ts';
 
 export interface ResultDataTable {
   header: string[];
   rows: (string | number | null)[][];
 }
 
-export type ResultDataFormat = "db" | "db_phase" | "re_im" | "mag_phase" | "all";
+export type ResultDataFormat = "db" | "db_phase" | "re_im" | "mag_phase" | "all" | "gd" | "phase_unwrapped";
 
 /** What the active plot shows, so copied/exported data matches it (both Results docks pass it). */
 export interface ResultDataOptions {
+  radiationQuantity?: RadiationQuantity;
   /** the S_ij picked in the S-parameter picker; every stored pair only when omitted */
   pairs?: [number, number][];
   /** S-parameter quantity: dB magnitude (default) or phase in degrees */
   sparamMode?: "db" | "phase";
   /** Numeric representation of complex S/Z samples. */
   format?: ResultDataFormat;
+  /** Odd sample aperture of the local least-squares group-delay derivative. */
+  aperturePoints?: number;
+  /** Internal comparison grid: phase is unwrapped before interpolation and differentiation. */
+  frequencyGridGHz?: number[];
   /** the Smith chart's port: its S_pp and input impedance (default: the sweep's S11 and Zin) */
   smithPort?: number;
   /** comparison: the names the legend uses for the runs (parallel to `runs`) */
   runNames?: (string | undefined)[];
   /** the far-field quantity shown (the pattern data add its column beside the directivity) */
   patternQuantity?: PatternQuantity;
+  /** Internal comparison contract: the base already resolved its quantity; references keep missing data. */
+  patternQuantityFixed?: boolean;
   /** Driven port of the selected pattern; compared runs without that port have no samples. */
   patternPort?: number;
+  /** Selected plotted cut(s). Omitted retains the full stored grid export used in reports. */
+  patternCut?: PatternCutChoice;
+  patternPrincipalAvailable?: boolean;
+  patternFallbackPhi?: number;
   /** Standalone pattern overlay: each displayed grid, including a synthesized array. */
   patternEntries?: { label: string; field: FarField }[];
   /** the summary of several runs: add the Δ columns (the Summary tab's "Δ vs A" view is on) */
@@ -47,17 +62,23 @@ const empty = (header: string[]): ResultDataTable => ({ header, rows: [] });
 // no NaN or ±Infinity in copied/CSV data (an exactly zero |Sij| is -Infinity dB): an empty cell
 const finiteCell = (n: number | undefined): number | null => typeof n === "number" && Number.isFinite(n) ? n : null;
 const phase = complexPhase;
-function sColumns(pair: [number, number], re: number[], im: number[], format: ResultDataFormat, phaseKnown = true, label = pairLabel(pair)) {
+const derivedPhaseFormat = (format: ResultDataFormat | undefined) => format === "gd" || format === "phase_unwrapped";
+function sColumns(pair: [number, number], re: number[], im: number[], format: ResultDataFormat, phaseKnown = true, label = pairLabel(pair), fGHz: number[] = [], options: ResultDataOptions = {}) {
   const p = label;
+  if (derivedPhaseFormat(format)) {
+    const analysis = analyzeSParameterPhase(fGHz, re, im, { gridGHz: options.frequencyGridGHz, aperturePoints: options.aperturePoints });
+    const values = format === "gd" ? analysis.delayNs : analysis.phaseDeg;
+    return [{ label: format === "gd" ? `τg ${p} (ns)` : `Unwrapped ∠${p} (deg)`, value: (k: number) => phaseKnown ? values[k] : Number.NaN }];
+  }
   const safe = (fn: (k: number) => number) => (k: number) => Number.isFinite(re[k]) && Number.isFinite(im[k]) ? fn(k) : Number.NaN;
-  const modes: Record<ResultDataFormat, { label: string; value: (k: number) => number }[]> = {
+  const modes: Record<Exclude<ResultDataFormat, "gd" | "phase_unwrapped">, { label: string; value: (k: number) => number }[]> = {
     db: [{ label: `|${p}| (dB)`, value: safe(k => complexDb(re[k], im[k])) }],
     db_phase: [{ label: `|${p}| (dB)`, value: safe(k => complexDb(re[k], im[k])) }, { label: `∠${p} (deg)`, value: safe(k => phase(re[k], im[k])) }],
     re_im: [{ label: `Re ${p}`, value: k => re[k] }, { label: `Im ${p}`, value: k => im[k] }],
     mag_phase: [{ label: `|${p}|`, value: safe(k => complexMagnitude(re[k], im[k])) }, { label: `∠${p} (deg)`, value: safe(k => phase(re[k], im[k])) }],
     all: [{ label: `|${p}| (dB)`, value: safe(k => complexDb(re[k], im[k])) }, { label: `∠${p} (deg)`, value: safe(k => phase(re[k], im[k])) }, { label: `Re ${p}`, value: k => re[k] }, { label: `Im ${p}`, value: k => im[k] }, { label: `|${p}|`, value: safe(k => complexMagnitude(re[k], im[k])) }],
   };
-  return modes[format].map(column => !phaseKnown && !column.label.startsWith("|") ? { ...column, value: () => Number.NaN } : column);
+  return modes[format as keyof typeof modes].map(column => !phaseKnown && !column.label.startsWith("|") ? { ...column, value: () => Number.NaN } : column);
 }
 function zColumns(re: number[], im: number[], format: ResultDataFormat) {
   const safe = (fn: (k: number) => number) => (k: number) => Number.isFinite(re[k]) && Number.isFinite(im[k]) ? fn(k) : Number.NaN;
@@ -70,8 +91,15 @@ function zColumns(re: number[], im: number[], format: ResultDataFormat) {
 
 /** Raw, unsampled data for a result view. Numeric cells retain the precision stored in the bundle. */
 export function resultDataTable(bundle: Bundle | null | undefined, view: ResultView, frequencyHz?: number, options: ResultDataOptions = {}): ResultDataTable {
+  const table = baseResultDataTable(bundle, view, frequencyHz, options), info = portProcessingInfo(bundle);
+  return info ? { header: [...table.header, "Port processing"], rows: table.rows.map(row => [...row, info.description]) } : table;
+}
+
+function baseResultDataTable(bundle: Bundle | null | undefined, view: ResultView, frequencyHz?: number, options: ResultDataOptions = {}): ResultDataTable {
+  if (view !== "sparams" && derivedPhaseFormat(options.format)) options = { ...options, format: undefined, frequencyGridGHz: undefined };
   const results = bundle?.results;
   if (!results) return empty(["No result data"]);
+  if (hasComplexPortReference(bundle) && (view === "smith" || view === "vswr")) return empty(["Complex power-wave reference: Smith impedance grid and physical VSWR unavailable"]);
   const phaseKnown = hasSParameterPhase(bundle);
   if (!phaseKnown && (view === "smith" || view === "impedance")) return empty(["f (GHz)", "Re Zin (Ω)", "Im Zin (Ω)"]);
 
@@ -84,20 +112,24 @@ export function resultDataTable(bundle: Bundle | null | undefined, view: ResultV
       // the picked pairs this run stores (a two-port run beside a four-port one lacks some)
       const picked = (options.pairs ?? []).filter(([i, j]) => matrix.get(i, j));
       const format = options.format;
+      const nativeGHz = matrix.f.map(f => f / 1e9);
+      const gridGHz = derivedPhaseFormat(format) ? options.frequencyGridGHz ?? nativeGHz : nativeGHz;
       const cols = (options.pairs === undefined ? matrix.pairs : picked).flatMap((p) => {
         const c = matrix.get(p[0], p[1])!;
-        if (format) return sColumns(p, c.re, c.im, format, phaseKnown, mappedPairLabel(matrix, p)).map(x => ({ label: x.label, values: c.re.map((_, k) => x.value(k)) }));
+        if (format) return sColumns(p, c.re, c.im, format, phaseKnown, mappedPairLabel(matrix, p), nativeGHz, options).map(x => ({ label: x.label, values: gridGHz.map((_, k) => x.value(k)) }));
         return options.sparamMode === "phase" ? [{ label: `∠${mappedPairLabel(matrix, p)} (deg)`, values: phaseKnown ? phaseDeg(c) : c.re.map(() => NaN) }] : [{ label: `|${mappedPairLabel(matrix, p)}| (dB)`, values: magDb(c) }];
       });
-      return { header: ["f (GHz)", ...cols.map((x) => x.label)], rows: matrix.f.map((f, k) => [f / 1e9, ...cols.map((x) => finiteCell(x.values[k]))]) };
+      return { header: ["f (GHz)", ...cols.map((x) => x.label)], rows: gridGHz.map((f, k) => [f, ...cols.map((x) => finiteCell(x.values[k]))]) };
     }
     const sw = sweep(bundle);
     if (!sw) return empty(["f (GHz)", "|S11| (dB)"]);
     const haveComplex = sw.s11Re && sw.s11Im;
     const fallbackRe = haveComplex ? sw.s11Re : sw.f.map(() => Number.NaN);
     const fallbackIm = haveComplex ? sw.s11Im : sw.f.map(() => Number.NaN);
-    const cols = options.format ? sColumns([1, 1], fallbackRe, fallbackIm, options.format, phaseKnown).map(c => c.label === "|S11| (dB)" && !haveComplex ? { ...c, value: (i: number) => sw.s11Db[i] } : c) : [{ label: "|S11| (dB)", value: (i: number) => sw.s11Db[i] }];
-    return { header: ["f (GHz)", ...cols.map(c => c.label)], rows: sw.f.map((f, i) => [f / 1e9, ...cols.map(c => finiteCell(c.value(i)))]) };
+    const nativeGHz = sw.f.map(f => f / 1e9);
+    const gridGHz = derivedPhaseFormat(options.format) ? options.frequencyGridGHz ?? nativeGHz : nativeGHz;
+    const cols = options.format ? sColumns([1, 1], fallbackRe, fallbackIm, options.format, phaseKnown, "S11", nativeGHz, options).map(c => c.label === "|S11| (dB)" && !haveComplex ? { ...c, value: (i: number) => sw.s11Db[i] } : c) : [{ label: "|S11| (dB)", value: (i: number) => sw.s11Db[i] }];
+    return { header: ["f (GHz)", ...cols.map(c => c.label)], rows: gridGHz.map((f, i) => [f, ...cols.map(c => finiteCell(c.value(i)))]) };
   }
 
   if (view === "smith" && options.smithPort !== undefined) {
@@ -107,7 +139,7 @@ export function resultDataTable(bundle: Bundle | null | undefined, view: ResultV
     const g = m?.get(p, p);
     const s = m ? mappedPairLabel(m, [p, p]) : pairLabel([p, p]);
     const physical = m ? physicalPortNumber(m, p) : p;
-    const zinPort = physical === p ? `port ${p}` : physical === null ? `matrix port ${p} (model unknown)` : `model port ${physical} (matrix ${p})`;
+    const zinPort = m?.modalChannels ? matrixPortLabel(m, p) : physical === p ? `port ${p}` : physical === null ? `matrix port ${p} (model unknown)` : `model port ${physical} (matrix ${p})`;
     const header = ["f (GHz)", `Re ${s}`, `Im ${s}`, `Re Zin ${zinPort} (Ω)`, `Im Zin ${zinPort} (Ω)`];
     if (m && g && m.ports.length > 1) {
       const reflection = reflectionAtPort(bundle, p)!;
@@ -126,8 +158,9 @@ export function resultDataTable(bundle: Bundle | null | undefined, view: ResultV
     if (view === "vswr") return { header: ["f (GHz)", "VSWR"], rows: sw.f.map((f, i) => [f / 1e9, finiteCell(sw.vswr[i])]) };
     const fmt = options.format;
     if (view === "smith" || view === "table") {
-      const base = view === "smith" ? ["Re S11", "Im S11", "Re Zin (Ω)", "Im Zin (Ω)"] : ["|S11| (dB)", "VSWR", "Re Zin (Ω)", "Im Zin (Ω)"];
-      const sCols = fmt && sw.s11Re && sw.s11Im ? sColumns([1, 1], sw.s11Re, sw.s11Im, fmt, phaseKnown) : [];
+      const label = primaryPortLabel(bundle);
+      const base = view === "smith" ? [`Re ${label}`, `Im ${label}`, "Re Zin (Ω)", "Im Zin (Ω)"] : [`|${label}| (dB)`, "VSWR", "Re Zin (Ω)", "Im Zin (Ω)"];
+      const sCols = fmt && sw.s11Re && sw.s11Im ? sColumns([1, 1], sw.s11Re, sw.s11Im, fmt, phaseKnown, label) : [];
       const zCols = fmt ? zColumns(sw.zRe, sw.zIm, fmt) : [];
       const extras = [...sCols, ...zCols].filter(c => !base.includes(c.label));
       return {
@@ -142,7 +175,7 @@ export function resultDataTable(bundle: Bundle | null | undefined, view: ResultV
       };
     }
     const cols = fmt ? zColumns(sw.zRe, sw.zIm, fmt) : [{ label: "Re Zin (Ω)", value: (i: number) => sw.zRe[i] }, { label: "Im Zin (Ω)", value: (i: number) => sw.zIm[i] }];
-    const reference = (bundle.ports.find((p) => p.excite) ?? bundle.ports[0])?.reference_impedance;
+    const reference = portProcessingInfo(bundle) ? undefined : (bundle.ports.find((p) => p.excite) ?? bundle.ports[0])?.reference_impedance;
     if (reference) {
       const power = (i: number) => powerWaveReflection(sw.zRe[i], sw.zIm[i], reference.real, reference.imag);
       cols.push({ label: "Re power-wave Zref (Ω)", value: () => reference.real }, { label: "Im power-wave Zref (Ω)", value: () => reference.imag },
@@ -172,16 +205,31 @@ export function resultDataTable(bundle: Bundle | null | undefined, view: ResultV
     if (!ff?.theta?.length || !ff.phi?.length) return empty(["theta (deg)", "phi (deg)", "Directivity (dBi)"]);
     const withPort = ffs.some((x) => x.port != null);
     // the shown quantity (gain, realized gain, a circular part) beside the directivity
-    const q = options.patternQuantity ? effectiveQuantity(bundle, ff, options.patternQuantity) : "directivity";
+    const q = options.patternQuantity ? (options.patternQuantityFixed ? options.patternQuantity : effectiveQuantity(bundle, ff, options.patternQuantity)) : "directivity";
+    if (options.patternCut) {
+      const grid = quantityGrid(bundle, ff, q);
+      return {
+        header: [...(withPort ? ['Port'] : []), 'f (GHz)', 'Cut', 'Cut angle (deg)', 'theta (deg)', 'phi (deg)', `${tEn(`farfield.quantity.${q}`)} (${quantityUnit(q)})`,
+          'HPBW estimate (deg)', 'HPBW status', 'SLL estimate (dB; floor -40 dB)', 'SLL status', 'Peak / 3D antipode (dB)', 'F/B status', 'Adjacent dB interpolation', 'Cut min spacing (deg)', 'Cut max spacing (deg)'],
+        rows: cutSpecs(options.patternCut, options.patternPrincipalAvailable ?? true, options.patternFallbackPhi ?? 0).flatMap(spec => {
+          const cut = analyzeCut(ff.theta, ff.phi, grid, spec, !!bundle.half_space);
+          const metrics = patternMetrics(cut, ff.theta, ff.phi, grid, !!bundle.half_space, q);
+          return cut.angle.map((a, i) => [...(withPort ? [ff.port ?? null] : []), ff.f / 1e9, cutLabel(spec), a, cut.theta[i], cut.phi[i], finiteCell(cut.value[i]),
+            metrics.hpbw.value, metrics.hpbw.reason ?? 'sampled estimate', metrics.sll.value, metrics.sll.reason ?? 'sampled estimate',
+            metrics.frontBack.value, metrics.frontBack.reason ?? 'sampled estimate', cut.interpolated ? 'yes' : 'no', ...(metrics.spacing ?? [null, null])]);
+        }),
+      };
+    }
     const extra = q === "directivity" ? null : quantityGrid(bundle, ff, q);
     const rows: (string | number | null)[][] = [];
     ff.theta.forEach((theta, i) => ff.phi.forEach((phi, j) => {
       const value = ff.directivity_dbi?.[i]?.[j];
       rows.push([...(withPort ? [ff.port ?? null] : []), ff.f / 1e9, theta, phi, finiteCell(value), ...(extra ? [finiteCell(extra[i]?.[j])] : [])]);
     }));
-    return { header: [...(withPort ? ["Port"] : []), "f (GHz)", "theta (deg)", "phi (deg)", "Directivity (dBi)", ...(extra ? [`${tEn(`farfield.quantity.${q}`)} (dBi)`] : [])], rows };
+    return { header: [...(withPort ? ["Port"] : []), "f (GHz)", "theta (deg)", "phi (deg)", "Directivity (dBi)", ...(extra ? [`${tEn(`farfield.quantity.${q}`)} (${quantityUnit(q)})`] : [])], rows };
   }
   if (view === "efficiency") {
+    if (options.radiationQuantity) return radiationTable(bundle, [options.radiationQuantity]);
     // every frequency of the band, the far-field frequencies and the band-wide efficiency (sorted):
     // the mismatch efficiency at each (|S11|² interpolated off the S11 grid), the radiation and total
     // efficiency where they are known, per driven port; percent
@@ -246,6 +294,17 @@ export const resultDataCsv = (table: ResultDataTable) => [table.header, ...table
 /** One shared raw-data table for a comparison selection. */
 export function comparedResultDataTable(runs: { file: string; bundle: Bundle }[], view: ResultView, frequencyHz?: number, options: ResultDataOptions = {}): ResultDataTable {
   if (!runs.length) return { header: [], rows: [] };
+  if (view === "pattern" && options.patternQuantity) {
+    // The plotted comparison chooses its quantity from the base run. A base that
+    // falls back to directivity must not export a reference-only AR column.
+    const base = runs[0].bundle, first = base.results?.farfield?.[0];
+    const ff = first && nearestFarfield(base, frequencyHz ?? first.f, options.patternPort);
+    options = { ...options, patternQuantity: ff ? effectiveQuantity(base, ff, options.patternQuantity) : "directivity", patternQuantityFixed: true };
+  }
+  if ((view === "smith" || view === "vswr") && runs.some(r => hasComplexPortReference(r.bundle))) return { header: ["Unavailable for complex power-wave references"], rows: [] };
+  if (view === "sparams" && derivedPhaseFormat(options.format)) {
+    options = { ...options, frequencyGridGHz: phaseComparisonGrid(runs.map(({ bundle }) => bundle)) };
+  }
   // Comparison uses each run's stored pattern, never a standalone viewer's synthesized overlay.
   const tables = runs.map((r) => resultDataTable(r.bundle, view, frequencyHz, { ...options, patternEntries: undefined }));
   const params = [...new Map(runs.flatMap((r) => r.bundle.model.params).map((p) => [p.key, p])).values()];
@@ -274,7 +333,10 @@ export function comparedResultDataTable(runs: { file: string; bundle: Bundle }[]
 /** The table Copy data and CSV write: one run, or every compared run. */
 export function activeResultDataTable(bundle: Bundle | null | undefined, view: ResultView, frequencyHz?: number, runs?: { file: string; bundle: Bundle }[], options: ResultDataOptions = {}): ResultDataTable {
   // the summary lists its runs as rows, one run included (its file name is a column)
-  if (view === "summary" && runs?.length) return summaryTable(runs.map((r, i) => ({ label: options.runNames?.[i] ?? r.bundle.model.name, file: r.file, bundle: r.bundle })), { deltas: options.summaryDeltas, reference: options.summaryReference });
+  if (view === "summary" && runs?.length) {
+    const table = summaryTable(runs.map((r, i) => ({ label: options.runNames?.[i] ?? r.bundle.model.name, file: r.file, bundle: r.bundle })), { deltas: options.summaryDeltas, reference: options.summaryReference });
+    return runs.some(r => portProcessingInfo(r.bundle)) ? { header: [...table.header, "Port processing"], rows: table.rows.map((row, i) => [...row, portProcessingInfo(runs[i].bundle)?.description ?? "Original stored result"]) } : table;
+  }
   return runs && runs.length >= 2 ? comparedResultDataTable(runs, view, frequencyHz, options) : resultDataTable(bundle, view, frequencyHz, options);
 }
 

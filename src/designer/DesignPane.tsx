@@ -316,7 +316,7 @@ function MaterialInspector(props: { i: number }) {
       <h3 class="dz-h">{t("props.material")}</h3>
       <TextField label={t("props.name")} value={m().name} error={nameError()} onChange={rename} />
       <SelectField label={t("props.material.kind")} value={m().kind} options={[{ value: "metal", label: t("props.material.metal") }, { value: "dielectric", label: t("props.material.dielectric") }]}
-        onChange={(v) => set((q) => { q.kind = v; if (v === "dielectric") { q.eps_r ??= 4.3; q.tan_d ??= 0; } }, "kind")} />
+        onChange={(v) => set((q) => { q.kind = v; if (v === "dielectric") { q.eps_r ??= 4.3; q.tan_d ??= 0; } else delete q.dispersion; }, "kind")} />
       <Show when={m().kind === "metal"}>
         <SelectField label={t("props.material.conductor")} value={conductorPreset(m().conductivity)} options={CONDUCTOR_PRESETS.map((p) => ({ value: p.id, label: conductorLabel(p) }))}
           onChange={(v) => set((q) => { const p = CONDUCTOR_PRESETS.find((x) => x.id === v); if (!p || p.id === "custom") return; if (p.sigma === null) { delete q.conductivity; delete q.thickness; } else q.conductivity = p.sigma; }, "conductivity")} />
@@ -327,11 +327,34 @@ function MaterialInspector(props: { i: number }) {
         </Show>
       </Show>
       <Show when={m().kind === "dielectric"}>
+        <SelectField id={fieldId(path("dispersion"))} label={t("props.material.model")} value={m().dispersion ? "ds" : "constant"}
+          options={[{ value: "constant", label: t("props.material.constant") }, { value: "ds", label: t("props.material.ds") }]}
+          onChange={(v) => set((q) => { if (v === "constant") delete q.dispersion; else q.dispersion = { model: "djordjevic-sarkar" }; }, "dispersion")} />
+        <Show when={issues()[path("dispersion")]}>{(issue) => <p class="dz-value dz-bad" role="status">{checkTitle(issue())}</p>}</Show>
         <ExprField label={t("feed.muR")} value={m().mu_r ?? 1} path={path("mu_r")} onChange={(v) => set((q) => { q.mu_r = v; }, "mu_r")} />
         <p class="note">{t("feed.muNote")}</p>
         <ExprField label={t("props.material.epsR")} value={m().eps_r} path={path("eps_r")} onChange={(v) => set((q) => { q.eps_r = v; }, "eps_r")} />
         <ExprField label={t("props.material.tanD")} value={m().tan_d ?? 0} path={path("tan_d")} onChange={(v) => set((q) => { q.tan_d = v; }, "tan_d")} />
-        <ExprField optional label={t("props.material.tanDFreq")} unit="GHz" value={m().tan_d_freq ?? ""} path={path("tan_d_freq")} onChange={(v) => set((q) => { if (v === "") delete q.tan_d_freq; else q.tan_d_freq = v; }, "tan_d_freq")} />
+        <ExprField optional={!m().dispersion} label={t(m().dispersion ? "props.material.dsReference" : "props.material.tanDFreq")} unit="GHz" value={m().tan_d_freq ?? ""} path={path("tan_d_freq")} onChange={(v) => set((q) => { if (v === "") delete q.tan_d_freq; else q.tan_d_freq = v; }, "tan_d_freq")} />
+        <Show when={m().dispersion}>
+          <p class="note">{t("props.material.dsNote")}</p>
+          <p class="note mono">{t("props.material.dsBand", { min: draft.simulation.f_min, max: draft.simulation.f_max })}</p>
+          <details class="dz-inspector-advanced">
+            <summary>{t("props.material.dsControls")}</summary>
+            <div class="dz-form">
+              <For each={["m1", "m2"] as const}>{(key) => <ExprField label={t(`props.material.${key}`)} unit="log10(rad/s)"
+                value={m().dispersion?.[key] ?? (key === "m1" ? 4 : 12)} path={path(`dispersion.${key}`)}
+                onChange={(v) => set((q) => { q.dispersion![key] = v; }, `dispersion.${key}`)} />}</For>
+              <label class="dz-field" for={fieldId(path("dispersion.n_poles"))}>
+                <span class="dz-label">{t("props.material.dsPoles")}</span>
+                <NumberField id={fieldId(path("dispersion.n_poles"))} class="rp-input dz-input mono" min={1} max={32} step={1}
+                  placeholder={t("props.material.dsAuto")} value={m().dispersion?.n_poles ?? ""}
+                  onChange={(e) => set((q) => { const v = e.currentTarget.value.trim(); if (!v) delete q.dispersion!.n_poles; else q.dispersion!.n_poles = Number(v); }, "dispersion.n_poles")} />
+              </label>
+              <p class="note">{t("props.material.dsCost")}</p>
+            </div>
+          </details>
+        </Show>
       </Show>
       <ColorField label={t("props.color")} value={m().color} fallback={() => themeColor(m().kind === "metal")}
         onPick={(c) => setColors("materials", [props.i], c)} onReset={() => setColors("materials", [props.i], undefined)} />
@@ -343,7 +366,7 @@ function MaterialInspector(props: { i: number }) {
           // datasheet's, so those are the library's values too, not an edit
           const freqEdited = () => m().tan_d_freq !== undefined && m().tan_d_freq !== "f0" && m().tan_d_freq !== (e().tan_d_freq ?? undefined);
           const edited = () => e().kind !== m().kind || (e().kind === "dielectric" &&
-            (m().eps_r !== e().eps_r || m().tan_d !== e().tan_d || freqEdited()));
+            (m().eps_r !== e().eps_r || m().tan_d !== e().tan_d || freqEdited() || !!m().dispersion));
           return <p class="note">{t("props.material.fromLibrary")} <b>{libraryLabel(e())}</b>{edited() ? ` ${t("props.material.editedSince")}` : ""}. {libraryNote(e())}</p>;
         }}
       </Show>

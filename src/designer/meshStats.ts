@@ -5,6 +5,7 @@
 import type { Bundle } from "../types";
 import { fmt, t } from "../i18n/index.ts";
 import { hostRates } from "../lib/hostRates.ts";
+import { meshBottlenecks } from "./meshBottlenecks.ts";
 
 const C0 = 299_792_458;
 
@@ -64,7 +65,7 @@ export function meshCells(lines: readonly [number, number, number]): number {
 /** null when the bundle has no real mesh (the empty-design stage, a first browser-built preview). */
 export function meshStats(b: Bundle | null | undefined): MeshStats | null {
   const m = b?.mesh;
-  if (!m || m.x.length < 3 || m.y.length < 2 || m.z.length < 2 || !m.total_cells) return null;
+  if (!m || !m.total_cells || !meshBottlenecks(b)) return null;
   const lines: [number, number, number] = [m.x.length, m.y.length, m.z.length];
   const d = [minStep(m.x), minStep(m.y), minStep(m.z)];
   const unit = b!.units?.length_m ?? 1e-3;
@@ -73,8 +74,8 @@ export function meshStats(b: Bundle | null | undefined): MeshStats | null {
     lines,
     cells: meshCells(lines),
     nodes: lines[0] * lines[1] * lines[2],
-    minCell: m.min_cell ?? Math.min(...d),
-    maxCell: m.max_cell ?? Math.max(maxStep(m.x), maxStep(m.y), maxStep(m.z)),
+    minCell: Math.min(...d) * unit * 1000,
+    maxCell: Math.max(maxStep(m.x), maxStep(m.y), maxStep(m.z)) * unit * 1000,
     dt: m.auto?.timestep_s ?? courant,
   };
 }

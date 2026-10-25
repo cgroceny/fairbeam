@@ -778,6 +778,7 @@ export interface ParametricDesign {
   materials?: { name: string; eps_r?: unknown; tan_d?: unknown }[];
   ports?: { number?: number; type?: string; R?: unknown; start?: unknown[]; stop?: unknown[]; direction?: string }[];
   simulation?: { f_min?: unknown; f_max?: unknown };
+  far_field?: { circular?: boolean };
 }
 
 export interface CstExtras {
@@ -1199,7 +1200,10 @@ export function cstMacro(b: Bundle, opt: CstOptions = DEFAULT_CST_OPTIONS, extra
     const [r, g, bl] = rgb(p.color ?? "#6f9a7e");
     const dpart = pd?.parts?.find((x) => x.name === p.name);
     const dmat = pd?.materials?.find((x) => x.name === dpart?.material);
-    const epsE = S && dmat ? S.field(dmat.eps_r, eps, `material ${ascii(p.name)} eps_r`) : null;
+    // A datasheet epsilon is not the fitted material's band-centre epsilon. The
+    // explicit unsupported-dispersion warning above applies to numeric appearance
+    // values only; never substitute the original parameter as constant physics.
+    const epsE = S && dmat && !mat.dispersion ? S.field(dmat.eps_r, eps, `material ${ascii(p.name)} eps_r`) : null;
     if (epsE && kappa > 0) S!.numeric.push(`material ${ascii(p.name)}: the loss (Sigma ${n(kappa)} S/m, from tan d) stays a number while eps_r follows the parameters`);
     // Folder "" keeps the plain name: a material inside a folder is referenced as "folder/name".
     // .Sigma is what CST 2019+ records (older releases: .Kappa).
@@ -1410,6 +1414,8 @@ export function cstMacro(b: Bundle, opt: CstOptions = DEFAULT_CST_OPTIONS, extra
   }
 
   const ffs = b.results?.farfield ?? [];
+  if (pd?.far_field?.circular === true || ffs.some(ff => ff.cp))
+    m.warnings.push("far_field.circular is not exported: RHCP/LHCP and axial-ratio postprocessing must be configured after importing the CST-compatible VBA macro");
   // a model with a far-field box but no analysed pattern yet (a design's preview): the import turns
   // the far field on again
   if (b.nf2ff_box && !ffs.length) data(m, { far_field: true });

@@ -77,6 +77,7 @@ export function MaterialLibraryDialog(props: { onClose: () => void; onManage?: (
                 <tr>
                   <td>
                     <div class="dm-lib-name">{m.name} <span class="muted">{materialKindLabel(m.kind)}</span></div>
+                    <Show when={m.dispersion}><div class="dm-lib-note">{t("props.material.ds")}</div></Show>
                   </td>
                   <td class="mono">{m.kind === "metal" ? (m.conductivity !== undefined ? fmt.num(m.conductivity, 4) + " S/m" : "PEC") : `${fmt.num(m.eps_r ?? 1, 3)}${"mu_r" in m && m.mu_r !== undefined ? ` · μr ${fmt.num(m.mu_r as number, 3)}` : ""}`}</td>
                   <td class="mono">{userLoss(m)}</td>
