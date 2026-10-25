@@ -35,6 +35,8 @@ export interface PointSeries {
   label: string;
   color: string;
   shape?: "circle" | "diamond";
+  /** Overlay samples of an already-labelled line without duplicating its legend. */
+  hideLegend?: boolean;
   x: number[];
   y: number[];
   /** per point: flagged (a ring in the warning colour) with this text in its tooltip */
@@ -164,7 +166,8 @@ export default function LineChart(props: LineChartProps) {
     },
     b: 40,
   };
-  const legendCount = () => props.series.length + (props.points?.length ?? 0);
+  const legendPoints = () => (props.points ?? []).filter(p => !p.hideLegend);
+  const legendCount = () => props.series.length + legendPoints().length;
   // Direct series labels (2-4 series) sit in a gutter to the right of the plot, not over the curves.
   // Only a series that ends within the right 15 % of the x range gets one (a series that stops
   // earlier is named by the legend); the gutter fits the widest such label, up to 30 % of the width.
@@ -433,7 +436,7 @@ export default function LineChart(props: LineChartProps) {
               </span>
             )}
           </For>
-          <For each={props.points ?? []}>
+          <For each={legendPoints()}>
             {(p) => (
               <span class="legend-item" title={p.label}>
                 <span class={`legend-key legend-point legend-point-${p.shape ?? "circle"}`} style={{ background: `var(${p.color})` }} />

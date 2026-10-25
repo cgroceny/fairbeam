@@ -11,6 +11,7 @@ import { useModal } from "../lib/dialog";
 import SweepSummaryMulti, { isMultiPortGroup } from "./SweepSummaryMulti";
 import { ClearQueueButton, engineThreadsText, jobName, QueueButton } from "./RunQueue";
 import { t } from "../i18n";
+import SweepTrend from './SweepTrendPanel';
 
 type StatusFilter = "all" | "active" | "done" | "failed" | "stopped";
 /** label: an i18n key */
@@ -152,6 +153,7 @@ export function SweepSummary(props: { group: SweepGroup; onOpenRun?: (file: stri
   const toggle = (key: SortKey) => setSort((s) => (s.key === key ? { key, dir: s.dir === 1 ? -1 : 1 } : { key, dir: 1 }));
   return (
     <div class="rp-summary">
+      <SweepTrend group={props.group} />
       <div class="cluster-sm">
         <button class="btn btn-ghost btn-sm" onClick={copyData}>{t("results.toolbar.copyData")}</button>
         <button class="btn btn-ghost btn-sm" onClick={exportCsv}>{t("runHistory.exportCsv")}</button>

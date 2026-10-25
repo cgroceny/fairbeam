@@ -1422,6 +1422,26 @@ and picks a geometric parameter, not the design frequency; choosing another para
 range. The optimizer's first parameter is also a geometric one, with bounds of the current value
 ±20 %.
 
+**Compare all runs** on a sweep folder (or double-click the folder) includes **Sweep trend**;
+the Runs panel's expanded sweep has the same view. Select a sequence and plot best-match
+frequency, minimum |S11|, matched bandwidth, peak directivity or radiation efficiency against
+its first parameter. The second parameter gives separate traces. More than eight traces are
+selected individually; the table and trend CSV still contain all of them. Parameter coordinates
+use the planner's ten significant digits and their model units. There is no 2D heatmap.
+
+Set the reference frequency and a positive half-window (default: 10% of that frequency).
+Within that fixed window, each trace follows the band nearest its preceding available frequency,
+from low to high parameter values. This is a frequency-association heuristic, not proof of mode
+identity. Equally near bands are ambiguous. Missing, failed, unfinished and duplicate-coordinate
+jobs leave gaps; slopes use only adjacent available points. Bandwidth needs both stored band
+edges. Radiation quantities use the nearest stored far-field sample within the half-window of
+the selected band, and list that sample's actual frequency. No new simulation or convergence
+qualification is implied. Raw efficiency outside 0–100% is flagged rather than clipped.
+
+**Export trend CSV** includes every expected coordinate, job identity/status, selection settings,
+sample frequencies, availability reason, raw metric and adjacent-point sensitivity. SVG and PNG
+buttons export the current chart with its settings in the title; CSV numbers use decimal points.
+
 The optimizer checks every candidate of a design before it simulates it. A candidate with check
 errors, or one whose values make metal overhang its substrate or float in the air
 (`metal-overhang`, `metal-floating` that the design at its own values does not have), is not
