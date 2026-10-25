@@ -1,7 +1,6 @@
 """Starter designs for the Start screen's "New project" (``design.template_design``).
 
-Each one is a small parametric design that simulates in seconds and passes the design checks
-without errors or warnings at its defaults: PML boundaries (8 cells), the automatic mesh at 20
+Each one is a small parametric design: PML boundaries (8 cells), the automatic mesh at 20
 cells per wavelength (the sleeve dipole keeps the 30 it was tuned on), end criterion -60 dB, far
 field on for the antennas, and every loss tangent given at the design frequency f0 (openEMS
 applies tan δ as a constant conductivity, exact at ``tan_d_freq`` only). The empty project and the
@@ -10,6 +9,8 @@ patch starter are in :mod:`fairbeam.design`.
 Validation (one run each at the defaults, GPU engine; the numbers are in docs/DESIGNER.md,
 "Starters"): the dipole, the monopole and the sleeve dipole resonate near f0, the line is matched
 across its band, the open waveguide radiates from 8 to 12 GHz.
+The f0-driven inset patch is an analytical starting point only; no full-wave resonance,
+matching, convergence or runtime result is claimed for it.
 """
 
 from __future__ import annotations
@@ -24,6 +25,60 @@ MESH = {"mode": "auto", "cells_per_wavelength": 20, "refine_features": False}
 
 def _design(id_: str, name: str, description: str, **rest) -> dict:
     return {"schema": DESIGN_SCHEMA, "model": {"id": id_, "name": name, "description": description}, **rest}
+
+
+def inset_patch_design(id_: str, name: str) -> dict:
+    """First-order inset patch, with a quasi-static 50 ohm feed and slot-model inset.
+
+    The independent input box keeps W/h > 16 and h*sqrt(eps_r)/lambda < 0.04.
+    Board margins, feed length and gap are layout choices, not fitted matching
+    corrections. Four touching metal rectangles leave two open inset slots.
+    """
+    return _design(
+        id_, name,
+        "Analytical inset-fed patch starting point. Set f0, eps_r and h; run mesh and domain "
+        "convergence before using resonance, matching or radiation results. No full-wave validation yet.",
+        params=[
+            {"key": "f0", "default": 2.4, "label": "Design frequency", "unit": "GHz", "min": 1, "max": 3},
+            {"key": "eps_r", "default": 4.4, "label": "Substrate permittivity", "unit": "", "min": 2, "max": 6},
+            {"key": "h", "default": 1.6, "label": "Substrate thickness", "unit": "mm", "min": 0.4, "max": 1.6},
+            {"key": "tan_d", "default": 0.02, "label": "Loss tangent at f0", "unit": "", "min": 0, "max": 0.05},
+            {"key": "lam0", "expr": "wavelength(f0)", "label": "Free-space wavelength", "unit": "mm"},
+            {"key": "W", "expr": "lam0/2*sqrt(2/(eps_r+1))", "label": "Estimated patch width (y)", "unit": "mm"},
+            {"key": "eps_eff", "expr": "(eps_r+1)/2+(eps_r-1)/2/sqrt(1+12*h/W)", "label": "Patch effective permittivity", "unit": ""},
+            {"key": "delta_l", "expr": "0.412*h*(eps_eff+0.3)*(W/h+0.264)/((eps_eff-0.258)*(W/h+0.8))", "label": "Edge length extension", "unit": "mm"},
+            {"key": "L", "expr": "lam0/(2*sqrt(eps_eff))-2*delta_l", "label": "Estimated patch length (x)", "unit": "mm"},
+            {"key": "feed_w", "expr": "microstrip_width(50,eps_r,h)", "label": "Estimated 50 ohm feed width", "unit": "mm"},
+            {"key": "inset", "expr": "patch_inset(50,L,W,f0)", "label": "Estimated 50 ohm inset", "unit": "mm"},
+            {"key": "gap", "expr": "0.5*h", "label": "Slot gap (layout choice)", "unit": "mm"},
+            {"key": "feed_len", "expr": "max(6*h,0.1*lam0)", "label": "External feed length (layout choice)", "unit": "mm"},
+            {"key": "margin", "expr": "max(6*h,0.08*lam0)", "label": "Board margin (layout choice)", "unit": "mm"},
+            {"key": "x_feed", "expr": "-L/2-feed_len", "label": "Feed-side board edge", "unit": "mm"},
+            {"key": "x_in", "expr": "-L/2+inset", "label": "Inset contact position", "unit": "mm"},
+            {"key": "slot_y", "expr": "feed_w/2+gap", "label": "Outer slot edge", "unit": "mm"},
+        ],
+        simulation={"f_min": "0.7*f0", "f_max": "1.3*f0", "boundaries": PML, "end_criteria_db": END_DB},
+        materials=[
+            {"name": "copper", "kind": "metal"},
+            {"name": "substrate", "kind": "dielectric", "eps_r": "eps_r", "tan_d": "tan_d", "tan_d_freq": "f0"},
+        ],
+        parts=[
+            {"name": "substrate", "material": "substrate", "label": "Substrate",
+             "primitives": [{"kind": "box", "start": ["x_feed", "-W/2-margin", 0], "stop": ["L/2+margin", "W/2+margin", "h"]}]},
+            {"name": "gnd", "material": "copper", "label": "Ground plane",
+             "primitives": [{"kind": "box", "start": ["x_feed", "-W/2-margin", 0], "stop": ["L/2+margin", "W/2+margin", 0]}]},
+            {"name": "patch", "material": "copper", "label": "Inset patch and feed",
+             "primitives": [
+                 {"kind": "box", "start": ["x_in", "-W/2", "h"], "stop": ["L/2", "W/2", "h"]},
+                 {"kind": "box", "start": ["-L/2", "slot_y", "h"], "stop": ["x_in", "W/2", "h"]},
+                 {"kind": "box", "start": ["-L/2", "-W/2", "h"], "stop": ["x_in", "-slot_y", "h"]},
+                 {"kind": "box", "start": ["x_feed", "-feed_w/2", "h"], "stop": ["x_in", "feed_w/2", "h"]},
+             ]},
+        ],
+        ports=[{"number": 1, "kind": "lumped", "R": 50, "start": ["x_feed", "-feed_w/2", 0],
+                "stop": ["x_feed", "feed_w/2", "h"], "direction": "z", "excite": 1}],
+        mesh=dict(MESH), far_field={"enabled": True, "phase_center": [0, 0, "h"], "frequencies": ["f0"]},
+    )
 
 
 def dipole_design(id_: str, name: str) -> dict:
