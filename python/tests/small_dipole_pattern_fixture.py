@@ -6,6 +6,7 @@ The finite model is compared with independently integrated sin-squared power.
 import math
 from pathlib import Path
 import re
+import tempfile
 
 import h5py
 import numpy as np
@@ -32,6 +33,10 @@ LIMITS=dict(pattern=.01,directivity=.01,native_directivity=.02,beamwidth_deg=1.,
     change_pattern=.002,change_directivity=.003,change_beamwidth_deg=.2,
     change_power_balance=.02,feed_z_relative=.005)
 SCOPE='Finite PEC-strip radiation pattern; input impedance is recorded but is outside pattern qualification'
+PREVIOUS_HEAD='2647318c915550c0af617e6c5e054dad6c0dc87b'
+PREVIOUS_SOURCE={
+    'tests/small_dipole_pattern_fixture.py':'77bda0bcee9a61530a739cc5920287ebc02c9654c734f8e87f9a4f17c03b564f',
+    'tests/test_small_dipole_pattern.py':'767db5a343e471f31000fdc3667832e5b3a0d09303fb009cf47c8fb96fc728af'}
 
 
 def identity():
@@ -39,6 +44,36 @@ def identity():
         'tests/coax_resonator_fixture.py','tests/coupled_stripline_fixture.py',
         'tests/test_coax_resonator.py','fairbeam/simulation.py','fairbeam/excitation.py','fairbeam/procutil.py')
     return {name:sha(ROOT/'python'/name)for name in names}
+
+
+def wall_limit(value):
+    if isinstance(value,bool)or not isinstance(value,(int,float))or not np.isfinite(value)or not 0<value<=2700.:
+        raise ValueError('finite wall limit in 0..2700 seconds required; default is 1800')
+    return float(value)
+
+
+def audit_capture_provenance(out,m,sim):
+    """Keep original receipts; admit only the pinned pre-wall-option source."""
+    import json
+    out=Path(out);receipt_path=out.parent/'worker.json'
+    receipt=json.loads(receipt_path.read_text());current=identity()
+    previous=dict(current,**PREVIOUS_SOURCE);legacy=m['source']!=current
+    if legacy and (m['source']!=previous or receipt['driver_head']!=PREVIOUS_HEAD):
+        raise ValueError('stored source changed')
+    deadline=wall_limit(receipt['deadline_seconds'])
+    times=[receipt['wall_seconds'],receipt['monotonic_seconds']]
+    if (receipt['exit_code']!=0 or receipt['failure']is not None
+        or any(isinstance(v,bool)or not isinstance(v,(int,float))or not np.isfinite(v)or v<0 or v>deadline for v in times)):
+        raise ValueError('process receipt rejected')
+    if legacy:
+        if deadline!=1800.:raise ValueError('original capture must retain its 1800-second receipt')
+    elif m.get('source_deadline_seconds')!=deadline or m.get('worker_receipt_sha256')!=sha(receipt_path):
+        raise ValueError('process receipt changed')
+    # Changing the supervisor cannot silently change the native physical model.
+    with tempfile.TemporaryDirectory()as tmp:
+        path=Path(tmp)/'input.xml';sim.fdtd.Write2XML(str(path))
+        if sha(path)!=m['input_sha256']:raise ValueError('rebuilt native input changed')
+    return receipt
 
 
 def angular_metrics(power,theta=THETA,phi=PHI):
@@ -280,17 +315,17 @@ def capture(out,n,control='ordinary',pilot_s=None):
 
 def read(out):
     import json
-    out=Path(out);m=json.loads((out/'report.json').read_text());_,_,expected=build(m['n'],m['control'],m['cap_s'])
-    if any(m.get(k)!=v for k,v in expected.items())or m['source']!=identity()or m['runtime']!=environment.runtime_identity():
+    out=Path(out);m=json.loads((out/'report.json').read_text());sim,_,expected=build(m['n'],m['control'],m['cap_s'])
+    if any(m.get(k)!=v for k,v in expected.items())or m['runtime']!=environment.runtime_identity():
         raise ValueError('stored model/source/runtime changed')
+    audit_capture_provenance(out,m,sim)
     if not all(quality(m).values()):raise ValueError('native source not admitted')
     for path,want in [('input.xml',m['input_sha256']),('operator-input.xml',m['operator']['input_sha256']),('operator.json',m['operator_sha256']),
         ('data.npz',m['data_sha256']),*m['field_sha256'].items(),*m['farfield_sha256'].items()]:
         if sha(out/path)!=want:raise ValueError('stored input/data changed')
-    log=out.parent/'worker.log';audit_header(log.read_text(),m);receipt=json.loads((out.parent/'worker.json').read_text())
-    if (sha(log)!=m['native_log_sha256']or receipt['exit_code']!=0 or receipt['failure']is not None
-        or receipt['deadline_seconds']!=1800. or max(receipt['wall_seconds'],receipt['monotonic_seconds'])>1800.):raise ValueError('log/process receipt changed')
-    if json.loads((out.parent/'plan.json').read_text())!=dict(expected,source=identity(),runtime=environment.runtime_identity(),input_sha256=m['input_sha256']):
+    log=out.parent/'worker.log';audit_header(log.read_text(),m)
+    if sha(log)!=m['native_log_sha256']:raise ValueError('native log changed')
+    if json.loads((out.parent/'plan.json').read_text())!=dict(expected,source=m['source'],runtime=environment.runtime_identity(),input_sha256=m['input_sha256']):
         raise ValueError('pre-field plan changed')
     stats=np.loadtxt(out/'raw/openEMS_stats.txt',comments='%')
     if m['native']!=dict(cells=int(stats[0]),dt_s=float(stats[1]),timesteps=int(stats[2]),numerical_time_s=float(stats[3]),iteration_wall_s=float(stats[4])):

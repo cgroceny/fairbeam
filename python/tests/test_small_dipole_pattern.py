@@ -28,16 +28,17 @@ def freeze(out,n,control,cap=None):
     f.save(out/'plan.json',m);return m
 
 
-def acquire(out,n,control='ordinary',rate=20.,pilot_s=None):
+def acquire(out,n,control='ordinary',rate=20.,pilot_s=None,max_wall_seconds=1800.):
+    deadline=f.wall_limit(max_wall_seconds)
     out=Path(out).resolve()
     if out.exists():raise ValueError('fresh acquisition path required')
     if pilot_s is not None and (not np.isfinite(pilot_s)or not 0<pilot_s<=.5e-9):raise ValueError('pilot in 0..0.5 ns required')
     _,_,m=f.build(n,control,pilot_s);seconds=forecast(m,rate)
-    if seconds>1800.:raise ValueError('over 30 minutes/source; defer acquisition')
+    if seconds>deadline:raise ValueError('forecast exceeds selected wall limit; defer acquisition')
     out.mkdir(parents=True,exist_ok=False);m=freeze(out,n,control,pilot_s)
     state=dict(status='prepared',started_utc=datetime.now(timezone.utc).isoformat(),source=m['source'],runtime=m['runtime'],
         driver_head=subprocess.check_output(['git','rev-parse','HEAD'],cwd=f.ROOT,text=True).strip(),
-        forecast_seconds=seconds,rate_mcps=rate,pilot=pilot_s is not None,active_launcher_pid=None,qualified=False)
+        forecast_seconds=seconds,rate_mcps=rate,source_deadline_seconds=deadline,pilot=pilot_s is not None,active_launcher_pid=None,qualified=False)
     proc=None;start,wall=time.monotonic(),time.time();code=None;failure=None;command=[]
     try:
         command=[sys.executable,'-m','tests.test_small_dipole_pattern','--worker','--mesh',str(n),'--control',control,'--out',str(out/'capture')]
@@ -52,16 +53,17 @@ def acquire(out,n,control='ordinary',rate=20.,pilot_s=None):
                     if f.MARKER in text and re.search(r'Energy:\s*~\s*[+-]?(?:nan|inf)\b',text.split(f.MARKER)[-1],re.I):
                         raise ValueError('nonfinite native energy')
                     return proc.wait(timeout=timeout)
-            try:code=wait_owned(Watched(),seconds=1800.)
+            try:code=wait_owned(Watched(),seconds=deadline)
             except BaseException as error:failure=repr(error);raise
             finally:
                 if proc.poll()is None:terminate_group(proc.pid,grace=0,job=proc.win_job);proc.wait(timeout=15)
                 release_group(proc)
                 f.save(out/'worker.json',dict(command=command,pid=proc.pid,exit_code=code,failure=failure,
-                    wall_seconds=time.time()-wall,monotonic_seconds=time.monotonic()-start,deadline_seconds=1800.,driver_head=state['driver_head']))
+                    wall_seconds=time.time()-wall,monotonic_seconds=time.monotonic()-start,deadline_seconds=deadline,driver_head=state['driver_head']))
         if code:raise RuntimeError('native worker failed; raw prefix retained')
         report=json.loads((out/'capture/report.json').read_text());f.audit_header((out/'worker.log').read_text(),report)
-        report['native_log_sha256']=f.sha(out/'worker.log');f.save(out/'capture/report.json',report)
+        report.update(native_log_sha256=f.sha(out/'worker.log'),source_deadline_seconds=deadline,
+            worker_receipt_sha256=f.sha(out/'worker.json'));f.save(out/'capture/report.json',report)
         if pilot_s is not None:
             q=f.quality(report)
             if not all(q[k]for k in ('grid','clock','time','operator','geometry','probes','engine'))or report['native']['timesteps']!=report['max_timesteps']:
@@ -141,7 +143,9 @@ def study(root):
             if (m['n'],m['control'])!=(n,c):raise ValueError('stored cohort does not match its declared mesh/control')
             row=compare(root/name/'capture')
         except (ValueError,AssertionError,FileNotFoundError)as error:rejected.append(dict(name=name,reason=repr(error)));continue
-        data[name]=(m,d);rows.append(dict(name=name,**row))
+        receipt=json.loads((root/name/'worker.json').read_text())
+        data[name]=(m,d);rows.append(dict(name=name,capture_source_head=receipt['driver_head'],
+            source_deadline_seconds=receipt['deadline_seconds'],**row))
         a={k:(np.repeat(v[:1],2,axis=0)if k in ('e_theta','e_phi','prad_w','native_dmax')else v)for k,v in d.items()}
         b={k:(np.repeat(v[1:],2,axis=0)if k in ('e_theta','e_phi','prad_w','native_dmax')else v)for k,v in d.items()}
         surfaces.append(dict(name=name,**changes((m,a),(m,b))))
@@ -307,16 +311,135 @@ class SmallDipolePatternTests(unittest.TestCase):
             self.assertEqual(json.loads((out/'worker.json').read_text())['exit_code'],2)
             self.assertFalse((out/'comparison.json').exists());self.assertIsNone(json.loads((out/'progress.json').read_text())['active_launcher_pid'])
 
+    def test_selected_wall_limit_is_opt_in_and_records_the_actual_waiter(self):
+        for deadline in (1800.,2700.):
+            proc=Mock(pid=123,win_job=None);proc.poll.return_value=2
+            with tempfile.TemporaryDirectory()as tmp,patch(__name__+'.popen_group',return_value=proc),patch(__name__+'.wait_owned',return_value=2)as wait,patch(__name__+'.release_group'):
+                out=Path(tmp)/'failed';kwargs={}if deadline==1800. else dict(max_wall_seconds=deadline)
+                with self.assertRaises(RuntimeError):acquire(out,2,'dt',rate=1000.,**kwargs)
+                self.assertEqual(wait.call_args.kwargs['seconds'],deadline)
+                self.assertEqual(json.loads((out/'worker.json').read_text())['deadline_seconds'],deadline)
+                self.assertEqual(json.loads((out/'progress.json').read_text())['source_deadline_seconds'],deadline)
+
+    def test_invalid_wall_limits_never_dispatch_or_create_output(self):
+        with tempfile.TemporaryDirectory()as tmp,patch(__name__+'.popen_group')as launch:
+            out=Path(tmp)/'absent'
+            for limit in (True,0,-1,2701,float('nan'),float('inf'),'2700'):
+                with self.assertRaises(ValueError):acquire(out,1,max_wall_seconds=limit)
+            self.assertFalse(out.exists());launch.assert_not_called()
+
+    def test_acquire_timeout_uses_real_waiter_and_cleans_owned_process(self):
+        from tests import test_coax_resonator as owner
+
+        for deadline in (1800., 2700.):
+            for scenario in ('suspend', 'monotonic', 'late_completion'):
+                with self.subTest(deadline=deadline, scenario=scenario):
+                    class Clock:
+                        elapsed, wall = 10., 100.
+                        def monotonic(self):return self.elapsed
+                        def time(self):return self.wall
+                    clock = Clock()
+
+                    class Process:
+                        pid, win_job, returncode = 123, object(), None
+                        def __init__(self):self.waits = []
+                        def poll(self):return self.returncode
+                        def wait(self, timeout=None):
+                            self.waits.append(timeout)
+                            if self.returncode is not None:return self.returncode
+                            clock.elapsed += deadline + .25 if scenario == 'monotonic' else .1
+                            clock.wall += .1 if scenario == 'monotonic' else deadline + .25
+                            if scenario == 'late_completion':
+                                self.returncode = 0
+                                return 0
+                            raise subprocess.TimeoutExpired('fake-owned-worker', timeout)
+
+                    proc = Process()
+                    def terminate(*args, **kwargs):proc.returncode = -15
+                    with tempfile.TemporaryDirectory() as tmp, \
+                         patch(__name__ + '.popen_group', return_value=proc) as launch, \
+                         patch(__name__ + '.time', clock), patch.object(owner, 'time', clock), \
+                         patch.object(owner, 'terminate_group', side_effect=terminate) as stop, \
+                         patch(__name__ + '.terminate_group', side_effect=terminate) as fallback, \
+                         patch(__name__ + '.release_group') as release:
+                        out = Path(tmp) / 'timeout'
+                        kwargs = {} if deadline == 1800. else dict(max_wall_seconds=deadline)
+                        action = 'returned after' if scenario == 'late_completion' else 'exceeded'
+                        message = f'owned FDTD worker {action} its {deadline:g}-second deadline'
+                        with self.assertRaisesRegex(TimeoutError, message):
+                            acquire(out, 1, rate=1000., **kwargs)
+                        launch.assert_called_once()
+                        if scenario == 'late_completion':
+                            stop.assert_not_called();self.assertEqual(proc.waits, [1.])
+                        else:
+                            stop.assert_called_once_with(proc.pid, grace=0, job=proc.win_job)
+                            self.assertEqual(proc.waits, [1., 15])
+                        fallback.assert_not_called();release.assert_called_once_with(proc)
+                        receipt = json.loads((out / 'worker.json').read_text())
+                        progress = json.loads((out / 'progress.json').read_text())
+                        self.assertEqual(receipt['deadline_seconds'], deadline)
+                        self.assertEqual(receipt['failure'], repr(TimeoutError(message)))
+                        self.assertIsNone(receipt['exit_code'])
+                        self.assertGreater(max(receipt['wall_seconds'], receipt['monotonic_seconds']), deadline)
+                        self.assertEqual(progress['status'], 'rejected')
+                        self.assertEqual(progress['reason'], receipt['failure'])
+                        self.assertIsNone(progress['active_launcher_pid'])
+                        self.assertFalse((out / 'comparison.json').exists())
+
+    def test_forecast_uses_selected_limit_without_changing_measured_rate(self):
+        proc=Mock(pid=123,win_job=None);proc.poll.return_value=2
+        with tempfile.TemporaryDirectory()as tmp,patch(__name__+'.forecast',return_value=1900.),patch(__name__+'.popen_group',return_value=proc)as launch,patch(__name__+'.wait_owned',return_value=2),patch(__name__+'.release_group'):
+            out=Path(tmp)/'bounded'
+            with self.assertRaises(ValueError):acquire(out,2,'dt',rate=23.592156395443137)
+            self.assertFalse(out.exists());launch.assert_not_called()
+            with self.assertRaises(RuntimeError):acquire(out,2,'dt',rate=23.592156395443137,max_wall_seconds=2700.)
+            state=json.loads((out/'progress.json').read_text())
+            self.assertEqual(state['rate_mcps'],23.592156395443137);self.assertEqual(state['forecast_seconds'],1900.)
+
+    def test_pinned_old_capture_keeps_its_source_receipt_and_native_input(self):
+        with tempfile.TemporaryDirectory()as tmp:
+            out=Path(tmp)/'capture';out.mkdir();receipt_path=out.parent/'worker.json'
+            sim=Mock();sim.fdtd.Write2XML.side_effect=lambda p:Path(p).write_bytes(b'unchanged native input')
+            current=dict(f.identity());source=dict(current,**f.PREVIOUS_SOURCE)
+            native=out/'input.xml';native.write_bytes(b'unchanged native input')
+            m=dict(source=source,input_sha256=f.sha(native))
+            receipt=dict(driver_head=f.PREVIOUS_HEAD,deadline_seconds=1800.,wall_seconds=1200.,monotonic_seconds=1200.,exit_code=0,failure=None)
+            f.save(receipt_path,receipt);before=receipt_path.read_bytes()
+            f.audit_capture_provenance(out,m,sim);self.assertEqual(receipt_path.read_bytes(),before)
+            for key,value in (('driver_head','unrelated'),('deadline_seconds',2700.),('wall_seconds',1801.)):
+                f.save(receipt_path,dict(receipt,**{key:value}))
+                with self.assertRaises(ValueError):f.audit_capture_provenance(out,m,sim)
+            f.save(receipt_path,receipt)
+            for name in ('tests/coax_resonator_fixture.py','tests/small_dipole_pattern_fixture.py'):
+                with self.assertRaises(ValueError):f.audit_capture_provenance(out,dict(m,source=dict(source,**{name:'changed'})),sim)
+            sim.fdtd.Write2XML.side_effect=lambda p:Path(p).write_bytes(b'changed native input')
+            with self.assertRaises(ValueError):f.audit_capture_provenance(out,m,sim)
+
+    def test_new_receipt_hash_deadline_and_elapsed_times_are_checked(self):
+        with tempfile.TemporaryDirectory()as tmp:
+            out=Path(tmp)/'capture';out.mkdir();receipt_path=out.parent/'worker.json'
+            sim=Mock();sim.fdtd.Write2XML.side_effect=lambda p:Path(p).write_bytes(b'native input')
+            native=out/'input.xml';native.write_bytes(b'native input')
+            receipt=dict(driver_head='new',deadline_seconds=2700.,wall_seconds=1900.,monotonic_seconds=1900.,exit_code=0,failure=None)
+            f.save(receipt_path,receipt)
+            m=dict(source=f.identity(),input_sha256=f.sha(native),source_deadline_seconds=2700.,worker_receipt_sha256=f.sha(receipt_path))
+            f.audit_capture_provenance(out,m,sim)
+            for key,value in (('deadline_seconds',1800.),('wall_seconds',2701.),('monotonic_seconds',float('nan')),('failure','timeout')):
+                changed=dict(receipt,**{key:value});receipt_path.write_text(json.dumps(changed))
+                # Even when rehashed, a mismatched/overrun receipt is rejected.
+                with self.assertRaises(ValueError):f.audit_capture_provenance(out,dict(m,worker_receipt_sha256=f.sha(receipt_path)),sim)
+
 
 def main():
     p=argparse.ArgumentParser(description=__doc__);mode=p.add_mutually_exclusive_group(required=True)
     for name in ('prepare','fdtd','worker','compare','study'):mode.add_argument('--'+name,action='store_true')
     p.add_argument('--out',type=Path,required=True);p.add_argument('--mesh',type=int,choices=f.MESHES,default=1)
     p.add_argument('--control',choices=f.CONTROLS,default='ordinary');p.add_argument('--rate-mcps',type=float,default=20.)
+    p.add_argument('--max-wall-seconds',type=float,default=1800.,help='opt-in source guard, at most 2700 seconds; default 1800')
     p.add_argument('--pilot-seconds',type=float);a=p.parse_args()
     if a.pilot_seconds is not None and (not(a.fdtd or a.worker)or not np.isfinite(a.pilot_seconds)or not 0<a.pilot_seconds<=.5e-9):p.error('performance-only pilot in 0..0.5 ns required')
     if a.worker:f.capture(a.out,a.mesh,a.control,a.pilot_seconds);return
-    if a.fdtd:r=acquire(a.out,a.mesh,a.control,a.rate_mcps,a.pilot_seconds)
+    if a.fdtd:r=acquire(a.out,a.mesh,a.control,a.rate_mcps,a.pilot_seconds,a.max_wall_seconds)
     elif a.compare:r=compare(a.out/'capture')
     elif a.study:r=study(a.out)
     else:
