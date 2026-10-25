@@ -146,6 +146,15 @@ input[data-bad-input] { border-color: var(--al-critical); }
 .rp-sweep-body { padding: var(--al-space-2) var(--al-space-2) var(--al-space-3) var(--al-space-5); }
 .rp-sweep-body .rp-hlist { margin: 0; }
 .rp-summary { overflow-x: auto; }
+.sweep-trend { margin-block: var(--al-space-3); min-width: 0; }
+.sweep-trend > summary { cursor: pointer; font-weight: 600; margin-bottom: var(--al-space-2); }
+.sweep-trend-controls { align-items: end; flex-wrap: wrap; }
+.sweep-trend-controls label { display: flex; flex-direction: column; gap: var(--al-space-1); min-width: 0; }
+.sweep-trend-controls input { width: 120px; max-width: 100%; }
+.sweep-trend-chart { min-width: 0; height: 290px; display: flex; flex-direction: column; }
+.sweep-trend-chart > .chart-container { flex: 1; min-height: 0; width: 100%; }
+.sweep-trend-chart .chart { height: 100%; }
+.sweep-trend-table { max-height: 320px; overflow: auto; }
 .rp-summary th { padding-right: var(--al-space-2); }
 /* a radiation efficiency above 100 %: not physical (RunHistory.tsx SweepSummary) */
 .rp-summary td.rp-over { color: var(--al-warn); font-weight: 600; }
