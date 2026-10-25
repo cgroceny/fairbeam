@@ -49,6 +49,8 @@ try {
     await page.locator('input[name="home-template"][value="inset-patch"]').click();
     await s.fill(await s.field(await s.T('home.newProject.name')), `Inset synthesis ${lang}`, { blur: false });
     await s.click('home.newProject.create'); await s.wait('.rb');
+    await s.wait('[role=tree]');
+    assert.deepEqual(s.consoleIssues, [], 'new template must render the design tree without exceptions');
     const before = await s.store((_, m) => ({ names: { ...m.s.names().names }, file: JSON.parse(JSON.stringify(m.s.file())), note: m.s.message()?.text }));
     assert.match(before.note || '', lang === 'en' ? /no full-wave validation/ : /tam dalga simülasyonuyla doğrulanmadı/);
     await s.wait('body', before.note);
@@ -81,6 +83,7 @@ try {
     await s.waitFor(async id => (await import('/src/designer/store.ts')).file()?.id === id, before.file.id);
     assert.deepEqual(await s.store((_, m) => JSON.parse(JSON.stringify(m.s.draft))), wanted);
     assert.deepEqual(forbidden, [], 'no solver or native-action endpoints requested');
+    assert.deepEqual(s.consoleIssues, [], 'editing and reopening must keep the design tree renderable');
     outcomes.push({ lang, template: true, warning: true, inputs: ['f0', 'eps_r', 'h'], preview: true, saveReopen: true, solverRequests: 0 });
     await context.close();
   }

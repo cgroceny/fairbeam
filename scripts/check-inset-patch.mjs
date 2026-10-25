@@ -20,6 +20,8 @@ const close = (a, b) => { checks++; assert.ok(Math.abs(a - b) <= 1e-9 * Math.max
 const equal = (a, b) => { checks++; assert.deepEqual(a, b); };
 const must = (a, message) => { checks++; assert.ok(a, message); };
 for (const { design: d, values, parts } of payload) {
+  for (const key of ["params", "materials", "parts", "ports", "resistors"]) must(Array.isArray(d[key]), `${key}: Designer collection contract`);
+  equal(d.resistors, []); equal(d.ports[0].type, "lumped");
   const { names, errors } = paramValues(d.params);
   equal(Object.keys(errors), []);
   for (const [key, value] of Object.entries(values)) close(names[key], value);

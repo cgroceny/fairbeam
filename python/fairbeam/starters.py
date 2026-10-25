@@ -75,8 +75,9 @@ def inset_patch_design(id_: str, name: str) -> dict:
                  {"kind": "box", "start": ["x_feed", "-feed_w/2", "h"], "stop": ["x_in", "feed_w/2", "h"]},
              ]},
         ],
-        ports=[{"number": 1, "kind": "lumped", "R": 50, "start": ["x_feed", "-feed_w/2", 0],
+        ports=[{"number": 1, "type": "lumped", "R": 50, "start": ["x_feed", "-feed_w/2", 0],
                 "stop": ["x_feed", "feed_w/2", "h"], "direction": "z", "excite": 1}],
+        resistors=[],
         mesh=dict(MESH), far_field={"enabled": True, "phase_center": [0, 0, "h"], "frequencies": ["f0"]},
     )
 

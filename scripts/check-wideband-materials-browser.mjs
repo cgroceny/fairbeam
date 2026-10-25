@@ -94,6 +94,12 @@ try {
       return { before: material, after: JSON.parse(JSON.stringify(store.draft.materials.find(m => m.name === "Laminate"))) };
     });
     assert.deepEqual(saved.after, saved.before, "save/reopen preserves expressions, reference and pole intent");
+    await page.evaluate(async () => {
+      const store = await import("/src/designer/store.ts");
+      store.setSelection({ type: "material", i: store.draft.materials.findIndex(m => m.name === "Laminate") });
+    });
+    await page.waitForSelector(model);
+    await page.evaluate(() => { document.querySelector("#dz-materials-Laminate-dispersion-m1").closest("details").open = true; });
     await page.screenshot({ path: join(out, `editor-${lang}.png`) });
     assert.deepEqual(starts, [], "no solver or renderer start attempts");
     assert.deepEqual(errors, [], "no browser exceptions");

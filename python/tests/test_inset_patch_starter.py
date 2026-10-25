@@ -184,6 +184,17 @@ class InsetPatchStarter(unittest.TestCase):
         with self.assertRaises(ValueError):
             microstrip_width((a + b) / 2, 4.4, 1)
 
+    def test_starter_supplies_designer_collection_contract(self):
+        # The UI's Design type requires these arrays even when they are empty.
+        # Python's optional-field admission alone does not prove a renderable tree.
+        d, _ = specimen({})
+        for key in ("params", "materials", "parts", "ports", "resistors"):
+            self.assertIn(key, d)
+            self.assertIsInstance(d[key], list)
+        self.assertEqual(d["resistors"], [])
+        self.assertEqual(d["ports"][0]["type"], "lumped")
+        self.assertNotIn("kind", d["ports"][0])
+
     def test_create_api_writes_template_without_scheduling_preview_or_run(self):
         from fairbeam.server import App
         from fairbeam import modelfiles
