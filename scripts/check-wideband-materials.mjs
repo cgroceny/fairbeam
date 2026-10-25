@@ -23,7 +23,9 @@ const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const win = process.platform === "win32";
 const venv = win ? join(root, ".venv/Scripts/python.exe") : join(homedir(), "opt/openEMS/venv/bin/python");
 const python = process.env.FAIRBEAM_PYTHON || (existsSync(venv) ? venv : win ? "python" : "python3");
-const py = JSON.parse(execFileSync(python, [join(root, "python/tests/wideband_fixture.py")], {
+// Enforce the stdlib-only bridge on developer machines too: an installed native
+// SDK must not hide an accidental eager package import that fails in web CI.
+const py = JSON.parse(execFileSync(python, ["-I", "-S", join(root, "python/tests/wideband_fixture.py")], {
   env: { ...process.env, PYTHONPATH: join(root, "python") }, encoding: "utf8",
 }));
 const fixture = JSON.parse(readFileSync(join(root, "python/tests/fixtures/wideband_materials.json"), "utf8"));
@@ -109,7 +111,7 @@ states.push(structuredClone(lifecycle));
 const dangling = structuredClone(states[0]);
 dangling.params = dangling.params.filter(p => p.key !== "lower");
 states.push(dangling); // External/malformed edits must still fail closed in both implementations.
-const stateResults = JSON.parse(execFileSync(python, [join(root, "python/tests/wideband_fixture.py"), "--designs"], {
+const stateResults = JSON.parse(execFileSync(python, ["-I", "-S", join(root, "python/tests/wideband_fixture.py"), "--designs"], {
   env: { ...process.env, PYTHONPATH: join(root, "python") }, input: JSON.stringify(states), encoding: "utf8",
 }));
 for (const [i, state] of states.entries()) {

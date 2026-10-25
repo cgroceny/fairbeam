@@ -3,6 +3,15 @@ import copy
 import json
 import sys
 from pathlib import Path
+
+if __name__ == "__main__" and "fairbeam" not in sys.modules:
+    # Like designer_fixture.py, load the real stdlib-only schema modules without
+    # fairbeam.__init__, which eagerly imports the native simulation SDK.
+    import types
+    package = types.ModuleType("fairbeam")
+    package.__path__ = [str(Path(__file__).resolve().parents[1] / "fairbeam")]
+    sys.modules["fairbeam"] = package
+
 from fairbeam.design import blank_design, evaluate, resolve_names
 from fairbeam.design_checks import lint
 from fairbeam.designer_dispersion import resolved_input
