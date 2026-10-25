@@ -1,5 +1,6 @@
 {
   "sweepTrend.title": "Tarama eğilimi",
+  "sweepTrend.nonphysical": "Işıma verimi %0–100 dışında; fiziksel değil.",
   "sweepTrend.metric": "Metrik",
   "sweepTrend.metric.frequency": "En iyi uyum frekansı",
   "sweepTrend.metric.s11": "En düşük |S11|",

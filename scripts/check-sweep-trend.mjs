@@ -47,6 +47,8 @@ assert.equal(sweepTrend([absent], 0, 'directivity', 2.1, 500).series[0].points[0
 const raw = job(1); raw.stats.farfield[1].rad_efficiency = 1.2;
 const point = sweepTrend([raw], 0, 'efficiency', 2.1, 500).series[0].points[0];
 assert.equal(point.value, 120); assert.equal(point.nonphysical, true);
+raw.stats.farfield[1].rad_efficiency = -.1;
+assert.equal(sweepTrend([raw], 0, 'efficiency', 2.1, 500).series[0].points[0].nonphysical, true);
 raw.stats.farfield[1].rad_efficiency = NaN;
 assert.equal(sweepTrend([raw], 0, 'efficiency', 2.1, 500).series[0].points[0].reason, 'metric');
 const csv = sweepTrendCsv(data, 'directivity', 0, 2.1, 500);

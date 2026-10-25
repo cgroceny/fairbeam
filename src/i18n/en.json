@@ -1,5 +1,6 @@
 {
   "sweepTrend.title": "Sweep trend",
+  "sweepTrend.nonphysical": "Radiation efficiency outside 0–100%; not physical.",
   "sweepTrend.metric": "Metric",
   "sweepTrend.metric.frequency": "Best-match frequency",
   "sweepTrend.metric.s11": "Minimum |S11|",

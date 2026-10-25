@@ -85,7 +85,7 @@ export default function SweepTrend(props: { group: SweepGroup }) {
           <thead><tr><th>{data().second ?? t('runHistory.sequence')}</th><th class="num">{data().first}</th><th>{t('runHistory.status')}</th><th class="num">{t(`sweepTrend.metric.${metric()}`)} ({trendUnit(metric())})</th><th class="num">Δ / Δ{data().first}</th><th class="num">{t('sweepTrend.band')}</th><th class="num">{t('sweepTrend.field')}</th><th>{t('sweepTrend.availability')}</th></tr></thead>
           <tbody><For each={data().series}>{s => <For each={s.points}>{p => <tr>
             <td>{s.second === null ? selectedSequence() + 1 : coordinate(s.second!)}</td><td class="num">{coordinate(p.x)}</td><td>{p.status ? p.status.split('|').map(status => t(`progress.status.${status}`)).join(' / ') : '—'}</td>
-            <td class="num" classList={{ 'rp-over': p.nonphysical }}>{value(p.value)}{p.nonphysical ? ' ⚠' : ''}</td><td class="num">{value(p.slope)}</td><td class="num">{value(p.bandGHz)}</td><td class="num">{value(p.fieldGHz)}</td><td>{t(`sweepTrend.reason.${p.reason}`)}<Show when={p.nonphysical}> · {t('runHistory.radEffOver')}</Show></td>
+            <td class="num" classList={{ 'rp-over': p.nonphysical }}>{value(p.value)}{p.nonphysical ? ' ⚠' : ''}</td><td class="num">{value(p.slope)}</td><td class="num">{value(p.bandGHz)}</td><td class="num">{value(p.fieldGHz)}</td><td>{t(`sweepTrend.reason.${p.reason}`)}<Show when={p.nonphysical}> · {t('sweepTrend.nonphysical')}</Show></td>
           </tr>}</For>}</For></tbody>
         </table></div>
       </>}><p role="alert">{t(`sweepTrend.error.${data().error}`)}</p></Show>
