@@ -1058,12 +1058,29 @@ def _cap_array(t, axis, diel, res_air, res_feature=None):
     return c
 
 
+def axis_bottleneck(lines) -> dict:
+    """Original line indices and coordinates; first occurrence wins ties. No geometry attribution."""
+    lines = np.asarray(lines, float)
+    if (lines.ndim != 1 or len(lines) < 2 or not np.all(np.isfinite(lines))
+            or np.any(np.diff(lines) <= 0)):
+        raise ValueError("Mesh lines must be finite and strictly increasing")
+    widths = np.diff(lines)
+    minimum = int(np.argmin(widths))
+    ratios = np.maximum(widths[1:] / widths[:-1], widths[:-1] / widths[1:])
+    worst = int(np.argmax(ratios)) if len(ratios) else None
+    return {"min_interval_index": minimum, "min_interval": lines[minimum:minimum + 2].tolist(),
+            "min_cell": float(widths[minimum]), "max_neighbour_ratio": float(ratios[worst]) if worst is not None else 1.0,
+            "max_neighbour_ratio_index": worst,
+            "max_neighbour_ratio_coordinates": lines[worst:worst + 3].tolist() if worst is not None else None}
+
+
 def mesh_report(sim, res_air, res_min, min_cell, warnings, settings) -> dict:
     lines = [np.asarray(sim.mesh.GetLines(a), float) for a in range(3)]
     cells = [len(l) - 1 for l in lines]
     widths = [np.diff(l) for l in lines]
     dmin = [float(w.min()) for w in widths]
-    ratio = max(float(np.max(np.maximum(w[1:] / w[:-1], w[:-1] / w[1:]))) if len(w) > 1 else 1.0 for w in widths)
+    bottlenecks = {axis: axis_bottleneck(line) for axis, line in zip("xyz", lines)}
+    ratio = max(item["max_neighbour_ratio"] for item in bottlenecks.values())
     dt = sim.unit / (C0 * np.sqrt(sum(1 / d ** 2 for d in dmin)))
     total = int(np.prod(cells))
     return {
@@ -1071,6 +1088,7 @@ def mesh_report(sim, res_air, res_min, min_cell, warnings, settings) -> dict:
         "cells": cells, "total_cells": total,
         "min_cell": round(min(dmin), 5), "max_cell": round(max(float(w.max()) for w in widths), 5),
         "max_neighbour_ratio": round(ratio, 3),
+        "axis_bottlenecks": bottlenecks,
         "res_air": round(res_air, 4), "res_dielectric": round(res_min, 4),
         "timestep_s": float(dt),
         "timesteps_per_ns": round(1e-9 / dt, 1),

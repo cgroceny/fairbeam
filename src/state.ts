@@ -1,6 +1,7 @@
 import { batch, createEffect, createRoot, createSignal, untrack } from "solid-js";
 import { createStore, reconcile } from "solid-js/store";
 import type { Bundle, ProjectIndexEntry } from "./types";
+import type { MeshHighlight } from "./designer/meshBottlenecks";
 import { DEMO, projectUrl, publicUrl } from "./env";
 
 /** demo bundles are immutable per deploy; local projects change under a running viewer */
@@ -65,6 +66,8 @@ createRoot(() => createEffect(() => {
 }));
 export const [hiddenParts, setHiddenParts] = createStore<Record<string, boolean>>({});
 export const [meshPlane, setMeshPlane] = createStore<{ axis: Axis; index: number }>({ axis: "z", index: 0 });
+/** Bound to the exact displayed bundle: a new preview/result cannot inherit stale interval indices. */
+export const [meshHighlight, setMeshHighlight] = createSignal<MeshHighlight | null>(null);
 export const [farfieldIndex, setFarfieldIndex] = createSignal(0);
 /** the E/H field-plane map drawn in the 3D view (index into the bundle's field_planes), or null */
 export const [fieldPlaneMap, setFieldPlaneMap] = createSignal<number | null>(null);

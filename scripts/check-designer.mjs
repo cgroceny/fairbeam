@@ -774,6 +774,7 @@ await import('./check-chart-scale.mjs');
 console.log(`check-designer: ${checks} checks, ${failures} failed (${fx.expressions.length} expressions, ${fx.cases.length} cases)`);
 // This script is part of both CI's check:designer and check:exports aggregations.
 await import('./check-result-session-state.mjs');
+await import('./check-mesh-bottlenecks.mjs');
 await import('./check-planar-ports.mjs');
 await import('./check-pattern-resolution.mjs');
 await import('./check-pattern-cuts.mjs');

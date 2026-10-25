@@ -9,6 +9,7 @@ import type { CircleCut, Design, DesignCut, DesignPart, DesignPrimitive, DesignT
 import { evaluate, namesIn } from "./expr.ts";
 import { wgCutoffGHz, wgMode } from "./checks.ts";
 import { clipPolygons, type Ring } from "./polygonClip.ts";
+import { markCarriedMesh } from "./meshBottlenecks.ts";
 
 type V3 = [number, number, number];
 type M3 = [[number, number, number], [number, number, number], [number, number, number]];
@@ -795,7 +796,7 @@ export function quickBundle(d: Design, names: Record<string, number>, previous: 
     const same = previous && previous.model.id === d.model.id && previous.mesh.x.length > 1;
     const f0 = evaluate(d.simulation.f_min, names) * 1e9, f1 = evaluate(d.simulation.f_max, names) * 1e9;
     for (const [part, entry] of pending) expanded.set(part, entry);
-    return {
+    const result = {
       // the design's own name: exports of a preview (drawings, reports, macros, file names) are deliverables; `preview`
       // marks it as not simulated for the UI
       schema: "fairbeam.project/1", name: d.model.name, preview: true,
@@ -807,6 +808,7 @@ export function quickBundle(d: Design, names: Record<string, number>, previous: 
       focus: { min: lo, max: hi },
       lumped_elements: (previous && same ? previous.lumped_elements : undefined) ?? [],
     } as unknown as Bundle;
+    return same ? markCarriedMesh(result) : result;
   } catch {
     return null;
   }

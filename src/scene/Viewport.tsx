@@ -9,7 +9,8 @@ import { activeExportSurface, exportNotice, geometryAvailable, registerSurfaceEx
 import { CAMERA_VIEWS, VIEW_DIRECTIONS, cameraShortcut, isViewCommand, nearestAxis, poseToSave, validPose, type CameraPose, type ViewName, type ViewCommand } from "./cameraViews";
 import { CameraViewIcon } from "./CameraViewIcon";
 import { stackLabels } from "./labelStack";
-import { bundle, centerView, farfieldIndex, setFarfieldIndex, hiddenParts, hoverPart, layers, meshPlane, selectedPart, selectedShape, setHoverPart, setViewCursor, solidFade, theme } from "../state";
+import { bundle, centerView, farfieldIndex, setFarfieldIndex, hiddenParts, hoverPart, layers, meshPlane, meshHighlight, selectedPart, selectedShape, setHoverPart, setViewCursor, solidFade, theme } from "../state";
+import { bottleneckTarget, meshHighlightSegments } from "../designer/meshBottlenecks";
 import { keepCamera, openingView, setOpeningView } from "../state";
 import { designStem } from "../lib/exportNames";
 import { previewGeometry } from "../designer/transforms";
@@ -860,12 +861,30 @@ export default function Viewport() {
       const shown = k > 1 ? { ...b, mesh: { ...b.mesh, x: thin(b.mesh.x), y: thin(b.mesh.y), z: thin(b.mesh.z) } } : b;
       setMeshNote(k > 1 ? t("viewport.meshThinned", { k, total }) : null);
       const obj = meshPlaneLines(shown, axis, pos, cssVar("--al-text"), 0.35);
+      const marked = meshHighlightSegments(b, meshHighlight(), meshPlane.axis, Math.min(meshPlane.index, lines.length - 1));
+      if (marked.length) {
+        const geometry = new THREE.BufferGeometry();
+        geometry.setAttribute("position", new THREE.Float32BufferAttribute(marked, 3));
+        const highlight = new THREE.LineSegments(geometry, new THREE.LineBasicMaterial({ color: cssVar("--al-focus"), depthTest: false, depthWrite: false }));
+        highlight.name = "mesh-bottleneck";
+        highlight.renderOrder = 6;
+        obj.add(highlight);
+      }
       obj.name = "meshplane";
       obj.renderOrder = 5;
       overlayRoot.add(obj);
       requestRender();
     }
-    createEffect(on([() => layers.mesh, () => meshPlane.axis, () => meshPlane.index], buildMeshPlane));
+    createEffect(on([() => layers.mesh, () => meshPlane.axis, () => meshPlane.index, meshHighlight], buildMeshPlane));
+    // Only an explicit inspector selection moves the camera; new previews and slider motion do not.
+    createEffect(on(meshHighlight, h => {
+      if (!h || h.source !== bundle()) return;
+      const normal = meshPlane.axis;
+      const target = new THREE.Vector3(...bottleneckTarget(h.source, h, normal, meshPlane.index));
+      camera.position.add(target.clone().sub(controls.target));
+      controls.target.copy(target);
+      orientView(({ x: "right", y: "front", z: "top" } as const)[normal]);
+    }, { defer: true }));
 
     function buildPattern() {
       disposeGroup(patternRoot);

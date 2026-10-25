@@ -168,6 +168,14 @@ records of the `Simulation`, and the boundary conditions. Per axis:
 
 ## Report
 
+New reports include `axis_bottlenecks` for x/y/z: the first `min_interval_index`, its two
+`min_interval` coordinates, and `max_neighbour_ratio_index` with its three
+`max_neighbour_ratio_coordinates`. Indices are zero-based into the original mesh line arrays;
+coordinates remain in drawing units. An axis with one cell has no adjacent pair, so its ratio
+index and coordinates are null. Ties choose the first occurrence. These optional fields add
+locations to the existing report; they do not change the mesh, timestep or solver. The Designer
+inspector also derives locations directly from mesh lines, so older bundles remain usable.
+
 `auto_mesh` returns a report, kept in `sim.mesh_report` and written to the bundle as `mesh.auto`:
 
 | Field | Meaning |
