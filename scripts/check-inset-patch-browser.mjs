@@ -53,7 +53,7 @@ try {
     assert.deepEqual(s.consoleIssues, [], 'new template must render the design tree without exceptions');
     const before = await s.store((_, m) => ({ names: { ...m.s.names().names }, file: JSON.parse(JSON.stringify(m.s.file())), note: m.s.message()?.text }));
     assert.match(before.note || '', lang === 'en' ? /no full-wave validation/ : /tam dalga simülasyonuyla doğrulanmadı/);
-    await s.wait('body', before.note);
+    await s.wait('.dz-msg[role=status]', before.note);
     await s.ev(async () => (await import('/src/designer/dockState.ts')).openParametersTab());
     await s.wait('.param-dock');
     for (const [key, value] of [['f0', 1.8], ['eps_r', 3.38], ['h', 0.8]]) {
