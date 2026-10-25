@@ -334,6 +334,8 @@
      "set": {"ports[0].group": {"connection":"series","members":[{"start":["feed+2",0,0],"stop":["feed+2",0,"h"],"direction":"z","polarity":-1}]}}}
   ],
   "cases": [
+    {"name": "wideband input rejects unsupported model", "set": {"materials[1].dispersion": {"model": "drude"}}, "expect": ["error|dispersion|materials.substrate.dispersion"]},
+    {"name": "wideband datasheet outside the band", "set": {"materials[1].dispersion": {"model": "djordjevic-sarkar"}, "materials[1].tan_d_freq": 10}, "expect": ["warning|dispersion-band|materials.substrate.tan_d_freq"]},
     {"name":"planar port excitation cannot follow propagation","set":{"ports":[{"type":"microstrip","number":1,"direction":"x","excitation_direction":"x","start":[0,-1,1],"stop":[10,1,0],"conductor":"copper","measurement_shift":5}]},"expect":["error|planar-port|ports[0]"]},
     {"name":"planar real reference must be positive","set":{"ports":[{"type":"microstrip","number":1,"direction":"x","excitation_direction":"z","start":[0,-1,1],"stop":[10,1,0],"conductor":"copper","measurement_shift":5,"reference_ohm":0}]},"expect":["error|planar-port|ports[0]"]},
     {"name":"CPW gap must be positive","set":{"ports":[{"type":"cpw","number":1,"direction":"x","excitation_direction":"y","start":[0,-1,1],"stop":[10,1,1],"gap":0,"conductor":"copper","measurement_shift":5}]},"expect":["error|planar-port|ports[0]"]},
