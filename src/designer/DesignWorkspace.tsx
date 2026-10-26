@@ -56,9 +56,9 @@ import { cellsText } from "./meshStats";
 import { draftMeshStats } from "./draftMesh";
 import { leaveResultsFor, resultFocus } from "./resultFocus";
 import { activateMainTab, cycleMainTabs, focusActiveMainTab } from "./mainTabsState";
-import { openRibbonResult, ribbonCurrents, ribbonExportReady, ribbonExportReason, ribbonFarfield, ribbonFieldPlanes, ribbonPattern3d, ribbonResult } from "./ribbonResults";
+import { openRibbonResult, ribbonArray, ribbonCurrents, ribbonExportReady, ribbonExportReason, ribbonFarfield, ribbonFieldPlanes, ribbonPattern3d, ribbonResult } from "./ribbonResults";
 import { ARRAY_PATTERN_NOTE, PatternQuantitySelect } from "../components/FarfieldCard";
-import { farfieldOverride } from "../lib/arrayStore";
+import { designerArray } from "./arraySession";
 import RibbonField from "./RibbonField";
 import "../styles/ribbon.css";
 import { cyclePanes } from "./panes";
@@ -749,6 +749,7 @@ export function Ribbon() {
           <RButton icon={CircleDot} label={t("ribbon.post.smith")} title={ribbonResult() ? t("ribbon.post.smithTitle") : t("ribbon.post.runFirst")} disabled={!ribbonResult()} onClick={() => void openRibbonResult("smith")} />
           <RButton icon={Gauge} label={t("ribbon.sim.efficiency")} title={ribbonResult() ? t("ribbon.post.efficiencyTitle") : t("ribbon.post.runFirst")} disabled={!ribbonResult()} onClick={() => void openRibbonResult("efficiency")} />
           <RButton icon={Radar} label={t("ribbon.post.pattern")} title={ribbonResult() ? t("ribbon.post.patternTitle") : t("ribbon.post.runFirst")} disabled={!ribbonResult()} onClick={() => void openRibbonResult("pattern")} />
+          <RButton icon={Radar} label={t("dock.results.array")} title={ribbonArray().reason} disabled={!ribbonArray().ok} pressed={resultFocus()?.view === "array"} onClick={() => void openRibbonResult("array")} />
           <RButton icon={Rotate3d} label={t("ribbon.post.pattern3d")} title={ribbonPattern3d().reason} disabled={!ribbonPattern3d().ok} pressed={resultFocus()?.view === "pattern3d"} onClick={() => void openRibbonResult("pattern3d")} />
           {/* only a run with surface-current maps (#90); the tooltip gives the reason otherwise */}
           <RButton icon={Activity} label={t("ribbon.post.currents")} title={ribbonCurrents().reason} disabled={!ribbonCurrents().ok} onClick={() => void openRibbonResult("currents")} />
@@ -766,7 +767,7 @@ export function Ribbon() {
           <RGroup label={t("ribbon.post.farfield")} icon={Globe}>
             <label class="rb-ff-quantity"><span>{t("ribbon.post.quantity")}</span>
               <PatternQuantitySelect bundle={shown().bundle} ff={shown().ff} class="rp-input"
-                directivityOnly={resultFocus()?.view === "pattern3d" && farfieldOverride() ? ARRAY_PATTERN_NOTE : undefined} />
+                directivityOnly={resultFocus()?.view === "pattern3d" && designerArray.override() ? ARRAY_PATTERN_NOTE : undefined} />
             </label>
           </RGroup>
         )}</Show>

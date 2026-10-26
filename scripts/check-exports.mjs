@@ -18,6 +18,7 @@ import { ffTag, figureSet, patternTag } from "../src/drawing/charts.ts";
 import { parseTouchstone, parseTouchstoneNPort, touchstoneNPort, touchstoneS1p } from "../src/export/touchstone.ts";
 import './check-touchstone-references.mjs';
 import './check-report-units.mjs';
+import './check-array-package-frequency.mjs';
 import './check-drawing-units.mjs';
 import './check-runner-sweep-submit.mjs';
 import { sMatrix } from "../src/lib/sparams.ts";

@@ -49,6 +49,8 @@ const TARGET_LABEL: Record<GoalKind, string> = {
   s11_max: "|S11| ≤",
   bw_min: "opt.target.atLeast",
   dmax_min: "opt.target.atLeast",
+  realized_gain_min: "opt.target.atLeast",
+  efficiency_min: "opt.target.atLeast",
   match_all: "opt.target.everySii",
   sij_max: "|Sij| ≤",
   sij_min: "|Sij| ≥",
@@ -191,6 +193,14 @@ export default function OptimizePanel(props: { onStarted?: (job: import("./api")
                     <X size={14} />
                   </button>
                 </div>
+                <Show when={preset().band}>
+                  <label class="rp-mini" for={id("at-hi")}>
+                    <span>{t("opt.atHi")}</span>
+                    <NumberField id={id("at-hi")} class="rp-input" step="any" min="0" value={g.atHi ?? ""}
+                      onInput={(e) => setGoals(i(), { atHi: e.currentTarget.value, atHiInvalid: e.currentTarget.dataset.badInput === "true" })} />
+                  </label>
+                  <p class="rp-hint op-row-hint">{t("opt.band.hint")}</p>
+                </Show>
                 <p class="rp-hint op-row-hint">{t(preset().hint)}</p>
                 <Show when={err(`goals.${i()}`)}>
                   <p class="rp-error" role="alert"><CircleAlert size={12} aria-hidden="true" /> {err(`goals.${i()}`)}</p>

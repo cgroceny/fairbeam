@@ -23,6 +23,22 @@ Directivity, gain, realized gain and available RHCP/LHCP partial directivities u
 
 The Examples publication-figure menu uses the selected cut, quantity and projection for the active stored run. Its SVG/PDF source includes visible estimate readouts and qualifications, with detailed numerical metrics in SVG description metadata. On-screen figure export preserves the visible chart. Standard generated report packages retain their explicit principal-plane defaults; they do not silently inherit interactive UI state. All cut controls are verified against deterministic synthetic analytic fields, not a new solver or measurement result.
 
+## Designer array synthesis
+
+For a run with at least two stored element-port patterns, the Designer's **Array**
+tab synthesizes directivity from their complex fields at a stored frequency. Its
+amplitude, phase and steering controls also supply the open Pattern tab and 3D
+pattern for that run. Pattern data and figure exports follow the synthesized cut;
+comparisons retain stored results. Feed settings reset when their run or frequency
+changes and are separate from the Examples viewer. Package export uses weights only
+for the exact selected run and captures its selected stored frequency: the weights CSV's
+active reflection and synthesized package/report array figures use that frequency only.
+A selected set with fewer than two elements cannot synthesize or export a Designer feed.
+See [Array feeds in the Designer](DESIGNER.md#array-feeds-in-the-designer)
+for the lifecycle and export rules, and [ARRAYS.md](ARRAYS.md) for the calculation.
+This reuses stored samples without a solver run; it establishes neither new gain or
+efficiency accuracy nor mesh or angular-grid convergence.
+
 ## Unwrapped phase and group delay
 
 In the S-parameters result view or the Examples reflection view, choose **Unwrapped phase**

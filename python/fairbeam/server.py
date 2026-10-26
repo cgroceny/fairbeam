@@ -1745,18 +1745,24 @@ class App:
                 try:
                     if not isinstance(g, dict) or g.get("kind") not in GOAL_KINDS:
                         raise ValueError(f"kind must be one of {', '.join(GOAL_KINDS)}")
-                    num = lambda x: None if x is None else float(x)  # noqa: E731
+                    def num(x):
+                        if isinstance(x, bool):
+                            raise ValueError("goal numbers must not be booleans")
+                        return None if x is None else float(x)
                     ports = g.get("ports")
                     if ports is not None and (not isinstance(ports, list) or len(ports) != 2 or
                                               not all(isinstance(n, int) and not isinstance(n, bool) and 1 <= n <= 64
                                                       for n in ports)):
                         raise ValueError("ports must be two port numbers [i, j]")
-                    goal = make_goal(g["kind"], num(g.get("target")), num(g.get("at")), num(g.get("weight", 1.0)) or 1.0,
-                                     tuple(ports) if ports else None)
+                    goal = make_goal(g["kind"], num(g.get("target")), num(g.get("at")), num(g.get("weight", 1.0)),
+                                     tuple(ports) if ports else None, num(g.get("at_hi")))
                     clean_goals.append({"kind": goal.kind, "target": goal.target, "at": goal.at, "weight": goal.weight,
-                                        "ports": list(goal.ports) if goal.ports else None})
+                                        "ports": list(goal.ports) if goal.ports else None, "at_hi": goal.at_hi})
                 except (TypeError, ValueError) as e:
                     errors[f"goals.{i}"] = str(e)
+        if (any(g["kind"] in ("realized_gain_min", "efficiency_min") for g in clean_goals)
+                and st["end_criteria_db"] is not None and st["end_criteria_db"] > -60):
+            errors["end_criteria_db"] = "realized gain and efficiency goals require -60 dB or stricter"
         max_evals = body.get("max_evals", 12)
         if isinstance(max_evals, bool) or not isinstance(max_evals, int) or not 1 <= max_evals <= MAX_OPT_EVALS:
             errors["max_evals"] = f"a whole number from 1 to {MAX_OPT_EVALS}"

@@ -31,9 +31,9 @@ const eq = (got, want, what) => check(JSON.stringify(got) === JSON.stringify(wan
 eq(ONLY_3D, { open: [], active: "3d" }, "a design starts with the 3D tab only");
 eq(mainTabIds(ONLY_3D), ["3d"], "the 3D tab is always in the strip");
 eq(MAIN_TAB_LABELS["3d"], "3D", "the first tab reads 3D");
-for (const v of ["sparams", "impedance", "vswr", "smith", "efficiency", "pattern", "table", "summary", "fieldmap"]) check(isMainResultView(v), `${v} opens as a main-area tab`);
+for (const v of ["array", "sparams", "impedance", "vswr", "smith", "efficiency", "pattern", "table", "summary", "fieldmap"]) check(isMainResultView(v), `${v} opens as a main-area tab`);
 for (const v of ["currents", "pattern3d", "log", "3d", "checks"]) check(!isMainResultView(v), `${v} does not open as a result tab`);
-eq(MAIN_RESULT_VIEWS.map((v) => MAIN_TAB_LABELS[v]), ["S-parameters", "Impedance", "VSWR", "Smith", "Efficiency", "Pattern", "Table", "Summary", "Field map"], "result tab labels");
+eq(MAIN_RESULT_VIEWS.map((v) => MAIN_TAB_LABELS[v]), ["Array", "S-parameters", "Impedance", "VSWR", "Smith", "Efficiency", "Pattern", "Table", "Summary", "Field map"], "result tab labels");
 
 // ---- open and focus
 let s = openResultTab(ONLY_3D, "sparams");

@@ -1,6 +1,6 @@
 # Optimizer
 
-`fairbeam optimize` tunes bounded continuous parameters of a Python model or a `.design.json` design towards goals, script-driven: each evaluation is a normal `fairbeam run` (same model file, engine, threads and end criterion), and the search is plain Python (stdlib and numpy, no scipy) in `python/fairbeam/optimize.py`.
+`fairbeam optimize` tunes bounded continuous parameters of a Python model or a `.design.json` design towards goals, script-driven: each evaluation uses the normal run path with the same model file, engine and threads. Realized-gain and efficiency goals require the stricter stopping and power checks described below. The search is plain Python (stdlib and numpy, no scipy) in `python/fairbeam/optimize.py`.
 
 ```bash
 fairbeam optimize python/models/dipole.py --vary length=50:66 --goal f0=2.40 --engine gpu
@@ -31,11 +31,31 @@ Goals combine additively. A weight is written `*w`, for example `s11_max=-25@2.4
 | Match | `s11_max=<dB>@<GHz>` | \|S11\| at the frequency | (excess / 3 dB)² | \|S11\| ≤ target |
 | Bandwidth | `bw_min=<MHz>` | −10 dB bandwidth of the band around f0 (else the first band) | (shortfall / 10 %)² | ≥ target |
 | Directivity | `dmax_min=<dBi>@<GHz>` | Dmax at the frequency (nearest far-field sample) | (shortfall / 0.5 dB)² | ≥ target |
+| Realized gain | `realized_gain_min=<dBi>@<GHz>` | stored peak realized gain of the primary driven port at the requested frequency, subject to power admission | (shortfall / 0.5 dB)² | ≥ target |
+| Radiation efficiency | `efficiency_min=<percent>@<GHz>` | 100 · Prad / Pacc of the primary driven port at the requested frequency, subject to power admission | (shortfall / 5 percentage points)² | ≥ target |
 | Isolation / coupling | `sij_max=<dB>@<GHz>:<i>,<j>` | \|S_ij\| at the frequency (port i receiving, port j driven) | (excess / 3 dB)² | ≤ target |
 | Transmission | `sij_min=<dB>@<GHz>:<i>,<j>` | \|S_ij\| at the frequency | (shortfall / 0.5 dB)² | ≥ target |
 | Match all ports | `match_all=<dB>@<GHz>` | the worst \|S_ii\| over all ports | (excess / 3 dB)² | ≤ target |
 
 A goal that cannot be evaluated costs 10⁴, for example when no resonance lies in the simulated band. The run stops as soon as every goal is met, when `--max-evals` is used up, or when the search converges.
+
+### Sampled frequency-band goals
+
+For `s11_max`, `sij_max`, `sij_min` and `match_all`, replace `@<GHz>` with `@<lower>..<upper>`. Examples of the syntax are `s11_max=-15@2.40..2.50`, `sij_min=-3.5@2.40..2.50:2,1` and `match_all=-15@2.40..2.50`. In the app, enter the lower frequency and the optional upper frequency; leave the upper field empty for a point goal. The limits must be finite, positive and increasing, and lie inside the simulated band.
+
+The goal uses every stored frequency sample inside the interval and interpolates its two edges. S11 edges use interpolation in dB; Sij and all-port match edges use interpolation of magnitude before conversion to dB. Upper-limit goals use the largest sampled value, transmission's lower-limit goal uses the smallest, and `match_all` includes every port's diagonal. The cost scales in the table remain unchanged. The evaluation table, best-result summary and CSV use that worst sampled value, not the value at the lower edge.
+
+A valid, strictly increasing frequency grid and finite samples covering the requested interval are required. Missing data are not filled, endpoints are not extrapolated, and an invalid computed Sij entry is not repaired from its reciprocal. Reciprocity can supply an uncomputed column when the opposite measured entry is usable; the metric records that source. These checks qualify only the stored samples and interpolated edges. A narrow feature between samples can still be missed; passing is **not a continuous-band guarantee**. Existing point-goal syntax and saved histories remain supported.
+
+### Realized-gain and efficiency admission
+
+The two new radiation goals are point goals: there is no upper-frequency field for them. The optimizer requests a far-field sample at the goal frequency and uses the primary driven port, consistently with its antenna goals. Another port's field or a nearby frequency does not answer the goal. A model must record the required far field; a missing field stays unavailable. `realized_gain_min` uses the stored peak realized gain, not boresight gain. `efficiency_min` accepts a target greater than 0 and at most 100 percent.
+
+Every driven port must have established energy convergence without reaching its timestep limit, with an end criterion of −60 dB or stricter. With no explicit override, the optimizer strengthens a weaker model criterion to −60 dB and preserves a stricter one. An explicitly weaker criterion is refused. The frequency must be supported by the actual result grid. Accepted and radiated powers must be finite, Pacc positive, and Prad / Pacc within [0, 1], consistent with the stored efficiency at its serialization precision. Realized gain must also agree with directivity, efficiency and the primary port's mismatch factor.
+
+Fields with QA warnings, or lossless efficiency normalized to one by construction, are not admitted as measured radiation objectives. An unavailable or inconsistent metric receives a penalty and cannot become the best candidate; later valid candidates may still succeed. The power and energy checks do not establish accepted-power conditioning, mesh, time-step, angular-grid or radiation-pattern convergence. Confirm a selected design with the appropriate convergence study before relying on its gain or efficiency. Axial ratio is not an optimizer goal.
+
+These goal additions describe source behavior; they add no fresh native EM qualification. The demonstrations below retain their original point-goal results and do not validate the new band or radiation objectives.
 
 ### Candidates the design checks refuse
 
@@ -46,13 +66,13 @@ For a design (`.design.json`), every candidate goes through the design checks ([
 
 A skipped candidate counts as an evaluation, like a failed one. Its entry carries `"skipped": "<reason>"` and an `error` starting with `skipped:`, the log line and the evaluations table say why (Status **Skipped**, for example "'patch' overhangs 'substrate' by 1.2 mm (x+)"), and it costs 10⁴ for a check error. Misplaced metal costs 10⁴ plus 10 % per mm of overhang or gap (at most 10⁵), so a search that starts among such points is led back to feasible ones. The search then goes on. `--no-precheck` simulates every candidate. Python models are not checked, and sweeps run every point as it is.
 
-The near-to-far-field transform runs only when a Dmax goal needs it (or with `--farfield`), which saves most of the post-processing time of each evaluation.
+The near-to-far-field transform runs when a directivity, realized-gain or efficiency goal needs it (or with `--farfield`). Without those requests, an existing band-efficiency monitor can still require the transform; otherwise it is skipped to reduce each evaluation's post-processing time.
 
 Each evaluation's raw openEMS folder (`<sim-root>/optimizations/<name>/<slug>/`) is removed as soon as its bundle is written; pass `--keep-sim` (or set `FAIRBEAM_KEEP_SIM=1`) to keep them.
 
 ### Multi-port goals and driven ports
 
-The last three goals read the S-matrix in `results.sparams` (the same `multiport.s_from_section` used by `fairbeam run`). Port numbers are the model's own. Examples for the Wilkinson divider: `sij_max=-25@2.4:2,3` (isolation S23 ≤ −25 dB), `sij_min=-3.2@2.4:2,1` (|S21| ≥ −3.2 dB), `match_all=-20@2.4` (S11, S22 and S33 all ≤ −20 dB). |S_ij| is interpolated on the magnitude between the two nearest frequency points.
+`sij_max`, `sij_min` and `match_all` read the S-matrix in `results.sparams` (the same `multiport.s_from_section` used by `fairbeam run`). Port numbers are the model's own. Examples for the Wilkinson divider: `sij_max=-25@2.4:2,3` (isolation S23 ≤ −25 dB), `sij_min=-3.2@2.4:2,1` (|S21| ≥ −3.2 dB), `match_all=-20@2.4` (S11, S22 and S33 all ≤ −20 dB). |S_ij| is interpolated on the magnitude between the two nearest frequency points.
 
 openEMS runs once per driven port, so the cost of an evaluation is the number of driven ports times the time of one run. `--excite` sets which ports are driven:
 
