@@ -5,6 +5,7 @@ python -m tests.test_waveguide_step --study --out C:\Temp\waveguide-step
 python -m tests.test_waveguide_step --compare --out C:\Temp\waveguide-step
 """
 import argparse
+import hashlib
 import json
 import os
 from pathlib import Path
@@ -14,6 +15,7 @@ import tempfile
 import time
 import unittest
 from unittest.mock import patch
+import xml.etree.ElementTree as ET
 
 import numpy as np
 
@@ -22,13 +24,17 @@ from fairbeam.procutil import popen_group, release_group, terminate_group
 from tests import waveguide_step_fixture as f
 
 
-def serial(out, cpw, excited, padding=f.PADDING):
+def serial(out, cpw, excited, padding=f.PADDING, *, pulse='gaussian'):
     out = Path(out).resolve()
     if out.exists():
         raise ValueError('use a fresh acquisition directory')
+    if pulse not in f.PULSES:
+        raise ValueError('unsupported research source pulse')
     out.parent.mkdir(parents=True, exist_ok=True)
     command = [sys.executable, '-m', 'tests.test_waveguide_step', '--fdtd', '--worker',
                '--mesh', str(cpw), '--excite', str(excited), '--padding', str(padding), '--out', str(out)]
+    if pulse != 'gaussian':
+        command += ['--pulse', pulse]
     started, wall = time.monotonic(), time.time()
     with out.with_name(out.name+'.log').open('w', encoding='utf-8') as log:
         proc = popen_group(command, stdout=log, stderr=subprocess.STDOUT,
@@ -59,7 +65,9 @@ def serial(out, cpw, excited, padding=f.PADDING):
     return meta
 
 
-def read_pair(root, cpw, padding):
+def read_pair(root, cpw, padding, *, pulse='gaussian'):
+    if pulse not in f.PULSES:
+        raise ValueError('unsupported research source pulse')
     incoming, outgoing = [], []
     for pn in (1, 2):
         path = Path(root)/f'cpw{cpw}'/f'pad{padding}'/f'e{pn}'
@@ -83,11 +91,38 @@ def read_pair(root, cpw, padding):
                 or isinstance(meta.get('dt_s'), bool) or not isinstance(meta.get('dt_s'), (int, float))
                 or not np.isfinite(meta['dt_s']) or meta['dt_s'] <= 0):
             raise ValueError('case is incomplete, over budget or lacks a confirmed exact energy stop')
-        pulse_steps = meta.get('excitation_timesteps')
-        if (isinstance(pulse_steps, bool) or not isinstance(pulse_steps, int)
-                or abs(pulse_steps-int(np.ceil(f.PULSE_END_S/meta['dt_s']))) > 1
-                or stats['timesteps'] < pulse_steps):
-            raise ValueError('simulation stopped before the native Gaussian excitation completed')
+        if pulse == 'gaussian':
+            pulse_steps = meta.get('excitation_timesteps')
+            if (meta.get('pulse', 'gaussian') != pulse
+                    or isinstance(pulse_steps, bool) or not isinstance(pulse_steps, int)
+                    or abs(pulse_steps-int(np.ceil(f.PULSE_END_S/meta['dt_s']))) > 1
+                    or stats['timesteps'] < pulse_steps):
+                raise ValueError('simulation stopped before the native Gaussian excitation completed')
+        else:
+            sim = f.build(cpw, pn, padding, pulse=pulse)
+            if meta.get('pulse') != pulse or meta.get('excitation') != sim.excitation:
+                raise ValueError('RF source identity mismatch')
+            with tempfile.TemporaryDirectory() as folder:
+                planned = Path(folder)/'input.xml'
+                sim.fdtd.Write2XML(str(planned))
+                if f.physical_input_sha(planned) != meta.get('physical_input_sha256'):
+                    raise ValueError('rebuilt RF native input changed')
+            for rel, key in (('input.xml', 'input_sha256'), ('data.npz', 'data_sha256'),
+                             ('raw/openEMS_stats.txt', 'native_stats_sha256')):
+                if hashlib.sha256((path/rel).read_bytes()).hexdigest() != meta.get(key):
+                    raise ValueError('RF input/data/native statistics changed')
+            audit = f.rf_source_audit(path/'raw', meta['dt_s'])
+            native = meta.get('native', {})
+            raw_stats = np.loadtxt(path/'raw/openEMS_stats.txt', comments='%')
+            actual_native = dict(cells=int(raw_stats[0]), dt_s=float(raw_stats[1]), timesteps=int(raw_stats[2]),
+                                 numerical_time_s=float(raw_stats[3]), iteration_wall_s=float(raw_stats[4]))
+            if (meta.get('source_audit') != audit or stats['timesteps'] < audit['complete_after_steps']
+                    or meta.get('excitation_timesteps') != audit['allocated_cache_steps']
+                    or native != actual_native
+                    or native.get('timesteps') != stats['timesteps'] or native.get('dt_s') != meta['dt_s']
+                    or native.get('cells') != int(np.prod(stats['grid']))
+                    or not np.isclose(native.get('numerical_time_s', 0), native['timesteps']*native['dt_s'], rtol=1e-8, atol=0)):
+                raise ValueError('RF active support or native statistics mismatch')
         with np.load(path/'data.npz') as data:
             if (not np.array_equal(data['f'], f.FREQUENCIES)
                     or any(data[k].shape != (2, len(f.FREQUENCIES)) or not np.isfinite(data[k]).all()
@@ -102,14 +137,14 @@ def read_pair(root, cpw, padding):
     return assemble_s(a, np.array(outgoing), [1, 2], 2)
 
 
-def compare(root):
+def compare(root, *, pulse='gaussian'):
     root, rows, spectra, missing = Path(root), [], {}, []
     for cpw, padding in [(n, f.PADDING) for n in f.MESHES]+[(f.CONTROL_MESH, f.CONTROL_PADDING)]:
         paths = [root/f'cpw{cpw}'/f'pad{padding}'/f'e{pn}'/'report.json' for pn in (1, 2)]
         if not all(p.is_file() for p in paths):
             missing.extend(str(p.relative_to(root)) for p in paths if not p.is_file())
             continue
-        spectra[cpw, padding] = read_pair(root, cpw, padding)
+        spectra[cpw, padding] = read_pair(root, cpw, padding, pulse=pulse)
     for cpw in f.MESHES:
         if (cpw, f.PADDING) not in spectra:
             continue
@@ -144,12 +179,98 @@ def compare(root):
               and all(r['mesh_pair_passes'] for r in rows[1:])
               and boundary is not None and boundary <= f.LIMITS['boundary_abs']
               and control is not None and control['passes'])
-    return dict(protocol=f.PROTOCOL, limits=f.LIMITS, rows=rows, missing_cases=missing,
+    result = dict(protocol=f.PROTOCOL, limits=f.LIMITS, rows=rows, missing_cases=missing,
                 boundary_abs_max=boundary, boundary_control=control, qualified_scope=bool(passed),
                 scope='complex TE10 power-wave S matrix on the fixed measurement planes only')
+    if pulse != 'gaussian':
+        result['pulse'] = pulse
+    return result
 
 
 class StepTests(unittest.TestCase):
+    def test_finite_rf_pulse_has_zero_continuous_area_and_keeps_the_rf_band(self):
+        t = np.linspace(0, f.PULSE_END_S, 40001)
+        values = f.rf_values(t)
+        self.assertTrue(np.isfinite(values).all())
+        np.testing.assert_array_equal(f.rf_values([-1., 0., f.PULSE_END_S, 1.]), 0)
+        self.assertLess(abs(np.trapezoid(values, x=t))/np.trapezoid(abs(values), x=t), 1e-7)
+        frequencies = np.array([0., 3.7e9, 6.56e9, 9.8e9, 1e10, 10.2e9])
+        spectrum = np.array([abs(np.sum(values*np.exp(-2j*np.pi*freq*t))) for freq in frequencies])
+        spectrum /= spectrum[4]
+        self.assertLess(spectrum[:3].max(), 1e-4)
+        self.assertGreater(spectrum[[3, 5]].min(), .05)
+        self.assertLess(spectrum[[3, 5]].max(), .2)
+
+    def test_rf_control_preserves_native_geometry_clock_and_default_source(self):
+        with tempfile.TemporaryDirectory() as folder:
+            paths = [Path(folder)/f'{k}.xml' for k in range(3)]
+            for n in f.MESHES:
+                for pn in (1, 2):
+                    sims = (f.build(n, pn), f.build(n, pn, pulse='gaussian'),
+                            f.build(n, pn, pulse='zero-integral-rf'))
+                    for sim, path in zip(sims, paths):
+                        sim.fdtd.Write2XML(str(path))
+                    self.assertEqual(f.physical_input_sha(paths[0]), f.physical_input_sha(paths[1]))
+                    ordinary, control = [ET.parse(p).getroot() for p in (paths[0], paths[2])]
+                    # SetCustomExcite requires an explicit spectral upper bound;
+                    # the Gaussian infers its native bound from its own pulse.
+                    self.assertEqual(float(control.find('FDTD').attrib.pop('f_max')), f.FREQUENCIES[-1])
+                    for root in (ordinary, control):
+                        root.find('FDTD').remove(root.find('FDTD/Excitation'))
+                        for parent in root.iter():
+                            for child in list(parent):
+                                if child.tag in ('FillColor', 'EdgeColor'):
+                                    parent.remove(child)
+                    self.assertEqual(ET.tostring(ordinary), ET.tostring(control))
+                    self.assertEqual(sims[2].excitation['type'], 'zero-integral-rf')
+            with self.assertRaises(ValueError):
+                f.build(40, 1, pulse='wrong')
+
+    def test_rf_cache_checks_both_clocks_complete_support_waveform_and_zero_tail(self):
+        dt, steps = 1e-12, 16000
+        with tempfile.TemporaryDirectory() as folder:
+            raw = Path(folder)
+            original = {}
+            for name, offset in (('et', 0.), ('ht', .5)):
+                t = (np.arange(steps)+offset)*dt
+                values = f.rf_values(t)
+                values[0] = 0
+                a = np.column_stack((t, values))
+                np.savetxt(raw/name, a, fmt='%.6g')
+                original[name] = a
+            audit = f.rf_source_audit(raw, dt, steps)
+            self.assertEqual(audit['allocated_cache_steps'], steps)
+            self.assertLess(audit['complete_after_steps'], steps)
+            for name, corruption in (('et', 'tail'), ('ht', 'clock'), ('ht', 'missing'), ('et', 'pulse')):
+                with self.subTest(name=name, corruption=corruption):
+                    a = original[name].copy()
+                    if corruption == 'tail':
+                        a[-1, 1] = 1e-3
+                    elif corruption == 'clock':
+                        a[:, 0] += dt
+                    elif corruption == 'missing':
+                        a = a[:-1]
+                    else:
+                        a[:, 1] = np.sin(2*np.pi*3.7e9*a[:, 0])
+                    np.savetxt(raw/name, a, fmt='%.6g')
+                    with self.assertRaises(ValueError):
+                        f.rf_source_audit(raw, dt, steps)
+                    np.savetxt(raw/name, original[name], fmt='%.6g')
+            for clock, cap in ((0., steps), (float('nan'), steps), (dt, 1000)):
+                with self.assertRaises(ValueError):
+                    f.rf_source_audit(raw, clock, cap)
+
+    def test_gaussian_and_rf_cohorts_cannot_be_interchanged(self):
+        with tempfile.TemporaryDirectory() as folder:
+            path = self.synthetic(folder)/'report.json'
+            with self.assertRaisesRegex(ValueError, 'RF source identity'):
+                read_pair(folder, 40, f.PADDING, pulse='zero-integral-rf')
+            meta = json.loads(path.read_text(encoding='utf-8'))
+            meta['pulse'] = 'zero-integral-rf'
+            path.write_text(json.dumps(meta), encoding='utf-8')
+            with self.assertRaises(ValueError):
+                read_pair(folder, 40, f.PADDING)
+
     def test_reference_against_independent_tangential_boundary_solve(self):
         beta, z = f.modes()
         for k in range(len(f.FREQUENCIES)):
@@ -307,30 +428,31 @@ def main():
     parser.add_argument('--excite', type=int, choices=(1, 2), default=1)
     parser.add_argument('--padding', type=int, choices=(f.PADDING, f.CONTROL_PADDING), default=f.PADDING)
     parser.add_argument('--worker', action='store_true', help=argparse.SUPPRESS)
+    parser.add_argument('--pulse', choices=f.PULSES, default='gaussian', help='opt-in same-band research source control')
     args = parser.parse_args()
     if args.worker and not args.fdtd:
         parser.error('internal worker requires --fdtd')
     if args.preflight:
         for n in f.MESHES:
-            sim = f.build(n, 1)
+            sim = f.build(n, 1, pulse=args.pulse)
             print(json.dumps(dict(cpw=n, geometry=f.geometry(),
                 cells=int(np.prod([len(sim.mesh.GetLines(a))-1 for a in 'xyz'])), limits=f.LIMITS)))
     elif args.study or args.fdtd or args.compare:
         if args.out is None:
             parser.error('--out is required')
         if args.compare:
-            result = compare(args.out)
+            result = compare(args.out, pulse=args.pulse)
             (args.out/'comparison.json').write_text(json.dumps(result, indent=2)+'\n', encoding='utf-8')
             print(json.dumps(result, indent=2))
         elif args.fdtd:
-            print(json.dumps((f.acquire if args.worker else serial)(args.out, args.mesh, args.excite, args.padding)))
+            print(json.dumps((f.acquire if args.worker else serial)(args.out, args.mesh, args.excite, args.padding, pulse=args.pulse)))
         else:
             frozen = f.source_ids()
             for n, padding in [(n, f.PADDING) for n in f.MESHES]+[(f.CONTROL_MESH, f.CONTROL_PADDING)]:
                 for pn in (1, 2):
                     if f.source_ids() != frozen:
                         raise RuntimeError('acquisition sources changed during cohort')
-                    meta = serial(args.out/f'cpw{n}'/f'pad{padding}'/f'e{pn}', n, pn, padding)
+                    meta = serial(args.out/f'cpw{n}'/f'pad{padding}'/f'e{pn}', n, pn, padding, pulse=args.pulse)
                     print(json.dumps(dict(cpw=n, padding=padding, port=pn, cells=meta['cells'],
                         dt_s=meta['dt_s'], seconds=meta['run']['wall_time_s'], energy_stopped=meta['run'].get('converged'))), flush=True)
     else:
