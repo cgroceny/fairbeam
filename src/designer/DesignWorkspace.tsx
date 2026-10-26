@@ -6,7 +6,7 @@
 import { createEffect, createSignal, For, type JSX, lazy, Match, on, onCleanup, onMount, Show, Suspense, Switch } from "solid-js";
 import {
   Box, CircleDot, Cone, Cylinder, Eye, EyeOff, FileCode, Globe, Grid3x3, Hexagon, Home, Layers, LayoutGrid, Library,
-  Camera, FileText, Radio, Waves, History, Move3d,
+  Camera, FileText, Radio, RadioTower, Waves, History, Move3d,
   MousePointer2, MousePointerClick, Pencil, Play, Plus, Redo2, Save, SaveAll, Settings2, Cog, SlidersHorizontal, Spline, Torus, Trash2, Triangle, Undo2, X, Zap, Keyboard,
   ChevronDown, ChevronUp, ChevronsRight, FileUp, Activity, Gauge, Layers2, CircuitBoard, ClipboardList, LocateFixed, Shapes, ScanLine, ChartNoAxesCombined, SlidersVertical,
   ArrowUpFromLine, Combine, Circle, PenTool, Fullscreen, AudioWaveform, Radar, Package, Omega, Timer, ChartScatter, ChartLine, Grid2x2, Diamond, Anvil, CopyPlus, Clipboard,
@@ -749,7 +749,7 @@ export function Ribbon() {
           <RButton icon={CircleDot} label={t("ribbon.post.smith")} title={ribbonResult() ? t("ribbon.post.smithTitle") : t("ribbon.post.runFirst")} disabled={!ribbonResult()} onClick={() => void openRibbonResult("smith")} />
           <RButton icon={Gauge} label={t("ribbon.sim.efficiency")} title={ribbonResult() ? t("ribbon.post.efficiencyTitle") : t("ribbon.post.runFirst")} disabled={!ribbonResult()} onClick={() => void openRibbonResult("efficiency")} />
           <RButton icon={Radar} label={t("ribbon.post.pattern")} title={ribbonResult() ? t("ribbon.post.patternTitle") : t("ribbon.post.runFirst")} disabled={!ribbonResult()} onClick={() => void openRibbonResult("pattern")} />
-          <RButton icon={Radar} label={t("dock.results.array")} title={ribbonArray().reason} disabled={!ribbonArray().ok} pressed={resultFocus()?.view === "array"} onClick={() => void openRibbonResult("array")} />
+          <RButton icon={RadioTower} label={t("dock.results.array")} title={ribbonArray().reason} disabled={!ribbonArray().ok} pressed={resultFocus()?.view === "array"} onClick={() => void openRibbonResult("array")} />
           <RButton icon={Rotate3d} label={t("ribbon.post.pattern3d")} title={ribbonPattern3d().reason} disabled={!ribbonPattern3d().ok} pressed={resultFocus()?.view === "pattern3d"} onClick={() => void openRibbonResult("pattern3d")} />
           {/* only a run with surface-current maps (#90); the tooltip gives the reason otherwise */}
           <RButton icon={Activity} label={t("ribbon.post.currents")} title={ribbonCurrents().reason} disabled={!ribbonCurrents().ok} onClick={() => void openRibbonResult("currents")} />
