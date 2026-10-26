@@ -1,5 +1,6 @@
 // Native construction only: transport actual exported Python through Edit/Apply; no FDTD.
 import assert from 'node:assert/strict';
+import { clickRibbonAction } from './ribbon-action.mjs';
 const draftOf = s => s.store((_,m)=>JSON.parse(JSON.stringify(m.s.draft)));
 // Exact box vertices in world coordinates, rounded to native import's 1e-6 mm precision.
 const geometryOf = s => s.ev((_,m)=>{
@@ -36,7 +37,7 @@ export default {
     literal.name='substrate [2]';literal.component='Assembly/Literal';literal.transforms=[];
     d.parts.push(literal);d.components=['Assembly/Original','Assembly/Literal','Empty/Folder'];d.far_field.enabled=false;
    }));
-   await s.click('ribbon.tab.post',{sel:'.rb-tab'});await s.clickSel('button[data-action="open-python"]');
+   await s.click('ribbon.tab.post',{sel:'.rb-tab'});await clickRibbonAction(s, 'ribbon.post.report', 'button[data-action="open-python"]');
    await s.wait('.python-panel .python-panel-code');await s.clickSel('button[data-action="python-edit"]');
    await s.wait('.python-panel .cm-content');
    before=await draftOf(s);geometry=await geometryOf(s);ports=await portsOf(s);history=await s.store((_,m)=>m.s.historyIndex());

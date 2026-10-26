@@ -208,7 +208,9 @@ try {
       assert.equal(rows[3][gainIndex], "4.5");
       assert.deepEqual(pageErrors, []);
       assert.deepEqual(forbidden, []);
-      outcomes.push({ lang, submitted: submitted[0], table, csv: csv.file, pageErrors, consoleIssues: s.consoleIssues,
+      const retainedCsv = `${lang}-verified-history.csv`;
+      await writeFile(join(out, retainedCsv), csv.text);
+      outcomes.push({ lang, submitted: submitted[0], table, csv: csv.file, retainedCsv, pageErrors, consoleIssues: s.consoleIssues,
         source: "synthetic job response and injected completed history", solverRuns: 0 });
     } catch (error) {
       await page.screenshot({ path: join(out, `${lang}-failure.png`) }).catch(() => {});
