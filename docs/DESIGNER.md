@@ -209,7 +209,7 @@ directivity rather than its gain.
     - Solver: Experimental solvers, Solver limits.
     - Run.
   - Optimize: Parameter sweep, Optimizer.
-  - Post-processing: the result tabs to open (Summary, S-parameters, Smith, Efficiency, Pattern, 3D pattern,
+  - Post-processing: the result tabs to open (Summary, S-parameters, Smith, Efficiency, Pattern, Array, 3D pattern,
     Currents, Field plane, Field map), Far field (the pattern quantity, only while a pattern is shown), and
     Report and export (PDF report, Package, Python).
 
@@ -224,7 +224,7 @@ directivity rather than its gain.
   The simulation settings are not in the tree: they are the Simulation tab of the ribbon. See
   [The navigation tree](#the-navigation-tree).
 - **Main area**: the **3D view** is the first tab and never closes; the result views of a run
-  (S-parameters, Impedance, VSWR, Smith, Efficiency, Pattern, Table) open as further tabs beside
+  (S-parameters, Impedance, VSWR, Smith, Efficiency, Pattern, Array, Table) open as further tabs beside
   it. Ctrl+Tab and Ctrl+Shift+Tab switch tabs; Delete or a middle-click closes a result tab.
 - **3D view**: the geometry as the run server builds it from your unsaved changes, so what you see
   is what openEMS will mesh. The browser draws each edit at once; the server's version replaces it a
@@ -294,6 +294,7 @@ coplanar with the original, with a rotation-axis/center or mirror-plane referenc
   - **1D Results**: S-parameters, impedance, VSWR, Smith chart, efficiency;
   - **Farfields**: for each far-field frequency, the pattern cuts (**Farfield (f = …)**) and the
     **3D pattern (f = …)**;
+  - **Array**: feed controls when at least two stored element-port patterns are available;
   - **2D/3D Results**: one surface-current map per monitor frequency, and one node per E/H
     field-plane map, e.g. "E-field (z = 2.572 mm, 2.45 GHz)" (the mesh line the plane was
     recorded on, which may differ slightly from the position typed);
@@ -1366,6 +1367,31 @@ and Post-processing › PDF report / Package take the run shown. The ✕ at the 
 tab's toolbar closes the shown run (its result tabs and the dock's Runs and Log tabs); the ✕ on a
 tab closes that tab only. Each tab's toolbar also has **Compare**, the data-format menu, **Copy
 data**, **CSV** and **Touchstone**.
+
+### Array feeds in the Designer
+
+A run with stored patterns for at least two element ports offers **Array** in the
+Results tree and the Post-processing ribbon. Select its stored frequency, edit each
+port amplitude and phase, or steer in the xz/yz plane. The pattern cuts and their
+CSV/SVG/PNG exports use the synthesized directivity at that frequency. This is
+post-processing of stored complex element fields; it starts no solver and does
+not establish a new radiation efficiency or realized gain.
+
+The feed belongs to the selected run and frequency. Switching either, replacing the
+result, closing the Array tab or leaving Design resets it to uniform. While Array
+remains open, the Pattern tab and 3D pattern use the same feed. Comparisons always
+show stored results. Viewer feeds are separate. Export package includes array weights
+only when they belong to the exact exported run; another run or geometry preview
+never borrows them. The package captures the weights and selected stored frequency together:
+`array_weights.csv` evaluates active reflection there, and its synthesized array figures
+and report pages use only that frequency. Other stored result patterns remain unchanged.
+Older programmatic exports that omit a frequency explicitly describe their fixed weights
+applied across all stored frequencies, without frequency-specific re-steering. Selecting
+a frequency or run with fewer than two element patterns makes Designer synthesis and
+feed export unavailable. A stored coarser angular grid still limits beamwidth and sidelobe
+resolution. Array tapers, scan sweeps and grating-lobe admission remain separate work.
+The controls add no fresh native EM qualification; see [ARRAYS.md](ARRAYS.md) for the
+stored-field synthesis and its existing demonstrations.
 
 ### Radiation versus frequency
 

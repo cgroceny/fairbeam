@@ -1807,6 +1807,13 @@
   "opt.addGoal": "Hedef",
   "opt.addParameter": "Parametre",
   "opt.at": "Frekans (GHz)",
+  "opt.atHi": "Üst frekans (GHz, isteğe bağlı)",
+  "opt.band.hint": "Tek frekans hedefi için boş bırakın. Aralık, kayıtlı tüm örnekleri ve aradeğerlenen sınırları denetler; örnekler arasındaki ihlalleri dışlayamaz.",
+  "opt.err.frequencyRange": "üst frekans sonlu ve alt frekanstan büyük olmalı",
+  "opt.err.efficiency": "verim hedefi yüzde 0'dan büyük ve en fazla yüzde 100 olmalı",
+  "opt.goal.realizedGain": "Tepe gerçekleşen kazanç",
+  "opt.goal.efficiency": "Işıma verimi",
+  "opt.goal.radiation.hint": "İlk uyarılan portta tam belirtilen frekans; her frekans için uzak alan hesabı ekler. Varsayılan durma ölçütü −60 dB'dir; açıkça seçilen daha zayıf ölçüt, yakınsamayan çalıştırma, güç uyarısı veya normalize kayıpsız verim bu hedefi karşılayamaz.",
   "opt.best.invalid": "“{key}” için en iyi değer geçersiz.",
   "opt.best.none": "Bu optimizasyonun en iyi parametreleri yok.",
   "opt.best.outOfBounds": "“{key}” için en iyi değer bu tasarımın parametre sınırlarını aşıyor.",
@@ -5209,5 +5216,8 @@
   "results.mesh.bboxTransformed": "Bir aday dönüştürülmüş: dünya koordinatlarındaki sınırlayıcı kutusu kesin yüzeyi değil, yalnızca yaklaşık bir ipucudur.",
   "results.mesh.clearHighlight": "Vurguyu temizle",
   "results.mesh.thinLink": "İnce metal = levha ayarını incele…",
-  "results.mesh.thinLinkNote": "Geçerli taslağın ayarını değiştirmeden açar. Kayıtlı sonuçların özgün mesh'i korunur."
+  "results.mesh.thinLinkNote": "Geçerli taslağın ayarını değiştirmeden açar. Kayıtlı sonuçların özgün mesh'i korunur.",
+  "array.singleRun": "Dizi beslemesini düzenlemek için tek bir çalıştırma seçin. Karşılaştırmalar her zaman kayıtlı örüntüleri kullanır.",
+  "array.designerScope": "Bu besleme bu çalıştırmaya ve kayıtlı frekansa aittir. Çalıştırma veya frekans değişince, Dizi kapanınca ya da Tasarım’dan çıkınca sıfırlanır. Dizi açıkken Örüntü ve 3B bu beslemeyi, karşılaştırmalar kayıtlı örüntüleri kullanır.",
+  "results.tab.array": "Dizi"
 }

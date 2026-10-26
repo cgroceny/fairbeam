@@ -1832,6 +1832,13 @@
   "opt.addGoal": "Goal",
   "opt.addParameter": "Parameter",
   "opt.at": "At (GHz)",
+  "opt.atHi": "Upper frequency (GHz, optional)",
+  "opt.band.hint": "Leave blank for a point goal. A range checks every stored sample and interpolated edge; it cannot rule out violations between samples.",
+  "opt.err.frequencyRange": "upper frequency must be finite and greater than the lower frequency",
+  "opt.err.efficiency": "efficiency target must be greater than 0 and at most 100 percent",
+  "opt.goal.realizedGain": "Peak realized gain",
+  "opt.goal.efficiency": "Radiation efficiency",
+  "opt.goal.radiation.hint": "First driven port at the exact frequency; adds a far-field calculation per frequency. Defaults to a −60 dB stop; a weaker explicit stop, unconverged run, power warning or normalized lossless efficiency cannot meet this goal.",
   "opt.best.invalid": "The best value for “{key}” is invalid.",
   "opt.best.none": "This optimization has no best parameters.",
   "opt.best.outOfBounds": "The best value for “{key}” exceeds this design's parameter bounds.",
@@ -5290,5 +5297,8 @@
   "results.mesh.bboxTransformed": "A candidate is transformed: its world-space bounding box is only a heuristic, not its exact surface.",
   "results.mesh.clearHighlight": "Clear highlight",
   "results.mesh.thinLink": "Review Thin metal = sheets…",
-  "results.mesh.thinLinkNote": "Opens the current draft's setting without changing it. Saved results keep their original mesh."
+  "results.mesh.thinLinkNote": "Opens the current draft's setting without changing it. Saved results keep their original mesh.",
+  "array.singleRun": "Choose one run to edit its array feed. Comparisons always use stored patterns.",
+  "array.designerScope": "This feed belongs to this run and stored frequency. Switching runs or frequencies, closing Array or leaving Design resets it. While Array is open, Pattern and 3D use this feed; comparisons use stored patterns.",
+  "results.tab.array": "Array"
 }

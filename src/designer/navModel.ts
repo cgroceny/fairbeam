@@ -1,3 +1,5 @@
+import { elementPatterns } from "../lib/sparams.ts";
+import type { Bundle } from "../types";
 // The designer's navigation tree as data (the Navigation Tree, #52): top-level sections for the
 // components, materials, ports, lumped elements and the results of
 // the open design, flattened into rows with their level for a role="tree". Pure (no Solid, no DOM),
@@ -238,7 +240,7 @@ export function runRows(entries: readonly ProjectIndexEntry[], model: string, fi
 
 /** What a run's bundle holds beyond the S-parameters: far-field and surface-current frequencies (Hz)
  * and its field-plane maps (index into the bundle's field_planes, with the tree's label). */
-export interface RunContent { farfield: number[]; currents: number[]; fieldPlanes?: { map: number; f: number; label: string }[] }
+export interface RunContent { array?: number[]; farfield: number[]; currents: number[]; fieldPlanes?: { map: number; f: number; label: string }[] }
 
 /** A field-plane map's name in the tree and on the colour bar: "E-field (z = 1.5 mm, 2.45 GHz)",
  * "Ex (z = 1.5 mm, 2.45 GHz)" for one component. */
@@ -256,7 +258,9 @@ export function runContent(b: unknown): RunContent {
   const uniq = (xs: unknown[]) => [...new Set(xs.filter((x): x is number => typeof x === "number" && Number.isFinite(x)))];
   const fieldPlanes = (Array.isArray(o.field_planes) ? o.field_planes as Record<string, unknown>[] : [])
     .flatMap((m, map) => (m && typeof m.f === "number" && Number.isFinite(m.f) ? [{ map, f: m.f, label: fieldPlaneLabel(m, (o.units?.length_m ?? 1e-3) * 1000) }] : []));
+  const array = elementPatterns(b as Bundle).filter(set => set.elements.length >= 2).map(set => set.f);
   return {
+    ...(array.length ? { array } : {}),
     farfield: uniq((o.results?.farfield ?? []).map((f) => f.f)),
     currents: uniq((o.fields?.planes?.[0]?.frequencies ?? []).map((f) => f.f_target ?? f.f)),
     ...(fieldPlanes.length ? { fieldPlanes } : {}),
@@ -286,6 +290,7 @@ export function runChildren(file: string, content: RunContent | null): NavNode[]
   if (content?.farfield.length) out.push(group("farfield", t("tree.result.farfields"), content.farfield.flatMap((f) => [
     leaf("pattern", t("tree.result.farfield", { f: ghz(f) }), "farfield", f), leaf("pattern3d", t("tree.result.pattern3d", { f: ghz(f) }), "farfield", f),
   ])));
+  if (content?.array?.length) out.push(leaf("array", t("dock.results.array"), "farfield", content.array[0]));
   // the surface currents (drawn in the 3D view) and the E/H field planes (a 2D map and a 3D plane)
   const maps = [
     ...(content?.currents ?? []).map((f) => leaf("currents", t("tree.result.current", { f: ghz(f) }), "current", f)),

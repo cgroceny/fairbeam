@@ -1,6 +1,6 @@
 # Optimizasyon aracı
 
-`fairbeam optimize`, Python modelinin veya `.design.json` tasarımının sınırlandırılmış sürekli parametrelerini betik üzerinden hedeflere göre ayarlar. Her değerlendirme normal bir `fairbeam run` çalıştırmasıdır (aynı model dosyası, motor, iş parçacıkları ve durdurma ölçütü). Arama, `python/fairbeam/optimize.py` içinde sade Python ile yapılır (standart kütüphane ve numpy; scipy yok).
+`fairbeam optimize`, Python modelinin veya `.design.json` tasarımının sınırlandırılmış sürekli parametrelerini betik üzerinden hedeflere göre ayarlar. Her değerlendirme aynı model dosyası, motor ve iş parçacıklarıyla normal çalıştırma yolunu kullanır. Gerçekleşen kazanç ve verimlilik hedefleri, aşağıda açıklanan daha sıkı durdurma ve güç denetimlerini gerektirir. Arama, `python/fairbeam/optimize.py` içinde sade Python ile yapılır (standart kütüphane ve numpy; scipy yok).
 
 ```bash
 fairbeam optimize python/models/dipole.py --vary length=50:66 --goal f0=2.40 --engine gpu
@@ -31,11 +31,31 @@ Hedefler toplanarak birleştirilir. Ağırlık `*w` olarak yazılır; örneğin 
 | Uyum | `s11_max=<dB>@<GHz>` | frekanstaki \|S11\| | (aşım / 3 dB)² | \|S11\| ≤ hedef |
 | Bant genişliği | `bw_min=<MHz>` | f0 çevresindeki bandın (yoksa ilk bandın) −10 dB bant genişliği | (eksik oran / 10 %)² | ≥ hedef |
 | Yönlülük | `dmax_min=<dBi>@<GHz>` | frekanstaki Dmax (en yakın uzak alan örneği) | (eksik değer / 0,5 dB)² | ≥ hedef |
+| Gerçekleşen kazanç | `realized_gain_min=<dBi>@<GHz>` | birincil uyarılan portun istenen frekanstaki kayıtlı tepe gerçekleşen kazancı; güç kabul koşulları uygulanır | (eksik değer / 0,5 dB)² | ≥ hedef |
+| Işıma verimliliği | `efficiency_min=<percent>@<GHz>` | birincil uyarılan portun istenen frekanstaki 100 · Prad / Pacc değeri; güç kabul koşulları uygulanır | (eksik değer / 5 yüzde puanı)² | ≥ hedef |
 | Yalıtım / kuplaj | `sij_max=<dB>@<GHz>:<i>,<j>` | frekanstaki \|S_ij\| (i alıcı, j uyarılan port) | (aşım / 3 dB)² | ≤ hedef |
 | İletim | `sij_min=<dB>@<GHz>:<i>,<j>` | frekanstaki \|S_ij\| | (eksik değer / 0,5 dB)² | ≥ hedef |
 | Tüm portlarda uyum | `match_all=<dB>@<GHz>` | tüm portların en kötü \|S_ii\| değeri | (aşım / 3 dB)² | ≤ hedef |
 
 Değerlendirilemeyen hedefin maliyeti 10⁴ olur; örneğin simüle edilen bantta rezonans yoksa. Tüm hedefler sağlanınca, `--max-evals` tükenince veya arama yakınsayınca çalıştırma durur.
+
+### Örneklenmiş frekans bandı hedefleri
+
+`s11_max`, `sij_max`, `sij_min` ve `match_all` için `@<GHz>` yerine `@<lower>..<upper>` yazın. Sözdizimi örnekleri: `s11_max=-15@2.40..2.50`, `sij_min=-3.5@2.40..2.50:2,1` ve `match_all=-15@2.40..2.50`. Uygulamada alt frekansı ve isteğe bağlı üst frekansı girin; tek frekanslı hedef için üst alanı boş bırakın. Sınırlar sonlu, pozitif, artan sırada ve simüle edilen bandın içinde olmalıdır.
+
+Hedef, aralık içindeki tüm kayıtlı frekans örneklerini kullanır ve iki uçta enterpolasyon yapar. S11 uçlarında dB cinsinden; Sij ve tüm portlarda uyum uçlarında ise dB'ye dönüştürmeden önce genlik üzerinden enterpolasyon yapılır. Üst sınır hedefleri en büyük, iletimin alt sınır hedefi en küçük örneklenmiş değeri kullanır; `match_all` her portun köşegen girdisini içerir. Tablodaki maliyet ölçekleri değişmez. Değerlendirme tablosu, en iyi sonuç özeti ve CSV, alt uçtaki değer yerine bu en kötü örneklenmiş değeri gösterir.
+
+Geçerli ve kesin artan bir frekans ızgarası ile istenen aralığı kapsayan sonlu örnekler gerekir. Eksik veriler doldurulmaz, uçların dışına uzatma yapılmaz ve hesaplanmış ama geçersiz Sij girdisi karşılıklı girdisiyle onarılmaz. Karşılıklılık, karşı taraftaki ölçülen girdi kullanılabilir durumdaysa hesaplanmamış sütunu sağlayabilir; ölçüt bu kaynağı kaydeder. Bu denetimler yalnızca kayıtlı örnekleri ve enterpole edilmiş uçları değerlendirir. Örnekler arasındaki dar bir özellik kaçabilir; hedefin sağlanması **kesintisiz bant garantisi değildir**. Mevcut tek frekanslı hedef sözdizimi ve kayıtlı geçmişler desteklenmeye devam eder.
+
+### Gerçekleşen kazanç ve verimlilik kabul koşulları
+
+İki yeni ışıma hedefi tek frekansta değerlendirilir; üst frekans alanları yoktur. Optimizasyon aracı hedef frekansında uzak alan örneği ister ve anten hedefleriyle tutarlı olarak birincil uyarılan portu kullanır. Başka portun alanı veya yakın bir frekans bu hedefi karşılamaz. Model gerekli uzak alanı kaydetmelidir; eksik alan kullanılamaz olarak kalır. `realized_gain_min`, ana eksendeki kazancı değil kayıtlı tepe gerçekleşen kazancı kullanır. `efficiency_min`, sıfırdan büyük ve en fazla yüzde 100 olan hedefi kabul eder.
+
+Uyarılan her port, zaman adımı sınırına ulaşmadan, −60 dB veya daha sıkı durdurma ölçütüyle enerji yakınsamasını sağlamalıdır. Açık bir geçersiz kılma verilmediyse optimizasyon aracı modelin daha gevşek ölçütünü −60 dB'ye sıkılaştırır, daha sıkı ölçütünü korur. Açıkça daha gevşek ölçüt verilmesi reddedilir. Frekans gerçek sonuç ızgarasıyla desteklenmelidir. Kabul edilen ve ışınan güç sonlu, Pacc pozitif, Prad / Pacc ise [0, 1] aralığında ve kayıtlı verimlilikle kayıt hassasiyeti içinde tutarlı olmalıdır. Gerçekleşen kazanç ayrıca yönlülük, verimlilik ve birincil portun uyumsuzluk çarpanıyla tutarlı olmalıdır.
+
+Kalite uyarısı taşıyan veya kayıpsız model varsayımıyla verimliliği bire normalize edilen alanlar, ölçülmüş ışıma hedefi olarak kabul edilmez. Kullanılamayan ya da tutarsız ölçüt ceza alır ve en iyi aday olamaz; sonraki geçerli adaylar başarılı olabilir. Güç ve enerji denetimleri; kabul edilen gücün sayısal koşullanmasını, mesh, zaman adımı, açısal ızgara veya ışıma örüntüsü yakınsamasını kanıtlamaz. Kazanç veya verimliliğe güvenmeden önce seçilen tasarımı uygun yakınsama çalışmasıyla doğrulayın. Eksenel oran bir optimizasyon hedefi değildir.
+
+Bu hedef eklemeleri kaynak kodun davranışını açıklar; yeni bir native EM doğrulaması sunmaz. Aşağıdaki gösterimler özgün tek frekanslı hedef sonuçlarını korur ve yeni bant veya ışıma hedeflerini doğrulamaz.
 
 ### Tasarım denetimlerinin reddettiği adaylar
 
@@ -46,13 +66,13 @@ Tasarımda (`.design.json`) her aday, openEMS çalışmadan önce tasarım denet
 
 Atlanan aday, başarısız aday gibi değerlendirme sayılır. Kaydı `"skipped": "<reason>"` ve `skipped:` ile başlayan `error` taşır; günlük satırı ve değerlendirme tablosu nedeni belirtir (**Atlandı** durumu; örneğin “'patch', 'substrate' üzerinden 1,2 mm taşıyor (x+)”). Denetim hatasının maliyeti 10⁴'tür. Yanlış yerleşmiş metalin maliyeti 10⁴ artı her mm taşma veya boşluk için %10'dur (en fazla 10⁵); böylece bu noktalardan başlayan arama uygulanabilir bölgeye yönelir. Arama ardından devam eder. `--no-precheck` her adayı simüle eder. Python modelleri denetlenmez; taramalar her noktayı olduğu gibi çalıştırır.
 
-Yakın alandan uzak alana dönüşüm yalnızca Dmax hedefi gerektiriyorsa (veya `--farfield` ile) yapılır; bu her değerlendirmenin son işlem süresinin büyük kısmını azaltır.
+Yakın alandan uzak alana dönüşüm, yönlülük, gerçekleşen kazanç veya verimlilik hedefi gerektiriyorsa (veya `--farfield` ile) yapılır. Bu istekler olmasa da mevcut bant boyunca verimlilik monitörü dönüşümü gerektirebilir; aksi durumda her değerlendirmenin son işlem süresini azaltmak için dönüşüm atlanır.
 
 Her değerlendirmenin ham openEMS klasörü (`<sim-root>/optimizations/<name>/<slug>/`), paketi yazılır yazılmaz kaldırılır; korumak için `--keep-sim` kullanın (veya `FAIRBEAM_KEEP_SIM=1` ayarlayın).
 
 ### Çok portlu hedefler ve uyarılan portlar
 
-Son üç hedef, `results.sparams` içindeki S-matrisini okur (`fairbeam run` ile aynı `multiport.s_from_section`). Port numaraları modelin kendi numaralarıdır. Wilkinson bölücü örnekleri: `sij_max=-25@2.4:2,3` (yalıtım S23 ≤ −25 dB), `sij_min=-3.2@2.4:2,1` (|S21| ≥ −3,2 dB), `match_all=-20@2.4` (S11, S22 ve S33'ün tümü ≤ −20 dB). |S_ij|, en yakın iki frekans noktası arasında genlik üzerinden enterpole edilir.
+`sij_max`, `sij_min` ve `match_all`, `results.sparams` içindeki S-matrisini okur (`fairbeam run` ile aynı `multiport.s_from_section`). Port numaraları modelin kendi numaralarıdır. Wilkinson bölücü örnekleri: `sij_max=-25@2.4:2,3` (yalıtım S23 ≤ −25 dB), `sij_min=-3.2@2.4:2,1` (|S21| ≥ −3,2 dB), `match_all=-20@2.4` (S11, S22 ve S33'ün tümü ≤ −20 dB). |S_ij|, en yakın iki frekans noktası arasında genlik üzerinden enterpole edilir.
 
 openEMS uyarılan her port için bir kez çalışır; değerlendirmenin süresi, uyarılan port sayısıyla tek çalıştırma süresinin çarpımıdır. Uyarılacak portları `--excite` belirler:
 

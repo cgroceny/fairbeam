@@ -1,0 +1,84 @@
+// Source/lifetime regression controls; analytical synthetic fields, no solver or DOM.
+// node --conditions=browser --experimental-strip-types scripts/check-array-session.mjs
+import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
+import { createRoot, createSignal } from 'solid-js';
+import { createArraySession, snapshotArrayFeed } from '../src/lib/arraySession.ts';
+import { runChildren, runContent } from '../src/designer/navModel.ts';
+const fixture = JSON.parse(readFileSync(new URL('../examples/synthetic/array2x1.json', import.meta.url), 'utf8'));
+createRoot(dispose => {
+  const [a, setA] = createSignal(fixture), [b, setB] = createSignal(structuredClone(fixture));
+  const f = fixture.results.farfield[0].f;
+  const [freq, setFreq] = createSignal(f), [compare, setCompare] = createSignal(false), [identity, setIdentity] = createSignal('run-a');
+  const x = createArraySession(a, freq, { comparing: compare, identity });
+  const y = createArraySession(b, () => f);
+  const uniform = () => assert.ok([...x.weights().values()].every(w => w.phaseDeg === 0 && w.ampDb === 0));
+  assert.equal(x.set().elements.length, 2); uniform();
+  x.steer(35, 0);
+  assert.ok([...x.weights().values()].some(w => w.phaseDeg !== 0));
+  assert.ok([...y.weights().values()].every(w => w.phaseDeg === 0));
+  assert.notDeepEqual(x.steered().directivity_dbi, y.steered().directivity_dbi);
+  setCompare(true); assert.equal(x.override(), null); assert.ok(y.override());
+  setCompare(false); assert.ok(x.override()); assert.equal(x.scanTheta(), 35);
+  setFreq(f + 1e9); assert.equal(x.set(), null); assert.equal(x.steered(), null); assert.equal(x.weights().size, 0);
+  setFreq(f); uniform(); assert.equal(x.scanTheta(), 0);
+  x.steer(-20, 90); setIdentity('replacement-a'); uniform(); assert.equal(x.scanTheta(), 0);
+  x.steer(20, 0); setA(structuredClone(fixture)); uniform();
+  setA(null); assert.equal(x.override(), null); assert.equal(x.weights().size, 0); assert.ok(y.override());
+  setA(fixture); uniform();
+  x.setActive(false); assert.equal(x.override(), null); assert.ok(y.override());
+  setB(null); assert.equal(y.override(), null); assert.ok(x.steered());
+  const content = runContent(fixture);
+  assert.ok(content.array.length > 0);
+  assert.ok(runChildren('fixture.json', content).some(n => n.action?.view === 'array'));
+  assert.ok(!runChildren('none.json', runContent({})).some(n => n.action?.view === 'array'));
+  const single = structuredClone(fixture); single.results.element_patterns.forEach(set => { set.elements = set.elements.slice(0, 1); });
+  assert.equal(runContent(single).array, undefined);
+  const [selected, select] = createSignal(fixture), [selectedFrequency, selectFrequency] = createSignal(f);
+  const designer = createArraySession(selected, selectedFrequency, { minElements: 2 });
+  const legacyViewer = createArraySession(selected, selectedFrequency);
+  assert.equal(designer.hasArray(), true);designer.steer(25, 0);
+  const snap = snapshotArrayFeed(designer, fixture);
+  assert.equal(snap.frequencyHz, f);assert.notEqual(snap.weights, designer.weights());
+  assert.notEqual(snap.weights.get(1), designer.weights().get(1));
+  assert.equal(snapshotArrayFeed(designer, structuredClone(fixture)), null, 'a lookalike bundle cannot borrow a feed');
+  select(single);
+  assert.equal(designer.hasArray(), false);assert.equal(designer.set(), null);assert.equal(designer.steered(), null);assert.equal(designer.override(), null);
+  assert.equal(designer.weights().size, 0);assert.equal(snapshotArrayFeed(designer, single), null);
+  designer.steer(30, 0);assert.equal(designer.weights().size, 0, 'ineligible source cannot steer');
+  assert.ok(legacyViewer.hasArray() && legacyViewer.steered(), 'viewer keeps its existing single-element admission');
+  const mixed = structuredClone(fixture), one = structuredClone(single.results.element_patterns[0]);one.f=f+100e6;mixed.results.element_patterns.push(one);
+  select(mixed);assert.ok(designer.hasArray());designer.steer(20, 0);selectFrequency(one.f);
+  assert.equal(designer.hasArray(), false);assert.equal(designer.set(), null);assert.equal(designer.steered(), null);assert.equal(designer.override(), null);
+  assert.equal(snapshotArrayFeed(designer, mixed), null, 'single-element frequency cannot export a feed');
+  assert.equal(designer.weights().size, 0);assert.equal(designer.sets().length, 1, 'single-element frequency is absent from the selection list');
+  selectFrequency(f+1e9);assert.equal(legacyViewer.hasArray(), false, 'missing selected frequency is unavailable in either mode');
+  selectFrequency(f);assert.ok(designer.hasArray());assert.ok([...designer.weights().values()].every(w=>w.phaseDeg===0));
+  assert.ok([...snap.weights.values()].some(w=>w.phaseDeg!==0), 'previous export snapshot survives run/frequency reset');
+  // Real UI accessors read the whole focus/tab/document object, even for a view-only
+  // transition. Equal resolved source/identity/frequency must preserve the feed.
+  const [focus, setFocus] = createSignal({ view: 'array', f, file: 'run-a' });
+  const [tabs, setTabs] = createSignal({ open: true, active: 'array' });
+  const [document, setDocument] = createSignal({ id: 'design-a', title: 'Original' });
+  const derived = createArraySession(() => {
+    const current = focus();
+    return tabs().open && current.file === 'run-a' ? fixture : null;
+  }, () => focus().f, { identity: () => `${document().id}\n${focus().file}` });
+  derived.steer(25, 0);derived.setActive(false);
+  const savedWeights = derived.weights(), savedPattern = derived.steered();
+  setFocus({ view: 'pattern', f, file: 'run-a' });
+  setTabs({ open: true, active: 'pattern' });
+  setDocument({ id: 'design-a', title: 'Renamed' });
+  assert.equal(derived.scanTheta(), 25);assert.equal(derived.active(), false);
+  assert.equal(derived.weights(), savedWeights);assert.equal(derived.steered(), savedPattern);
+  // A nearby requested frequency resolves to the very same canonical stored set.
+  setFocus({ view: 'pattern3d', f: f + 1, file: 'run-a' });
+  assert.equal(derived.set().f, f);assert.equal(derived.scanTheta(), 25);assert.equal(derived.weights(), savedWeights);
+  setTabs({ open: false, active: 'pattern' });
+  assert.equal(derived.weights().size, 0);assert.equal(derived.source(), null);assert.equal(derived.scanTheta(), 0);
+  setTabs({ open: true, active: 'array' });assert.ok(derived.hasArray());assert.equal(derived.active(), true);
+  derived.steer(20, 0);setDocument({ id: 'design-b', title: 'Renamed' });
+  assert.equal(derived.scanTheta(), 0);assert.ok([...derived.weights().values()].every(w=>w.phaseDeg===0));
+  dispose();
+});
+console.log('Array sessions: independent feeds, compare suppression, frequency/run/revision/reset/close and tree admission passed. Synthetic software controls only.');

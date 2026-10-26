@@ -41,6 +41,8 @@ export interface GoalDraft {
   kind: GoalKind;
   target: string;
   at: string;
+  atHi?: string;
+  atHiInvalid?: boolean;
   weight: string;
   /** port numbers of S_ij (sij_max / sij_min) */
   i: string;
@@ -53,6 +55,7 @@ export interface GoalPreset {
   label: string;
   unit: string;
   needsAt: boolean;
+  band?: boolean;
   /** needs the port pair i, j */
   pair?: boolean;
   /** evaluated on the S-matrix of a multi-port model */
@@ -63,12 +66,14 @@ export interface GoalPreset {
 
 export const GOAL_PRESETS: GoalPreset[] = [
   { kind: "f0", label: "opt.goal.f0", unit: "GHz", needsAt: false, hint: "opt.goal.f0.hint" },
-  { kind: "s11_max", label: "opt.goal.s11Max", unit: "dB", needsAt: true, hint: "opt.goal.s11Max.hint" },
+  { kind: "s11_max", label: "opt.goal.s11Max", unit: "dB", needsAt: true, band: true, hint: "opt.goal.s11Max.hint" },
   { kind: "bw_min", label: "opt.goal.bwMin", unit: "MHz", needsAt: false, hint: "opt.goal.bwMin.hint" },
   { kind: "dmax_min", label: "opt.goal.dmaxMin", unit: "dBi", needsAt: true, hint: "opt.goal.dmaxMin.hint" },
-  { kind: "match_all", label: "opt.goal.matchAll", unit: "dB", needsAt: true, multi: true, hint: "opt.goal.matchAll.hint" },
-  { kind: "sij_max", label: "opt.goal.sijMax", unit: "dB", needsAt: true, pair: true, multi: true, hint: "opt.goal.sijMax.hint" },
-  { kind: "sij_min", label: "opt.goal.sijMin", unit: "dB", needsAt: true, pair: true, multi: true, hint: "opt.goal.sijMin.hint" },
+  { kind: "realized_gain_min", label: "opt.goal.realizedGain", unit: "dBi", needsAt: true, hint: "opt.goal.radiation.hint" },
+  { kind: "efficiency_min", label: "opt.goal.efficiency", unit: "%", needsAt: true, hint: "opt.goal.radiation.hint" },
+  { kind: "match_all", label: "opt.goal.matchAll", unit: "dB", needsAt: true, band: true, multi: true, hint: "opt.goal.matchAll.hint" },
+  { kind: "sij_max", label: "opt.goal.sijMax", unit: "dB", needsAt: true, band: true, pair: true, multi: true, hint: "opt.goal.sijMax.hint" },
+  { kind: "sij_min", label: "opt.goal.sijMin", unit: "dB", needsAt: true, band: true, pair: true, multi: true, hint: "opt.goal.sijMin.hint" },
 ];
 
 export const presetOf = (kind: GoalKind) => GOAL_PRESETS.find((p) => p.kind === kind)!;
@@ -88,9 +93,9 @@ export const modelPorts = createRoot(() =>
 /** Default draft of a goal kind at frequency f (GHz, as typed). */
 export function goalDraft(kind: GoalKind, f: string, weight = "1"): GoalDraft {
   const n = modelPorts()?.length ?? 3;
-  const target = { f0: f, s11_max: "-20", bw_min: "100", dmax_min: "5", match_all: "-20", sij_max: "-25", sij_min: "-3.5" }[kind];
+  const target = { f0: f, s11_max: "-20", bw_min: "100", dmax_min: "5", realized_gain_min: "5", efficiency_min: "90", match_all: "-20", sij_max: "-25", sij_min: "-3.5" }[kind];
   const [i, j] = kind === "sij_max" ? (n >= 3 ? ["2", "3"] : ["2", "1"]) : kind === "sij_min" ? ["2", "1"] : ["", ""];
-  return { kind, target, at: presetOf(kind).needsAt ? f : "", weight, i, j };
+  return { kind, target, at: presetOf(kind).needsAt ? f : "", atHi: "", atHiInvalid: false, weight, i, j };
 }
 
 export const [vary, setVary] = createStore<VaryDraft[]>([]);
@@ -252,14 +257,16 @@ export const optPlan = createRoot(() =>
     goals.forEach((g, i) => {
       const target = Number(g.target);
       const preset = presetOf(g.kind);
-      if (!Number.isFinite(target)) errors[`goals.${i}`] = t("opt.err.targetNumber");
+      if (!g.target.trim() || !Number.isFinite(target)) errors[`goals.${i}`] = t("opt.err.targetNumber");
       else if ((g.kind === "f0" || g.kind === "bw_min") && target <= 0) errors[`goals.${i}`] = t("opt.err.targetPositive");
       else if ((g.kind === "s11_max" || g.kind === "sij_max" || g.kind === "match_all") && target >= 0) errors[`goals.${i}`] = t("opt.err.negativeDb");
       else if (g.kind === "sij_min" && target > 0) errors[`goals.${i}`] = t("opt.err.atMostZeroDb");
-      else if (preset.needsAt && !(Number(g.at) > 0)) errors[`goals.${i}`] = t("opt.err.frequency");
+      else if (g.kind === "efficiency_min" && !(target > 0 && target <= 100)) errors[`goals.${i}`] = t("opt.err.efficiency");
+      else if (preset.needsAt && (!Number.isFinite(Number(g.at)) || !(Number(g.at) > 0))) errors[`goals.${i}`] = t("opt.err.frequency");
+      else if (preset.band && (g.atHiInvalid || g.atHi?.trim() && (!Number.isFinite(Number(g.atHi)) || Number(g.atHi) <= Number(g.at)))) errors[`goals.${i}`] = t("opt.err.frequencyRange");
       else if (preset.pair && !(isPort(g.i) && isPort(g.j)))
         errors[`goals.${i}`] = numbers ? t("opt.err.ports", { ports: numbers.join(", ") }) : t("opt.err.portNumbers");
-      else if (!(Number(g.weight) > 0)) errors[`goals.${i}`] = t("opt.err.weight");
+      else if (!Number.isFinite(Number(g.weight)) || !(Number(g.weight) > 0)) errors[`goals.${i}`] = t("opt.err.weight");
     });
     if (!vary.length) errors.vary = t("opt.err.noVary");
     if (!goals.length) errors.goals = t("opt.err.noGoal");
@@ -307,6 +314,7 @@ export async function startOptimize() {
         kind: g.kind,
         target: Number(g.target),
         at: presetOf(g.kind).needsAt ? Number(g.at) : null,
+        ...(presetOf(g.kind).band && g.atHi?.trim() ? { at_hi: Number(g.atHi) } : {}),
         weight: Number(g.weight) || 1,
         ...(presetOf(g.kind).pair ? { ports: [Number(g.i), Number(g.j)] as [number, number] } : {}),
       })),
@@ -385,9 +393,16 @@ import { fmtG, goalText } from "./optimizeGoals";
 
 /** Metric of a multi-port goal in an evaluation (null when unknown). */
 export function goalValue(g: OptGoal, m: OptEval["metrics"]): number | null {
+  if (g.at_hi != null) return null; // old point metrics cannot answer a band goal
+  if (g.kind === "s11_max") return m.s11_at?.[fmtG(g.at)] ?? null;
   if (g.kind === "match_all") return m.match_all_at?.[fmtG(g.at)]?.max ?? null;
   if ((g.kind === "sij_max" || g.kind === "sij_min") && g.ports) return m.sij_at?.[`${g.ports[0]},${g.ports[1]}@${fmtG(g.at)}`] ?? null;
   return null;
+}
+
+export function evaluationGoalValue(g: OptGoal, e: OptEval, index: number): number | null {
+  // Explicit unavailable values must not fall through to an unrelated point metric.
+  return e.goals ? e.goals[index]?.value ?? null : goalValue(g, e.metrics);
 }
 
 const sub = (i: number, j: number) => (i < 10 && j < 10 ? `S${i}${j}` : `S${i},${j}`);

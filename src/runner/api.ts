@@ -342,11 +342,12 @@ export interface JobSweep {
 export type SweepAxisRequest = { key: string; values: number[] } | { key: string; start: number; stop: number; steps: number };
 
 /** Single-port goals, and multi-port goals on results.sparams (sij_max, sij_min, match_all). */
-export type GoalKind = "f0" | "s11_max" | "bw_min" | "dmax_min" | "sij_max" | "sij_min" | "match_all";
+export type GoalKind = "f0" | "s11_max" | "bw_min" | "dmax_min" | "sij_max" | "sij_min" | "match_all" | "realized_gain_min" | "efficiency_min";
 export interface OptGoal {
   kind: GoalKind;
   target: number;
   at?: number | null;
+  at_hi?: number | null;
   weight?: number;
   /** [i, j] for sij_max / sij_min: |S_ij|, receiving port i, driven port j */
   ports?: [number, number] | null;

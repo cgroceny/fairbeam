@@ -650,6 +650,8 @@ class JobManager:
             text = f"{g['kind']}={g['target']!r}"
             if g.get("at") is not None:
                 text += f"@{g['at']!r}"
+                if g.get("at_hi") is not None:
+                    text += f"..{g['at_hi']!r}"
             if g.get("ports"):
                 text += f":{int(g['ports'][0])},{int(g['ports'][1])}"
             if g.get("weight", 1) != 1:

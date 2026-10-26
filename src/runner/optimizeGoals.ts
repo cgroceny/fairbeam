@@ -9,7 +9,7 @@ const sub = (i: number, j: number) => (i < 10 && j < 10 ? `S${i}${j}` : `S${i},$
 
 /** Goal as shown in the progress card, e.g. "|S23| ≤ −25 dB @ 2.4 GHz"; `tx` tEn for exported files. */
 export function goalText(g: OptGoal, tx: typeof t = t): string {
-  const at = ` @ ${fmtG(g.at)} GHz`;
+  const at = ` @ ${fmtG(g.at)}${g.at_hi != null ? `..${fmtG(g.at_hi)}` : ""} GHz`;
   const w = g.weight && g.weight !== 1 ? ` ×${g.weight}` : "";
   const [i, j] = g.ports ?? [1, 1];
   const text = {
@@ -17,6 +17,8 @@ export function goalText(g: OptGoal, tx: typeof t = t): string {
     s11_max: `|S11| ≤ ${g.target} dB${at}`,
     bw_min: `BW ≥ ${g.target} MHz`,
     dmax_min: `Dmax ≥ ${g.target} dBi${at}`,
+    realized_gain_min: `${tx("opt.goal.realizedGain")} ≥ ${g.target} dBi${at}`,
+    efficiency_min: `${tx("opt.goal.efficiency")} ≥ ${g.target} %${at}`,
     sij_max: `|${sub(i, j)}| ≤ ${g.target} dB${at}`,
     sij_min: `|${sub(i, j)}| ≥ ${g.target} dB${at}`,
     match_all: `${tx("opt.goalText.allSii")} ≤ ${g.target} dB${at}`,

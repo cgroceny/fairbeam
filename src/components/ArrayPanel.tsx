@@ -3,11 +3,11 @@
 // beam, HPBW, Dmax and active reflection per port. The steered pattern feeds the 3D view and the
 // Pattern tab (arrayStore).
 
-import { createMemo, For, Show } from "solid-js";
+import { createMemo, createUniqueId, For, Show } from "solid-js";
 import { RotateCcw, TriangleAlert } from "lucide-solid";
-import { bundle } from "../state";
 import { activeReflection, gammaDb, uniformWeights, type Weight } from "../lib/array";
-import { arraySet, arrayWeights, scanPhi, scanTheta, setArrayWeights, setScanTheta, steer, steeredBeam, steeredFarField } from "../lib/arrayStore";
+import { viewerArray } from "../lib/arrayStore";
+import type { ArraySession } from "../lib/arraySession";
 import { radioGroupKeys } from "../lib/a11y";
 import { sMatrix } from "../lib/sparams";
 import { num } from "../lib/format";
@@ -34,8 +34,13 @@ function Phasor(props: { w: Weight; maxAmp: number }) {
   );
 }
 
-export default function ArrayPanel() {
-  const set = arraySet;
+export default function ArrayPanel(props: { session?: ArraySession }) {
+  const session = props.session ?? viewerArray;
+  const bundle = session.source, arrayWeights = session.weights, setArrayWeights = session.setWeights;
+  const scanPhi = session.scanPhi, scanTheta = session.scanTheta, setScanTheta = session.setScanTheta;
+  const steer = session.steer, steeredBeam = session.beam, steeredFarField = session.steered;
+  const uid = createUniqueId();
+  const set = session.set;
   const ports = () => set()?.elements.map((e) => e.port) ?? [];
   const S = createMemo(() => sMatrix(bundle()));
   const active = createMemo(() => {
@@ -66,8 +71,8 @@ export default function ArrayPanel() {
             phi: bundle()!.results!.element_patterns!.phi.length,
           })}</p>
         </Show>
-        <section class="array-block" aria-labelledby="array-weights">
-          <h3 class="section-label" id="array-weights">
+        <section class="array-block" aria-labelledby={`array-weights-${uid}`}>
+          <h3 class="section-label" id={`array-weights-${uid}`}>
             {t("array.weights")}
             <button class="btn btn-ghost btn-sm push" onClick={reset} title={t("array.uniformTitle")}>
               <RotateCcw size={14} aria-hidden="true" /> {t("array.uniform")}
@@ -120,8 +125,8 @@ export default function ArrayPanel() {
           </div>
         </section>
 
-        <section class="array-block stack" aria-labelledby="array-steer">
-          <h3 class="section-label" id="array-steer">{t("array.steer")}</h3>
+        <section class="array-block stack" aria-labelledby={`array-steer-${uid}`}>
+          <h3 class="section-label" id={`array-steer-${uid}`}>{t("array.steer")}</h3>
           <p class="note">{t("array.steerNote")}</p>
           <div class="array-steer">
             <span class="rp-mini">{t("array.scanPlane")}</span>
@@ -129,9 +134,9 @@ export default function ArrayPanel() {
               <button class="seg-btn" role="radio" aria-checked={scanPhi() === 0} aria-label={t("array.planeXzAria")} title={t("array.planeXz")} onClick={() => steer(scanTheta(), 0)}>xz</button>
               <button class="seg-btn" role="radio" aria-checked={scanPhi() === 90} aria-label={t("array.planeYzAria")} title={t("array.planeYz")} onClick={() => steer(scanTheta(), 90)}>yz</button>
             </div>
-            <label class="rp-mini" for="array-scan">{t("array.scanAngle")}</label>
+            <label class="rp-mini" for={`array-scan-${uid}`}>{t("array.scanAngle")}</label>
             <div class="array-scan">
-              <input id="array-scan" type="range" min={-thetaMax()} max={thetaMax()} step="1" value={scanTheta()}
+              <input id={`array-scan-${uid}`} type="range" min={-thetaMax()} max={thetaMax()} step="1" value={scanTheta()}
                 aria-valuetext={t("array.degrees", { n: scanTheta() })} onInput={(e) => steer(Number(e.currentTarget.value), scanPhi())} />
               <NumberField class="rp-input array-input" min={-thetaMax()} max={thetaMax()} step="5" value={scanTheta()} aria-label={t("array.scanAngleAria")}
                 onChange={(e) => steer(clampNum(e.currentTarget.value, -thetaMax(), thetaMax(), scanTheta()), scanPhi())} />
@@ -141,8 +146,8 @@ export default function ArrayPanel() {
           <p class="note">{t("array.formula", { f: num((set()!.f) / 1e9, 3) })}</p>
         </section>
 
-        <section class="array-block" aria-labelledby="array-beam">
-          <h3 class="section-label" id="array-beam">{t("array.pattern")}</h3>
+        <section class="array-block" aria-labelledby={`array-beam-${uid}`}>
+          <h3 class="section-label" id={`array-beam-${uid}`}>{t("array.pattern")}</h3>
           <Show when={steeredBeam()}>
             {(bm) => (
               <dl class="kv">

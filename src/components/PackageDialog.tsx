@@ -6,7 +6,7 @@ import { PACKAGE_GROUPS, cstGeometryOnly, fabUnavailable, packageFiles, packageN
 import { technicalDrawing } from "../drawing/drawing";
 import { capture3d, reportPdfFor, svgToPdf } from "../drawing/render";
 import { useModal } from "../lib/dialog";
-import { arrayWeights, hasArray } from "../lib/arrayStore";
+import { arrayFeedFor } from "../lib/currentArray";
 import { reference } from "../compare/store";
 import { downloadFailedMessage, downloadMessage, revealDownloadedFile, saveDownload } from "../lib/download";
 import { hasKey, t } from "../i18n";
@@ -57,7 +57,8 @@ export default function PackageDialog() {
     const b = bundle();
     if (!b) return [];
     const ph = new Uint8Array(0);
-    return packageFiles(b, effective(), { isoPng: ph, drawingPdf: ph, reportPdf: ph, arrayWeights: hasArray() ? arrayWeights() : null, reference: reference() }).map((f) => f.path);
+    const feed = arrayFeedFor(b);
+    return packageFiles(b, effective(), { isoPng: ph, drawingPdf: ph, reportPdf: ph, arrayWeights: feed?.weights, arrayFrequencyHz: feed?.frequencyHz, reference: reference() }).map((f) => f.path);
   });
   // the time in the file name: when the dialog opened, then the moment of the last export (the name shown is the name saved)
   const [stampAt, setStampAt] = createSignal(new Date());
@@ -69,6 +70,8 @@ export default function PackageDialog() {
     const now = new Date();
     setStampAt(now);
     const want = effective();
+    const feed = arrayFeedFor(b);
+    const weights = feed?.weights, arrayFrequencyHz = feed?.frequencyHz;
     const problems: string[] = [];
     const file = packageName(b, now);
     const model = modelFileOf(b);
@@ -98,8 +101,8 @@ export default function PackageDialog() {
         try {
           // the report lists the files of this package: the ones captured and rendered so far, the report itself
           const ph = new Uint8Array(1);
-          const paths = packageFiles(b, want, { isoPng, drawingPdf, reportPdf: ph, arrayWeights: hasArray() ? arrayWeights() : null, reference: reference(), model }, now).map((f) => f.path);
-          reportPdf = await reportPdfFor(b, now, hasArray() ? arrayWeights() : null, reference(), { files: paths, model });
+          const paths = packageFiles(b, want, { isoPng, drawingPdf, reportPdf: ph, arrayWeights: weights, arrayFrequencyHz, reference: reference(), model }, now).map((f) => f.path);
+          reportPdf = await reportPdfFor(b, now, weights, reference(), { files: paths, model, arrayFrequencyHz });
         } catch (e) {
           console.error(e);
           problems.push(t("package.missing.report"));
@@ -107,7 +110,7 @@ export default function PackageDialog() {
       }
       setBusy(t("package.busy.zip"));
       await new Promise((r) => setTimeout(r, 0));
-      const files = packageFiles(b, want, { isoPng, drawingPdf, reportPdf, arrayWeights: hasArray() ? arrayWeights() : null, reference: reference(), model }, now);
+      const files = packageFiles(b, want, { isoPng, drawingPdf, reportPdf, arrayWeights: weights, arrayFrequencyHz, reference: reference(), model }, now);
       const r = await saveDownload(file, zipPackage(files, file.replace(/\.zip$/, ""), now), "application/zip");
       setNote(problems.length
         ? { text: downloadMessage(r, t("package.filesWithout", { count: files.length, missing: problems.join(", ") })), warn: true, path: r.status === "saved" ? r.path : undefined }
@@ -128,8 +131,9 @@ export default function PackageDialog() {
     const now = new Date();
     setStampAt(now);
     const file = packageName(b, now).replace(/\.zip$/, "_report.pdf");
+    const feed = arrayFeedFor(b);
     try {
-      const r = await saveDownload(file, await reportPdfFor(b, now, hasArray() ? arrayWeights() : null, reference(), { model: modelFileOf(b) }), "application/pdf");
+      const r = await saveDownload(file, await reportPdfFor(b, now, feed?.weights, reference(), { model: modelFileOf(b), arrayFrequencyHz: feed?.frequencyHz }), "application/pdf");
       setNote({ text: downloadMessage(r), warn: r.status === "failed" || r.status === "cancelled", path: r.status === "saved" ? r.path : undefined });
     } catch (e) {
       console.error(e);

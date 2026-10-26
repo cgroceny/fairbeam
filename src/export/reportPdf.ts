@@ -7,7 +7,7 @@ import { convergenceText, efficiencyWarning, energyText, finalEnergy } from "../
 import { technicalDrawing } from "../drawing/drawing.ts";
 import { patternFigure, patternFigureFor, s11Figure, smithFigure, sparamFigure, zinFigure } from "../drawing/charts.ts";
 import { activeReflection, arrayFarField, gammaDb, mainBeam, type Weight } from "../lib/array.ts";
-import { elementPatterns, magDb, pairLabel, sMatrix } from "../lib/sparams.ts";
+import { magDb, pairLabel, sMatrix } from "../lib/sparams.ts";
 import { comparisonFigures } from "../drawing/charts.ts";
 import { comparisonMetrics, metricsRows } from "../import/metrics.ts";
 import type { RefBundle } from "../import/reference.ts";
@@ -19,6 +19,7 @@ import { APP_VERSION, bundleWriter } from "../lib/appVersion.ts";
 import { bandTexts } from "../lib/bands.ts";
 import { radiationBands, radiationPatternPoints } from "../lib/radiationFrequency.ts";
 import { modelMmText, modelToMm } from "../lib/modelUnits.ts";
+import { arrayExportScope, arrayExportSets } from "./arrayFeed.ts";
 
 const W = 210;
 const H = 297;
@@ -39,6 +40,8 @@ export interface ReportOptions {
   pdfDate?: Date;
   /** beam-steering weights for the array page (bundles with element patterns) */
   arrayWeights?: Map<number, Weight> | null;
+  /** Exact stored frequency captured with arrayWeights; omitted for legacy fixed-weight reports. */
+  arrayFrequencyHz?: number;
   /** imported reference data to compare with */
   reference?: RefBundle | null;
   /** the paths of the package the report goes into (its "Files and formats" list); a report on its own has none */
@@ -436,14 +439,14 @@ export function reportPages(bundle: Bundle, opt: ReportOptions): string[] {
   // steered array pattern at the current weights
   const weights = opt.arrayWeights;
   if (weights?.size) {
-    for (const set of elementPatterns(b)) {
+    for (const set of arrayExportSets(b, opt.arrayFrequencyHz)) {
       const ff = arrayFarField(b, set, weights);
       const beam = mainBeam(ff.theta, ff.phi, ff.directivity_dbi, !!b.half_space);
       const p = patternFigureFor(b, ff, { widthMm: 150, title: `Array directivity (dBi), f = ${f3(ff.f)} GHz` });
       if (!p) continue;
       d.newPage();
       d.h2(`Array pattern at ${f3(ff.f)} GHz (current weights)`);
-      d.figure(p, `Figure ${fig++}. Array pattern |Σ w_i E_i|² from the embedded element patterns, normalised to directivity by integrating over ${b.half_space ? "the upper half space" : "the sphere"}; cuts φ = 0° and φ = 90°.`);
+      d.figure(p, `Figure ${fig++}. Array pattern |Σ w_i E_i|² from the embedded element patterns, normalised to directivity by integrating over ${b.half_space ? "the upper half space" : "the sphere"}; cuts φ = 0° and φ = 90°. ${arrayExportScope(opt.arrayFrequencyHz)}`);
       const g = S ? activeReflection(S, weights, ff.f) : new Map<number, [number, number] | null>();
       d.table(
         ["Port", "Amplitude (dB)", "Phase (°)", "Active |Γ| (dB)", ""],

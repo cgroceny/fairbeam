@@ -1,3 +1,6 @@
+import ResultArray from "./ResultArray";
+import { designerArray } from "./arraySession";
+import { arrayOverrideFor } from "../lib/currentArray";
 import { appModeRevision } from "../workspace";
 import { openUserProject } from "../runner/openProject";
 import { powerWaveReflection } from "../lib/powerWaves";
@@ -421,9 +424,10 @@ function ResultPattern(props: { b: Bundle }) {
     const f = resultFocus()?.f;
     return f === undefined || !ffs().length ? 0 : nearestIndex(ffs().map((x) => x.f), f);
   };
-  const ff = () => ffs()[Math.min(k(), ffs().length - 1)];
+  const override = () => arrayOverrideFor(originalPortResult(props.b));
+  const ff = () => override() ?? ffs()[Math.min(k(), ffs().length - 1)];
   const cmp = useCompare(() => props.b);
-  const shownQuantity = () => ff() ? effectiveQuantity(props.b, ff()!, patternQuantity()) : "directivity";
+  const shownQuantity = () => override() ? "directivity" : ff() ? effectiveQuantity(props.b, ff()!, patternQuantity()) : "directivity";
   const summary = createMemo(() => (ff() ? farfieldSummary(props.b, ff()!) : null));
   const patternEntries = (): PatternEntry[] => {
     const f = ff();
@@ -440,7 +444,7 @@ function ResultPattern(props: { b: Bundle }) {
     <Show when={ff()} fallback={<div class="panel-empty">{t("results.pattern.none")}</div>}>
       <PatternCutPanel entries={patternEntries()} principalAvailable={!cmp()}>
           <FreqChips label={t("farfield.frequency")} freqs={[...new Set(ffs().map((f) => f.f))]} active={ff()!.f} />
-          <label class="rdk-field"><span>{t("results.pattern.quantity")}</span><PatternQuantitySelect bundle={props.b} ff={ff()!} /></label>
+          <label class="rdk-field"><span>{t("results.pattern.quantity")}</span><PatternQuantitySelect bundle={props.b} ff={ff()!} directivityOnly={override() ? t("farfield.arrayPatternNote") : undefined} /></label>
           <Show when={quantityFallbackNote(props.b, ff()!, patternQuantity())}>{(note) => <p class="rdk-note" role="note">{note()}</p>}</Show>
           <dl class="kv">
             <dt>{t("results.pattern.frequency")}</dt><dd class="mono">{freqText(ff()!.f)}</dd>
@@ -509,6 +513,7 @@ export function ResultBody(props: { view: MainResultView; b: Bundle; format: Res
 function ResultBodyContent(props: { view: MainResultView; b: Bundle; format: ResultDataFormat }) {
   return (
     <Switch>
+      <Match when={props.view === "array"}><ResultArray /></Match>
       <Match when={props.view === "sparams"}><ResultSParams b={props.b} format={props.format} /></Match>
       <Match when={props.view === "impedance"}><ResultImpedance b={props.b} /></Match>
       <Match when={props.view === "vswr"}><ResultVswr b={props.b} /></Match>
@@ -529,6 +534,7 @@ function ResultBodyContent(props: { view: MainResultView; b: Bundle; format: Res
  * close button of the shown run. */
 export function ResultToolbar(props: { view: MainResultView }) {
   let bar!: HTMLDivElement;
+  const dataView = () => props.view === "array" ? "pattern" : props.view;
   const barSize = useSize(() => bar); // a narrow bar folds its labelled buttons to icons
   const [openingResult, setOpeningResult] = createSignal<string | null>(null);
   const [failedResult, setFailedResult] = createSignal<string | null>(null);
@@ -591,7 +597,10 @@ export function ResultToolbar(props: { view: MainResultView }) {
       ? { pairs: designSParams.selectedPairs(), sparamMode: designSParams.mode(), smithPort: designSParams.smithPort() }
       : {}),
     runNames: runs?.map((r) => runLabel(r.file)),
-    patternQuantity: patternQuantity(),
+    patternQuantity: props.view === "array" || arrayOverrideFor(rawDesignResult()?.bundle ?? null) ? "directivity" : patternQuantity(),
+    ...((props.view === "array" || props.view === "pattern") && designerArray.source() && !resultFocus()?.compare?.length
+      && (props.view === "array" ? designerArray.steered() : designerArray.override())
+      ? { patternEntries: [{ label: t("farfield.arrayTag"), field: (props.view === "array" ? designerArray.steered() : designerArray.override())! }] } : {}),
     radiationQuantity: props.view === "efficiency" && efficiencyQuantity() !== "efficiency" ? radiationQuantity() : undefined,
     patternCut: patternCutChoice(),
     patternPrincipalAvailable: !comparedRuns().length,
@@ -610,10 +619,10 @@ export function ResultToolbar(props: { view: MainResultView }) {
     if (portProcessingSession.revision() !== processingRevision || designResult()?.file !== run.file || designResult()?.bundle !== run.bundle || (resultFocus() && resultFocus()?.file !== run.file) || selectedRuns().join("\n") !== files.join("\n")) throw new Error(t("results.compare.changed"));
     return loaded;
   };
-  const exportFrequency = () => props.view === "pattern" ? resultFocus()?.f ?? designResult()?.bundle.results?.farfield[0]?.f : undefined;
+  const exportFrequency = () => props.view === "array" ? designerArray.set()?.f : props.view === "pattern" ? resultFocus()?.f ?? designResult()?.bundle.results?.farfield[0]?.f : undefined;
   const exportBase = (b: Bundle) => resultExportStem(b, props.view, exportFrequency()) + (portProcessingInfo(b) ? "_postprocessed" : "");
   const plot = () => bar.closest(".dw-result")?.querySelector<HTMLElement>(".dw-result-plot") ?? null;
-  const ready = () => !!designResult()?.bundle.results && (!resultFocus() || resultFocus()?.file === designResult()?.file);
+  const ready = () => (props.view !== "array" || !!designerArray.steered() && !resultFocus()?.compare?.length) && !!designResult()?.bundle.results && (!resultFocus() || resultFocus()?.file === designResult()?.file);
   const figureReady = () => ready() && comparisonReady() && !["table", "summary", "fieldmap"].includes(props.view);
   const exportFigure = async (format: "png" | "svg") => {
     const run = designResult();
@@ -625,22 +634,22 @@ export function ResultToolbar(props: { view: MainResultView }) {
   };
   const copyData = async () => {
     const run = designResult();
-    if (!run) return;
+    if (!run || !ready()) return;
     try {
       const frequency = resultFocus()?.f, options = dataOptions(selectedRuns().map(file => ({ file })));
       const runs = await comparedBundles(run);
-      const result = await copyResultData(run.bundle, props.view, frequency, runs, options);
+      const result = await copyResultData(run.bundle, dataView(), frequency, runs, options);
       if (result.ok) flashCopied(); else feedback(t("results.toolbar.copyFailed", { error: result.message }), true);
     } catch (error) { feedback(t("results.toolbar.copyFailed", { error: error instanceof Error ? error.message : String(error) }), true); }
   };
   const exportData = async () => {
     const run = designResult();
-    if (!run) return;
+    if (!run || !ready()) return;
     try {
       const frequency = resultFocus()?.f, options = dataOptions(selectedRuns().map(file => ({ file })));
       const filename = `${exportBase(run.bundle)}.csv`;
       const runs = await comparedBundles(run);
-      saved(await exportResultCsv(run.bundle, props.view, filename, frequency, runs, options));
+      saved(await exportResultCsv(run.bundle, dataView(), filename, frequency, runs, options));
     } catch (error) { feedback(error instanceof Error ? error.message : t("results.toolbar.exportFailed"), true); }
   };
   const exportTouchstone = async () => {
@@ -655,8 +664,8 @@ export function ResultToolbar(props: { view: MainResultView }) {
     const chart=()=>ready() && comparisonReady() && visibleFigureSvgs(plot()).length>0;
     const figure = exportFigure;
     onCleanup(registerSurfaceExports("design-result",{ready:chart,screenshot:()=>figure("png"),actions:()=>[
-      {id:"result-csv",label:t("contextExport.resultCsv"),disabled:!ready()||!resultDataTable(designResult()?.bundle,props.view,resultFocus()?.f,dataOptions()).rows.length,reason:t("contextExport.noData"),run:exportData},
-      {id:"result-touchstone",label:t("contextExport.touchstone"),disabled:!ready()||!sMatrix(designResult()!.bundle)?.pairs.length,reason:t("contextExport.noSParameters"),run:exportTouchstone},
+      {id:"result-csv",label:t("contextExport.resultCsv"),disabled:!ready()||!resultDataTable(designResult()?.bundle,dataView(),resultFocus()?.f,dataOptions()).rows.length,reason:t("contextExport.noData"),run:exportData},
+      ...(props.view === "array" ? [] : [{id:"result-touchstone",label:t("contextExport.touchstone"),disabled:!ready()||!sMatrix(designResult()!.bundle)?.pairs.length,reason:t("contextExport.noSParameters"),run:exportTouchstone}]),
       ...(["svg","png"] as const).map(format=>({id:`figure-${format}`,label:t("contextExport.figureFormat",{format:format.toUpperCase()}),disabled:!chart(),reason:t("contextExport.noChart"),run:()=>figure(format)})),
     ]}));
   });
@@ -688,7 +697,7 @@ export function ResultToolbar(props: { view: MainResultView }) {
       <span class="dock-hint rdk-shown" title={designResult()?.file}>{shown()}</span>
       <Show when={[designResult(), ...comparedRuns()].some(run => run && portProcessingInfo(run.bundle))}><span class="chip" title={t("portProcessing.originalContext")}>{t("portProcessing.badge")}</span></Show>
       {/* a field map belongs to one run: no comparison, and no S-parameter data format */}
-      <Show when={props.view !== "fieldmap"}>
+      <Show when={props.view !== "fieldmap" && props.view !== "array"}>
       <div class="rdk-compare-control">
         <button ref={compareTrigger} class="btn btn-ghost btn-sm" aria-haspopup="dialog" aria-expanded={compareOpen()} aria-controls="rdk-compare-popover" aria-label={t("results.toolbar.compare")} onClick={toggleComparePicker}>
           <GitCompareArrows size={14} aria-hidden="true" /> <span class="btn-label">{t("results.toolbar.compare")}</span>
@@ -740,13 +749,13 @@ export function ResultToolbar(props: { view: MainResultView }) {
         <Show when={!comparisonReady()}><span class="muted" role="status">{t(Object.values(comparedLoadState()).includes("error") ? "results.compare.failed" : "results.compare.loading")}</span></Show>
       </div>
       </Show>
-      <Show when={props.view === "pattern" && farfields().length}>
+      <Show when={(props.view === "pattern" || props.view === "array") && farfields().length}>
         <button class="btn btn-ghost btn-sm" type="button" title={t("results.toolbar.show3dTitle")}
           onClick={() => showView("pattern3d", resultFocus()?.f ?? farfields()[0].f)}>
           <Globe size={14} aria-hidden="true" /> {t("results.toolbar.show3d")}
         </button>
       </Show>
-      <Show when={props.view !== "summary" && props.view !== "fieldmap"}>
+      <Show when={props.view !== "summary" && props.view !== "fieldmap" && props.view !== "array"}>
       <select class="btn btn-ghost btn-sm result-format" aria-label={t("results.toolbar.formatAria")} value={formatForView(resultDataFormat(), props.view === "sparams")} onChange={(event) => writeResultDataFormat(event.currentTarget.value as ResultDataFormat)}>
         <option value="plot">{t("results.format.plot")}</option><option value="db">dB</option><option value="db_phase">{t("results.format.dbPhase")}</option><option value="re_im">Re/Im</option><option value="mag_phase">{t("results.format.magPhase")}</option><option value="all">{t("results.format.all")}</option>
         <Show when={props.view === "sparams"}><option value="phase_unwrapped">{t("chart.q.unwrappedPhase")}</option><option value="gd">{t("chart.q.groupDelay")}</option></Show>
@@ -758,7 +767,7 @@ export function ResultToolbar(props: { view: MainResultView }) {
       <ResultFigureMenu disabled={!figureReady()} save={exportFigure} />
       {/* CSV and Touchstone: their own icons and a short label that stays when the bar folds to icons */}
       <button class="btn btn-ghost btn-sm" onClick={exportData} title={t("results.toolbar.csvTitle")} aria-label={t("results.toolbar.csvTitle")}><FileSpreadsheet size={14} aria-hidden="true" /> <span class="btn-short">CSV</span></button>
-      <Show when={designResult()?.bundle.results && props.view !== "summary"}>
+      <Show when={designResult()?.bundle.results && props.view !== "summary" && props.view !== "array"}>
         <button class="btn btn-ghost btn-sm" onClick={exportTouchstone} title={t("results.toolbar.touchstoneTitle")} aria-label={t("results.toolbar.touchstoneTitle")}>
           <FileChartLine size={14} aria-hidden="true" /> <span class="btn-short">{touchstoneExt()}</span>
         </button>

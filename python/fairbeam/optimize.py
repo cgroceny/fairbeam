@@ -62,8 +62,10 @@ import numpy as np
 from .jsonutil import finite_json
 
 OPT_SCHEMA = "fairbeam.optimization/1"
-GOAL_KINDS = ("f0", "s11_max", "bw_min", "dmax_min", "sij_max", "sij_min", "match_all")
-FREQ_GOALS = ("s11_max", "dmax_min", "sij_max", "sij_min", "match_all")
+GOAL_KINDS = ("f0", "s11_max", "bw_min", "dmax_min", "sij_max", "sij_min", "match_all", "realized_gain_min", "efficiency_min")
+RADIATION_GOALS = ("dmax_min", "realized_gain_min", "efficiency_min")
+BAND_GOALS = ("s11_max", "sij_max", "sij_min", "match_all")
+FREQ_GOALS = BAND_GOALS + RADIATION_GOALS
 PAIR_GOALS = ("sij_max", "sij_min")
 METHOD_CHOICES = ("auto", "secant", "nelder-mead", "bayesian", "cma-es", "particle-swarm", "genetic", "trust-region")
 
@@ -85,11 +87,19 @@ class Goal:
     at: float | None = None  # GHz, for the frequency goals
     weight: float = 1.0
     ports: tuple[int, int] | None = None  # (i, j) for sij_max / sij_min
+    at_hi: float | None = None  # optional upper GHz bound, S-parameter goals only
+
+    def frequency_key(self) -> str:
+        return f"{self.at:g}" + (f"..{self.at_hi:g}" if self.at_hi is not None else "")
+
+    def metric_key(self) -> str:
+        # Display labels round to six significant digits; they cannot identify data.
+        return json.dumps([self.kind, self.at, self.at_hi, self.ports], separators=(",", ":"))
 
     def label(self) -> str:
         unit = {"f0": " GHz", "s11_max": " dB", "bw_min": " MHz", "dmax_min": " dBi", "sij_max": " dB",
-                "sij_min": " dB", "match_all": " dB"}[self.kind]
-        at = f" @ {self.at:g} GHz" if self.at is not None else ""
+                "sij_min": " dB", "match_all": " dB", "realized_gain_min": " dBi", "efficiency_min": " %"}[self.kind]
+        at = f" @ {self.frequency_key()} GHz" if self.at is not None else ""
         w = f" ×{self.weight:g}" if self.weight != 1 else ""
         if self.kind in PAIR_GOALS:
             i, j = self.ports
@@ -125,20 +135,21 @@ class Vary:
 def parse_goal(text: str) -> Goal:
     """``f0=2.45``, ``s11_max=-25@2.45``, ``bw_min=150*2``, ``dmax_min=5@2.4``, ``sij_max=-25@2.4:2,3``,
     ``sij_min=-3.2@2.4:2,1``, ``match_all=-20@2.4``."""
-    m = re.fullmatch(r"\s*(\w+)\s*=\s*([-+0-9.eE]+)\s*(?:@\s*([-+0-9.eE]+))?\s*(?::\s*(\d+)\s*,\s*(\d+))?"
+    m = re.fullmatch(r"\s*(\w+)\s*=\s*([-+0-9.eE]+)\s*(?:@\s*([-+0-9.eE]+?)(?:\.\.([-+0-9.eE]+))?)?\s*(?::\s*(\d+)\s*,\s*(\d+))?"
                      r"\s*(?:\*\s*([0-9.eE]+))?\s*", text or "")
     if not m or m.group(1) not in GOAL_KINDS:
         raise ValueError(f"goal '{text}': expected one of {', '.join(k + '=...' for k in GOAL_KINDS)}")
     kind = m.group(1)
     target = float(m.group(2))
     at = float(m.group(3)) if m.group(3) else None
-    ports = (int(m.group(4)), int(m.group(5))) if m.group(4) else None
-    weight = float(m.group(6)) if m.group(6) else 1.0
-    return make_goal(kind, target, at, weight, ports)
+    at_hi = float(m.group(4)) if m.group(4) else None
+    ports = (int(m.group(5)), int(m.group(6))) if m.group(5) else None
+    weight = float(m.group(7)) if m.group(7) else 1.0
+    return make_goal(kind, target, at, weight, ports, at_hi)
 
 
 def make_goal(kind: str, target: float, at: float | None = None, weight: float = 1.0,
-              ports: tuple[int, int] | None = None) -> Goal:
+              ports: tuple[int, int] | None = None, at_hi: float | None = None) -> Goal:
     if kind not in GOAL_KINDS:
         raise ValueError(f"unknown goal {kind!r}")
     if not math.isfinite(target):
@@ -147,6 +158,10 @@ def make_goal(kind: str, target: float, at: float | None = None, weight: float =
         raise ValueError(f"{kind}: frequency must be a finite number of GHz")
     if kind in FREQ_GOALS and (at is None or not at > 0):
         raise ValueError(f"{kind} needs a frequency: {kind}=<value>@<GHz>")
+    if at_hi is not None and (kind not in BAND_GOALS or at is None or not math.isfinite(at_hi) or at_hi <= at):
+        raise ValueError("frequency range requires an S-parameter goal and finite 0 < lower < upper GHz")
+    if kind == "efficiency_min" and not 0 < target <= 100:
+        raise ValueError("efficiency_min: target must be greater than 0 and at most 100 percent")
     if kind in PAIR_GOALS:
         if ports is None or len(ports) != 2 or min(ports) < 1:
             raise ValueError(f"{kind} needs two port numbers: {kind}=<dB>@<GHz>:<i>,<j>")
@@ -163,7 +178,8 @@ def make_goal(kind: str, target: float, at: float | None = None, weight: float =
         raise ValueError("s11_max: target must be negative dB")
     if not (weight > 0 and math.isfinite(weight)):
         raise ValueError(f"{kind}: weight must be positive")
-    return Goal(kind, float(target), None if at is None else float(at), float(weight), ports)
+    return Goal(kind, float(target), None if at is None else float(at), float(weight), ports,
+                None if at_hi is None else float(at_hi))
 
 
 def needed_excite(goals: list[Goal], port_numbers: list[int]) -> list[int]:
@@ -236,6 +252,119 @@ def parse_vary(text: str) -> Vary:
 
 # ---------------------------------------------------------------------------- metrics and cost
 
+def sampled_band(f, values, lo: float, hi: float) -> list[float] | None:
+    """Stored interior samples plus interpolated edges, never a continuous-band guarantee."""
+    f, values = np.asarray(f, float), np.asarray(values, float)
+    if (f.ndim != 1 or values.shape != f.shape or len(f) < 2 or
+            not np.isfinite(f).all() or not np.all(np.diff(f) > 0) or
+            not f[0] <= lo < hi <= f[-1]):
+        return None
+    start = max(0, int(np.searchsorted(f, lo, side="right")) - 1)
+    end = min(len(f), int(np.searchsorted(f, hi, side="left")) + 1)
+    if not np.isfinite(values[start:end]).all():
+        return None
+    x = np.concatenate(([lo], f[(f > lo) & (f < hi)], [hi]))
+    return np.interp(x, f, values).tolist()
+
+
+def band_metric(bundle: dict, g: Goal) -> dict:
+    """Complete sampled band, with explicit reciprocity provenance; no gap filling."""
+    from .study import _excited_key
+
+    try:
+        f, numbers, matrix = sparam_matrix(bundle)
+    except (ValueError, TypeError, KeyError, IndexError):
+        return {"values": None, "reason": "invalid S-matrix data"}
+    pairs = ([g.ports] if g.kind in PAIR_GOALS else
+             [(n, n) for n in numbers] if g.kind == "match_all" else
+             [(int(_excited_key(bundle)), int(_excited_key(bundle)))] if _excited_key(bundle) is not None else [])
+    all_values, sources = [], []
+    for i, j in pairs:
+        if i not in numbers or j not in numbers:
+            return {"values": None, "reason": "missing port"}
+        a, b = numbers.index(i), numbers.index(j)
+        col = matrix[:, a, b]
+        entries = ((bundle.get("results") or {}).get("sparams") or {}).get("s") or {}
+        # Serialized keys are matrix ordinals; physical port_numbers may be sparse.
+        reciprocal = i != j and f"{a + 1},{b + 1}" not in entries and bool(np.isnan(col).all())
+        if reciprocal:
+            col = matrix[:, b, a]
+        # Preserve S11's dB interpolation and Sij's magnitude interpolation.
+        mag = np.abs(col)
+        sampled = sampled_band(f, 20 * np.log10(np.maximum(mag, 1e-9)) if g.kind == "s11_max" else mag,
+                               g.at, g.at_hi)
+        if sampled is None:
+            return {"values": None, "reason": "incomplete band or nonfinite samples"}
+        vals = sampled if g.kind == "s11_max" else (20 * np.log10(np.maximum(sampled, 1e-9))).tolist()
+        all_values.extend(vals)
+        sources.append({"ports": [i, j], "reciprocal": reciprocal, "samples": len(vals)})
+    return {"values": all_values or None, "sources": sources, "at": g.at, "at_hi": g.at_hi,
+            "sampling": "stored samples and interpolated edges; not continuous-frequency qualification"}
+
+
+def radiation_metric(bundle: dict, g: Goal) -> dict:
+    """Stored peak realized gain / radiation efficiency with strict power admission."""
+    from .study import _excited_key
+
+    primary = _excited_key(bundle)
+    if primary is None:
+        return {"value": None, "reason": "missing driven port"}
+    numeric = lambda v: isinstance(v, (int, float)) and not isinstance(v, bool) and math.isfinite(v)
+    candidates = [ff for ff in (bundle.get("results") or {}).get("farfield", [])
+                  if numeric(ff.get("f")) and str(ff.get("port", primary)) == str(primary)
+                  and math.isclose(ff["f"] / 1e9, g.at, rel_tol=1e-9, abs_tol=1e-12)]
+    unavailable = {"value": None, "reason": "missing exact-frequency, converged, -60 dB power-qualified field"}
+    if len(candidates) != 1:
+        return unavailable
+    ff = candidates[0]
+    run, solver = bundle.get("run") or {}, bundle.get("solver") or {}
+    eff, pacc, prad = ff.get("rad_efficiency"), ff.get("pacc_w"), ff.get("prad_w")
+    end = solver.get("end_criteria_db")
+    if (run.get("converged") is not True or run.get("hit_timestep_limit") is True or
+            any(r.get("converged") is not True for r in run.get("port_runs", [])) or
+            not numeric(end) or end > -60 or
+            any(not numeric(v) for v in (eff, pacc, prad)) or
+            not 0 <= eff <= 1 or pacc <= 0 or prad < 0 or prad / pacc > 1 or ff.get("qa_warnings")):
+        return unavailable
+    # rad_efficiency is serialized to four decimals. Do not accept normalized or
+    # contradictory power values as a measured efficiency.
+    if abs(eff - prad / pacc) > 0.000050000001:
+        return unavailable
+    value = ff.get("realized_gain_dbi") if g.kind == "realized_gain_min" else 100 * eff
+    if not numeric(value):
+        return unavailable
+    res = bundle.get("results") or {}
+    try:
+        frequencies = np.asarray(res.get("frequency", []), float)
+    except (ValueError, TypeError):
+        return unavailable
+    if (frequencies.ndim != 1 or len(frequencies) < 2 or
+            not np.isfinite(frequencies).all() or not np.all(np.diff(frequencies) > 0) or
+            not frequencies[0] <= ff["f"] <= frequencies[-1]):
+        return unavailable
+    if g.kind == "realized_gain_min":
+        pr = (res.get("ports") or {}).get(str(primary), {})
+        try:
+            real, imag = np.asarray(pr.get("s11_re", []), float), np.asarray(pr.get("s11_im", []), float)
+        except (ValueError, TypeError):
+            return unavailable
+        if real.shape != frequencies.shape or imag.shape != frequencies.shape:
+            return unavailable
+        reflection = real + 1j * imag
+        if not np.isfinite(reflection).all():
+            return unavailable
+        accepted = 1 - float(np.interp(ff["f"], frequencies, np.abs(reflection) ** 2))
+        directivity = ff.get("dmax_dbi")
+        if not numeric(directivity) or accepted <= 0 or eff <= 0:
+            return unavailable
+        # Dmax and gain are independently rounded to 0.001 dB; efficiency to 0.0001.
+        expected = directivity + 10 * math.log10((prad / pacc) * accepted)
+        if abs(value - expected) > 0.0010000001:
+            return unavailable
+    return {"value": value, "frequency_hz": ff["f"], "port": int(primary), "rad_efficiency": eff,
+            "pacc_w": pacc, "prad_w": prad, "end_criteria_db": end}
+
+
 def bundle_metrics(bundle: dict, goals: list[Goal]) -> dict:
     """The quantities the goals need, from a result bundle."""
     from .study import _excited_key, _excited_s11, _matched_bands, first_resonance, reactance_zeros
@@ -243,6 +372,9 @@ def bundle_metrics(bundle: dict, goals: list[Goal]) -> dict:
     res = bundle.get("results") or {}
     out: dict = {"f0_ghz": None, "f0_source": None, "s11_min_db": None, "bw_mhz": None,
                  "s11_at": {}, "dmax_at": {}, "dmax_dbi": None}
+    out["band_goals"] = {g.metric_key(): band_metric(bundle, g) for g in goals if g.at_hi is not None}
+    out["radiation_goals"] = {g.metric_key(): radiation_metric(bundle, g) for g in goals
+                              if g.kind in ("realized_gain_min", "efficiency_min")}
     key = _excited_key(bundle)
     if key is None:
         return out
@@ -272,10 +404,12 @@ def bundle_metrics(bundle: dict, goals: list[Goal]) -> dict:
     else:
         out["bw_mhz"] = 0.0
     ffs = res.get("farfield") or []
-    if any(g.kind in PAIR_GOALS or g.kind == "match_all" for g in goals):
+    if any(g.at_hi is None and (g.kind in PAIR_GOALS or g.kind == "match_all") for g in goals):
         sf, numbers, smat = sparam_matrix(bundle)
         out["sij_at"], out["match_all_at"] = {}, {}
         for g in goals:
+            if g.at_hi is not None:
+                continue
             if g.kind in PAIR_GOALS:
                 i, j = g.ports
                 out["sij_at"][f"{i},{j}@{g.at:g}"] = s_db_at(sf, numbers, smat, i, j, g.at)
@@ -306,6 +440,19 @@ PENALTY = 1e4  # a goal that cannot be evaluated (no resonance, no far field)
 
 def _goal_cost(g: Goal, m: dict, f0_tol_pct: float = 0.25) -> tuple[float, bool, float | None]:
     """(cost, met, value) of one goal for the metrics ``m``."""
+    if g.at_hi is not None:
+        vals = ((m.get("band_goals") or {}).get(g.metric_key()) or {}).get("values")
+        if not vals or not all(math.isfinite(v) for v in vals):
+            return PENALTY, False, None
+        v = min(vals) if g.kind == "sij_min" else max(vals)
+        excess = max(0.0, g.target - v if g.kind == "sij_min" else v - g.target)
+        return (excess / (0.5 if g.kind == "sij_min" else 3.0)) ** 2, excess == 0, v
+    if g.kind in ("realized_gain_min", "efficiency_min"):
+        v = ((m.get("radiation_goals") or {}).get(g.metric_key()) or {}).get("value")
+        if v is None:
+            return PENALTY, False, None
+        short = max(0.0, g.target - v)
+        return (short / (5 if g.kind == "efficiency_min" else 0.5)) ** 2, short == 0, v
     if g.kind == "f0":
         v = m.get("f0_ghz")
         if v is None:
@@ -760,6 +907,10 @@ def run_optimization(model_path: str, vary: list[Vary], goals: list[Goal], *, fi
     from .model import load_model, resolve_params
     from .simdata import keep_sim_requested, prune_empty_parents, remove_inside
 
+    qualified_radiation = any(g.kind in ("realized_gain_min", "efficiency_min") for g in goals)
+    if qualified_radiation:
+        if end_db is not None and (not math.isfinite(end_db) or end_db > -60):
+            raise ValueError("realized gain and efficiency goals require an end criterion of -60 dB or stricter")
     module = load_model(model_path)
     fixed = {k: str(v) for k, v in (fixed or {}).items()}
     specs = {p.key: p for p in module.PARAMS}
@@ -781,6 +932,8 @@ def run_optimization(model_path: str, vary: list[Vary], goals: list[Goal], *, fi
     for g in goals:
         if g.at is not None and not f_lo - 1e-9 <= g.at <= f_hi + 1e-9:
             raise ValueError(f"goal {g.label()}: {g.at:g} GHz is outside the simulated band {f_lo:g}-{f_hi:g} GHz")
+        if g.at_hi is not None and g.at_hi > f_hi + 1e-9:
+            raise ValueError(f"goal {g.label()}: upper frequency is outside the simulated band")
     for g in goals:
         for n in (g.ports or ()):
             if n not in port_numbers:
@@ -793,7 +946,7 @@ def run_optimization(model_path: str, vary: list[Vary], goals: list[Goal], *, fi
     name = name or _slug(module.MODEL["id"] + "--opt", {v.key: f"{v.lo:g}-{v.hi:g}" for v in vary})
     opt_dir = Path(out) / "optimizations"
     member_dir = opt_dir / name
-    pattern = sorted({g.at * 1e9 for g in goals if g.kind == "dmax_min"})
+    pattern = sorted({g.at * 1e9 for g in goals if g.kind in RADIATION_GOALS})
     want_ff = bool(pattern) or bool(farfield)
     keep = keep_sim_requested() if keep_sim is None else keep_sim
     raw_dir = Path(sim_root).absolute() / "optimizations" / name
@@ -815,6 +968,15 @@ def run_optimization(model_path: str, vary: list[Vary], goals: list[Goal], *, fi
 
         def before_run(sim):
             nonlocal warned_legacy_nf2ff
+            if qualified_radiation:
+                if any(not sim.f_min <= freq <= sim.f_max for freq in pattern):
+                    raise ValueError("radiation goal is outside this candidate's simulated band")
+                # Preserve a model's stricter setting, including parameter-dependent limits.
+                criterion = min(sim.end_criteria_db, end_db if end_db is not None else -60.0)
+                if not math.isfinite(criterion):
+                    raise ValueError("radiation goals require a finite model end criterion")
+                sim.end_criteria_db = criterion
+                sim.fdtd.SetEndCriteria(10 ** (criterion / 10))
             if not want_ff and not sim.efficiency_points:
                 if not sim.remove_nf2ff_box():
                     # Older CSXCAD bindings can still skip the transform, but retain the dumps.
@@ -825,7 +987,7 @@ def run_optimization(model_path: str, vary: list[Vary], goals: list[Goal], *, fi
                         warned_legacy_nf2ff = True
 
         sim = run_model(module, values, excite=excite_spec, sim_path=str(raw_dir / slug),
-                        threads=threads, echo=False, engine=engine, end_db=end_db, n_freq=points,
+                        threads=threads, echo=False, engine=engine, end_db=None if qualified_radiation else end_db, n_freq=points,
                         pattern_freqs=pattern or None, element_patterns=False, before_run=before_run, log=lambda *a: None)
         params = [p.describe(values[p.key]) for p in module.PARAMS]
         label = module.MODEL["name"] + " · " + ", ".join(f"{k}={v:g}" for k, v in point.items())
@@ -902,8 +1064,9 @@ def add_command(sub, defaults: dict):
     p.add_argument("--vary", action="append", required=True, metavar="KEY=MIN:MAX[:START[:RES]]",
                    help="parameter to vary within bounds (repeat)")
     p.add_argument("--goal", action="append", required=True, metavar="GOAL",
-                   help="f0=<GHz> | s11_max=<dB>@<GHz> | bw_min=<MHz> | dmax_min=<dBi>@<GHz> | sij_max=<dB>@<GHz>:<i>,<j>"
-                        " | sij_min=<dB>@<GHz>:<i>,<j> | match_all=<dB>@<GHz>, optional *weight")
+                   help="f0=<GHz> | s11_max=<dB>@<GHz>[..<GHz>] | bw_min=<MHz> | dmax_min=<dBi>@<GHz> | sij_max=<dB>@<GHz>[..<GHz>]:<i>,<j>"
+                        " | sij_min=<dB>@<GHz>[..<GHz>]:<i>,<j> | match_all=<dB>@<GHz>[..<GHz>]"
+                        " | realized_gain_min=<dBi>@<GHz> | efficiency_min=<percent>@<GHz>, optional *weight")
     p.add_argument("--set", action="append", metavar="KEY=VALUE", help="fixed parameter override")
     p.add_argument("--method", choices=METHOD_CHOICES, default="auto")
     p.add_argument("--seed", type=int, default=0, help="random seed for stochastic methods (default 0)")

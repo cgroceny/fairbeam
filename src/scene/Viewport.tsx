@@ -31,7 +31,7 @@ import FarfieldCard from "../components/FarfieldCard";
 import { effectiveQuantity, quantityGrid, quantityMax, quantityRange } from "../lib/farfieldQuantity";
 import { patternQuantity } from "../lib/patternQuantityStore";
 import { showPattern3dEntry } from "../designer/runResults";
-import { arrayActive, arraySet, arrayWeights, farfieldOverride } from "../lib/arrayStore";
+import { currentArray, arrayOverrideFor, arraySourceMatches } from "../lib/currentArray";
 import { currentLayer, fieldExcitation, shownFieldFrequency, hasCurrentPhase, updateCurrentPhase } from "./fields";
 import { fieldPlaneLayer, updateFieldPlanePhase } from "./fieldPlanes";
 import { currentFieldPlaneView } from "./FieldPlaneControls";
@@ -129,6 +129,10 @@ export default function Viewport() {
     announceTask?.request();
   };
 
+  const farfieldOverride = () => arrayOverrideFor(bundle());
+  const arrayActive = () => currentArray().active();
+  const arraySet = () => arraySourceMatches(bundle()) ? currentArray().set() : null;
+  const arrayWeights = () => currentArray().weights();
   const ff = () => {
     // a steered array pattern (src/lib/arrayStore.ts) replaces the stored far field when active
     const o = farfieldOverride();
@@ -904,14 +908,14 @@ export default function Viewport() {
 
     // array feed on the port labels while the array pattern is shown: "P2 · 0 dB ∠ −90°"
     function writePortFeeds() {
-      const feed = arrayActive() && arraySet() ? arrayWeights() : null;
+      const feed = farfieldOverride() && arraySet() ? arrayWeights() : null;
       for (const [n, { el, base }] of portLabels) {
         const w = feed?.get(n);
         el.textContent = w ? `P${n} · ${num(w.ampDb, 1)} dB ∠ ${num(w.phaseDeg, 0)}°`.replace(/-/g, "\u2212") : base;
       }
       requestRender();
     }
-    createEffect(on([arrayWeights, arrayActive, arraySet, bundle, themeTick, theme], writePortFeeds));
+    createEffect(on([arrayWeights, arrayActive, arraySet, farfieldOverride, bundle, themeTick, theme], writePortFeeds));
 
     function buildCurrent() {
       disposeGroup(currentRoot); // also disposes the plane textures (material.map)
