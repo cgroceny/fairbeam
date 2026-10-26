@@ -805,3 +805,24 @@ geçişleri ve sonsuz yönlendiricilik kapsam dışında kalır. Bölüm 7'de si
 diğer uygulamalar kabul edilmez; fikstür PR'ları başarısız, bekleyen ve ertelenen
 kontrolleri korur. Kayıt sabit kaynak commit'lerini ve çoğaltma komutlarını
 bağlar. Galeri modeli, üretilmiş paket veya kitap içeriği eklenmez.
+
+## 24. Bölüm 14 karşılaştırma kapsamı
+
+[Bölüm 14 kaydı](https://github.com/ismailakdag/fairbeam/blob/main/docs/benchmarks/pozar-chapter-14.md),
+Örnek 14.2 ile ilişkili kendi sonlu PEC şerit modelimizin örneklenmiş normalize
+ışıma deseni, açısal yönlendiricilik ve yarı güç hüzme genişliği kapsamını toplar.
+Üç mesh, iki ardışık mesh karşılaştırması, dört bağımsız kontrol ve yedi çift
+yüzey karşılaştırması; kaynak tamamlandıktan ve tam -90 dB yerel durdurma
+ölçütüne ulaşıldıktan sonra sabit sınırlarını sağlar. Asimptotik yakınsama
+sırası iddia edilmez.
+
+Giriş empedansı, tüm antenin başarımı, kalibre edilmiş mutlak güç ve yerel
+yönlendiriciliğin yakınsaması kapsam dışında kalır. Bölüm 14'teki diğer yedi
+örnek hesap/sistem kapsamındadır ve yerel alan koşusu gerektirmez. Kayıt gerçek
+ölçüm kaynaklarını ve süre sınırlarını korur; sabit kaynak sürümlerine ve çoğaltma
+komutlarına bağlantı verir. Galeri modeli, üretilmiş paket veya kitap varlığı eklenmez.
+
+Kayıttaki [açık ölçüm özeti, manifestler ve çevrimdışı hesap denetimi](https://github.com/ismailakdag/fairbeam/blob/main/docs/benchmarks/pozar-chapter-14.md#offline-review-evidence),
+13 tablo satırını, altı mesh/kontrol ve yedi çift yüzey karşılaştırmasını kapsar.
+Bu denetim yayımlanan hesabı ve bildirilen kabul bilgilerini kontrol eder;
+katkıcının sakladığı özgün ham alanları bağımsız olarak yeniden işlemez.
