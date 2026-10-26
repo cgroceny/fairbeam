@@ -267,10 +267,13 @@ def compare(root, factor):
         control_s = spectra[base.CONTROL_MESH, base.CONTROL_PADDING]
         boundary = float(abs(control_s-spectra[base.CONTROL_MESH, base.PADDING]).max())
         control = metrics(control_s)
-    qualified = bool(not rejected and len(rows) == 3 and all(r['passes'] for r in rows)
+    checks_pass = bool(not rejected and len(rows) == 3 and all(r['passes'] for r in rows)
                      and len(changes) == 2 and all(r['passes'] for r in changes)
                      and boundary is not None and boundary <= base.LIMITS['boundary_abs']
                      and control is not None and control['passes'])
     return dict(protocol=PROTOCOL, factor=factor, limits=base.LIMITS, rows=rows, changes=changes,
                 rejected=rejected, boundary_abs_max=boundary, boundary_control=control,
-                qualified_scope=qualified, scope='complex TE10 power-wave S on the fixed measurement planes only')
+                numerical_checks_pass=checks_pass, qualified_scope=False, diagnostic_only=True,
+                qualification_blocker='First native energy-threshold crossing is not a late-time stability certificate; '
+                    'independent continuation evidence is required.',
+                scope='TE10 clock-sensitivity diagnostic; no temporal-stability or application qualification')

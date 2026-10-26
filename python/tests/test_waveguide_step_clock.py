@@ -126,7 +126,10 @@ class ClockTests(unittest.TestCase):
         def perfect(root, cpw, padding, factor):
             return reference.copy()
         with patch.object(f, 'read_pair', side_effect=perfect):
-            self.assertTrue(f.compare(Path('synthetic'), .9)['qualified_scope'])
+            result = f.compare(Path('synthetic'), .9)
+            self.assertTrue(result['numerical_checks_pass'])
+            self.assertTrue(result['diagnostic_only'])
+            self.assertFalse(result['qualified_scope'])
         def bad_control(root, cpw, padding, factor):
             s = reference.copy()
             phase = s[:, 0, 0]/abs(s[:, 0, 0])
