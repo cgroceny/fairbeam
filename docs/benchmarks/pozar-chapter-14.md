@@ -1,6 +1,6 @@
 # Chapter 14: qualified finite-strip pattern scope
 
-This record identifies Example 14.2, p. 664, and reports our own finite PEC-strip realization, parameters, equations and measurements. The physical realization is an extension of a prescribed-pattern calculation. No textbook text, figures, tables, solution steps or PDF excerpts are included. Fields were acquired with Fairbeam and bundled openEMS 0.37.0rc3 on Windows, serially with four FDTD threads and four NF2FF threads. Raw fields, frozen manifests and process receipts remain outside Git.
+This record identifies Example 14.2, p. 664, and reports our own finite PEC-strip realization, parameters, equations and measurements. The physical realization is an extension of a prescribed-pattern calculation. No textbook text, figures, tables, solution steps or PDF excerpts are included. Fields were acquired with Fairbeam and bundled openEMS 0.37.0rc3 on Windows, serially with four FDTD threads and four NF2FF threads. Raw face fields and original process logs remain outside Git; reduced measured samples and source/receipt/native-input manifests are published below.
 
 Only sampled normalized power pattern, independently integrated angular directivity and half-power beamwidth are qualified. Every point bound, both successive spatial-mesh changes, four independent controls and all seven two-surface comparisons pass the limits fixed before the fields. This finite sampled qualification establishes neither an asymptotic convergence order nor input impedance, complete antenna performance, calibrated absolute power or native-D convergence.
 
@@ -47,6 +47,24 @@ Every admitted source completes its waveform and reaches the unchanged native st
 Explicit per-box E/H recording oversampling is 8. A diagnostic Nyquist-only configuration previously produced power-ratio errors despite a plausible normalized pattern; independent time-domain Fourier fields isolated that fixture configuration. The rejected FD1 and standby-interrupted records are retained outside Git and excluded. [PR #328](https://github.com/ismailakdag/fairbeam/pull/328) gives the measured before/after values and reproduction commands; production code and the native runtime were unchanged.
 
 ## Provenance and reproduction
+
+### Offline review evidence
+
+The committed [audit and manifests](pozar-chapter-14-evidence.json) retain the original full-precision final report, all seven acquisition source identities, runtime fingerprints, receipt summaries, native mesh/clock/operator/admission metadata and original file hashes. Installation directories and the original command's capture path are omitted from the published extraction; the original receipt/report hashes identify the unmodified local originals. All 56 source-file hashes were checked against their respective public acquisition commits. Rebuilding the seven planned native inputs with the preserved reader reproduces their original XML hashes.
+
+The [reduced measured samples](pozar-chapter-14-samples.npz) contain normalized power on the complete sampled angular grid, measured peak and cross-polar power, voltage/current Fourier values, native radiated power and native directivity. They contain no raw face fields, native input file, Designer bundle or textbook asset. Sample-array SHA-256: `a7950b77c82c242dba8755318c2f10635525db67ee6169169502ff17431a6b60`.
+
+From the repository root, with NumPy 2 installed, run the [offline replay](pozar-chapter-14-replay.py):
+
+```powershell
+python docs/benchmarks/pozar-chapter-14-replay.py
+```
+
+It imports neither Fairbeam nor openEMS and launches no native process. It checks the sample-file hash, recomputes 42 point rows, all six mesh/control comparisons and seven two-surface comparisons, then checks the 13 printed table rows at their stated precision. Reported admission metadata is checked separately. A missing or altered sample file, inconsistent report, failed numerical bound or changed printed value fails the replay.
+
+The contributor also replayed all seven original captures with source `3d3c7250b46995df717cc3d53d59f51c34ab1435`; the strict result matches the original final audit without changed values or thresholds. Offline recomputation from the reduced samples is not an independent replay of unavailable raw face fields, probe traces or process logs. The maintainer has not replayed those captures. Hashes alone do not prove the contents of the original raw files. No new FDTD propagation was performed to publish this evidence.
+
+### Native acquisition
 
 Six sources retain their original source `2647318c915550c0af617e6c5e054dad6c0dc87b` and actual 1,800-second guards. The final dt control uses `3d3c7250b46995df717cc3d53d59f51c34ab1435` with its explicitly approved, actual 2,700-second guard. The newer test-only wall option defaults to 1,800 seconds. All seven regenerated native XML inputs are byte-identical to their frozen physical plans; the old records and their receipts are not rewritten as new acquisitions. The newer reader admits exactly the pinned prior source only with unchanged shared dependencies, its original 1,800-second receipt and a matching rebuilt native input.
 

@@ -821,3 +821,8 @@ yönlendiriciliğin yakınsaması kapsam dışında kalır. Bölüm 14'teki diğ
 örnek hesap/sistem kapsamındadır ve yerel alan koşusu gerektirmez. Kayıt gerçek
 ölçüm kaynaklarını ve süre sınırlarını korur; sabit kaynak sürümlerine ve çoğaltma
 komutlarına bağlantı verir. Galeri modeli, üretilmiş paket veya kitap varlığı eklenmez.
+
+Kayıttaki [açık ölçüm özeti, manifestler ve çevrimdışı hesap denetimi](https://github.com/ismailakdag/fairbeam/blob/main/docs/benchmarks/pozar-chapter-14.md#offline-review-evidence),
+13 tablo satırını, altı mesh/kontrol ve yedi çift yüzey karşılaştırmasını kapsar.
+Bu denetim yayımlanan hesabı ve bildirilen kabul bilgilerini kontrol eder;
+katkıcının sakladığı özgün ham alanları bağımsız olarak yeniden işlemez.

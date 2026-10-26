@@ -1211,3 +1211,8 @@ native-directivity convergence remain excluded. Seven other Chapter 14 examples
 have calculation/system scopes and require no native fields. The record preserves
 actual acquisition-source/deadline provenance and links pinned reproduction
 sources. No gallery model, generated bundle or textbook asset is added.
+
+The record includes [public reduced samples, manifests and an offline replay](benchmarks/pozar-chapter-14.md#offline-review-evidence)
+for all 13 table rows and six mesh/control plus seven two-surface comparisons.
+This checks the published arithmetic and reported admission metadata; it does
+not independently replay the original raw fields retained by the contributor.
