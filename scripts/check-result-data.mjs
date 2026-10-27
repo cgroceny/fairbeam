@@ -5,6 +5,7 @@ import { compareCuts, nearestFarfield, traces } from "../src/compare/series.ts";
 import { quantityGrid } from "../src/lib/farfieldQuantity.ts";
 import { reflectionAtPort, zFromGamma } from "../src/lib/sparams.ts";
 import { importReference } from "../src/import/reference.ts";
+import { smallAntennaAnalysis, smallAntennaColumns } from "../src/lib/smallAntenna.ts";
 import { readResultDataFormat, writeResultDataFormat, RESULT_DATA_FORMAT_KEY } from "../src/designer/resultDataPreference.ts";
 
 const check = (condition, message) => { if (!condition) throw new Error(message); };
@@ -67,10 +68,14 @@ for (const format of formats) {
   check(chosen.header.length === blocks.length + 1, `${format} selected pair count`);
   const zt = resultDataTable(legacy, "impedance", undefined, { format });
   const zlabels = { db: ["Re Zin (Ω)", "Im Zin (Ω)"], db_phase: ["Re Zin (Ω)", "Im Zin (Ω)", "∠Zin (deg)"], re_im: ["Re Zin (Ω)", "Im Zin (Ω)"], mag_phase: ["|Zin| (Ω)", "∠Zin (deg)"], all: ["Re Zin (Ω)", "Im Zin (Ω)", "|Zin| (Ω)", "∠Zin (deg)"] }[format];
-  assert.deepEqual(zt.header.slice(1), zlabels, `${format} impedance headers`);
+  assert.deepEqual(zt.header.slice(1, 1 + zlabels.length), zlabels, `${format} original impedance headers`);
   const zr = results.ports["1"].zin_re[0], zi = results.ports["1"].zin_im[0];
   const zv = format === "mag_phase" ? [Math.hypot(zr, zi), Math.atan2(zi, zr) * 180 / Math.PI] : format === "all" ? [zr, zi, Math.hypot(zr, zi), Math.atan2(zi, zr) * 180 / Math.PI] : format === "db_phase" ? [zr, zi, Math.atan2(zi, zr) * 180 / Math.PI] : [zr, zi];
-  assert.deepEqual(zt.rows[0].slice(1), zv, `${format} impedance values from stored Zin`);
+  assert.deepEqual(zt.rows[0].slice(1, 1 + zlabels.length), zv, `${format} impedance values from stored Zin`);
+  const small = smallAntennaColumns(smallAntennaAnalysis(legacy));
+  assert.deepEqual(zt.header.slice(1 + zlabels.length), [...small.header, "Small antenna selection", "Small antenna result file"], `${format} complete appended scalar headers`);
+  for (const row of zt.rows) assert.deepEqual(row.slice(1 + zlabels.length), [...small.row, "default", ""], `${format} same full-precision selected analysis on each sample`);
+  assert.equal(small.row[small.header.indexOf("small_antenna_qz")], null, "unresolved/nonresonant fixture never gains an invented Q");
 }
 const nonfinite = structuredClone(bundle);
 nonfinite.results.sparams.s["1,1"].re[0] = Number.NaN;

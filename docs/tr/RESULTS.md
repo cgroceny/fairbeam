@@ -159,3 +159,65 @@ referansları reddedilir. Geçiş/TRL kalibrasyonu veya dispersif hat modeli uyg
 Uzak alan, verim, güç, çözücü QA'sı, çalışma listesi ve eniyileyici özgün veride kalır.
 Yeni görünümde eski pasiflik/karşılıklılık QA değerleri yeniden ölçülmüş gibi sunulmaz.
 Örnekler görüntüleyicisi özgün veriyi gösterir.
+
+## Elektriksel olarak küçük anten tahminleri
+
+Tasarım'ın **Empedans** ve **Özet** görünümleri **Elektriksel olarak küçük anten
+tahminleri** panelini paylaşır. Hesap, geçerli taslak veya ideal eşleme devresinden
+değil, seçili kayıtlı sonuçtan yapılır. Doğal reaktans sıfır geçişini, VSWR sınırını
+(varsayılan 2) ve çevrelenen geometriyi belirleyen sonuç parçalarını seçin. Birden çok
+geçiş varsa seçim gerekir. Bu iki görünüm arasında seçim korunur; sonuç, belge veya port
+son işlemi değişince sıfırlanır. Karşılaştırmada odaktaki çalıştırmanın seçimi, diğerlerinin
+açıkça belirtilen varsayılanları kullanılır. Seçimini değiştirmek için ilgili çalıştırmayı açın.
+
+Yalnızca sıralı, sonlu frekans ızgarası ve sabit pozitif gerçek referansı olan özgün
+tek portlu karmaşık veriler kabul edilir. Port dönüşümleri, yalnızca genlik içeren veriler
+ve çok portlu sonuçlarda kullanılamama nedeni gösterilir. S11 minimumu kendiliğinden
+reaktans sıfır geçişi değildir; **Q rezonansı**, Özet'teki mevcut en iyi eşleme
+frekansından ayrıdır.
+
+Çözümlenmiş doğal geçişte empedans tahmini
+`Q_Z = f0 * sqrt((dR/df)^2 + (dX/df)^2) / (2 R0)` şeklindedir; frekans Hz cinsindendir.
+Türev, reaktansla birlikte direnci de içerir. Üç ve beş bitişik örnekten, düzgün aralıklı
+olması gerekmeyen ızgaraya uygun yerel polinom tahminleri kullanılır. Tahminler %5 içinde,
+geçiş frekansları ise geçişi çevreleyen aralığın dörtte biri içinde uyuşmalıdır. Boşluklar,
+pozitif olmayan direnç, uç noktalar, düz sıfırlar ve çözümlenmemiş türevler kullanılabilir
+bir sonuç üretmez. Bu bir empedans tanısıdır; depolanmış alan enerjisinin integrali değildir.
+
+VSWR `s > 1` için tahmini bağıl bant genişliği `(s - 1) / (sqrt(s) * Q_Z)` olur.
+Bu, **bu rezonansta R0'a ideal gerçek eşleme** varsayar; R0, kayıtlı referansa eşit
+olmak zorunda değildir. Örneklerden elde edilen eşlenmiş genişlik de aynı varsayımı kullanır.
+İki eşik kenarı, boşluk veya başka rezonans olmadan örneklerle çevrelenmelidir. Tahmini
+bağıl genişlik %10'u aşmamalı; yerel Q değişimi ve tahmini/örneklenmiş genişlik farkı ayrı
+ayrı %10 içinde kalmalıdır. Bunlar yazılımın eleme ölçütleridir, doğruluk garantisi değildir.
+Bant genişliği çözümlenemese de yerel Q kullanılabilir olabilir. Bu genişlikler kayıtlı
+referansın VSWR değerini veya mevcut −10 dB bant tablosunu değiştirmez.
+
+Yarıçap, seçili parçaların birleşik sınırlayıcı kutusunun köşegeninin yarısıdır ve metreye
+çevrilir. Bu korumacı çevreleyen küre, en küçük küre değildir. Başlangıçta sonlu toprak,
+alt tabaka ve besleme yapıları dahil tüm boşluk olmayan parçalar seçilir; dışlananlar kaydedilir.
+**PEC görüntüsünü çevrele** seçeneği, birleşik kutuyu hesaplamadan önce seçili sınırları
+kayıtlı z-min PEC düzleminden yansıtır. Yarıçapı doğrudan ikiyle çarpmaz. Elektriksel boyut,
+serbest uzaydaki `ka = 2π f0 a / 299792458` ifadesini kullanır.
+
+`0 < ka < 1` için adlandırılmış **tek modlu Chu/McLean referansı**
+`1/(ka)^3 + 1/ka` olur. Q_Z/referans oranı, eksiksiz sonlu serbest uzay çevrelemesi için
+koşullu bir tanıdır. Parça dışlandığında, sınır bilgisi belirsiz olduğunda veya PEC görüntüsü
+kullanıldığında verilmez. Kayıp ve mod varsayımları önemlidir: bu evrensel bir sınır kararı
+veya eniyilik yüzdesi değildir. Birleşik elektrik/manyetik modun referansı farklıdır.
+Işıma verimi yalnızca aynı fiziksel port/frekans ve güvenilir güç/yakınsama kanıtıyla ayrı
+gösterilir; en yakın frekans veya toplam verim yerine konmaz. Modelle normalize edilmiş
+verim ve ham güç oranı ayrı etiketlenir. Orana verim düzeltmesi uygulanmaz.
+
+Veri kopyalama ve CSV; tam hassasiyeti, birimleri, seçimi, kaynak/port kimliğini,
+varsayımları ve kullanılamama nedenlerini korur. Özet'teki yeni **Small antenna** sütunları
+mevcut ölçütleri değiştirmez. Empedans dışa aktarmalarında bu skaler sütunlar, özgün
+frekans/empedans satırlarının yanında tekrarlanır; her satırda bağımsız hesap değil, seçili
+tek rezonansın analizidir. Asenkron karşılaştırma yüklenirken seçim değişirse durumlar
+karıştırılmak yerine dışa aktarma iptal edilir. Bu işlemler kayıtlı sonucu veya Tasarım'ı
+değiştirmez, çözücü çalıştırmaz ve mesh yakınsaması kanıtlamaz.
+
+Denklemler [Yaghjian ve Best (2005)](https://doi.org/10.1109/TAP.2005.844443),
+[sürümü belirtilmiş bant genişliği türetimi](https://arxiv.org/html/2501.03146v5) ve
+[McLean (1996)](https://doi.org/10.1109/8.496253) çalışmalarını izler. Bağımsız analitik
+devre ve geometri kontrolleri yazılım hesabını doğrular; antenin sayısal yeterliliği ayrıdır.

@@ -25,6 +25,8 @@ import { bundleQuality, bundleRunMetrics, comparedRuns, runLabel, runShortLabel 
 import { deltaLabel, metricDeltas, referenceIndex, type DeltaKey, type MetricDelta, type RunMetrics } from "./runSummary";
 import { chooseSummaryReference, summaryMode, summaryReference, writeSummaryMode, type SummaryMode } from "./summaryMode";
 import "../styles/run-summary.css";
+import SmallAntennaPanel, { SmallAntennaComparison } from "../components/SmallAntennaPanel";
+import { designerSmallAntenna } from "./smallAntennaSession";
 
 // a minus sign, not a hyphen, on negative dB values
 const signed = (v: number | null | undefined, digits: number) => num(v, digits).replace(/^-/, "−");
@@ -108,6 +110,7 @@ function RunCard(props: { b: Bundle }) {
           <Show when={metrics().bands.some((b) => b.edge_lo || b.edge_hi)}><p class="note">{t("spec.bandOpenNote")}</p></Show>
         </Show>
 
+        <SmallAntennaPanel bundle={props.b} session={designerSmallAntenna} />
         <Show when={farfields().length}>
           <h3 class="rs-h">{t("tree.result.farfields")}</h3>
           <table class="table rs-table">
@@ -268,7 +271,10 @@ export function ResultSummary(props: { b: Bundle }) {
   });
   return (
     <div class="rs">
-      <Show when={runs().length >= 2} fallback={<RunCard b={props.b} />}><RunsCompare runs={runs()} /></Show>
+      <Show when={runs().length >= 2} fallback={<RunCard b={props.b} />}>
+        <RunsCompare runs={runs()} />
+        <SmallAntennaComparison runs={runs().map(run => ({ ...run, label: runLabel(run.file) }))} session={designerSmallAntenna} />
+      </Show>
     </div>
   );
 }

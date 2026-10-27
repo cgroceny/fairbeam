@@ -175,7 +175,12 @@ assert.ok(metrics.size >= 10, "the example bundles were read");
   assert.equal(metricsLine(m, fmt.fixed), "2,453 GHz · −34,5 dB · 6,8 dBi", "displayed numbers follow the Decimal separator setting");
   // exported data keeps the decimal point whatever is chosen
   const t = summaryTable([{ label: "A", file: "patch-antenna.json", bundle: load("patch-antenna.json") }]);
-  for (const cell of t.rows[0]) assert.ok(cell === null || typeof cell === "number" || !/\d,\d/.test(cell), `exported cell ${cell} keeps the point`);
+  // Structured provenance contains JSON commas (e.g. [0,1]); only an entire
+  // numeric string is a locale-formatted scalar, not a comma inside metadata.
+  const localizedScalar = /^[+-]?\d+,\d+(?:e[+-]?\d+)?$/i;
+  assert.ok(localizedScalar.test("123,45") && localizedScalar.test("-1,25e-3"), "localized numeric strings remain rejected");
+  assert.ok(!localizedScalar.test("[0,1]") && !localizedScalar.test("123.45"), "JSON separators and decimal points remain distinct");
+  for (const cell of t.rows[0]) assert.ok(cell === null || typeof cell === "number" || !localizedScalar.test(cell), `exported cell ${cell} keeps the point`);
   setDecimalChoice("language");
 }
 
