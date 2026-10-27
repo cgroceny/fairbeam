@@ -30,7 +30,7 @@ Dar pencerelerde ağaç ve özellikler panelleri aynı açılır alanı paylaş�
 - **Tasarım**, kendi çalıştırmalarını içerir. Gezinti ağacında Sonuçlar altında listelenip yerinde açılırlar: 3B görünüm, çalıştırmanın geometrisini örüntü veya yüzey akımlarıyla; alt panel grafiklerini gösterir.
 - **Örnekler**, [README](../README.md) ve [RESULTS.md](RESULTS.md) içinde açıklanan görüntüleyicidir. Sonuçları hazır yerleşik örnekleri ve Python modellerinizin çalıştırmalarını gösterir. Üst çubuktaki aranabilir sonuç seçici (filtrelemek için yazın, modele göre grupludur) bunları listeler; tasarımlarınızın çalıştırmaları burada yer almaz. **Yeni tasarım olarak aç…** (seçicinin yanında ve model panelinde), açık örnekten düzenlenebilir tasarım oluşturur. Tasarım biçiminin temsil edemediği örnekte veya yerleşik örnek olmayan sonuçta devre dışıdır; nedeni ipucunda gösterilir. Sonuç kendi tasarımlarınızdan birinden simüle edilmişse model panelinde **Tasarımcıda aç** görünür. Çalıştırma sunucusu yokken (herkese açık demo) her sonuç örnektir ve Tasarım kullanılamaz.
 
-  **Python örneğinin kopyası neleri içerir?** Penceredeki not bunları listeler. Örnek, açık sonucun değerleriyle (yerleşiklerde varsayılanlarıyla) oluşturulur; şekiller, malzemeler, portlar, bant, sınırlar ve kendi mesh çizgileri (1e-6 mm'ye yuvarlanmış) geri okunur. Aynı metaller tek malzeme paylaşır (katıların adları korunur). Örneğin **parametreleri** de aktarılır: Fairbeam her sayısal parametreyi biraz değiştirerek örneği yeniden oluşturur (parametre başına en fazla iki oluşturma, hiçbir şeyi değiştirmeyen parametrede bir). Parametrelerin tam doğrusal işlevi olan (1e-9 içinde) her koordinat veya değer ifade olarak yazılır: yama örneğinin kutusu `-patch_w/2, -patch_l/2, sub_h` ile `patch_w/2, patch_l/2, sub_h`, dielektrik sabiti `eps_r`, beslemesi `feed_x` olur. Böylece kopya bu parametrelerle kendi tasarımınız gibi taranabilir ve optimize edilebilir. Bu koordinatlarda duran mesh çizgileri onları izler; aradaki çizgiler oransal yerlerini korur, mesh geometriyle esner. Büyük geometri parametresi değişiminden sonra **Otomatik mesh'e geç** (Simülasyon ayarları) daha güvenlidir. Diğer sayılar sabit sayı kalır. Hiçbir ifadede görünmeyen parametre (yalnızca `mesh_div` gibi mesh'i veya fraktalın `iterations` değeri gibi model yapısını değiştiriyorsa) kopyaya eklenmez; açıklamada oluşturulduğu değerle listelenir. Aktarılan parametre *kısmen izleniyor* olarak işaretlenebilir: örnek başka boyutları bundan doğrusal olmayan kuralla türetiyorsa (`eps_r` üzerinden mikroşerit genişliği, `f0` üzerinden saplama uzunluğu), parametreyi değiştirdiğinizde bu geometri varsayılan boyutunda kalır. Örneğin sonuçları kopyaya dahil değildir; kendi sonuçlarınız için kopyayı çalıştırın.
+  **Python örneğinin kopyası neleri içerir?** Penceredeki not bunları listeler. Örnek, açık sonucun değerleriyle (yerleşiklerde varsayılanlarıyla) oluşturulur; şekiller, malzemeler, portlar, bant, sınırlar ve kendi mesh çizgileri (normalde 1e-6 mm'ye yuvarlanır; etkin yerel bölge aktarımında tam hassasiyet korunur) geri okunur. Aynı metaller tek malzeme paylaşır (katıların adları korunur). Örneğin **parametreleri** de aktarılır: Fairbeam her sayısal parametreyi biraz değiştirerek örneği yeniden oluşturur (parametre başına en fazla iki oluşturma, hiçbir şeyi değiştirmeyen parametrede bir). Parametrelerin tam doğrusal işlevi olan (1e-9 içinde) her koordinat veya değer ifade olarak yazılır: yama örneğinin kutusu `-patch_w/2, -patch_l/2, sub_h` ile `patch_w/2, patch_l/2, sub_h`, dielektrik sabiti `eps_r`, beslemesi `feed_x` olur. Böylece kopya bu parametrelerle kendi tasarımınız gibi taranabilir ve optimize edilebilir. Bu koordinatlarda duran mesh çizgileri onları izler; aradaki çizgiler oransal yerlerini korur, mesh geometriyle esner. Büyük geometri parametresi değişiminden sonra **Otomatik mesh'e geç** (Simülasyon ayarları) daha güvenlidir. Diğer sayılar sabit sayı kalır. Hiçbir ifadede görünmeyen parametre (yalnızca `mesh_div` gibi mesh'i veya fraktalın `iterations` değeri gibi model yapısını değiştiriyorsa) kopyaya eklenmez; açıklamada oluşturulduğu değerle listelenir. Aktarılan parametre *kısmen izleniyor* olarak işaretlenebilir: örnek başka boyutları bundan doğrusal olmayan kuralla türetiyorsa (`eps_r` üzerinden mikroşerit genişliği, `f0` üzerinden saplama uzunluğu), parametreyi değiştirdiğinizde bu geometri varsayılan boyutunda kalır. Örneğin sonuçları kopyaya dahil değildir; kendi sonuçlarınız için kopyayı çalıştırın.
 
 ### Şablonlar
 
@@ -395,6 +395,24 @@ Simülasyon sekmesinin düğmeleri (Frekans bandı, Sınırlar, Mesh ayarları, 
 **Deneysel Elmer FEM.** Simülasyon › Deneysel çözücüler, kurulum ve sınırlamaları gösterir. Çalıştır penceresindeki Elmer seçenekleri openEMS'in yerini otomatik olarak almaz. Önce [deneysel çözücü kılavuzunu](EXPERIMENTAL-SOLVERS.md) okuyun.
 
 **Deneysel koaksiyel TEM portu.** Port türü seçimindeki bu seçenek, uyumlu çalışma ortamı ve açık kabul gerektirir. [Koaksiyel portlar](COAXIAL-PORTS.md) desteklenen geometriyi ve henüz sağlanmayan sayısal doğrulama ölçütlerini açıklar.
+
+### Yerel mesh bölgeleri
+
+Simülasyon ayarları › Mesh bölümünde besleme, aralık veya başka bir alanın yakınında en
+büyük hücre genişliğini belirlemek için yerel bölge ekleyin. Ad, başlangıç ve bitiş
+koordinatları ile pozitif hücre boyutu girin. Koordinatlar Tasarımın uzunluk biriminde ve
+genel model eksenlerindedir; sayısal alanlar parametre ifadelerini kabul eder. Bölgeler
+pencerenin normal Uygula/İptal ve geri alma davranışıyla düzenlenebilir veya silinebilir.
+En fazla 32 bölge kullanılabilir.
+
+İki otomatik mod da geçerli listeyi uygular; Manuel çizgiler listeyi etkin olmayan ayar
+olarak korur. Kutu hesaplanan alanın içinde kalmalıdır. Sağlanamayan boyut veya hücre
+bütçesi önizlemede hata verir; hiçbir bölge sessizce elenmez. Çizgiler tüm Kartezyen alana
+uzanır; küçük kutuların da hücre maliyetini inceleyin. Bölge ekleme maliyeti ile port
+hizalamasından sonraki son hücre sayısı ayrıdır. Mesh görünümü eşleşen önizlemenin çözülmüş
+kutularını kullanır; taslak düzenlemesi eski çizgilere yeni kutular eklemez. Boyut, komşu
+hücre oranı ve raporlama kuralları için [yerel bölgeler](MESHING.md#açık-yerel-inceltme-bölgeleri)
+bölümüne bakın. İnceltme tek başına elektromanyetik yakınsama kanıtı değildir.
 
 ## Mesh görünümü
 

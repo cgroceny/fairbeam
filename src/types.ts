@@ -351,6 +351,23 @@ export interface RunStats {
   log_tail: string[];
 }
 
+/** Explicit-region cost stages refer to interval-cell products, never native solver nodes. */
+export interface LocalMeshRefinementReport {
+  version: 1;
+  precision: "float64-round-trip";
+  regions: { id: string; name: string; start: Vec3; stop: Vec3; cell_size: number; max_width: Vec3 }[];
+  insertion: {
+    stage: "after-automatic-probe-alignment";
+    before: { cells: Vec3; total_cells: number; timestep_s: number };
+    after: { cells: Vec3; total_cells: number; timestep_s: number };
+    added_cells: number;
+    ratio: number;
+  };
+  final: { stage: "validated-current-grid"; cells: Vec3; total_cells: number; timestep_s: number };
+  cell_limit: number;
+  grading: { configured_max_ratio: number; baseline_max_ratio: number; admission_ceiling: number; insertion_max_ratio: number; final_max_ratio: number };
+}
+
 export interface Bundle {
   /** "fairbeam.project/1"; a bundle with the older id is read as that (src/lib/legacy.ts) */
   schema: string;
@@ -409,6 +426,7 @@ export interface Bundle {
         cell_limit: number; required_cells_lower_bound: number; skipped_cell_limit: boolean;
         enabled?: boolean; dropped_features?: number; retained_features?: number;
       };
+      local_refinement?: LocalMeshRefinementReport;
     };
   };
   domain: { min: Vec3; max: Vec3 };

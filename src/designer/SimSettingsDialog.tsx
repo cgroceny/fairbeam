@@ -11,6 +11,8 @@ import { draftPreview, engine, meshFreshness } from "../runner/store";
 import { setSimSettingsFocus, setSimSettingsOpen, setSimSettingsSection, simSettingsFocus, simSettingsSection } from "./simSettingsState";
 import { ExprField } from "./DesignPane";
 import FieldPlanesEditor, { addFieldPlane, fieldPlanes } from "./FieldPlanesEditor";
+import LocalMeshRegionsEditor from "./LocalMeshRegionsEditor";
+import { retainLocalMeshRegions } from "./localMeshRegions";
 import { setMeshView } from "./MeshView";
 import { cellsText, estimateText } from "./meshStats";
 import { draftEstimate, draftMeshStats } from "./draftMesh";
@@ -167,14 +169,14 @@ export default function SimSettingsDialog() {
   const setMode = (mode: string) => edit((x) => {
     if (x.mesh.mode === "manual") {
       const settings = x.mesh.automatic;
-      x.mesh = { ...(settings ?? { mode: "design", overrides: {} }), thin_metal: x.mesh.thin_metal, refine_features: x.mesh.refine_features ?? settings?.refine_features };
+      x.mesh = retainLocalMeshRegions(x.mesh, { ...(settings ?? { mode: "design", overrides: {} }), thin_metal: x.mesh.thin_metal, refine_features: x.mesh.refine_features ?? settings?.refine_features });
     } else if (mode === "design") {
       if (x.mesh.mode !== "design") previousLegacy = JSON.parse(JSON.stringify(x.mesh));
       x.mesh.mode = "design";
       for (const key of ["cells_per_wavelength", "pad", "edge_rule", "max_ratio", "air_cells_per_wavelength"]) delete (x.mesh as Record<string, unknown>)[key];
       x.mesh.overrides ??= {};
     } else if (mode === "auto") {
-      x.mesh = { ...(previousLegacy ?? { mode: "auto", cells_per_wavelength: 20, thin_metal: x.mesh.thin_metal }), refine_features: x.mesh.refine_features };
+      x.mesh = retainLocalMeshRegions(x.mesh, { ...(previousLegacy ?? { mode: "auto", cells_per_wavelength: 20, thin_metal: x.mesh.thin_metal }), refine_features: x.mesh.refine_features });
     }
   }, "mesh-mode");
   const est = () => draftEstimate(engine());
@@ -582,6 +584,7 @@ export default function SimSettingsDialog() {
                 </select>
                 <span class="dz-value">{t("sim.mesh.thinMetal.note")}</span>
               </label>
+              <LocalMeshRegionsEditor />
               <Show when={!manualMesh()}><dl class="kv">
                 <dt>{t("sim.mesh.previewMesh")}</dt>
                 <dd class="mono">{stats() ? t("sim.mesh.previewStats", { lines: stats()!.lines.join(" × "), cells: cellsText(stats()!.cells) }) : t("sim.mesh.waitingPreview")}</dd>

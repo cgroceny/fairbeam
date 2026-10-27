@@ -6,6 +6,7 @@
 import { evaluate, nameMap, namesIn } from "./expr.ts";
 import { resolvedDatasheet } from "./dispersion.ts";
 import { portFeedEntries, portGroupProblem } from "../lib/portGroups.ts";
+import { localMeshRegionChecks, LOCAL_MESH_REGION_EXPLANATION, LOCAL_MESH_RESOLVED_MESSAGES } from "./localMeshRegions.ts";
 import type { Axis, Design, DesignFieldPlane, DesignPart, DesignPrimitive, Expr } from "./types.ts";
 
 /** "info": nothing is wrong, the build does something the drawing does not show (server only) */
@@ -35,11 +36,12 @@ export const CHEAP = new Set([
   "cells-per-wavelength", "end-criterion", "port-length", "port-volume", "port-r", "port-reference", "port-overlap", "no-port",
   "no-metal", "resistor-r", "resistor-length", "component-path", "cone-radii", "cone-length", "torus-radii",
   "wire-points", "wg-mode", "wg-size", "wg-cutoff", "wg-aperture", "cut-sheet", "boolean-transform-angle", "sheet-transform-angle", "scale", "mesh-lines",
-  "monitor-efficiency", "field-plane", "conductivity", "metal-thickness", "tan-d-band", "ff-step",
+  "monitor-efficiency", "field-plane", "conductivity", "metal-thickness", "tan-d-band", "ff-step", "mesh-local-region",
 ]);
 
 /** Keep CHEAP wording in sync with Python EXPLANATIONS (checked by check-designer). */
 export const EXPLANATIONS: Readonly<Record<string, string>> = {
+  "mesh-local-region": LOCAL_MESH_REGION_EXPLANATION,
   "ff-step": "Use an angular step from 0.25 to 90 degrees. Smaller steps resolve narrower beams but increase far-field processing time and bundle size; they do not establish solver or mesh convergence.",
   "dispersion": "Use a nonmagnetic dielectric datasheet point with an explicit positive reference frequency. The corner exponents are log10(rad/s), m2 > m1. Calibration must have positive eps_inf and nonnegative strength. The optional 1–32 poles control fit resources, not certified accuracy.",
   "dispersion-band": "The datasheet reference is outside the simulation band. A one-point causal model is an assumption, not evidence of broadband material accuracy. Check additional measured data; do not move the datasheet frequency just to remove this warning.",
@@ -578,6 +580,9 @@ export function designChecks(d: Design): Check[] {
     else if (end < END_DB_MIN) error("simulation.end_criteria_db", "end-criterion", `${g(end)} dB is below the ${END_DB_MIN} dB limit that runs accept`);
   }
   const rawMesh = d.mesh ?? ({} as Design["mesh"]);
+  if (rawMesh.axis_precision !== undefined && rawMesh.axis_precision !== "float64")
+    error("mesh.axis_precision", "mesh-local-region", "axis precision must be float64");
+  for (const issue of localMeshRegionChecks(rawMesh.local_regions, rawMesh.mode === "manual", names)) error(issue.path, issue.code, issue.message);
   if (rawMesh.mode === "manual") {
     const resolved: Partial<Record<Axis, number[]>> = {};
     for (const axis of AXES) {
@@ -889,7 +894,8 @@ export function mergeChecks(live: Check[], server: Check[]): Check[] {
   // without one needs comes from the resolved geometry), matched by code and field
   const fixes = new Map(server.filter((c) => c.fix).map((c) => [`${c.code}|${c.path}`, c.fix!]));
   const all = [...live.map((c) => (c.fix || !fixes.has(`${c.code}|${c.path}`) ? c : { ...c, fix: fixes.get(`${c.code}|${c.path}`) })),
-    ...server.filter((c) => !CHEAP.has(c.code))];
+    ...server.filter((c) => !CHEAP.has(c.code) ||
+      (c.code === "mesh-local-region" && LOCAL_MESH_RESOLVED_MESSAGES.has(c.message)))];
   const rank = { error: 0, warning: 1, info: 2 } as const;
   return all.sort((a, b) => rank[a.severity] - rank[b.severity]);
 }

@@ -460,7 +460,36 @@ def generate(sim, f_max: float | None = None, cells_per_wavelength: float = 20, 
              max_ratio: float = 1.4, min_cell: float | None = None, dielectric_cells: int = 4,
              pad: float | None = None, metal_cells: int = 6, edge_res: float | None = None,
              keep_existing: bool = True, air_cells_per_wavelength: float | None = None,
-             refine_features: bool = False, feature_cells: int | None = None) -> dict:
+             refine_features: bool = False, feature_cells: int | None = None,
+             local_regions: list | None = None) -> dict:
+    """Generate a fresh grid; failed or partial generations cannot be exported/run.
+
+    See :func:`_generate` for options. Source-capture metadata describes one grid,
+    so replacing its request deliberately removes that old provenance.
+    """
+    sim._mesh_generation_error = "mesh generation has not completed"
+    for key in ("_local_mesh_state", "_design_local_mesh", "_mesh_axis_precision", "mesh_report"):
+        if hasattr(sim, key):
+            delattr(sim, key)
+    try:
+        report = _generate(sim, f_max=f_max, cells_per_wavelength=cells_per_wavelength, edge_rule=edge_rule,
+                           max_ratio=max_ratio, min_cell=min_cell, dielectric_cells=dielectric_cells,
+                           pad=pad, metal_cells=metal_cells, edge_res=edge_res, keep_existing=keep_existing,
+                           air_cells_per_wavelength=air_cells_per_wavelength, refine_features=refine_features,
+                           feature_cells=feature_cells, local_regions=local_regions)
+    except Exception:
+        sim._mesh_generation_error = "mesh generation failed; rebuild before exporting or running"
+        raise
+    del sim._mesh_generation_error
+    return report
+
+
+def _generate(sim, f_max: float | None = None, cells_per_wavelength: float = 20, edge_rule: str = "thirds",
+             max_ratio: float = 1.4, min_cell: float | None = None, dielectric_cells: int = 4,
+             pad: float | None = None, metal_cells: int = 6, edge_res: float | None = None,
+             keep_existing: bool = True, air_cells_per_wavelength: float | None = None,
+             refine_features: bool = False, feature_cells: int | None = None,
+             local_regions: list | None = None) -> dict:
     """Mesh ``sim`` (an :class:`fairbeam.Simulation`) and return a report dict.
 
     Lengths are in drawing units (``sim.unit`` metres). ``f_max`` defaults to the simulation's.
@@ -474,6 +503,9 @@ def generate(sim, f_max: float | None = None, cells_per_wavelength: float = 20, 
     """
     if edge_rule not in ("thirds", "edge"):
         raise ValueError("edge_rule must be 'thirds' or 'edge'")
+    if local_regions is not None:
+        from .local_mesh import resolve_regions
+        local_regions = resolve_regions(local_regions)
     if not np.isfinite(cells_per_wavelength) or cells_per_wavelength <= 0:
         raise ValueError("cells_per_wavelength must be finite and > 0")
     if not np.isfinite(max_ratio) or max_ratio <= 1:
@@ -919,6 +951,9 @@ def generate(sim, f_max: float | None = None, cells_per_wavelength: float = 20, 
         "retained_features": len(candidates),
     }
     sim.mesh_report = report
+    if local_regions:
+        from .local_mesh import apply_regions
+        apply_regions(sim, local_regions, max_ratio, required)
     return report
 
 

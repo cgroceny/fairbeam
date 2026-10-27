@@ -11,6 +11,7 @@ import { cellsText, estimateText, estimateTime, meshStats } from "./meshStats";
 import { bottleneckPlane, likelyMeshSources, meshBottlenecks, meshMatchesGeometry, type AxisBottleneck } from "./meshBottlenecks";
 import { focusSimSettings } from "./simSettingsState";
 import { t } from "../i18n";
+import LocalMeshRegionReport from "./LocalMeshRegionReport";
 
 export const [meshView, setMeshViewSignal] = createSignal(false);
 
@@ -100,6 +101,7 @@ export function MeshViewPanel() {
           <button class="btn btn-ghost btn-sm" data-mesh-thin-link onClick={() => focusSimSettings("mesh.thin_metal")}>{t("results.mesh.thinLink")}</button>
           <p class="note">{t("results.mesh.thinLinkNote")}</p>
         </section>}</Show>
+        <LocalMeshRegionReport bundle={bundle()} />
         <div class="mv-row">
           <div class="seg seg-sm" role="radiogroup" aria-label={t("results.mesh.planeNormal")} onKeyDown={radioGroupKeys}>
             <For each={["x", "y", "z"] as Axis[]}>{(a) => (

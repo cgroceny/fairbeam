@@ -177,6 +177,15 @@ export interface DesignFieldPlane {
   frequencies: Expr[];
 }
 
+/** Explicit world-coordinate mesh caps. Expressions remain in the saved Design length unit. */
+export interface LocalMeshRegion {
+  id: string;
+  name: string;
+  start: Vec3;
+  stop: Vec3;
+  cell_size: Expr;
+}
+
 export interface Design {
   /** Explicit component folders, including empty folders; geometry remains on parts. */
   components?: string[];
@@ -193,6 +202,10 @@ export interface Design {
   ports: DesignPort[];
   resistors: DesignResistor[];
   mesh: {
+    /** Active in automatic modes; preserved but inactive with authored manual lines. */
+    local_regions?: LocalMeshRegion[];
+    /** Captured active-region grids preserve their manual axis coordinates without legacy rounding. */
+    axis_precision?: "float64";
     /** Missing in saved designs means off; new designs explicitly enable refinement. */
     refine_features?: boolean;
     /** Missing/auto keeps the legacy editor and server auto-mesh behavior. */

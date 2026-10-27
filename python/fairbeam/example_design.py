@@ -401,6 +401,10 @@ def _read_design(module, values: dict, source_path: Path):
 
     if getattr(sim, "unit", 1e-3) != 1e-3:
         raise ExampleConversionError(f"simulation length unit {sim.unit:g} m is not millimetres")
+    if getattr(sim, "_local_mesh_state", None) or getattr(sim, "_mesh_axis_precision", False):
+        sim.finalize_planar_ports()
+        sim.finalize_coaxial_ports()
+        sim.finalize_local_regions()
     excitation = getattr(sim, "excitation", {})
     if excitation.get("type") != "gaussian-derivative":
         raise ExampleConversionError(f"excitation {excitation.get('type')!r} cannot be represented exactly")
@@ -723,13 +727,14 @@ def _expression(terms: dict, p0: dict, target: float, loose: bool = False) -> st
     return text
 
 
-def _fit_parameters(module, source_path: Path, values: dict, base_core: dict, base_lines) -> dict:
+def _fit_parameters(module, source_path: Path, values: dict, base_core: dict, base_lines, *, precise=False) -> dict:
     """Which slots of the design are exact linear functions of the example's parameters.
 
     Returns ``{"expressions": {slot path: text}, "carried": [key, ...], "skipped": {key: why}}``."""
     snapped = copy.deepcopy(base_core)
-    _snap_coordinates(snapped)
-    snapped_lines = [[round(float(v), 6) for v in axis] for axis in base_lines]
+    if not precise:
+        _snap_coordinates(snapped)
+    snapped_lines = [[float(v) if precise else round(float(v), 6) for v in axis] for axis in base_lines]
     target = _slot_values(snapped, snapped_lines)     # what the design holds now
     raw = _slot_values(base_core, base_lines)         # what the example produced
     skeleton = _skeleton(base_core)
@@ -900,8 +905,15 @@ def _convert_example(source_path: Path, model_id: str, name: str,
     except Exception as exc:
         raise ExampleConversionError(f"could not load/build {source_path.name} at defaults: {exc}") from exc
     sim, core = _read_design(module, values, source_path)
+    from .local_mesh import captured_regions
+    sim.finalize_local_regions()
+    local_capture = captured_regions(sim)
+    stored_regions = copy.deepcopy(local_capture["local_regions"]) if local_capture else None
+    if local_capture and not local_capture["local_regions"] and not local_capture["axis_precision"]:
+        local_capture = None  # an explicit empty list retains the legacy conversion path
+    precise = bool(getattr(sim, "_local_mesh_state", None) or getattr(sim, "_mesh_axis_precision", False))
     base_lines = [[float(v) for v in sim.mesh.GetLines(a)] for a in "xyz"]
-    fit = _fit_parameters(module, source_path, values, core, base_lines)
+    fit = _fit_parameters(module, source_path, values, core, base_lines, precise=precise)
     materials, parts, ports, resistors, far_field = (core[k] for k in ("materials", "parts", "ports", "resistors", "far_field"))
 
     source_cells = _cells(sim)
@@ -919,6 +931,7 @@ def _convert_example(source_path: Path, model_id: str, name: str,
     source_name = origin or source_path.name
     notes = [_note("source", f"Converted from the bundled example {source_name} ({source_path.name}).",
                    example=source_name, file=source_path.name),
+             _note("meshLinesFloat64", "This design preserves the source mesh lines at full float64 precision; local regions remain stored but inactive in manual mode.") if precise else
              _note("meshLines", "This design uses the example's own mesh lines, rounded to 1e-6 mm.")]
 
     carried, partial, skipped = fit["carried"], fit["partial"], fit["skipped"]
@@ -936,6 +949,18 @@ def _convert_example(source_path: Path, model_id: str, name: str,
             if param.description:
                 item["description"] = param.description
             params.append(item)
+    if local_capture:
+        if local_capture["params"]:
+            # Only this explicit generated-Design channel carries nonlinear and
+            # derived region expressions. Recheck its resolved values first.
+            saved = copy.deepcopy(local_capture["params"])
+            for item in saved:
+                if "expr" not in item:
+                    item["default"] = local_capture["names"][item["key"]]
+            params = saved
+            notes.append(_note("meshRegionExpressions", "Local-region expressions and their parameter definitions were recovered from validated generated-Design metadata. Other geometry still follows the conversion's separate fitted-parameter limits."))
+        else:
+            notes.append(_note("meshRegionNumeric", "Local regions were recovered as resolved numeric boxes. Arbitrary Python expressions cannot be recovered."))
     if carried:
         count = sum(1 for path in expressions if path[0] != "mesh")
         notes.append(_note("carried", f"Parameters carried from the example: {', '.join(carried)}. {count} coordinates and values that "
@@ -946,7 +971,8 @@ def _convert_example(source_path: Path, model_id: str, name: str,
             notes.append(_note("partial", "Only partly followed (the example also derives other geometry from them by a rule that is not "
                                "a formula the design can hold, and that geometry stays at its default size): " + ", ".join(partial) + ".",
                                params=", ".join(partial)))
-    frozen = [f"{p.key}={values[p.key]}" for p in module.PARAMS if p.key not in carried]
+    preserved_keys = {p["key"] for p in params}
+    frozen = [f"{p.key}={values[p.key]}" for p in module.PARAMS if p.key not in preserved_keys]
     if frozen:
         notes.append(_note("frozen", "Source parameters not carried (frozen at example defaults or resolved override values): "
                            + ", ".join(frozen) + ".", params=", ".join(frozen)))
@@ -971,7 +997,8 @@ def _convert_example(source_path: Path, model_id: str, name: str,
     if "monitors" in core:
         design["monitors"] = core["monitors"]
     # snap before validating, so the design that is checked, meshed and counted below is the one returned
-    _snap_coordinates(design)
+    if not precise:
+        _snap_coordinates(design)
     for path, text in expressions.items():
         if path[0] != "mesh":
             _set(design, path, text)
@@ -980,7 +1007,7 @@ def _convert_example(source_path: Path, model_id: str, name: str,
         values = {}
         # Preserve the source mesh exactly as editable manual lines. Fit the Design settings
         # separately so the retained automatic overrides remain useful for future edits.
-        source_lines = [[round(float(v), 6) for v in sim.mesh.GetLines(a)] for a in "xyz"]
+        source_lines = [[float(v) if precise else round(float(v), 6) for v in sim.mesh.GetLines(a)] for a in "xyz"]
         for axis, line in zip("xyz", source_lines):
             if len(line) != len(set(line)):
                 raise ExampleConversionError(f"rounding source {axis} mesh lines to 1e-6 mm creates duplicates")
@@ -1014,10 +1041,16 @@ def _convert_example(source_path: Path, model_id: str, name: str,
                         candidate["air_cells_per_wavelength"] = max(2, round(cpw * air_ratio))
                         candidate["air_cells_per_wavelength"] = min(candidate["air_cells_per_wavelength"], cpw)
                         target_candidates.append(candidate)
+        # Explicit captured requests already have an authoritative full-precision
+        # grid. Do not run hundreds of speculative meshes or fit away their caps.
+        if local_capture:
+            target_candidates = []
         best = None
         for candidate in target_candidates:
             mesh.clear(); mesh.update({"mode": "design", "overrides": candidate,
                                       "refine_features": base.get("refine_features", False)})
+            if local_capture:
+                mesh["local_regions"] = copy.deepcopy(local_capture["local_regions"])
             try:
                 built = build_design(design, values)
                 count = _cells(built)
@@ -1029,15 +1062,25 @@ def _convert_example(source_path: Path, model_id: str, name: str,
             if best is None or score < best[0]:
                 best = (score, count, candidate)
         coaxial = any(p["type"] == "coaxial" for p in ports)
-        if best is None and not coaxial:
+        if best is None and not coaxial and not local_capture:
             raise ExampleConversionError("no valid Design automatic mesh candidate could be built")
         # a line that follows a parameter is an expression, the others stay numbers
         manual = {axis: [expressions.get(("mesh", axis, i), v) for i, v in enumerate(line)]
                   for axis, line in zip("xyz", source_lines)}
+        if precise:
+            # The snapshot is authoritative: fitted line expressions carry an
+            # approximation tolerance and cannot guarantee sub-rounding caps.
+            manual = dict(zip("xyz", source_lines))
         mesh.clear(); mesh.update({"mode": "manual", "lines": manual})
+        if stored_regions is not None:
+            mesh["local_regions"] = copy.deepcopy(stored_regions)
+        if precise:
+            mesh["axis_precision"] = "float64"
         if best is not None:
             mesh["automatic"] = {"mode": "design", "overrides": best[2],
                                  "refine_features": base.get("refine_features", False)}
+        elif local_capture:
+            notes.append(_note("meshRegionSnapshot", "This conversion keeps the source grid and local-region settings as a manual snapshot. Automatic settings were not fitted; switching to an automatic mode requires a fresh mesh preview."))
         else:
             # The automatic mesh does not refine a coaxial annulus; settings that cannot build the
             # native port would only fail later, when the user switches to them.
@@ -1052,7 +1095,7 @@ def _convert_example(source_path: Path, model_id: str, name: str,
             raise ValueError("converted ports were not built")
     except Exception as exc:
         raise ExampleConversionError(f"converted Design failed validation/build: {exc}") from exc
-    stats = {"params_carried": len(carried), "params_total": len(module.PARAMS),
+    stats = {"params_carried": sum(p.key in preserved_keys for p in module.PARAMS), "params_total": len(module.PARAMS),
              "params_partial": list(partial), "expressions": len(expressions)}
     return design, source_cells, design_cells, stats
 

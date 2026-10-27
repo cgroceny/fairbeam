@@ -576,6 +576,11 @@ class Simulation:
         return self.lumped_element(name, a.tolist(), c.tolist(), direction, label=label, priority=priority,
                                    **{key: value})
 
+    def finalize_local_regions(self):
+        """Validate explicit caps and refresh actual counts after port finalizers."""
+        from .local_mesh import finalize_regions
+        finalize_regions(self)
+
     def auto_mesh(self, verbose: bool = False, **kw) -> dict:
         """Generate the whole FDTD mesh from the geometry (``fairbeam.automesh.generate``; see
         docs/MESHING.md). Call after the geometry and ports, before ``add_nf2ff_box``. Returns the
@@ -688,6 +693,7 @@ class Simulation:
             raise ValueError("experimental native coaxial ports currently support CPU runs only; CUDA/Metal excitation and probe parity is not qualified")
         self.finalize_coaxial_ports()
         self.finalize_planar_ports()
+        self.finalize_local_regions()
         # refuse meshes that would exhaust memory (about 90 bytes per cell in the CPU engine)
         cells = int(np.prod([max(len(self.mesh.GetLines(a)) - 1, 1) for a in "xyz"]))
         limit = int(float(os.environ.get("FAIRBEAM_MAX_CELLS", 40e6)))
@@ -1070,6 +1076,7 @@ class Simulation:
     def to_bundle(self, model: dict, params: list[dict], name: str | None = None) -> dict:
         self.finalize_coaxial_ports()
         self.finalize_planar_ports()
+        self.finalize_local_regions()
         from ._meta import BUNDLE_SCHEMA, __version__
         from .geometry import read_structure
         import CSXCAD
@@ -1078,6 +1085,7 @@ class Simulation:
         parts, _helpers, nf2ff_box = read_structure(self.csx, self.materials, self.unit)
         _show_drawn_thickness(parts, self.thin_sheets)
         lines = {a: np.asarray(self.mesh.GetLines(a)) for a in "xyz"}
+        precise_axes = bool(getattr(self, "_local_mesh_state", None) or getattr(self, "_mesh_axis_precision", False))
         cells = [int(len(lines[a]) - 1) for a in "xyz"]
         widths = np.concatenate([np.diff(lines[a]) for a in "xyz"])
         half_space = None
@@ -1102,7 +1110,8 @@ class Simulation:
             "parts": parts,
             "ports": self.ports,
             "half_space": half_space,
-            "mesh": {"x": _r(lines["x"], 4), "y": _r(lines["y"], 4), "z": _r(lines["z"], 4),
+            "mesh": {**{a: lines[a].tolist() if precise_axes else _r(lines[a], 4) for a in "xyz"},
+                     **({"axis_precision": "float64"} if precise_axes else {}),
                      "cells": cells, "total_cells": int(np.prod(cells)),
                      "min_cell": round(float(widths.min()), 5), "max_cell": round(float(widths.max()), 5),
                      **({"auto": getattr(self, "mesh_report")} if getattr(self, "mesh_report", None) else {})},

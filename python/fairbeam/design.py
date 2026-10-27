@@ -491,6 +491,13 @@ def check_design(d: dict) -> None:
         raise DesignError("a design is a JSON object")
     if not schema_is(d.get("schema"), DESIGN_SCHEMA):
         raise DesignError(f"schema must be {DESIGN_SCHEMA!r}", "schema")
+    from .local_mesh import LocalMeshError, precision_marker, resolve_regions
+    try:
+        mesh = d.get("mesh", {})
+        precision_marker(mesh)
+        resolve_regions(mesh.get("local_regions", []), active=False)
+    except LocalMeshError as exc:
+        raise DesignError(exc.detail, exc.where) from None
     from .organization import organization_issues
     for path, detail in organization_issues(d):
         raise DesignError(detail, path)
@@ -2845,6 +2852,13 @@ def build(d: dict, values: dict):
     names = resolve_names(d, values)
     require_safe_sheet_transforms(d, names)
     num, vec = _evaluator(names)
+    from .local_mesh import LocalMeshError, capture_design_regions, precision_marker, resolve_regions
+    mesh_source = d.get("mesh", {})
+    try:
+        local_regions = resolve_regions(mesh_source.get("local_regions", []), num,
+                                        active=mesh_source.get("mode", "auto") != "manual")
+    except LocalMeshError as exc:
+        raise DesignError(exc.detail, exc.where) from None
 
     s = d.get("simulation", {})
     f_min, f_max = num(s.get("f_min", 1), "simulation.f_min") * 1e9, num(s.get("f_max", 3), "simulation.f_max") * 1e9
@@ -3040,7 +3054,7 @@ def build(d: dict, values: dict):
         import numpy as np
         dt = sim.unit / (C0 * np.sqrt(sum(1 / x**2 for x in dmin)))
         # the exact lines (the bundle rounds its mesh arrays for size): a CST export can carry them
-        sim.mesh_report = {"settings": {"mode": "manual", "lines": {AXES[a]: [round(v, 6) for v in x] for a, x in enumerate(manual_lines)}},
+        sim.mesh_report = {"settings": {"mode": "manual", "lines": {AXES[a]: [v if precision_marker(m) else round(v, 6) for v in x] for a, x in enumerate(manual_lines)}},
                            "cells": cells,
                            "total_cells": int(np.prod(cells)), "min_cell": min(dmin),
                            "max_cell": max(max(x) for x in widths), "warnings": [],
@@ -3127,7 +3141,10 @@ def build(d: dict, values: dict):
                               "mesh.air_cells_per_wavelength")
     if mode != "manual":
         kw["refine_features"] = m.get("refine_features", False)
+        if local_regions:
+            kw["local_regions"] = local_regions
         sim.auto_mesh(**kw)
+    capture_design_regions(sim, m, d.get("params", []), names)
     if mode == "design":
         report = getattr(sim, "mesh_report", None)
         if report is not None:
@@ -3137,6 +3154,7 @@ def build(d: dict, values: dict):
     sim.finalize_planar_ports()
     if any(p.get("type") == "coaxial" for p in d.get("ports", [])):
         sim.finalize_coaxial_ports()
+    sim.finalize_local_regions()
     if s.get("max_timesteps") in (None, "auto"):
         # no limit was chosen: cover the excitation pulse and its decay (it was a fixed 60000, which a
         # mesh with tiny cells spent on the pulse alone)
@@ -3774,6 +3792,12 @@ def to_python(d: dict) -> str:
         out.append(f"    sim.lumped_element({(r.get('name') or f'R{i + 1}')!r}, {start}, "
                    f"{stop}, {r['direction']!r}{values}, topology={r.get('topology', 'parallel')!r}{lbl}{prio_arg})")
     mm = d.get("mesh", {})
+    local_arg = ""
+    if mm.get("local_regions") and mm.get("mode", "auto") != "manual":
+        local_arg = ", local_regions=[" + ", ".join(
+            "{'id': " + repr(r["id"]) + ", 'name': " + repr(r["name"]) + ", 'start': " + vec(r["start"])
+            + ", 'stop': " + vec(r["stop"]) + ", 'cell_size': " + e(r["cell_size"]) + "}"
+            for r in mm["local_regions"]) + "]"
     if mm.get("mode") == "manual":
         for ax in AXES:
             out.append(f"    sim.mesh.AddLine({ax!r}, [" + ", ".join(e(v) for v in mm["lines"][ax]) + "])" )
@@ -3799,7 +3823,7 @@ def to_python(d: dict) -> str:
                     "pad": e(ov["pad"]) if "pad" in ov else pad_expr}
         adaptive["refine_features"] = repr(mm.get("refine_features", False))
         args = ", ".join(f"{k}={v}" for k, v in adaptive.items())
-        out.append(f"    sim.auto_mesh({args})")
+        out.append(f"    sim.auto_mesh({args}{local_arg})")
         note_keys = list(adaptive)
         out.append("    sim.mesh_report['settings']['mode'] = 'design'")
         out.append("    sim.mesh_report['notes'] = " + repr({k: ("overridden" if k in ov else "selected from design geometry, materials, frequency band, and far-field setting") for k in note_keys}))
@@ -3809,7 +3833,12 @@ def to_python(d: dict) -> str:
         max_ratio = f", max_ratio={e(mm['max_ratio'])}" if "max_ratio" in mm else ""
         air_cpw = (f", air_cells_per_wavelength={e(mm['air_cells_per_wavelength'])}"
                    if mm.get("air_cells_per_wavelength") is not None else "")
-        out.append(f"    sim.auto_mesh(cells_per_wavelength={e(mm.get('cells_per_wavelength', 20))}{edge_rule}{max_ratio}{air_cpw}{pad}, refine_features={mm.get('refine_features', False)!r})")
+        out.append(f"    sim.auto_mesh(cells_per_wavelength={e(mm.get('cells_per_wavelength', 20))}{edge_rule}{max_ratio}{air_cpw}{pad}, refine_features={mm.get('refine_features', False)!r}{local_arg})")
+    if "local_regions" in mm or "axis_precision" in mm:
+        out.append("    from fairbeam.local_mesh import capture_design_regions")
+        out.append(f"    capture_design_regions(sim, {mm!r}, {d.get('params', [])!r}, resolve_names({{'params': {d.get('params', [])!r}}}, p))")
+        if mm.get("local_regions") or "axis_precision" in mm:
+            out += ["    sim.finalize_planar_ports()", "    sim.finalize_coaxial_ports()", "    sim.finalize_local_regions()"]
     if s.get("max_timesteps") in (None, "auto"):
         out.append(f"    apply_auto_timesteps(sim, ({e(s.get('f_max', 3))}) * 1e9)")
     ff = d.get("far_field", {"enabled": True})

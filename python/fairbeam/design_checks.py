@@ -33,6 +33,7 @@ from .design import (AXES, DT_SAFETY, auto_timesteps, ringdown_steps, EFFICIENCY
                      port_feeds, resolve_primitive, sheet_transform_issues, thin_metal_limit, thin_sheets, transform_maps, wg_cutoff_ghz,
                      wg_mode)
 from .pattern_grid import PATTERN_STEP_MIN, PATTERN_STEP_MAX
+from .local_mesh import LocalMeshError, precision_marker, region_checks
 
 EPS = 1e-9
 # the Gaussian-derivative excitation (fairbeam.excitation, which needs numpy): -20 dB at f max, the
@@ -50,6 +51,7 @@ END_DB_MAX = -10
 
 # checks that src/designer/checks.ts also runs; the rest need the resolved geometry or the bundle
 CHEAP = frozenset({
+    "mesh-local-region",
     "coax-port", "coax-mesh", "planar-port",
     "expr", "param-range", "part-name-duplicate", "part-empty", "brick-flat", "brick-inverted", "radius",
     "inner-radius", "cylinder-length", "polygon-points", "polygon-area", "polygon-self-intersect",
@@ -63,6 +65,9 @@ CHEAP = frozenset({
 
 # Plain-language guidance shared by server checks and the live CHEAP checks.
 EXPLANATIONS = {
+    "mesh-local-region": "Use up to 32 named boxes with unique IDs, finite coordinates, increasing bounds, and a positive cell size inside the mesh domain. Coordinates use the model length unit; manual mesh keeps these settings inactive.",
+    "mesh-local-limit": "Reduce the requested local refinement or model extent. Explicit regions cannot be discarded to fit the configured hard cell budget.",
+    "mesh-local-grid": "The actual final grid must retain protected planes and satisfy every positive-overlap region cap with finite increasing lines. Change the request or coordinates; no cap is silently enlarged.",
     "ff-step": "Use an angular step from 0.25 to 90 degrees. Smaller steps resolve narrower beams but increase far-field processing time and bundle size; they do not establish solver or mesh convergence.",
     "dispersion": "Use a nonmagnetic dielectric datasheet point with an explicit positive reference frequency. The corner exponents are log10(rad/s), m2 > m1. Calibration must have positive eps_inf and nonnegative strength. The optional 1–32 poles control fit resources, not certified accuracy.",
     "dispersion-band": "The datasheet reference is outside the simulation band. A one-point causal model is an assumption, not evidence of broadband material accuracy. Check additional measured data; do not move the datasheet frequency just to remove this warning.",
@@ -614,6 +619,14 @@ class _Lint:
                 self.error("simulation.end_criteria_db", "end-criterion",
                            f"{end:g} dB is below the {END_DB_MIN} dB limit that runs accept")
         m = self.d.get("mesh", {})
+        _, local_errors = region_checks(m.get("local_regions", []), lambda value, _path: evaluate(value, self.names),
+                                         active=m.get("mode", "auto") != "manual")
+        for problem in local_errors:
+            self.error(problem.where, problem.code, problem.detail)
+        try:
+            precision_marker(m)
+        except LocalMeshError as problem:
+            self.error(problem.where, problem.code, problem.detail)
         if "refine_features" in m and not isinstance(m["refine_features"], bool):
             self.error("mesh.refine_features", "expr", "refine features must be true or false")
         if m.get("mode") == "manual":
@@ -1829,7 +1842,13 @@ class _Lint:
         if reference_errors:
             return self.out
         try:
-            check_design(d)
+            # Local fields have collected, path-specific cheap checks below.
+            # Keep unrelated structure admission unchanged and do not return at
+            # the first invalid local field before the other cheap checks run.
+            structure = d
+            if isinstance(d.get("mesh"), dict) and any(k in d["mesh"] for k in ("local_regions", "axis_precision")):
+                structure = dict(d, mesh={k: v for k, v in d["mesh"].items() if k not in ("local_regions", "axis_precision")})
+            check_design(structure)
         except DesignError as e:
             code = "expr" if ".group" in (e.where or "") or e.where in ("mesh.refine_features", "far_field.circular") else "structure"
             if match := re.fullmatch(r"materials\[(\d+)\]\.dispersion", e.where or ""):

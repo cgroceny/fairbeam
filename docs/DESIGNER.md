@@ -104,7 +104,8 @@ inner control handles it first.
 
   **What the copy of a Python example contains.** The dialog's note lists it. The example is built at
   the values of the open project (its defaults for the bundled ones) and read back as shapes,
-  materials, ports, band, boundaries and its own mesh lines (rounded to 1e-6 mm). Identical metals
+  materials, ports, band, boundaries and its own mesh lines (normally rounded to 1e-6 mm;
+  active local-region captures preserve full precision). Identical metals
   share one material (the parts keep their names). The example's **parameters** come along: Fairbeam
   rebuilds the example with each numeric parameter moved a little (two builds per parameter at most,
   one for a parameter that changes nothing) and every coordinate or value that is an exact linear
@@ -1090,6 +1091,23 @@ without the dialog.
 **Experimental Elmer FEM.** Simulation › Experimental solvers opens setup and limitations. The Elmer choices in Run do not automatically replace openEMS. Read the [experimental solver guide](EXPERIMENTAL-SOLVERS.md) first.
 
 **Coaxial TEM port (experimental).** This port-type choice needs a compatible runtime and explicit acceptance. [Coaxial ports](COAXIAL-PORTS.md) describes supported geometry and numerical qualification criteria that are still unmet.
+
+### Local mesh regions
+
+In Simulation settings › Mesh, add a local region to request a maximum cell width near a
+feed, gap or other area of interest. Give it a name, start and stop coordinates and a
+positive cell size. Coordinates use the Design length unit and global model axes; all
+numeric fields accept parameter expressions. You can edit or remove each region, with
+the dialog's normal Apply/Cancel and undo behavior. At most 32 regions are allowed.
+
+Both automatic modes apply the current list; Manual lines retains it as inactive. A box
+must fit inside the computed domain. Impossible sizes or cell budgets fail the preview
+without silently discarding a region. Lines extend across the full Cartesian domain,
+so check the cell-count impact even for a small box. The region-insertion cost and the
+final mesh count after port alignment are distinct. Mesh view uses resolved boxes from
+the matching displayed preview; editing a draft does not put new boxes on stale lines.
+See [explicit regions](MESHING.md#explicit-local-refinement-regions) for the cap, grading
+and reporting rules. Refinement alone does not establish electromagnetic convergence.
 
 ## Mesh view
 
