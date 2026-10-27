@@ -55,6 +55,20 @@ def serial(out, cpw, excited, padding=f.base.PADDING, *, factor=1.):
 
 
 class ClockTests(unittest.TestCase):
+    def test_recorded_first_crossing_is_not_a_late_stability_certificate(self):
+        path = Path(__file__).parent/'fixtures/waveguide_step_clock_evidence.json'
+        data = json.loads(path.read_text(encoding='utf-8'))
+        self.assertEqual(data['format'], 'fairbeam-te10-clock-diagnostic-evidence-v1')
+        rows = {r['name']: r for r in data['controls']}
+        self.assertTrue(rows['factor_0.75']['native_stop_gate_passed'])
+        self.assertFalse(rows['factor_0.9']['native_stop_gate_passed'])
+        tail = data['continuation']
+        self.assertTrue(tail['same_source_cache_hashes'])
+        self.assertEqual(max(r['db'] for r in tail['post_primary_stop_energy_trace']), tail['maximum_late_energy_db'])
+        self.assertGreater(tail['maximum_late_energy_db'], f.base.END_DB)
+        self.assertTrue(data['diagnostic_only'])
+        self.assertFalse(data['qualified_scope'])
+
     def test_only_clock_and_step_budget_change(self):
         with tempfile.TemporaryDirectory() as folder:
             original = Path(folder)/'original.xml'

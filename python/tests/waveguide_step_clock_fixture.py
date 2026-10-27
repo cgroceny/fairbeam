@@ -3,6 +3,8 @@
 Only the native clock and corresponding step allocation change. The geometry,
 Gaussian source, measurement planes and analytical/numerical limits come from
 waveguide_step_fixture. No gallery or production source is modified.
+An early energy-threshold crossing can precede late growth. Numerical checks
+in this diagnostic do not issue a temporal-stability or application certificate.
 """
 import hashlib
 import json

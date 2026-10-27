@@ -1,0 +1,1640 @@
+{
+  "format": "fairbeam-te10-clock-diagnostic-evidence-v1",
+  "exported_utc": "2026-10-27T02:51:14.629287+00:00",
+  "own_geometry": {
+    "a_mm": 22.86,
+    "b_mm": 10.16,
+    "right_eps_r": 2.54,
+    "mu_r": 1.0,
+    "measurement_planes_mm": [
+      -20.0,
+      20.0
+    ],
+    "interface_mm": 0.0
+  },
+  "frequency_hz": [
+    9800000000.0,
+    9810000000.0,
+    9820000000.0,
+    9830000000.0,
+    9840000000.0,
+    9850000000.0,
+    9860000000.0,
+    9870000000.0,
+    9880000000.0,
+    9890000000.0,
+    9900000000.0,
+    9910000000.0,
+    9920000000.0,
+    9930000000.0,
+    9940000000.0,
+    9950000000.0,
+    9960000000.0,
+    9970000000.0,
+    9980000000.0,
+    9990000000.0,
+    10000000000.0,
+    10010000000.0,
+    10020000000.0,
+    10030000000.0,
+    10040000000.0,
+    10050000000.0,
+    10060000000.0,
+    10070000000.0,
+    10080000000.0,
+    10090000000.0,
+    10100000000.0,
+    10110000000.0,
+    10120000000.0,
+    10130000000.0,
+    10140000000.0,
+    10150000000.0,
+    10160000000.0,
+    10170000000.0,
+    10180000000.0,
+    10190000000.0,
+    10200000000.0
+  ],
+  "native_threads": 4,
+  "runtime": {
+    "binding_version": "0.37.0rc3",
+    "python": "3.13.15 (main, Sep 24 2026, 17:56:47) [MSC v.1944 64 bit (AMD64)]",
+    "numpy": "2.5.3",
+    "port_helpers_sha256": "0daec44373d6a06395f1c47b252b004df4e99ee2fca5525b486e934451dcc1c1",
+    "physical_constants_sha256": "3be7100e2f94954750803eb462af9d40b98b7bdb31449a62deacec4aa075ac14",
+    "dependencies": {
+      "fparser.dll": "79aa8744d843e7e7bebec2059d39a5543ba3f811fef07a3dc244afe1f86ecc33",
+      "nf2ff.dll": "de6d690ad4a91136902f1ff53cb0c27b45495236164d2a5d5160ce91b130c9bf"
+    },
+    "files": {
+      "CSXCAD.dll": "acc1bc60a06b8848fa3d12a0e8a72a1898f50f8bae6a38becc3297b2b1e65358",
+      "openEMS.dll": "848f1f0bbb09706d8d25bac6c1c623d3c04f56eceac63c5114a3b58ed258bb77",
+      "QCSXCAD.dll": "279cb61cbce733c6a50171ed794f8f1f25f196f51f64050e88d1ced8767bdd1a",
+      "_nf2ff.cp313-win_amd64.pyd": "c6b32e59e6cd613b16d29b6ecfc9b8bbb09b4e51d2e2860530b5bece6ace8b65",
+      "openEMS.cp313-win_amd64.pyd": "6b6aac30d2a038d7c9ecae48b94d464b68c406dd96a2765e6f3d9e5cc51722ca",
+      "sar_calculation.cp313-win_amd64.pyd": "5b46c5e25d7b45449c4197682e92e6e42378ef6ebb5f6ed0b944c96742c014c1"
+    },
+    "csxcad_bindings": {
+      "CSPrimitives.cp313-win_amd64.pyd": "fef6255e77e42aeda333fac65596088cf306eaedabf1af7cc122049e1e6bfbda",
+      "CSProperties.cp313-win_amd64.pyd": "c3b5cc41f960f2bfddffc5e4c206040cfe5e6b32d1cf6d3f3465414b2e3388de",
+      "CSRectGrid.cp313-win_amd64.pyd": "6165f64e91ee87e88f6f5f9b2f9bfa84e38117522bd27a9edc66c37da3613e2c",
+      "CSTransform.cp313-win_amd64.pyd": "c8124a3351e3cce822fb3c0995bf412deb981e8f9976fa5f1262dfd9dfd84a64",
+      "CSXCAD.cp313-win_amd64.pyd": "af8aecad6052cf5e4c9047f863055bdcd53654578c663136f1e65e686d57e0a1",
+      "ParameterObjects.cp313-win_amd64.pyd": "801748571d63bb6cc8f7c06c281bfe2ca7edb56d343af229345f1ab11c598dd8",
+      "Utilities.cp313-win_amd64.pyd": "61a32927e8a8d097368c95a95e801350f7f2d4a79198840a2d1d16e7bbf1560e",
+      "__init__.py": "acc97b8322d1d604f0864bff62f45cd6748c06ce1b9c8250877c5baad0786b5c"
+    }
+  },
+  "controls": [
+    {
+      "name": "default",
+      "acquisition_head": "a03221ab2f5b08b4fc5e04b115e56017e7fc7c53",
+      "factor": 1.0,
+      "dt_s": 7.03007e-13,
+      "dt_precision": "exported source cache first interval",
+      "native_cells": 290493,
+      "native_timesteps": 200000,
+      "allocated_steps": 200000,
+      "native_stop_gate_passed": false,
+      "hit_timestep_limit": true,
+      "native_end_db": -90.0,
+      "native_end_bound_db": null,
+      "last_logged_energy_db": -65.61,
+      "energy_trace": [
+        {
+          "timestep": 1496,
+          "db": -0.0
+        },
+        {
+          "timestep": 2873,
+          "db": -0.0
+        },
+        {
+          "timestep": 4420,
+          "db": -0.0
+        },
+        {
+          "timestep": 6001,
+          "db": -0.0
+        },
+        {
+          "timestep": 7582,
+          "db": -0.0
+        },
+        {
+          "timestep": 8755,
+          "db": -0.0
+        },
+        {
+          "timestep": 9867,
+          "db": -0.0
+        },
+        {
+          "timestep": 11067,
+          "db": -2.02
+        },
+        {
+          "timestep": 12597,
+          "db": -3.6
+        },
+        {
+          "timestep": 14127,
+          "db": -11.23
+        },
+        {
+          "timestep": 15351,
+          "db": -19.26
+        },
+        {
+          "timestep": 16813,
+          "db": -30.76
+        },
+        {
+          "timestep": 18309,
+          "db": -48.83
+        },
+        {
+          "timestep": 19703,
+          "db": -65.05
+        },
+        {
+          "timestep": 21029,
+          "db": -86.77
+        },
+        {
+          "timestep": 22236,
+          "db": -83.99
+        },
+        {
+          "timestep": 23664,
+          "db": -87.13
+        },
+        {
+          "timestep": 24973,
+          "db": -87.44
+        },
+        {
+          "timestep": 26418,
+          "db": -87.08
+        },
+        {
+          "timestep": 27795,
+          "db": -86.36
+        },
+        {
+          "timestep": 29019,
+          "db": -85.78
+        },
+        {
+          "timestep": 30153,
+          "db": -85.25
+        },
+        {
+          "timestep": 31416,
+          "db": -84.72
+        },
+        {
+          "timestep": 32861,
+          "db": -84.14
+        },
+        {
+          "timestep": 34323,
+          "db": -83.59
+        },
+        {
+          "timestep": 35615,
+          "db": -83.12
+        },
+        {
+          "timestep": 37053,
+          "db": -82.64
+        },
+        {
+          "timestep": 38420,
+          "db": -82.22
+        },
+        {
+          "timestep": 39916,
+          "db": -81.76
+        },
+        {
+          "timestep": 41429,
+          "db": -81.32
+        },
+        {
+          "timestep": 42704,
+          "db": -80.98
+        },
+        {
+          "timestep": 44367,
+          "db": -80.52
+        },
+        {
+          "timestep": 46376,
+          "db": -80.03
+        },
+        {
+          "timestep": 48569,
+          "db": -79.52
+        },
+        {
+          "timestep": 50745,
+          "db": -79.03
+        },
+        {
+          "timestep": 52156,
+          "db": -78.74
+        },
+        {
+          "timestep": 53788,
+          "db": -78.4
+        },
+        {
+          "timestep": 55301,
+          "db": -78.1
+        },
+        {
+          "timestep": 56712,
+          "db": -77.83
+        },
+        {
+          "timestep": 58004,
+          "db": -77.59
+        },
+        {
+          "timestep": 59340,
+          "db": -77.34
+        },
+        {
+          "timestep": 60962,
+          "db": -77.06
+        },
+        {
+          "timestep": 62514,
+          "db": -76.8
+        },
+        {
+          "timestep": 63920,
+          "db": -76.57
+        },
+        {
+          "timestep": 65467,
+          "db": -76.32
+        },
+        {
+          "timestep": 66912,
+          "db": -76.1
+        },
+        {
+          "timestep": 68544,
+          "db": -75.85
+        },
+        {
+          "timestep": 70074,
+          "db": -75.62
+        },
+        {
+          "timestep": 71434,
+          "db": -75.42
+        },
+        {
+          "timestep": 72828,
+          "db": -75.23
+        },
+        {
+          "timestep": 74171,
+          "db": -75.05
+        },
+        {
+          "timestep": 75633,
+          "db": -74.84
+        },
+        {
+          "timestep": 76976,
+          "db": -74.67
+        },
+        {
+          "timestep": 78387,
+          "db": -74.48
+        },
+        {
+          "timestep": 79407,
+          "db": -74.36
+        },
+        {
+          "timestep": 80563,
+          "db": -74.21
+        },
+        {
+          "timestep": 81765,
+          "db": -74.06
+        },
+        {
+          "timestep": 83045,
+          "db": -73.91
+        },
+        {
+          "timestep": 84507,
+          "db": -73.74
+        },
+        {
+          "timestep": 85714,
+          "db": -73.59
+        },
+        {
+          "timestep": 86802,
+          "db": -73.46
+        },
+        {
+          "timestep": 88182,
+          "db": -73.31
+        },
+        {
+          "timestep": 89562,
+          "db": -73.16
+        },
+        {
+          "timestep": 90967,
+          "db": -73.01
+        },
+        {
+          "timestep": 92310,
+          "db": -72.87
+        },
+        {
+          "timestep": 93653,
+          "db": -72.72
+        },
+        {
+          "timestep": 95285,
+          "db": -72.56
+        },
+        {
+          "timestep": 96798,
+          "db": -72.4
+        },
+        {
+          "timestep": 98141,
+          "db": -72.26
+        },
+        {
+          "timestep": 99382,
+          "db": -72.14
+        },
+        {
+          "timestep": 100895,
+          "db": -71.99
+        },
+        {
+          "timestep": 101677,
+          "db": -71.92
+        },
+        {
+          "timestep": 102340,
+          "db": -71.86
+        },
+        {
+          "timestep": 103377,
+          "db": -71.76
+        },
+        {
+          "timestep": 104754,
+          "db": -71.63
+        },
+        {
+          "timestep": 106369,
+          "db": -71.49
+        },
+        {
+          "timestep": 108018,
+          "db": -71.34
+        },
+        {
+          "timestep": 109633,
+          "db": -71.2
+        },
+        {
+          "timestep": 111316,
+          "db": -71.05
+        },
+        {
+          "timestep": 113067,
+          "db": -70.9
+        },
+        {
+          "timestep": 114512,
+          "db": -70.78
+        },
+        {
+          "timestep": 116195,
+          "db": -70.64
+        },
+        {
+          "timestep": 117714,
+          "db": -70.51
+        },
+        {
+          "timestep": 118983,
+          "db": -70.41
+        },
+        {
+          "timestep": 120292,
+          "db": -70.31
+        },
+        {
+          "timestep": 121754,
+          "db": -70.19
+        },
+        {
+          "timestep": 123267,
+          "db": -70.07
+        },
+        {
+          "timestep": 124661,
+          "db": -69.97
+        },
+        {
+          "timestep": 125953,
+          "db": -69.87
+        },
+        {
+          "timestep": 127330,
+          "db": -69.76
+        },
+        {
+          "timestep": 128843,
+          "db": -69.65
+        },
+        {
+          "timestep": 130339,
+          "db": -69.55
+        },
+        {
+          "timestep": 131767,
+          "db": -69.44
+        },
+        {
+          "timestep": 133239,
+          "db": -69.33
+        },
+        {
+          "timestep": 134606,
+          "db": -69.24
+        },
+        {
+          "timestep": 135999,
+          "db": -69.14
+        },
+        {
+          "timestep": 137581,
+          "db": -69.04
+        },
+        {
+          "timestep": 139230,
+          "db": -68.92
+        },
+        {
+          "timestep": 140607,
+          "db": -68.83
+        },
+        {
+          "timestep": 142069,
+          "db": -68.74
+        },
+        {
+          "timestep": 143174,
+          "db": -68.66
+        },
+        {
+          "timestep": 144432,
+          "db": -68.58
+        },
+        {
+          "timestep": 145724,
+          "db": -68.5
+        },
+        {
+          "timestep": 146948,
+          "db": -68.42
+        },
+        {
+          "timestep": 148308,
+          "db": -68.33
+        },
+        {
+          "timestep": 149799,
+          "db": -68.23
+        },
+        {
+          "timestep": 151248,
+          "db": -68.14
+        },
+        {
+          "timestep": 152694,
+          "db": -68.06
+        },
+        {
+          "timestep": 154071,
+          "db": -67.98
+        },
+        {
+          "timestep": 155720,
+          "db": -67.88
+        },
+        {
+          "timestep": 157097,
+          "db": -67.79
+        },
+        {
+          "timestep": 158491,
+          "db": -67.71
+        },
+        {
+          "timestep": 159800,
+          "db": -67.64
+        },
+        {
+          "timestep": 161058,
+          "db": -67.56
+        },
+        {
+          "timestep": 162299,
+          "db": -67.49
+        },
+        {
+          "timestep": 163574,
+          "db": -67.42
+        },
+        {
+          "timestep": 164934,
+          "db": -67.34
+        },
+        {
+          "timestep": 166379,
+          "db": -67.26
+        },
+        {
+          "timestep": 167892,
+          "db": -67.17
+        },
+        {
+          "timestep": 169252,
+          "db": -67.1
+        },
+        {
+          "timestep": 170292,
+          "db": -67.04
+        },
+        {
+          "timestep": 170844,
+          "db": -67.01
+        },
+        {
+          "timestep": 171411,
+          "db": -66.98
+        },
+        {
+          "timestep": 171853,
+          "db": -66.96
+        },
+        {
+          "timestep": 172669,
+          "db": -66.92
+        },
+        {
+          "timestep": 174097,
+          "db": -66.84
+        },
+        {
+          "timestep": 175661,
+          "db": -66.76
+        },
+        {
+          "timestep": 177225,
+          "db": -66.67
+        },
+        {
+          "timestep": 178721,
+          "db": -66.6
+        },
+        {
+          "timestep": 180268,
+          "db": -66.52
+        },
+        {
+          "timestep": 181713,
+          "db": -66.44
+        },
+        {
+          "timestep": 183243,
+          "db": -66.37
+        },
+        {
+          "timestep": 184671,
+          "db": -66.29
+        },
+        {
+          "timestep": 186014,
+          "db": -66.23
+        },
+        {
+          "timestep": 187357,
+          "db": -66.16
+        },
+        {
+          "timestep": 188734,
+          "db": -66.09
+        },
+        {
+          "timestep": 189819,
+          "db": -66.04
+        },
+        {
+          "timestep": 191080,
+          "db": -65.98
+        },
+        {
+          "timestep": 192321,
+          "db": -65.92
+        },
+        {
+          "timestep": 193426,
+          "db": -65.87
+        },
+        {
+          "timestep": 195092,
+          "db": -65.79
+        },
+        {
+          "timestep": 197081,
+          "db": -65.7
+        },
+        {
+          "timestep": 199053,
+          "db": -65.61
+        }
+      ],
+      "source_sha256": {
+        "fixture": "cd79bb351628cb84dc308609a228c19e4b0f0656f75bf8e96cf092b407ba9748",
+        "runner": "6d6758c44f0e4e4c353850b94c6ee52a347f77dd4ee211d92cca6b7ec78f4922",
+        "simulation": "a2ba7133901197b7d86f66e7f77ed1d6e1e18b7d19cd4407149cf6a62eafe058"
+      },
+      "original_file_sha256": {
+        "report.json": "5052875770b348cf07044d1eb5099a47244179c51da9901a11e80a53b28f7bfd",
+        "data.npz": "f95de91044a7165e46e77b560f4ded6c5ca1e97f425096d9a8885e256e614af5",
+        "raw/et": "c47b1d2bec0c9cf95475fc8f910e92af5368e9d6b6ac158f93ffb510860e3b25",
+        "raw/ht": "f6a537a5c3b470a9fd3e3a5f0b6dbca93c157e3e319f401ca207ab2aaccf9be8"
+      },
+      "case_wall_seconds": 581.1362588405609,
+      "late_time_stability_established": false
+    },
+    {
+      "name": "factor_0.9",
+      "acquisition_head": "2b42a46ec5b21e8a11ca49203f60d1b58b3045b6",
+      "factor": 0.9,
+      "dt_s": 6.327059430615674e-13,
+      "dt_precision": "native statistics",
+      "native_cells": 290493,
+      "native_timesteps": 222223,
+      "allocated_steps": 222223,
+      "native_stop_gate_passed": false,
+      "hit_timestep_limit": true,
+      "native_end_db": -90.0,
+      "native_end_bound_db": null,
+      "last_logged_energy_db": -63.78,
+      "energy_trace": [
+        {
+          "timestep": 1881,
+          "db": -0.0
+        },
+        {
+          "timestep": 3895,
+          "db": -0.0
+        },
+        {
+          "timestep": 5890,
+          "db": -0.0
+        },
+        {
+          "timestep": 7904,
+          "db": -0.0
+        },
+        {
+          "timestep": 9842,
+          "db": -0.0
+        },
+        {
+          "timestep": 11799,
+          "db": -0.99
+        },
+        {
+          "timestep": 13737,
+          "db": -2.57
+        },
+        {
+          "timestep": 15751,
+          "db": -10.0
+        },
+        {
+          "timestep": 17708,
+          "db": -23.75
+        },
+        {
+          "timestep": 19665,
+          "db": -39.54
+        },
+        {
+          "timestep": 21622,
+          "db": -60.73
+        },
+        {
+          "timestep": 23560,
+          "db": -84.48
+        },
+        {
+          "timestep": 25479,
+          "db": -85.84
+        },
+        {
+          "timestep": 27412,
+          "db": -85.36
+        },
+        {
+          "timestep": 29336,
+          "db": -84.94
+        },
+        {
+          "timestep": 31122,
+          "db": -84.16
+        },
+        {
+          "timestep": 33033,
+          "db": -83.38
+        },
+        {
+          "timestep": 35017,
+          "db": -82.65
+        },
+        {
+          "timestep": 37012,
+          "db": -81.95
+        },
+        {
+          "timestep": 38950,
+          "db": -81.33
+        },
+        {
+          "timestep": 40887,
+          "db": -80.73
+        },
+        {
+          "timestep": 42883,
+          "db": -80.19
+        },
+        {
+          "timestep": 44802,
+          "db": -79.68
+        },
+        {
+          "timestep": 46721,
+          "db": -79.19
+        },
+        {
+          "timestep": 48735,
+          "db": -78.72
+        },
+        {
+          "timestep": 50692,
+          "db": -78.27
+        },
+        {
+          "timestep": 52649,
+          "db": -77.86
+        },
+        {
+          "timestep": 54606,
+          "db": -77.45
+        },
+        {
+          "timestep": 56525,
+          "db": -77.07
+        },
+        {
+          "timestep": 58463,
+          "db": -76.71
+        },
+        {
+          "timestep": 60439,
+          "db": -76.37
+        },
+        {
+          "timestep": 62415,
+          "db": -76.02
+        },
+        {
+          "timestep": 64391,
+          "db": -75.69
+        },
+        {
+          "timestep": 66386,
+          "db": -75.37
+        },
+        {
+          "timestep": 68400,
+          "db": -75.06
+        },
+        {
+          "timestep": 70395,
+          "db": -74.76
+        },
+        {
+          "timestep": 72371,
+          "db": -74.48
+        },
+        {
+          "timestep": 74309,
+          "db": -74.2
+        },
+        {
+          "timestep": 76228,
+          "db": -73.95
+        },
+        {
+          "timestep": 78128,
+          "db": -73.7
+        },
+        {
+          "timestep": 80123,
+          "db": -73.44
+        },
+        {
+          "timestep": 82137,
+          "db": -73.2
+        },
+        {
+          "timestep": 84151,
+          "db": -72.95
+        },
+        {
+          "timestep": 86108,
+          "db": -72.72
+        },
+        {
+          "timestep": 88084,
+          "db": -72.5
+        },
+        {
+          "timestep": 90022,
+          "db": -72.28
+        },
+        {
+          "timestep": 92015,
+          "db": -72.06
+        },
+        {
+          "timestep": 93974,
+          "db": -71.85
+        },
+        {
+          "timestep": 95931,
+          "db": -71.65
+        },
+        {
+          "timestep": 97888,
+          "db": -71.45
+        },
+        {
+          "timestep": 99883,
+          "db": -71.25
+        },
+        {
+          "timestep": 101840,
+          "db": -71.07
+        },
+        {
+          "timestep": 103816,
+          "db": -70.88
+        },
+        {
+          "timestep": 105792,
+          "db": -70.7
+        },
+        {
+          "timestep": 107749,
+          "db": -70.52
+        },
+        {
+          "timestep": 109706,
+          "db": -70.35
+        },
+        {
+          "timestep": 111644,
+          "db": -70.18
+        },
+        {
+          "timestep": 113525,
+          "db": -70.01
+        },
+        {
+          "timestep": 115406,
+          "db": -69.86
+        },
+        {
+          "timestep": 117382,
+          "db": -69.69
+        },
+        {
+          "timestep": 119377,
+          "db": -69.53
+        },
+        {
+          "timestep": 121391,
+          "db": -69.37
+        },
+        {
+          "timestep": 123367,
+          "db": -69.22
+        },
+        {
+          "timestep": 125324,
+          "db": -69.07
+        },
+        {
+          "timestep": 127300,
+          "db": -68.92
+        },
+        {
+          "timestep": 129257,
+          "db": -68.77
+        },
+        {
+          "timestep": 131176,
+          "db": -68.63
+        },
+        {
+          "timestep": 133152,
+          "db": -68.49
+        },
+        {
+          "timestep": 135090,
+          "db": -68.35
+        },
+        {
+          "timestep": 137028,
+          "db": -68.22
+        },
+        {
+          "timestep": 138985,
+          "db": -68.08
+        },
+        {
+          "timestep": 140961,
+          "db": -67.95
+        },
+        {
+          "timestep": 142956,
+          "db": -67.82
+        },
+        {
+          "timestep": 144913,
+          "db": -67.69
+        },
+        {
+          "timestep": 146832,
+          "db": -67.57
+        },
+        {
+          "timestep": 148764,
+          "db": -67.44
+        },
+        {
+          "timestep": 150689,
+          "db": -67.32
+        },
+        {
+          "timestep": 152627,
+          "db": -67.2
+        },
+        {
+          "timestep": 154565,
+          "db": -67.09
+        },
+        {
+          "timestep": 156484,
+          "db": -66.97
+        },
+        {
+          "timestep": 158384,
+          "db": -66.86
+        },
+        {
+          "timestep": 160284,
+          "db": -66.75
+        },
+        {
+          "timestep": 162260,
+          "db": -66.63
+        },
+        {
+          "timestep": 164217,
+          "db": -66.52
+        },
+        {
+          "timestep": 166166,
+          "db": -66.41
+        },
+        {
+          "timestep": 168131,
+          "db": -66.3
+        },
+        {
+          "timestep": 170069,
+          "db": -66.2
+        },
+        {
+          "timestep": 172045,
+          "db": -66.09
+        },
+        {
+          "timestep": 174040,
+          "db": -65.98
+        },
+        {
+          "timestep": 175997,
+          "db": -65.88
+        },
+        {
+          "timestep": 177992,
+          "db": -65.77
+        },
+        {
+          "timestep": 179930,
+          "db": -65.67
+        },
+        {
+          "timestep": 181868,
+          "db": -65.58
+        },
+        {
+          "timestep": 183768,
+          "db": -65.48
+        },
+        {
+          "timestep": 185706,
+          "db": -65.38
+        },
+        {
+          "timestep": 187625,
+          "db": -65.29
+        },
+        {
+          "timestep": 189601,
+          "db": -65.19
+        },
+        {
+          "timestep": 191576,
+          "db": -65.09
+        },
+        {
+          "timestep": 193515,
+          "db": -65.0
+        },
+        {
+          "timestep": 195472,
+          "db": -64.91
+        },
+        {
+          "timestep": 197391,
+          "db": -64.82
+        },
+        {
+          "timestep": 199367,
+          "db": -64.73
+        },
+        {
+          "timestep": 201278,
+          "db": -64.64
+        },
+        {
+          "timestep": 203186,
+          "db": -64.55
+        },
+        {
+          "timestep": 205181,
+          "db": -64.46
+        },
+        {
+          "timestep": 207119,
+          "db": -64.38
+        },
+        {
+          "timestep": 209095,
+          "db": -64.29
+        },
+        {
+          "timestep": 211033,
+          "db": -64.2
+        },
+        {
+          "timestep": 213047,
+          "db": -64.12
+        },
+        {
+          "timestep": 215023,
+          "db": -64.03
+        },
+        {
+          "timestep": 217037,
+          "db": -63.95
+        },
+        {
+          "timestep": 218975,
+          "db": -63.87
+        },
+        {
+          "timestep": 220913,
+          "db": -63.78
+        }
+      ],
+      "source_sha256": {
+        "tests/waveguide_step_clock_fixture.py": "3d4125a3610faf6008bb90d5e87c3130e38e60feb931808690d632d6c70dda7b",
+        "tests/test_waveguide_step_clock.py": "a44442b62170f24d1e8bcb0a676dbbb5b86144b6899e2ea0e324e50011566464",
+        "tests/waveguide_step_fixture.py": "e0b484116eb505612d8959a4a2c61e46532bc7067262c7097246c2200d320ee9",
+        "tests/test_coax_resonator.py": "0d836277eb2c28802eae152fa8b8159eed6f9ef6558b507087acd5c2239de76c",
+        "tests/coupled_stripline_fixture.py": "9fb88e2835dceb88fa55b11158a8736bc36450b1f56636f8e7caad068ec87570",
+        "fairbeam/simulation.py": "a2ba7133901197b7d86f66e7f77ed1d6e1e18b7d19cd4407149cf6a62eafe058",
+        "fairbeam/multiport.py": "9f62ab1a3fb6c4e9f2606bfb3ee645c578853f6297c1391870e2bd9a3c73dc89",
+        "fairbeam/procutil.py": "e5609b57c0d0fee23f5721ea50a6323bdc0c4b6d91e3b80ff4f17f09ff9acfc4"
+      },
+      "original_file_sha256": {
+        "report.json": "8c03ac22d3741464ffa93ad7b4344838b802b9449766ed9504a6e361df50b701",
+        "data.npz": "f896b48d7be5f4bdd3aef6c9da41e46b590091d67cb8992eed0d382471b31dcb",
+        "raw/et": "d4948a3e53d14550e719919c1ed7661d3ebd4d45cccc9b107334d6ee5f0fbc31",
+        "raw/ht": "1bb3af192937be859090c4830ed5a065e0becfbabd60320af36e9b6cf434c8ea"
+      },
+      "case_wall_seconds": 462.46420839999337,
+      "late_time_stability_established": false
+    },
+    {
+      "name": "factor_0.75",
+      "acquisition_head": "2b42a46ec5b21e8a11ca49203f60d1b58b3045b6",
+      "factor": 0.75,
+      "dt_s": 5.272549525513062e-13,
+      "dt_precision": "native statistics",
+      "native_cells": 290493,
+      "native_timesteps": 28796,
+      "allocated_steps": 266667,
+      "native_stop_gate_passed": true,
+      "hit_timestep_limit": false,
+      "native_end_db": -90.0,
+      "native_end_bound_db": -90.0,
+      "last_logged_energy_db": null,
+      "energy_trace": [
+        {
+          "timestep": 1840,
+          "db": -0.0
+        },
+        {
+          "timestep": 3749,
+          "db": -0.0
+        },
+        {
+          "timestep": 5589,
+          "db": -0.0
+        },
+        {
+          "timestep": 7475,
+          "db": -0.0
+        },
+        {
+          "timestep": 9338,
+          "db": -0.0
+        },
+        {
+          "timestep": 11201,
+          "db": -0.0
+        },
+        {
+          "timestep": 13110,
+          "db": -0.0
+        },
+        {
+          "timestep": 15019,
+          "db": -2.44
+        },
+        {
+          "timestep": 16951,
+          "db": -4.24
+        },
+        {
+          "timestep": 18860,
+          "db": -11.43
+        },
+        {
+          "timestep": 20746,
+          "db": -21.38
+        },
+        {
+          "timestep": 22609,
+          "db": -31.96
+        },
+        {
+          "timestep": 24495,
+          "db": -49.55
+        },
+        {
+          "timestep": 26381,
+          "db": -66.17
+        },
+        {
+          "timestep": 28267,
+          "db": -85.04
+        }
+      ],
+      "source_sha256": {
+        "tests/waveguide_step_clock_fixture.py": "3d4125a3610faf6008bb90d5e87c3130e38e60feb931808690d632d6c70dda7b",
+        "tests/test_waveguide_step_clock.py": "a44442b62170f24d1e8bcb0a676dbbb5b86144b6899e2ea0e324e50011566464",
+        "tests/waveguide_step_fixture.py": "e0b484116eb505612d8959a4a2c61e46532bc7067262c7097246c2200d320ee9",
+        "tests/test_coax_resonator.py": "0d836277eb2c28802eae152fa8b8159eed6f9ef6558b507087acd5c2239de76c",
+        "tests/coupled_stripline_fixture.py": "9fb88e2835dceb88fa55b11158a8736bc36450b1f56636f8e7caad068ec87570",
+        "fairbeam/simulation.py": "a2ba7133901197b7d86f66e7f77ed1d6e1e18b7d19cd4407149cf6a62eafe058",
+        "fairbeam/multiport.py": "9f62ab1a3fb6c4e9f2606bfb3ee645c578853f6297c1391870e2bd9a3c73dc89",
+        "fairbeam/procutil.py": "e5609b57c0d0fee23f5721ea50a6323bdc0c4b6d91e3b80ff4f17f09ff9acfc4"
+      },
+      "original_file_sha256": {
+        "report.json": "069052a3135bb3ee71cf3d70f534c356abf0aef8824bf5baab424fd1d14b6c4e",
+        "data.npz": "e11c4dc626bb6908456c21eef0cbb18c0626184731eb6ebe17a3a07d205e8891",
+        "raw/et": "aeb271ff889e74a4726ab08f51ca7b75d95983afa8b1d4877bcc29eb6b7630a9",
+        "raw/ht": "25592c5023a2277dccde45c4882ff7c8aa944b8b490592fe55a86cea3a7f3759"
+      },
+      "case_wall_seconds": 67.14585809997516,
+      "late_time_stability_established": false
+    }
+  ],
+  "continuation": {
+    "acquisition_head": "2b42a46ec5b21e8a11ca49203f60d1b58b3045b6",
+    "private_model_driver_sha256": "c3a1eba0659c08e30775ea062e643b332e87c55a517b48dfbd7fe813cd8f8586",
+    "factor": 0.75,
+    "native_end_db": -150.0,
+    "max_timesteps": 113797,
+    "native": {
+      "cells": 290493,
+      "dt_s": 5.272549525513062e-13,
+      "timesteps": 113797,
+      "numerical_time_s": 6.000003183548098e-08,
+      "iteration_wall_s": 192.289785
+    },
+    "energy_trace": [
+      {
+        "timestep": 2300,
+        "db": -0.0
+      },
+      {
+        "timestep": 4715,
+        "db": -0.0
+      },
+      {
+        "timestep": 7107,
+        "db": -0.0
+      },
+      {
+        "timestep": 9315,
+        "db": -0.0
+      },
+      {
+        "timestep": 11661,
+        "db": -0.0
+      },
+      {
+        "timestep": 14099,
+        "db": -0.55
+      },
+      {
+        "timestep": 16468,
+        "db": -2.89
+      },
+      {
+        "timestep": 18814,
+        "db": -11.23
+      },
+      {
+        "timestep": 21160,
+        "db": -24.58
+      },
+      {
+        "timestep": 23506,
+        "db": -39.98
+      },
+      {
+        "timestep": 25898,
+        "db": -60.92
+      },
+      {
+        "timestep": 28290,
+        "db": -85.04
+      },
+      {
+        "timestep": 30682,
+        "db": -87.81
+      },
+      {
+        "timestep": 33074,
+        "db": -89.44
+      },
+      {
+        "timestep": 35305,
+        "db": -88.6
+      },
+      {
+        "timestep": 37628,
+        "db": -87.88
+      },
+      {
+        "timestep": 39951,
+        "db": -87.17
+      },
+      {
+        "timestep": 42366,
+        "db": -86.47
+      },
+      {
+        "timestep": 44781,
+        "db": -85.81
+      },
+      {
+        "timestep": 47150,
+        "db": -85.2
+      },
+      {
+        "timestep": 49519,
+        "db": -84.64
+      },
+      {
+        "timestep": 51658,
+        "db": -84.16
+      },
+      {
+        "timestep": 53866,
+        "db": -83.69
+      },
+      {
+        "timestep": 56166,
+        "db": -83.23
+      },
+      {
+        "timestep": 58558,
+        "db": -82.77
+      },
+      {
+        "timestep": 60950,
+        "db": -82.34
+      },
+      {
+        "timestep": 63365,
+        "db": -81.93
+      },
+      {
+        "timestep": 65734,
+        "db": -81.53
+      },
+      {
+        "timestep": 68172,
+        "db": -81.14
+      },
+      {
+        "timestep": 70587,
+        "db": -80.78
+      },
+      {
+        "timestep": 72956,
+        "db": -80.43
+      },
+      {
+        "timestep": 75371,
+        "db": -80.1
+      },
+      {
+        "timestep": 77832,
+        "db": -79.76
+      },
+      {
+        "timestep": 80270,
+        "db": -79.45
+      },
+      {
+        "timestep": 82731,
+        "db": -79.14
+      },
+      {
+        "timestep": 85215,
+        "db": -78.84
+      },
+      {
+        "timestep": 87676,
+        "db": -78.56
+      },
+      {
+        "timestep": 90114,
+        "db": -78.29
+      },
+      {
+        "timestep": 92575,
+        "db": -78.01
+      },
+      {
+        "timestep": 94990,
+        "db": -77.76
+      },
+      {
+        "timestep": 97405,
+        "db": -77.51
+      },
+      {
+        "timestep": 99843,
+        "db": -77.26
+      },
+      {
+        "timestep": 102074,
+        "db": -77.05
+      },
+      {
+        "timestep": 104443,
+        "db": -76.82
+      },
+      {
+        "timestep": 106904,
+        "db": -76.59
+      },
+      {
+        "timestep": 109365,
+        "db": -76.37
+      },
+      {
+        "timestep": 111803,
+        "db": -76.16
+      }
+    ],
+    "post_primary_stop_energy_trace": [
+      {
+        "timestep": 30682,
+        "db": -87.81
+      },
+      {
+        "timestep": 33074,
+        "db": -89.44
+      },
+      {
+        "timestep": 35305,
+        "db": -88.6
+      },
+      {
+        "timestep": 37628,
+        "db": -87.88
+      },
+      {
+        "timestep": 39951,
+        "db": -87.17
+      },
+      {
+        "timestep": 42366,
+        "db": -86.47
+      },
+      {
+        "timestep": 44781,
+        "db": -85.81
+      },
+      {
+        "timestep": 47150,
+        "db": -85.2
+      },
+      {
+        "timestep": 49519,
+        "db": -84.64
+      },
+      {
+        "timestep": 51658,
+        "db": -84.16
+      },
+      {
+        "timestep": 53866,
+        "db": -83.69
+      },
+      {
+        "timestep": 56166,
+        "db": -83.23
+      },
+      {
+        "timestep": 58558,
+        "db": -82.77
+      },
+      {
+        "timestep": 60950,
+        "db": -82.34
+      },
+      {
+        "timestep": 63365,
+        "db": -81.93
+      },
+      {
+        "timestep": 65734,
+        "db": -81.53
+      },
+      {
+        "timestep": 68172,
+        "db": -81.14
+      },
+      {
+        "timestep": 70587,
+        "db": -80.78
+      },
+      {
+        "timestep": 72956,
+        "db": -80.43
+      },
+      {
+        "timestep": 75371,
+        "db": -80.1
+      },
+      {
+        "timestep": 77832,
+        "db": -79.76
+      },
+      {
+        "timestep": 80270,
+        "db": -79.45
+      },
+      {
+        "timestep": 82731,
+        "db": -79.14
+      },
+      {
+        "timestep": 85215,
+        "db": -78.84
+      },
+      {
+        "timestep": 87676,
+        "db": -78.56
+      },
+      {
+        "timestep": 90114,
+        "db": -78.29
+      },
+      {
+        "timestep": 92575,
+        "db": -78.01
+      },
+      {
+        "timestep": 94990,
+        "db": -77.76
+      },
+      {
+        "timestep": 97405,
+        "db": -77.51
+      },
+      {
+        "timestep": 99843,
+        "db": -77.26
+      },
+      {
+        "timestep": 102074,
+        "db": -77.05
+      },
+      {
+        "timestep": 104443,
+        "db": -76.82
+      },
+      {
+        "timestep": 106904,
+        "db": -76.59
+      },
+      {
+        "timestep": 109365,
+        "db": -76.37
+      },
+      {
+        "timestep": 111803,
+        "db": -76.16
+      }
+    ],
+    "maximum_late_energy_db": -76.16,
+    "same_source_cache_hashes": true,
+    "spectral_change_relative_to_original_incidence": {
+      "a": 2.669485106505457e-07,
+      "b": 1.671203831684183e-07
+    },
+    "single_column_reference_residual": 0.003460294874404144,
+    "original_file_sha256": {
+      "input.xml": "64161c2c04e5a7225de23d813e59f47a01541a2b6f8c457125284f63a9f35d91",
+      "data.npz": "d9e06cf2f943f98f345aab35790b6f206b81188ee7a6957dbb411ee0b02b4830",
+      "result.json": "761c908bb037788b0dc4f9c54cac74934f8bf743dcc4e0988033577d3ae76fe3",
+      "raw/et": "aeb271ff889e74a4726ab08f51ca7b75d95983afa8b1d4877bcc29eb6b7630a9",
+      "raw/ht": "25592c5023a2277dccde45c4882ff7c8aa944b8b490592fe55a86cea3a7f3759"
+    },
+    "diagnostic_only": true,
+    "qualified_scope": false
+  },
+  "diagnostic_only": true,
+  "qualified_scope": false,
+  "native_runs_in_this_export": 0,
+  "evidence_boundary": "Contributor-reported measured scalars/traces from the pinned acquisition sources. No independent maintainer raw replay is claimed. Original field/probe files remain outside Git; hashes identify them. Native energy is an internal proxy, not calibrated physical joules. A first threshold crossing is not a late-time stability certificate. The 60 ns stricter-criterion case is diagnostic and is excluded from numerical qualification. This is a reduced regression record, not a generated simulation/project bundle or textbook content."
+}
