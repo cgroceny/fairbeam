@@ -747,11 +747,18 @@ Hiçbir galeri modeli veya üretilmiş paket değişmez.
 
 ## 20. Bölüm 4 karşılaştırma kapsamları
 
-[Bölüm 4 kaydı](benchmarks/pozar-chapter-04.md), 4.8 için hedefi ve mesh ölçütlerini
-sağlayan ideal akımla hesaplanan modal genlik ve giriş direncini toplar. Darbe
-tamamlanıp kesin -90 dB enerji duruşuna ulaşıldıktan sonra iki ardışık mesh farkı,
-bağımsız sınır kontrolü ve kendi hedef/kalite ölçütlerini sağlar. 4.2 arayüzü,
-yeni sınır kontrolü enerji duruşunu sağlayamadığı için kapsam dışında kalır.
+[Bölüm 4 kaydı](benchmarks/pozar-chapter-04.md) iki sınırlı kapsamı toplar:
+4.8 için ideal akımla hesaplanan modal genlik ve giriş direnci ile 4.2 için isteğe
+bağlı MUR kontrolleri kullanılan, bize ait düzgün dielektrik arayüzün karmaşık TE10
+matrisi. İkisi de kaynak tamamlanıp kesin -90 dB birincil duruş sağlandıktan sonra
+iki ardışık mesh farkını, bağımsız sınır kontrollerini ve kendi hedef/kalite
+ölçütlerini sağlar. 4.2 için ayrıca sekiz sabit 60 ns gözlem, örneklenen geç zaman
+enerjisi ve port dalgası değişimi ölçütlerini geçer; gözlemin -150 dB eşiğine
+yakınsama veya sınırsız süre kararlılığı iddia edilmez. Azaltılmış ölçümler ve
+çevrimdışı aritmetik tekrar [PR #343](https://github.com/ismailakdag/fairbeam/pull/343)
+içindedir. Varsayılan PML_8 arayüzü, sınır kontrolü enerji duruşunu sağlayamadığı
+için kapsam dışıdır; tekil neden [#340](https://github.com/ismailakdag/fairbeam/issues/340)
+içinde çözümlenmemiştir.
 
 Filament reaktansı, pratik beslemeler ve genel mod dönüşümü kapsam dışındadır.
 Probun hedef hataları monoton değildir; sınır/prob üçlüsü duyarlılığı doğruluk iddiasını
