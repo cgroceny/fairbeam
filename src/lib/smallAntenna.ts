@@ -299,7 +299,7 @@ function convergedEnergy(b: Bundle, port: number) {
   if (run.final_energy_db !== undefined && (!last || Math.abs(last.db - run.final_energy_db) > 1e-9)) return null;
   if (run.final_energy_bound_db !== undefined) {
     // An earlier sample can exceed the stop bound; a sample at the stop cannot.
-    if (last?.timestep === run.timesteps && last.db > run.final_energy_bound_db) return null;
+    if (last && last.timestep === run.timesteps && last.db > run.final_energy_bound_db) return null;
     return run.final_energy_bound_db <= criterion
       ? { db: run.final_energy_bound_db, bound: true, timestep: run.timesteps!, source: 'recorded-bound' as const } : null;
   }
