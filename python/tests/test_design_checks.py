@@ -82,10 +82,27 @@ class SharedFixture(unittest.TestCase):
     def test_every_emitted_code_has_an_explanation(self):
         # Find check codes in emitter calls, polygon result pairs and server check dictionaries.
         # Scanning all server modules also catches the preview worker's build-error check.
-        codes = set()
+        # Local mesh failures carry their code through an exception rather than
+        # a literal check dictionary. Discover both its default and call-site
+        # overrides, then prove those codes traverse the actual preview route.
+        from fairbeam.local_mesh import LocalMeshError
+        codes, local_codes = set(), set()
         for path in (Path(__file__).resolve().parents[1] / "fairbeam").glob("*.py"):
             tree = ast.parse(path.read_text(encoding="utf-8"))
             for node in ast.walk(tree):
+                if path.name == "local_mesh.py" and isinstance(node, ast.ClassDef) and node.name == "LocalMeshError":
+                    init = next(item for item in node.body if isinstance(item, ast.FunctionDef) and item.name == "__init__")
+                    defaults = dict(zip((arg.arg for arg in init.args.args[-len(init.args.defaults):]), init.args.defaults))
+                    self.assertIsInstance(defaults["code"], ast.Constant)
+                    local_codes.add(defaults["code"].value)
+                if isinstance(node, ast.Call) and isinstance(node.func, ast.Name) and node.func.id == "LocalMeshError":
+                    explicit = [kw.value for kw in node.keywords if kw.arg == "code"]
+                    if len(node.args) > 2:
+                        explicit.append(node.args[2])
+                    for value in explicit:
+                        self.assertIsInstance(value, ast.Constant, f"untracked dynamic LocalMeshError code in {path.name}")
+                        self.assertIsInstance(value.value, str)
+                        local_codes.add(value.value)
                 if (path.name == "design_checks.py" and isinstance(node, ast.Call)
                         and isinstance(node.func, ast.Attribute) and node.func.attr in {"error", "warn", "info", "add"}):
                     index = 2 if node.func.attr == "add" else 1
@@ -99,6 +116,21 @@ class SharedFixture(unittest.TestCase):
                     for pair in node.value.elts:
                         if isinstance(pair, ast.Tuple) and len(pair.elts) == 2 and isinstance(pair.elts[0], ast.Constant):
                             codes.add(pair.elts[0].value)
+        baseline = blank_design("t", "T")
+        build = preview_checks(baseline, {}, None, ValueError("unsupported geometry"))
+        build_check = next(c for c in build if c["code"] == "build")
+        self.assertEqual(build_check["message"], "does not build: ValueError: unsupported geometry")
+        codes.add(build_check["code"])
+        self.assertTrue(local_codes)
+        for code in local_codes:
+            with self.subTest(route_code=code):
+                problem = LocalMeshError("local route control", "mesh.local_regions[0].cell_size", code)
+                routed = preview_checks(baseline, {}, None, problem)
+                emitted = next(c for c in routed if c["message"] == "local route control")
+                self.assertEqual((emitted["severity"], emitted["code"], emitted["path"]),
+                                 ("error", code, problem.where))
+                self.assertEqual(emitted["explain"], EXPLANATIONS[code])
+                codes.add(emitted["code"])
         self.assertEqual(codes, set(EXPLANATIONS), "every emitted code needs guidance; remove obsolete guidance too")
         self.assertLessEqual(CHEAP, codes)
         checker = _Lint({}, None, None)
@@ -111,7 +143,6 @@ class SharedFixture(unittest.TestCase):
                 checker.add("warning", "", code, "example")
                 self.assertEqual(checker.out[-1]["explain"], text)
         self.assertEqual(lint(None)[0]["explain"], EXPLANATIONS["structure"])
-        build = preview_checks(blank_design("t", "T"), {}, None, ValueError("unsupported geometry"))
         self.assertEqual(next(c for c in build if c["code"] == "build")["explain"], EXPLANATIONS["build"])
 
     def test_every_check_has_a_case_or_a_test(self):
