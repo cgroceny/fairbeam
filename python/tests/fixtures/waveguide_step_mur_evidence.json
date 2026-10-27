@@ -1,0 +1,4258 @@
+{
+  "format": "fairbeam-te10-mur-measured-evidence-v1",
+  "exported_utc": "2026-10-27T05:44:55.786348+00:00",
+  "own_example_identifier": "4.2",
+  "source_head": "ca01682730b4dab35dd25252dd80c2fbdb9c7ebd",
+  "source_file_sha256": {
+    "fixture": "1a6f37ea307a7fdc00d18fcf0699547037ecd48a26fa7abde2830af6907412b9",
+    "runner": "7caf447cd3c9cee722adddb7e32234d30dade298152334ec37d5836c6b909f9a",
+    "simulation": "a2ba7133901197b7d86f66e7f77ed1d6e1e18b7d19cd4407149cf6a62eafe058",
+    "fairbeam/multiport.py": "9f62ab1a3fb6c4e9f2606bfb3ee645c578853f6297c1391870e2bd9a3c73dc89",
+    "fairbeam/procutil.py": "e5609b57c0d0fee23f5721ea50a6323bdc0c4b6d91e3b80ff4f17f09ff9acfc4",
+    "tests/coupled_stripline_fixture.py": "9fb88e2835dceb88fa55b11158a8736bc36450b1f56636f8e7caad068ec87570",
+    "tests/test_coax_resonator.py": "0d836277eb2c28802eae152fa8b8159eed6f9ef6558b507087acd5c2239de76c"
+  },
+  "runtime": {
+    "binding_version": "0.37.0rc3",
+    "files": {
+      "CSXCAD.dll": "acc1bc60a06b8848fa3d12a0e8a72a1898f50f8bae6a38becc3297b2b1e65358",
+      "openEMS.dll": "848f1f0bbb09706d8d25bac6c1c623d3c04f56eceac63c5114a3b58ed258bb77",
+      "QCSXCAD.dll": "279cb61cbce733c6a50171ed794f8f1f25f196f51f64050e88d1ced8767bdd1a",
+      "_nf2ff.cp313-win_amd64.pyd": "c6b32e59e6cd613b16d29b6ecfc9b8bbb09b4e51d2e2860530b5bece6ace8b65",
+      "openEMS.cp313-win_amd64.pyd": "6b6aac30d2a038d7c9ecae48b94d464b68c406dd96a2765e6f3d9e5cc51722ca",
+      "sar_calculation.cp313-win_amd64.pyd": "5b46c5e25d7b45449c4197682e92e6e42378ef6ebb5f6ed0b944c96742c014c1"
+    },
+    "python": "3.13.15 (main, Sep 24 2026, 17:56:47) [MSC v.1944 64 bit (AMD64)]",
+    "numpy": "2.5.3",
+    "port_helpers_sha256": "0daec44373d6a06395f1c47b252b004df4e99ee2fca5525b486e934451dcc1c1",
+    "physical_constants_sha256": "3be7100e2f94954750803eb462af9d40b98b7bdb31449a62deacec4aa075ac14",
+    "csxcad_bindings": {
+      "CSPrimitives.cp313-win_amd64.pyd": "fef6255e77e42aeda333fac65596088cf306eaedabf1af7cc122049e1e6bfbda",
+      "CSProperties.cp313-win_amd64.pyd": "c3b5cc41f960f2bfddffc5e4c206040cfe5e6b32d1cf6d3f3465414b2e3388de",
+      "CSRectGrid.cp313-win_amd64.pyd": "6165f64e91ee87e88f6f5f9b2f9bfa84e38117522bd27a9edc66c37da3613e2c",
+      "CSTransform.cp313-win_amd64.pyd": "c8124a3351e3cce822fb3c0995bf412deb981e8f9976fa5f1262dfd9dfd84a64",
+      "CSXCAD.cp313-win_amd64.pyd": "af8aecad6052cf5e4c9047f863055bdcd53654578c663136f1e65e686d57e0a1",
+      "ParameterObjects.cp313-win_amd64.pyd": "801748571d63bb6cc8f7c06c281bfe2ca7edb56d343af229345f1ab11c598dd8",
+      "Utilities.cp313-win_amd64.pyd": "61a32927e8a8d097368c95a95e801350f7f2d4a79198840a2d1d16e7bbf1560e",
+      "__init__.py": "acc97b8322d1d604f0864bff62f45cd6748c06ce1b9c8250877c5baad0786b5c"
+    },
+    "dependencies": {
+      "fparser.dll": "79aa8744d843e7e7bebec2059d39a5543ba3f811fef07a3dc244afe1f86ecc33",
+      "nf2ff.dll": "de6d690ad4a91136902f1ff53cb0c27b45495236164d2a5d5160ce91b130c9bf"
+    }
+  },
+  "own_geometry": {
+    "a_mm": 22.86,
+    "b_mm": 10.16,
+    "right_eps_r": 2.54,
+    "mu_r": 1.0,
+    "measurement_planes_mm": [
+      -20.0,
+      20.0
+    ],
+    "interface_mm": 0.0
+  },
+  "frequency_hz": [
+    9800000000.0,
+    9810000000.0,
+    9820000000.0,
+    9830000000.0,
+    9840000000.0,
+    9850000000.0,
+    9860000000.0,
+    9870000000.0,
+    9880000000.0,
+    9890000000.0,
+    9900000000.0,
+    9910000000.0,
+    9920000000.0,
+    9930000000.0,
+    9940000000.0,
+    9950000000.0,
+    9960000000.0,
+    9970000000.0,
+    9980000000.0,
+    9990000000.0,
+    10000000000.0,
+    10010000000.0,
+    10020000000.0,
+    10030000000.0,
+    10040000000.0,
+    10050000000.0,
+    10060000000.0,
+    10070000000.0,
+    10080000000.0,
+    10090000000.0,
+    10100000000.0,
+    10110000000.0,
+    10120000000.0,
+    10130000000.0,
+    10140000000.0,
+    10150000000.0,
+    10160000000.0,
+    10170000000.0,
+    10180000000.0,
+    10190000000.0,
+    10200000000.0
+  ],
+  "excitation": {
+    "type": "gaussian",
+    "f0": 10000000000.0,
+    "fc": 200000000.0,
+    "f_min": 9800000000.0,
+    "f_max": 10200000000.0,
+    "dc_free": false
+  },
+  "source_support_s": 1.4323944878270583e-08,
+  "limits": {
+    "target_abs": 0.01,
+    "mesh_abs": 0.003,
+    "boundary_abs": 0.002,
+    "reciprocity_abs": 0.002,
+    "power_abs": 0.01
+  },
+  "hold_limits": {
+    "duration_s": 6e-08,
+    "end_db": -150.0,
+    "late_energy_db": -90.0,
+    "wave_abs": 0.002
+  },
+  "termination": "MUR",
+  "meshes": [
+    40,
+    50,
+    60
+  ],
+  "padding": 16,
+  "control_mesh": 50,
+  "control_padding": 24,
+  "grids": [
+    {
+      "cpw": 40,
+      "padding": 16,
+      "sample_prefix": "n40_p16",
+      "records": [
+        {
+          "excited": 1,
+          "primary": {
+            "kind": "primary",
+            "native": {
+              "cells": 154275,
+              "dt_s": 8.554620937602217e-13,
+              "timesteps": 17043,
+              "numerical_time_s": 1.457964046395546e-08,
+              "iteration_wall_s": 23.647709
+            },
+            "run": {
+              "converged": true,
+              "hit_timestep_limit": false,
+              "threads": 4,
+              "engine": "cpu",
+              "exact_endcriteria": true,
+              "final_energy_db": null,
+              "final_energy_bound_db": -90.0,
+              "wall_time_s": 24.13
+            },
+            "max_timesteps": 200000,
+            "native_end_db": -90.0,
+            "case_elapsed_s": 25.783977508544922,
+            "source_cache": {
+              "records": {
+                "et": {
+                  "sha256": "73f79b6f12f9cc4fe51c69fc3c79d971ace03d0f200703cc85efb2328dfd116d",
+                  "samples": 16745
+                },
+                "ht": {
+                  "sha256": "fea403d8ad9673f61b1079f6c6172a672af526bd8ce8d681b33a07964c36e17a",
+                  "samples": 16745
+                }
+              },
+              "complete_after_steps": 16746
+            },
+            "seed_report_sha256": null,
+            "energy_trace": [
+              {
+                "timestep": 2842,
+                "db": -0.0
+              },
+              {
+                "timestep": 5670,
+                "db": -0.0
+              },
+              {
+                "timestep": 8638,
+                "db": -0.07
+              },
+              {
+                "timestep": 11606,
+                "db": -10.66
+              },
+              {
+                "timestep": 14308,
+                "db": -37.49
+              }
+            ],
+            "hashes": {
+              "report": "0b6440a0cbe4d75bcf7c8749c0836b44f6badfabca13fcebc3f924a5709d4d30",
+              "input": "9f981b0a9a135a3deb4dc770c90e45bd8485e96de978573136c1e19f6fb42187",
+              "physical_input": "36e984bd03d836e7196ddb330397bd5d954a8acfe67741d463f81c910ce0a97a",
+              "spectra": "9eb449d945afc973c59ae022f7583f0fbdd790385dc369f26625d7682d8dea7c",
+              "native_statistics": "03d38415dd2d416f4353e2d8c672a12d526baac3e1d26420e55240c1dd93edff",
+              "raw_probes": {
+                "port_it_1": "b3c7f7224c25736d2f1b5b0ff7afc08feb8ef06388631e6e3c662424c758f4f2",
+                "port_it_2": "f8371f18e203717a639e9d470e64aeab856a75ac68d45b54d0cc6d68b4f0c950",
+                "port_ut_1": "d5f530e115c1b72eeed8ef6e216ee529a54bec9da15fcab3239b19b256020a78",
+                "port_ut_2": "f1a87dc72dbccace2cde59c8f9dff68b5de2d4f6b1cac40ca610cb2e6e9e6d7b"
+              },
+              "native_worker_log": "45df978c18ba43267b176e980df756d6232a9a8d8f5a8df8d49d2c1c16914ef8",
+              "worker_receipt": "48801de189f3b4532faaa7b2e6d0d1610099025d1bd835847dd895ccb731b888",
+              "enclosing_receipt": "fcae5b05ca675b0d72ccce504a3e252e3626aa7a3a941407afd3e9aaecff49fb",
+              "private_case_receipt": "16271a438cf503484ef0d33aa05214a0b5d52c414e4f7d152eccc2897902de04"
+            },
+            "worker": {
+              "exit_code": 0,
+              "failure": null,
+              "deadline_seconds": 1800.0,
+              "wall_seconds": 25.770841598510742,
+              "monotonic_seconds": 25.770842700032517
+            },
+            "enclosing_guard": {
+              "exit_code": 0,
+              "timed_out": false,
+              "wall_seconds": 28.075,
+              "monotonic_seconds": 28.075,
+              "deadline_seconds": 1800.0
+            },
+            "forecast": {
+              "admission_seconds": 599.3140729489995,
+              "full_allocation_seconds": 599.3140729489995,
+              "basis": "full native allocation at lower-only measured speed",
+              "rate_mcps": 77.24788836721612,
+              "forecast_ceiling_seconds": 1800.0,
+              "actual_worker_guard_seconds": 1800.0,
+              "controller_sha256": "cd571e19693a4a062c4c76e6c95b34709f6595facc305a90ee26967fe7dc28ed"
+            }
+          },
+          "hold": {
+            "kind": "hold60ns",
+            "native": {
+              "cells": 154275,
+              "dt_s": 8.554620937602217e-13,
+              "timesteps": 70138,
+              "numerical_time_s": 6.000040033215443e-08,
+              "iteration_wall_s": 110.057212
+            },
+            "run": {
+              "converged": false,
+              "hit_timestep_limit": true,
+              "threads": 4,
+              "engine": "cpu",
+              "exact_endcriteria": true,
+              "final_energy_db": -116.3,
+              "final_energy_bound_db": null,
+              "wall_time_s": 110.58
+            },
+            "max_timesteps": 70138,
+            "native_end_db": -150.0,
+            "case_elapsed_s": 112.57822275161743,
+            "source_cache": {
+              "records": {
+                "et": {
+                  "sha256": "73f79b6f12f9cc4fe51c69fc3c79d971ace03d0f200703cc85efb2328dfd116d",
+                  "samples": 16745
+                },
+                "ht": {
+                  "sha256": "fea403d8ad9673f61b1079f6c6172a672af526bd8ce8d681b33a07964c36e17a",
+                  "samples": 16745
+                }
+              },
+              "complete_after_steps": 16746
+            },
+            "seed_report_sha256": "0b6440a0cbe4d75bcf7c8749c0836b44f6badfabca13fcebc3f924a5709d4d30",
+            "energy_trace": [
+              {
+                "timestep": 2898,
+                "db": -0.0
+              },
+              {
+                "timestep": 5530,
+                "db": -0.0
+              },
+              {
+                "timestep": 8246,
+                "db": -0.0
+              },
+              {
+                "timestep": 10887,
+                "db": -6.44
+              },
+              {
+                "timestep": 13509,
+                "db": -28.06
+              },
+              {
+                "timestep": 16198,
+                "db": -65.7
+              },
+              {
+                "timestep": 18844,
+                "db": -111.16
+              },
+              {
+                "timestep": 21504,
+                "db": -112.94
+              },
+              {
+                "timestep": 24206,
+                "db": -112.93
+              },
+              {
+                "timestep": 26838,
+                "db": -114.92
+              },
+              {
+                "timestep": 29498,
+                "db": -114.38
+              },
+              {
+                "timestep": 32130,
+                "db": -113.68
+              },
+              {
+                "timestep": 34734,
+                "db": -113.78
+              },
+              {
+                "timestep": 37352,
+                "db": -115.66
+              },
+              {
+                "timestep": 39956,
+                "db": -115.3
+              },
+              {
+                "timestep": 42588,
+                "db": -116.82
+              },
+              {
+                "timestep": 45206,
+                "db": -115.75
+              },
+              {
+                "timestep": 47894,
+                "db": -115.72
+              },
+              {
+                "timestep": 51198,
+                "db": -116.8
+              },
+              {
+                "timestep": 54054,
+                "db": -118.16
+              },
+              {
+                "timestep": 56308,
+                "db": -115.66
+              },
+              {
+                "timestep": 58730,
+                "db": -117.83
+              },
+              {
+                "timestep": 61012,
+                "db": -115.86
+              },
+              {
+                "timestep": 63112,
+                "db": -115.98
+              },
+              {
+                "timestep": 65576,
+                "db": -118.88
+              },
+              {
+                "timestep": 67816,
+                "db": -116.2
+              },
+              {
+                "timestep": 69468,
+                "db": -116.3
+              }
+            ],
+            "hashes": {
+              "report": "36afdf9b331fc5b62f18b9771abe357c3620a69adb2cc447a05ccb6c06c20e76",
+              "input": "b65f4fcd5be46b6c4f77dc8ff01a77ddb4ab94ff7607ebc1241edb75eb7cb8a4",
+              "physical_input": "aabdca86585a06715bf5c3958bf04051d55abc7432fbe0efa0fa39920c8d8492",
+              "spectra": "e48b655959b041c08840bfde092cc04cc6fa6a1e01d643ea65d2867d2c48410d",
+              "native_statistics": "3872c932bac87209a68de48b460410533ff79d1af34228ad4afd2dfb86d3f7bd",
+              "raw_probes": {
+                "port_it_1": "f905546421d29a27ecd33689f045d11f3471d649eb67d362764728f8c910220e",
+                "port_it_2": "509511514fcfd3ba31a1feca7d84217d180875faf63dd4dc1e1a6b9733900223",
+                "port_ut_1": "73f8e82244efd1b05191e8df0fe07d84e05c58cbef124a6a0e652f69937a9ccf",
+                "port_ut_2": "62e5bdcfe9e29745c94e50ab674efdb6118486e7df12ec60d615a8ca4b48298e"
+              },
+              "native_worker_log": "4e828e1631f208ea8a3ced9cac2175b767e0864caa00b48fdeb544709f55c4ef",
+              "worker_receipt": "02165cd53b7e0e2af70bb04511e2dde451c0180060d2486f1ed385a5d8edeb22",
+              "enclosing_receipt": "4b6e5c7100160de369794fb76aa17bb257127d07a31496efbe94e2064b759b89",
+              "private_case_receipt": "f43df252e79bc72579bcc1dc9953e40230af2b7cfe9399ba5568864f6b0c5ddb"
+            },
+            "worker": {
+              "exit_code": 0,
+              "failure": null,
+              "deadline_seconds": 1800.0,
+              "wall_seconds": 112.55094981193542,
+              "monotonic_seconds": 112.5509515000158
+            },
+            "enclosing_guard": {
+              "exit_code": 0,
+              "timed_out": false,
+              "wall_seconds": 115.655,
+              "monotonic_seconds": 115.655,
+              "deadline_seconds": 1800.0
+            },
+            "forecast": {
+              "admission_seconds": 288.0906522424846,
+              "full_allocation_seconds": 288.0906522424846,
+              "basis": "full native allocation at lower-only measured speed",
+              "rate_mcps": 77.24788836721612,
+              "forecast_ceiling_seconds": 1800.0,
+              "actual_worker_guard_seconds": 1800.0,
+              "controller_sha256": "cd571e19693a4a062c4c76e6c95b34709f6595facc305a90ee26967fe7dc28ed"
+            }
+          },
+          "temporal_check": {
+            "passes": true,
+            "maximum_late_energy_db": -111.16,
+            "wave_change": {
+              "a": 1.2185869316502615e-06,
+              "b": 5.763270301834547e-06
+            },
+            "limits": {
+              "duration_s": 6e-08,
+              "end_db": -150.0,
+              "late_energy_db": -90.0,
+              "wave_abs": 0.002
+            }
+          }
+        },
+        {
+          "excited": 2,
+          "primary": {
+            "kind": "primary",
+            "native": {
+              "cells": 154275,
+              "dt_s": 8.554620937602217e-13,
+              "timesteps": 17100,
+              "numerical_time_s": 1.462840180329979e-08,
+              "iteration_wall_s": 35.815839
+            },
+            "run": {
+              "converged": true,
+              "hit_timestep_limit": false,
+              "threads": 4,
+              "engine": "cpu",
+              "exact_endcriteria": true,
+              "final_energy_db": null,
+              "final_energy_bound_db": -90.0,
+              "wall_time_s": 36.3
+            },
+            "max_timesteps": 200000,
+            "native_end_db": -90.0,
+            "case_elapsed_s": 38.19153380393982,
+            "source_cache": {
+              "records": {
+                "et": {
+                  "sha256": "73f79b6f12f9cc4fe51c69fc3c79d971ace03d0f200703cc85efb2328dfd116d",
+                  "samples": 16745
+                },
+                "ht": {
+                  "sha256": "fea403d8ad9673f61b1079f6c6172a672af526bd8ce8d681b33a07964c36e17a",
+                  "samples": 16745
+                }
+              },
+              "complete_after_steps": 16746
+            },
+            "seed_report_sha256": null,
+            "energy_trace": [
+              {
+                "timestep": 1988,
+                "db": -0.0
+              },
+              {
+                "timestep": 3318,
+                "db": -0.0
+              },
+              {
+                "timestep": 4914,
+                "db": -0.0
+              },
+              {
+                "timestep": 7350,
+                "db": -0.0
+              },
+              {
+                "timestep": 9842,
+                "db": -1.39
+              },
+              {
+                "timestep": 12236,
+                "db": -14.41
+              },
+              {
+                "timestep": 14056,
+                "db": -33.74
+              },
+              {
+                "timestep": 15260,
+                "db": -50.06
+              }
+            ],
+            "hashes": {
+              "report": "7606e8587a9794a0913c96bcc851c47addc392794a3cfcf4b9652d0d6a55b202",
+              "input": "eb9784b37f977065c33358a4b902bb02b96286e5090446ef271be4cfc13aefd7",
+              "physical_input": "4a62417e3152565c24482f6c652b4953eb4edac0c738184ae7278e437512abbb",
+              "spectra": "25ee6e984e0245199c4760dadcef81ba2070420f2d1b2e590aba422bb5bd861b",
+              "native_statistics": "85e84552e54d26b9f093679aa10ee8a1a355df10533da42f2927fa66377861f3",
+              "raw_probes": {
+                "port_it_1": "c4d360a1edbc84b424b707c40a1a3e408ad7da1167fec15dd1895b4f896c8b8b",
+                "port_it_2": "a303e4d232075af0fee978fec26bfdd98b9ae756058ba70446d240b43e1881e3",
+                "port_ut_1": "acd516dd5421a2aaaf5b9a206a4d1e5d33e96d3b38d198affeed2d726bb39f78",
+                "port_ut_2": "22ca40a8bf18ae04160eaa52a0a0f3c476a8eceeee0bacbbd208937925ecf160"
+              },
+              "native_worker_log": "c00ee0c4bdb13c14ab052f11106528443e02d5110bde4fa47bff839d1069b97f",
+              "worker_receipt": "08502962d5e6e5cca976e7c3016377dcfbdb75f4e1d536b115fb235ca2ed21cc",
+              "enclosing_receipt": "db1dd04170fc9ed679ff7cebf5f6337a612f3582c8a3432c4a4a287b3a3e5a85",
+              "private_case_receipt": "5509893aa5757a604da5335df48ac9500bbf0914c2385e4f49ef454dd3e979cf"
+            },
+            "worker": {
+              "exit_code": 0,
+              "failure": null,
+              "deadline_seconds": 1800.0,
+              "wall_seconds": 38.1723210811615,
+              "monotonic_seconds": 38.17232209997019
+            },
+            "enclosing_guard": {
+              "exit_code": 0,
+              "timed_out": false,
+              "wall_seconds": 41.109,
+              "monotonic_seconds": 41.109,
+              "deadline_seconds": 1800.0
+            },
+            "forecast": {
+              "admission_seconds": 604.7829993666043,
+              "full_allocation_seconds": 604.7829993666043,
+              "basis": "full native allocation at lower-only measured speed",
+              "rate_mcps": 76.37644069279763,
+              "forecast_ceiling_seconds": 1800.0,
+              "actual_worker_guard_seconds": 1800.0,
+              "controller_sha256": "cd571e19693a4a062c4c76e6c95b34709f6595facc305a90ee26967fe7dc28ed"
+            }
+          },
+          "hold": {
+            "kind": "hold60ns",
+            "native": {
+              "cells": 154275,
+              "dt_s": 8.554620937602217e-13,
+              "timesteps": 70138,
+              "numerical_time_s": 6.000040033215443e-08,
+              "iteration_wall_s": 301.780953
+            },
+            "run": {
+              "converged": false,
+              "hit_timestep_limit": true,
+              "threads": 4,
+              "engine": "cpu",
+              "exact_endcriteria": true,
+              "final_energy_db": -119.56,
+              "final_energy_bound_db": null,
+              "wall_time_s": 302.31
+            },
+            "max_timesteps": 70138,
+            "native_end_db": -150.0,
+            "case_elapsed_s": 304.49545550346375,
+            "source_cache": {
+              "records": {
+                "et": {
+                  "sha256": "73f79b6f12f9cc4fe51c69fc3c79d971ace03d0f200703cc85efb2328dfd116d",
+                  "samples": 16745
+                },
+                "ht": {
+                  "sha256": "fea403d8ad9673f61b1079f6c6172a672af526bd8ce8d681b33a07964c36e17a",
+                  "samples": 16745
+                }
+              },
+              "complete_after_steps": 16746
+            },
+            "seed_report_sha256": "7606e8587a9794a0913c96bcc851c47addc392794a3cfcf4b9652d0d6a55b202",
+            "energy_trace": [
+              {
+                "timestep": 1881,
+                "db": -0.0
+              },
+              {
+                "timestep": 3584,
+                "db": -0.0
+              },
+              {
+                "timestep": 4844,
+                "db": -0.0
+              },
+              {
+                "timestep": 5950,
+                "db": -0.0
+              },
+              {
+                "timestep": 7168,
+                "db": -0.0
+              },
+              {
+                "timestep": 8708,
+                "db": -1.16
+              },
+              {
+                "timestep": 10066,
+                "db": -1.97
+              },
+              {
+                "timestep": 11508,
+                "db": -10.47
+              },
+              {
+                "timestep": 13636,
+                "db": -29.98
+              },
+              {
+                "timestep": 15064,
+                "db": -47.12
+              },
+              {
+                "timestep": 16587,
+                "db": -71.68
+              },
+              {
+                "timestep": 18312,
+                "db": -111.27
+              },
+              {
+                "timestep": 20118,
+                "db": -115.28
+              },
+              {
+                "timestep": 21826,
+                "db": -116.2
+              },
+              {
+                "timestep": 23506,
+                "db": -116.93
+              },
+              {
+                "timestep": 25214,
+                "db": -116.32
+              },
+              {
+                "timestep": 26614,
+                "db": -117.65
+              },
+              {
+                "timestep": 27986,
+                "db": -118.31
+              },
+              {
+                "timestep": 29330,
+                "db": -118.22
+              },
+              {
+                "timestep": 30954,
+                "db": -117.85
+              },
+              {
+                "timestep": 32452,
+                "db": -117.64
+              },
+              {
+                "timestep": 34143,
+                "db": -118.64
+              },
+              {
+                "timestep": 35784,
+                "db": -118.33
+              },
+              {
+                "timestep": 37449,
+                "db": -118.94
+              },
+              {
+                "timestep": 39088,
+                "db": -119.08
+              },
+              {
+                "timestep": 40527,
+                "db": -118.71
+              },
+              {
+                "timestep": 41930,
+                "db": -119.05
+              },
+              {
+                "timestep": 43162,
+                "db": -118.94
+              },
+              {
+                "timestep": 44394,
+                "db": -118.99
+              },
+              {
+                "timestep": 45444,
+                "db": -119.16
+              },
+              {
+                "timestep": 46242,
+                "db": -119.34
+              },
+              {
+                "timestep": 47040,
+                "db": -119.23
+              },
+              {
+                "timestep": 47572,
+                "db": -119.45
+              },
+              {
+                "timestep": 48216,
+                "db": -119.24
+              },
+              {
+                "timestep": 49112,
+                "db": -119.24
+              },
+              {
+                "timestep": 49994,
+                "db": -119.29
+              },
+              {
+                "timestep": 50862,
+                "db": -119.23
+              },
+              {
+                "timestep": 51520,
+                "db": -119.57
+              },
+              {
+                "timestep": 52150,
+                "db": -119.18
+              },
+              {
+                "timestep": 52839,
+                "db": -119.48
+              },
+              {
+                "timestep": 53256,
+                "db": -119.47
+              },
+              {
+                "timestep": 53970,
+                "db": -119.45
+              },
+              {
+                "timestep": 54530,
+                "db": -119.5
+              },
+              {
+                "timestep": 54992,
+                "db": -119.49
+              },
+              {
+                "timestep": 55538,
+                "db": -119.28
+              },
+              {
+                "timestep": 56168,
+                "db": -119.6
+              },
+              {
+                "timestep": 56854,
+                "db": -119.36
+              },
+              {
+                "timestep": 57554,
+                "db": -119.52
+              },
+              {
+                "timestep": 58184,
+                "db": -119.45
+              },
+              {
+                "timestep": 58632,
+                "db": -119.49
+              },
+              {
+                "timestep": 59080,
+                "db": -119.53
+              },
+              {
+                "timestep": 59612,
+                "db": -119.66
+              },
+              {
+                "timestep": 60060,
+                "db": -119.67
+              },
+              {
+                "timestep": 60620,
+                "db": -119.51
+              },
+              {
+                "timestep": 61047,
+                "db": -119.49
+              },
+              {
+                "timestep": 61404,
+                "db": -119.57
+              },
+              {
+                "timestep": 61726,
+                "db": -119.59
+              },
+              {
+                "timestep": 62104,
+                "db": -119.6
+              },
+              {
+                "timestep": 62482,
+                "db": -119.56
+              },
+              {
+                "timestep": 62902,
+                "db": -119.5
+              },
+              {
+                "timestep": 63322,
+                "db": -119.45
+              },
+              {
+                "timestep": 63798,
+                "db": -119.58
+              },
+              {
+                "timestep": 64162,
+                "db": -119.46
+              },
+              {
+                "timestep": 64624,
+                "db": -119.49
+              },
+              {
+                "timestep": 64988,
+                "db": -119.49
+              },
+              {
+                "timestep": 65408,
+                "db": -119.5
+              },
+              {
+                "timestep": 65912,
+                "db": -119.57
+              },
+              {
+                "timestep": 66500,
+                "db": -119.68
+              },
+              {
+                "timestep": 67004,
+                "db": -119.6
+              },
+              {
+                "timestep": 67676,
+                "db": -119.66
+              },
+              {
+                "timestep": 68166,
+                "db": -119.68
+              },
+              {
+                "timestep": 68824,
+                "db": -119.54
+              },
+              {
+                "timestep": 69398,
+                "db": -119.65
+              },
+              {
+                "timestep": 70053,
+                "db": -119.56
+              }
+            ],
+            "hashes": {
+              "report": "1628ef0aa84e7bd424bcf51cfec7d29b2e7d9e6fcdbdc5d99775f3655f427d71",
+              "input": "443348954b7f761628f51ef6639e69a245475964be118b65ff3d2b7b9ddc41e4",
+              "physical_input": "dd39915bd8db8555ba3de03f54c84d204c4adab8b23a1f7f299b2a87dd52aedd",
+              "spectra": "f5a9cc94c9547aafb603d5a52d069249f586f87c613864ad223f55b4e1388bfd",
+              "native_statistics": "1fc0fc3fcd5504dd1260d1418ab1edf2e4c3755f1ff6b08310f90204ddb61cc6",
+              "raw_probes": {
+                "port_it_1": "8cf1af516b0fb02b96b1582fa2eeebf18595d1243131dbe4bed4cf399c5edf0e",
+                "port_it_2": "1a5982fef3a5abbfb2f8ecb7f9f1d46cfca60b2fe9decc6793eaf5aad5c77de7",
+                "port_ut_1": "23bbad1e674fb9c506cb9e42860e8821fefd19f75423e477dba57b94cc438515",
+                "port_ut_2": "e3cecfb6ae6907880faefeb9b3b0cc2eb99cfd12613e8627a82abaf0e922da28"
+              },
+              "native_worker_log": "704f52226b70feb7278d5079517ffac9eed130e7d8d44d63ec4182c1ec2bfe15",
+              "worker_receipt": "ff2487af160782ba48f8247644e4be2fabdff84f6837c11325efecd279ab4be4",
+              "enclosing_receipt": "336577e151322a0e635ccfec2aedfd6718f9e49d75abc3252552de4e468007c5",
+              "private_case_receipt": "89cebd6a0052aaf5fa6d0e80805f2a3a9d9a7c1983410584d1ef1378fb124676"
+            },
+            "worker": {
+              "exit_code": 0,
+              "failure": null,
+              "deadline_seconds": 1800.0,
+              "wall_seconds": 304.48160910606384,
+              "monotonic_seconds": 304.48161070002243
+            },
+            "enclosing_guard": {
+              "exit_code": 0,
+              "timed_out": false,
+              "wall_seconds": 308.159,
+              "monotonic_seconds": 308.159,
+              "deadline_seconds": 1800.0
+            },
+            "forecast": {
+              "admission_seconds": 358.60720945040384,
+              "full_allocation_seconds": 358.60720945040384,
+              "basis": "full native allocation at lower-only measured speed",
+              "rate_mcps": 54.41850633896688,
+              "forecast_ceiling_seconds": 1800.0,
+              "actual_worker_guard_seconds": 1800.0,
+              "controller_sha256": "cd571e19693a4a062c4c76e6c95b34709f6595facc305a90ee26967fe7dc28ed"
+            }
+          },
+          "temporal_check": {
+            "passes": true,
+            "maximum_late_energy_db": -111.27,
+            "wave_change": {
+              "a": 1.4130770872175975e-06,
+              "b": 7.07212924140053e-06
+            },
+            "limits": {
+              "duration_s": 6e-08,
+              "end_db": -150.0,
+              "late_energy_db": -90.0,
+              "wave_abs": 0.002
+            }
+          }
+        }
+      ],
+      "incident_condition_max": 1.933769697237216
+    },
+    {
+      "cpw": 50,
+      "padding": 16,
+      "sample_prefix": "n50_p16",
+      "records": [
+        {
+          "excited": 1,
+          "primary": {
+            "kind": "primary",
+            "native": {
+              "cells": 261261,
+              "dt_s": 7.030066034017416e-13,
+              "timesteps": 20700,
+              "numerical_time_s": 1.455223669041605e-08,
+              "iteration_wall_s": 100.913339
+            },
+            "run": {
+              "converged": true,
+              "hit_timestep_limit": false,
+              "threads": 4,
+              "engine": "cpu",
+              "exact_endcriteria": true,
+              "final_energy_db": null,
+              "final_energy_bound_db": -90.0,
+              "wall_time_s": 101.66
+            },
+            "max_timesteps": 200000,
+            "native_end_db": -90.0,
+            "case_elapsed_s": 103.56707739830017,
+            "source_cache": {
+              "records": {
+                "et": {
+                  "sha256": "c47b1d2bec0c9cf95475fc8f910e92af5368e9d6b6ac158f93ffb510860e3b25",
+                  "samples": 20376
+                },
+                "ht": {
+                  "sha256": "f6a537a5c3b470a9fd3e3a5f0b6dbca93c157e3e319f401ca207ab2aaccf9be8",
+                  "samples": 20376
+                }
+              },
+              "complete_after_steps": 20377
+            },
+            "seed_report_sha256": null,
+            "energy_trace": [
+              {
+                "timestep": 884,
+                "db": -0.0
+              },
+              {
+                "timestep": 1241,
+                "db": -0.0
+              },
+              {
+                "timestep": 1615,
+                "db": -0.0
+              },
+              {
+                "timestep": 2006,
+                "db": -0.0
+              },
+              {
+                "timestep": 2550,
+                "db": -0.0
+              },
+              {
+                "timestep": 3128,
+                "db": -0.0
+              },
+              {
+                "timestep": 3604,
+                "db": -0.0
+              },
+              {
+                "timestep": 3910,
+                "db": -0.0
+              },
+              {
+                "timestep": 4420,
+                "db": -0.0
+              },
+              {
+                "timestep": 4828,
+                "db": -0.0
+              },
+              {
+                "timestep": 5134,
+                "db": -0.0
+              },
+              {
+                "timestep": 5576,
+                "db": -0.0
+              },
+              {
+                "timestep": 6154,
+                "db": -0.0
+              },
+              {
+                "timestep": 6698,
+                "db": -0.0
+              },
+              {
+                "timestep": 7276,
+                "db": -0.0
+              },
+              {
+                "timestep": 7854,
+                "db": -0.0
+              },
+              {
+                "timestep": 8279,
+                "db": -0.0
+              },
+              {
+                "timestep": 9231,
+                "db": -0.0
+              },
+              {
+                "timestep": 10557,
+                "db": -0.03
+              },
+              {
+                "timestep": 12172,
+                "db": -2.74
+              },
+              {
+                "timestep": 13974,
+                "db": -10.23
+              },
+              {
+                "timestep": 15725,
+                "db": -21.59
+              },
+              {
+                "timestep": 17476,
+                "db": -38.08
+              },
+              {
+                "timestep": 19312,
+                "db": -59.69
+              }
+            ],
+            "hashes": {
+              "report": "3570eb8ddf011cdc121de5e4fd24e67aa5d5bee3fefb5d88fa1049b9ac043cf5",
+              "input": "175487d7d97b2c4d3fd6fa6e98116f5d6b69e3fc789703d5fc85ea516c13bea9",
+              "physical_input": "5b80612f7a243911edd4986f183ea19657a913c5bf00d134f67ad5f53e157852",
+              "spectra": "a0fe67601cc74544260a394dc1845468d572ee29ea98d0ebad1d81ca44a236ae",
+              "native_statistics": "9985454a1b774af07054083998014097da2ffdd7db985aa826f8af7defa01736",
+              "raw_probes": {
+                "port_it_1": "4117125e96d1629a6edd57c2047252e6a5f4364cb1f843e6bc5bd4371726a52f",
+                "port_it_2": "a6c3e1bea49550727cad8d8f00dc62c34d0ee424c257ac0215c5cd0632e34b5e",
+                "port_ut_1": "302c577ebebe79d1a233c601a5d325a101a9dcfe418e9ff4846c494d34010bc1",
+                "port_ut_2": "74c3bd23464aa76b1473621134fe24573ea487ea560b8b8dc370dd590265efb2"
+              },
+              "native_worker_log": "50806cc50f260b33afcecacb2c1e8d08b49c7241e3be5d72da827fffa4477e07",
+              "worker_receipt": "0f06183e96bc0aafbe534993b1c6ce3636c1d6bdaded456890c01dd24a2cd8ec",
+              "enclosing_receipt": "11aafa8b0c29b8db33bf49cc466e93e9855eecd0df5f7f3dff726a40e215adeb",
+              "private_case_receipt": "44e5444214be849034b63092b9c4db10c793788d3d9baf9008c41421fbda6471"
+            },
+            "worker": {
+              "exit_code": 0,
+              "failure": null,
+              "deadline_seconds": 1800.0,
+              "wall_seconds": 103.55077910423279,
+              "monotonic_seconds": 103.55078029999277
+            },
+            "enclosing_guard": {
+              "exit_code": 0,
+              "timed_out": false,
+              "wall_seconds": 106.088,
+              "monotonic_seconds": 106.088,
+              "deadline_seconds": 1800.0
+            },
+            "forecast": {
+              "admission_seconds": 581.3861825954734,
+              "full_allocation_seconds": 2334.104578522799,
+              "basis": "twice the longest completed primary physical stop, at unchanged lower-only speed",
+              "rate_mcps": 28.319637928680766,
+              "forecast_ceiling_seconds": 2700.0,
+              "actual_worker_guard_seconds": 1800.0,
+              "controller_sha256": "7bbf5260d4c8a468ecba53321bb569a80b79237ef269aec7b34d86aa823af858"
+            }
+          },
+          "hold": {
+            "kind": "hold60ns",
+            "native": {
+              "cells": 261261,
+              "dt_s": 7.030066034017416e-13,
+              "timesteps": 85348,
+              "numerical_time_s": 6.000020758713184e-08,
+              "iteration_wall_s": 190.920493
+            },
+            "run": {
+              "converged": false,
+              "hit_timestep_limit": true,
+              "threads": 4,
+              "engine": "cpu",
+              "exact_endcriteria": true,
+              "final_energy_db": -117.68,
+              "final_energy_bound_db": null,
+              "wall_time_s": 191.71
+            },
+            "max_timesteps": 85348,
+            "native_end_db": -150.0,
+            "case_elapsed_s": 193.70076298713684,
+            "source_cache": {
+              "records": {
+                "et": {
+                  "sha256": "c47b1d2bec0c9cf95475fc8f910e92af5368e9d6b6ac158f93ffb510860e3b25",
+                  "samples": 20376
+                },
+                "ht": {
+                  "sha256": "f6a537a5c3b470a9fd3e3a5f0b6dbca93c157e3e319f401ca207ab2aaccf9be8",
+                  "samples": 20376
+                }
+              },
+              "complete_after_steps": 20377
+            },
+            "seed_report_sha256": "3570eb8ddf011cdc121de5e4fd24e67aa5d5bee3fefb5d88fa1049b9ac043cf5",
+            "energy_trace": [
+              {
+                "timestep": 2001,
+                "db": -0.0
+              },
+              {
+                "timestep": 3859,
+                "db": -0.0
+              },
+              {
+                "timestep": 5695,
+                "db": -0.0
+              },
+              {
+                "timestep": 7514,
+                "db": -0.0
+              },
+              {
+                "timestep": 9333,
+                "db": -0.0
+              },
+              {
+                "timestep": 11135,
+                "db": -0.73
+              },
+              {
+                "timestep": 12954,
+                "db": -4.97
+              },
+              {
+                "timestep": 14722,
+                "db": -14.37
+              },
+              {
+                "timestep": 16609,
+                "db": -29.4
+              },
+              {
+                "timestep": 18216,
+                "db": -47.04
+              },
+              {
+                "timestep": 20043,
+                "db": -70.39
+              },
+              {
+                "timestep": 21726,
+                "db": -110.45
+              },
+              {
+                "timestep": 23596,
+                "db": -112.1
+              },
+              {
+                "timestep": 25432,
+                "db": -111.92
+              },
+              {
+                "timestep": 27251,
+                "db": -113.25
+              },
+              {
+                "timestep": 29118,
+                "db": -113.73
+              },
+              {
+                "timestep": 30981,
+                "db": -113.45
+              },
+              {
+                "timestep": 32725,
+                "db": -114.4
+              },
+              {
+                "timestep": 34561,
+                "db": -114.55
+              },
+              {
+                "timestep": 36227,
+                "db": -114.29
+              },
+              {
+                "timestep": 38097,
+                "db": -114.56
+              },
+              {
+                "timestep": 39882,
+                "db": -114.78
+              },
+              {
+                "timestep": 41633,
+                "db": -115.39
+              },
+              {
+                "timestep": 43469,
+                "db": -114.93
+              },
+              {
+                "timestep": 45322,
+                "db": -116.39
+              },
+              {
+                "timestep": 47022,
+                "db": -116.01
+              },
+              {
+                "timestep": 48807,
+                "db": -117.3
+              },
+              {
+                "timestep": 50524,
+                "db": -116.44
+              },
+              {
+                "timestep": 52224,
+                "db": -116.37
+              },
+              {
+                "timestep": 54077,
+                "db": -116.89
+              },
+              {
+                "timestep": 55879,
+                "db": -117.84
+              },
+              {
+                "timestep": 57715,
+                "db": -116.12
+              },
+              {
+                "timestep": 59547,
+                "db": -116.76
+              },
+              {
+                "timestep": 61370,
+                "db": -117.1
+              },
+              {
+                "timestep": 63036,
+                "db": -117.07
+              },
+              {
+                "timestep": 64617,
+                "db": -118.03
+              },
+              {
+                "timestep": 66368,
+                "db": -117.49
+              },
+              {
+                "timestep": 68136,
+                "db": -117.91
+              },
+              {
+                "timestep": 69836,
+                "db": -117.7
+              },
+              {
+                "timestep": 71740,
+                "db": -117.33
+              },
+              {
+                "timestep": 73576,
+                "db": -117.54
+              },
+              {
+                "timestep": 75395,
+                "db": -118.55
+              },
+              {
+                "timestep": 77265,
+                "db": -118.4
+              },
+              {
+                "timestep": 79084,
+                "db": -117.37
+              },
+              {
+                "timestep": 80784,
+                "db": -118.2
+              },
+              {
+                "timestep": 82662,
+                "db": -117.5
+              },
+              {
+                "timestep": 84405,
+                "db": -117.68
+              }
+            ],
+            "hashes": {
+              "report": "33ed8dd09fe9779a9e21fd17847c5e834cc30f355de9ecd5419b98d565c32759",
+              "input": "cc1a436df333e486d47c970d04258c0f9cc62f3485855ceafd7bd5959a646c51",
+              "physical_input": "43f1d1943b86cf1f64344cfb7c176c59f39c760d81ed1d0a4fd26a58fcde9e38",
+              "spectra": "cf6eec83e3de6ca331af63425edea80b726ceea9b3fcd6566dc609bfc5314d88",
+              "native_statistics": "41c83ef6925fae63df2419155dbc9fdd1c90deea8515a137da165f123e2550dc",
+              "raw_probes": {
+                "port_it_1": "912b8b43972cd340ffb08919edbddf7aba49c02e99d9182bc3e98881f8a92f0d",
+                "port_it_2": "fc455624cce42697eb1384fd00b7b5a30bfbcaa31c6aeb7d86b194f1b9f91402",
+                "port_ut_1": "988ed12963c894251b0c56e0fa78f3ca00eaef71981dbee763aaefd581dec302",
+                "port_ut_2": "b2c61f27a2f2e4c1957dcf1618fad8b7a8e1e3c2d838e406bf2402e90cc6b5fc"
+              },
+              "native_worker_log": "daaf74af05c00f0b8a1d566d10057e5db6eb9df5976c2274ad9ecd52afe7a6f3",
+              "worker_receipt": "e3f4fd471ff87522150cb2df0ede1041afd22cca48fe81b5b79bfe75e49c2074",
+              "enclosing_receipt": "ab8a207804e12fa82ebcc09af3141fd583c4a56a0e1a2f842439ce01258759d3",
+              "private_case_receipt": "5ebb34f6415db370beff30dfada21a3ee30defa55d1691e76f88f9c1305fd0f7"
+            },
+            "worker": {
+              "exit_code": 0,
+              "failure": null,
+              "deadline_seconds": 1800.0,
+              "wall_seconds": 193.685631275177,
+              "monotonic_seconds": 193.68563259998336
+            },
+            "enclosing_guard": {
+              "exit_code": 0,
+              "timed_out": false,
+              "wall_seconds": 197.351,
+              "monotonic_seconds": 197.351,
+              "deadline_seconds": 1800.0
+            },
+            "forecast": {
+              "admission_seconds": 1064.8469878388194,
+              "full_allocation_seconds": 1064.8469878388194,
+              "basis": "complete fixed 60 ns continuation allocation",
+              "rate_mcps": 28.319637928680766,
+              "forecast_ceiling_seconds": 2700.0,
+              "actual_worker_guard_seconds": 1800.0,
+              "controller_sha256": "7bbf5260d4c8a468ecba53321bb569a80b79237ef269aec7b34d86aa823af858"
+            }
+          },
+          "temporal_check": {
+            "passes": true,
+            "maximum_late_energy_db": -110.45,
+            "wave_change": {
+              "a": 1.5776103043293226e-06,
+              "b": 7.151029777269878e-06
+            },
+            "limits": {
+              "duration_s": 6e-08,
+              "end_db": -150.0,
+              "late_energy_db": -90.0,
+              "wave_abs": 0.002
+            }
+          }
+        },
+        {
+          "excited": 2,
+          "primary": {
+            "kind": "primary",
+            "native": {
+              "cells": 261261,
+              "dt_s": 7.030066034017416e-13,
+              "timesteps": 20769,
+              "numerical_time_s": 1.460074414605077e-08,
+              "iteration_wall_s": 54.603662
+            },
+            "run": {
+              "converged": true,
+              "hit_timestep_limit": false,
+              "threads": 4,
+              "engine": "cpu",
+              "exact_endcriteria": true,
+              "final_energy_db": null,
+              "final_energy_bound_db": -90.0,
+              "wall_time_s": 55.3
+            },
+            "max_timesteps": 200000,
+            "native_end_db": -90.0,
+            "case_elapsed_s": 57.014344930648804,
+            "source_cache": {
+              "records": {
+                "et": {
+                  "sha256": "c47b1d2bec0c9cf95475fc8f910e92af5368e9d6b6ac158f93ffb510860e3b25",
+                  "samples": 20376
+                },
+                "ht": {
+                  "sha256": "f6a537a5c3b470a9fd3e3a5f0b6dbca93c157e3e319f401ca207ab2aaccf9be8",
+                  "samples": 20376
+                }
+              },
+              "complete_after_steps": 20377
+            },
+            "seed_report_sha256": null,
+            "energy_trace": [
+              {
+                "timestep": 1377,
+                "db": -0.0
+              },
+              {
+                "timestep": 1972,
+                "db": -0.0
+              },
+              {
+                "timestep": 3519,
+                "db": -0.0
+              },
+              {
+                "timestep": 4233,
+                "db": -0.0
+              },
+              {
+                "timestep": 4896,
+                "db": -0.0
+              },
+              {
+                "timestep": 5610,
+                "db": -0.0
+              },
+              {
+                "timestep": 6358,
+                "db": -0.0
+              },
+              {
+                "timestep": 8585,
+                "db": -0.0
+              },
+              {
+                "timestep": 10880,
+                "db": -0.9
+              },
+              {
+                "timestep": 13294,
+                "db": -7.14
+              },
+              {
+                "timestep": 15708,
+                "db": -22.11
+              },
+              {
+                "timestep": 17952,
+                "db": -43.95
+              },
+              {
+                "timestep": 19941,
+                "db": -68.98
+              }
+            ],
+            "hashes": {
+              "report": "571896a478e0c9ae2c9515ddbf05fa94e41519e371f1a6f236382a41373c90d4",
+              "input": "a0f17a2aab7624a1a2d6c5eac7bf01bf473e6c0176b2463fae775b991f740d57",
+              "physical_input": "8a9e0cd2be6f4d4a6f9e1efae39be362b7b2ab4d1c5ee54f084ce8f73b5fecc6",
+              "spectra": "efc6c7ad26aaf9b49468715cf20f0e513e2fd56339fb4b051691761082c425a2",
+              "native_statistics": "3397fe38298a1f5ef93f88e9b02d0046aaf142433177cf9bfce2f561b0d8d8e8",
+              "raw_probes": {
+                "port_it_1": "cf17298f5f34169bcd53c8f712782ce9da2d68c5e94cea47da500d6a9238989a",
+                "port_it_2": "dd409dc0db3a8db53039de1b4dfb646a46fe6c022ce71a05ba37978bedbce543",
+                "port_ut_1": "2b34cc0de370d7b46dae0267fdfa5297c150a65c5844c6922d68af36982fa755",
+                "port_ut_2": "e1f69397fe2d7d0d1f0528e54d888ab3169c9a38f8e243134ab49de31ed29885"
+              },
+              "native_worker_log": "38fea3253c5915f858f3d43b71fa8814ce13c318452c3b5a3c4a876031b717d0",
+              "worker_receipt": "d8e0f75e98fa365002925c31d038f513aca50c142abd463ba96e368d8e08a296",
+              "enclosing_receipt": "902b81dae6d54e884174bffa9b393d2d1b0c687c700c9d0c22c7bf8eb606878d",
+              "private_case_receipt": "a299abe9f0b1ed3412cfb101ef0aa56e97433e2269c67e679bce06a665b42ce3"
+            },
+            "worker": {
+              "exit_code": 0,
+              "failure": null,
+              "deadline_seconds": 1800.0,
+              "wall_seconds": 56.99654459953308,
+              "monotonic_seconds": 56.99654650001321
+            },
+            "enclosing_guard": {
+              "exit_code": 0,
+              "timed_out": false,
+              "wall_seconds": 59.701,
+              "monotonic_seconds": 59.701,
+              "deadline_seconds": 1800.0
+            },
+            "forecast": {
+              "admission_seconds": 581.3861825954734,
+              "full_allocation_seconds": 2334.104578522799,
+              "basis": "twice the longest completed primary physical stop, at unchanged lower-only speed",
+              "rate_mcps": 28.319637928680766,
+              "forecast_ceiling_seconds": 2700.0,
+              "actual_worker_guard_seconds": 1800.0,
+              "controller_sha256": "7bbf5260d4c8a468ecba53321bb569a80b79237ef269aec7b34d86aa823af858"
+            }
+          },
+          "hold": {
+            "kind": "hold60ns",
+            "native": {
+              "cells": 261261,
+              "dt_s": 7.030066034017416e-13,
+              "timesteps": 85348,
+              "numerical_time_s": 6.000020758713184e-08,
+              "iteration_wall_s": 154.167491
+            },
+            "run": {
+              "converged": false,
+              "hit_timestep_limit": true,
+              "threads": 4,
+              "engine": "cpu",
+              "exact_endcriteria": true,
+              "final_energy_db": -120.47,
+              "final_energy_bound_db": null,
+              "wall_time_s": 154.96
+            },
+            "max_timesteps": 85348,
+            "native_end_db": -150.0,
+            "case_elapsed_s": 156.79144740104675,
+            "source_cache": {
+              "records": {
+                "et": {
+                  "sha256": "c47b1d2bec0c9cf95475fc8f910e92af5368e9d6b6ac158f93ffb510860e3b25",
+                  "samples": 20376
+                },
+                "ht": {
+                  "sha256": "f6a537a5c3b470a9fd3e3a5f0b6dbca93c157e3e319f401ca207ab2aaccf9be8",
+                  "samples": 20376
+                }
+              },
+              "complete_after_steps": 20377
+            },
+            "seed_report_sha256": "571896a478e0c9ae2c9515ddbf05fa94e41519e371f1a6f236382a41373c90d4",
+            "energy_trace": [
+              {
+                "timestep": 2380,
+                "db": -0.0
+              },
+              {
+                "timestep": 4554,
+                "db": -0.0
+              },
+              {
+                "timestep": 6681,
+                "db": -0.0
+              },
+              {
+                "timestep": 8857,
+                "db": -0.0
+              },
+              {
+                "timestep": 10965,
+                "db": -1.1
+              },
+              {
+                "timestep": 13124,
+                "db": -6.27
+              },
+              {
+                "timestep": 15266,
+                "db": -18.13
+              },
+              {
+                "timestep": 17457,
+                "db": -37.75
+              },
+              {
+                "timestep": 19635,
+                "db": -63.72
+              },
+              {
+                "timestep": 21828,
+                "db": -109.24
+              },
+              {
+                "timestep": 23970,
+                "db": -117.14
+              },
+              {
+                "timestep": 26197,
+                "db": -117.92
+              },
+              {
+                "timestep": 28339,
+                "db": -117.63
+              },
+              {
+                "timestep": 30481,
+                "db": -118.7
+              },
+              {
+                "timestep": 32623,
+                "db": -118.37
+              },
+              {
+                "timestep": 34833,
+                "db": -119.32
+              },
+              {
+                "timestep": 37191,
+                "db": -119.66
+              },
+              {
+                "timestep": 39491,
+                "db": -119.58
+              },
+              {
+                "timestep": 41718,
+                "db": -119.64
+              },
+              {
+                "timestep": 43911,
+                "db": -119.45
+              },
+              {
+                "timestep": 46223,
+                "db": -119.86
+              },
+              {
+                "timestep": 48535,
+                "db": -119.69
+              },
+              {
+                "timestep": 51170,
+                "db": -120.05
+              },
+              {
+                "timestep": 53873,
+                "db": -119.89
+              },
+              {
+                "timestep": 56389,
+                "db": -120.12
+              },
+              {
+                "timestep": 58581,
+                "db": -119.99
+              },
+              {
+                "timestep": 60843,
+                "db": -120.05
+              },
+              {
+                "timestep": 63172,
+                "db": -120.3
+              },
+              {
+                "timestep": 65365,
+                "db": -120.25
+              },
+              {
+                "timestep": 67507,
+                "db": -120.33
+              },
+              {
+                "timestep": 69581,
+                "db": -120.27
+              },
+              {
+                "timestep": 71672,
+                "db": -120.27
+              },
+              {
+                "timestep": 73865,
+                "db": -120.38
+              },
+              {
+                "timestep": 76038,
+                "db": -120.43
+              },
+              {
+                "timestep": 78108,
+                "db": -120.4
+              },
+              {
+                "timestep": 80155,
+                "db": -120.45
+              },
+              {
+                "timestep": 82246,
+                "db": -120.45
+              },
+              {
+                "timestep": 84456,
+                "db": -120.47
+              }
+            ],
+            "hashes": {
+              "report": "a69f466f644755313d7de3a13471c3d8e619b38d21f03a8abd5e8c60de1323b1",
+              "input": "530908fd7a94f865df35a0f117d406e36a65c807a3e99ef1a526c578c0ba3e89",
+              "physical_input": "6de9f95b435db5ca7d6e0103a5acd3e41cf823f5b538cd9f65946211fb6a335f",
+              "spectra": "3b01d1a15290483a22ccf5b23bc83f41b72a80e07210954a1c11abdb4b5a321d",
+              "native_statistics": "c0863fed3898c9a0a86a9e9dd709f0782f4ce64182715310c148af7912cff3b3",
+              "raw_probes": {
+                "port_it_1": "06bb52470815d7ed6a9c853c138daf78fda520b76706df85819406e470d37fba",
+                "port_it_2": "b79d239f286986f78fdc8fb2faee724de31f72588362b3974dc65589eef804b4",
+                "port_ut_1": "9ef72c12825eaeffb35d8fed0bb543e650f86c58f4e959c64a8d47e6fc929792",
+                "port_ut_2": "9af52a1d81f18ee2b70123e3e1f3e0e3ce68ea882549f64241c1fc26ef674a71"
+              },
+              "native_worker_log": "462564b42387f668aa3e804bac0ca8669b87799cf439a643318ec5353cd341e9",
+              "worker_receipt": "f0c1fd6d353fd2156a84a209848926b0f7eace8c8a77be3e50e542ec87991176",
+              "enclosing_receipt": "82c7bda7696c98cc2d90c6f3e00ce5c753fac1d7d8d03da251663162e5715839",
+              "private_case_receipt": "e735567bb32650b561c7cc8f08ac7425ff635a890baa8bc3093a2af555c24f2b"
+            },
+            "worker": {
+              "exit_code": 0,
+              "failure": null,
+              "deadline_seconds": 1800.0,
+              "wall_seconds": 156.77740788459778,
+              "monotonic_seconds": 156.77740889997222
+            },
+            "enclosing_guard": {
+              "exit_code": 0,
+              "timed_out": false,
+              "wall_seconds": 160.207,
+              "monotonic_seconds": 160.207,
+              "deadline_seconds": 1800.0
+            },
+            "forecast": {
+              "admission_seconds": 1064.8469878388194,
+              "full_allocation_seconds": 1064.8469878388194,
+              "basis": "complete fixed 60 ns continuation allocation",
+              "rate_mcps": 28.319637928680766,
+              "forecast_ceiling_seconds": 2700.0,
+              "actual_worker_guard_seconds": 1800.0,
+              "controller_sha256": "7bbf5260d4c8a468ecba53321bb569a80b79237ef269aec7b34d86aa823af858"
+            }
+          },
+          "temporal_check": {
+            "passes": true,
+            "maximum_late_energy_db": -109.24,
+            "wave_change": {
+              "a": 1.1587750835016798e-06,
+              "b": 8.676702920703504e-06
+            },
+            "limits": {
+              "duration_s": 6e-08,
+              "end_db": -150.0,
+              "late_energy_db": -90.0,
+              "wave_abs": 0.002
+            }
+          }
+        }
+      ],
+      "incident_condition_max": 2.0188762105218143
+    },
+    {
+      "cpw": 60,
+      "padding": 16,
+      "sample_prefix": "n60_p16",
+      "records": [
+        {
+          "excited": 1,
+          "primary": {
+            "kind": "primary",
+            "native": {
+              "cells": 444675,
+              "dt_s": 5.794184636342246e-13,
+              "timesteps": 25116,
+              "numerical_time_s": 1.455267413263718e-08,
+              "iteration_wall_s": 151.804513
+            },
+            "run": {
+              "converged": true,
+              "hit_timestep_limit": false,
+              "threads": 4,
+              "engine": "cpu",
+              "exact_endcriteria": true,
+              "final_energy_db": null,
+              "final_energy_bound_db": -90.0,
+              "wall_time_s": 153.03
+            },
+            "max_timesteps": 200000,
+            "native_end_db": -90.0,
+            "case_elapsed_s": 154.68969297409058,
+            "source_cache": {
+              "records": {
+                "et": {
+                  "sha256": "a826a295b8d33bfb4820e6e5906017a48476a0fd0bba35ca67d22b85c7b043b0",
+                  "samples": 24722
+                },
+                "ht": {
+                  "sha256": "0fe5cbdf8035d859142d32fbb64ae7733bc4211b7d6af3ae3ecf474ad7fbd224",
+                  "samples": 24722
+                }
+              },
+              "complete_after_steps": 24723
+            },
+            "seed_report_sha256": null,
+            "energy_trace": [
+              {
+                "timestep": 1071,
+                "db": -0.0
+              },
+              {
+                "timestep": 1974,
+                "db": -0.0
+              },
+              {
+                "timestep": 2625,
+                "db": -0.0
+              },
+              {
+                "timestep": 3591,
+                "db": -0.0
+              },
+              {
+                "timestep": 4326,
+                "db": -0.0
+              },
+              {
+                "timestep": 5376,
+                "db": -0.0
+              },
+              {
+                "timestep": 6342,
+                "db": -0.0
+              },
+              {
+                "timestep": 7014,
+                "db": -0.0
+              },
+              {
+                "timestep": 7413,
+                "db": -0.0
+              },
+              {
+                "timestep": 8505,
+                "db": -0.0
+              },
+              {
+                "timestep": 9429,
+                "db": -0.0
+              },
+              {
+                "timestep": 10395,
+                "db": -0.0
+              },
+              {
+                "timestep": 10962,
+                "db": -0.0
+              },
+              {
+                "timestep": 11907,
+                "db": -0.0
+              },
+              {
+                "timestep": 12474,
+                "db": -0.33
+              },
+              {
+                "timestep": 12726,
+                "db": -0.44
+              },
+              {
+                "timestep": 13209,
+                "db": -0.62
+              },
+              {
+                "timestep": 13587,
+                "db": -0.73
+              },
+              {
+                "timestep": 14511,
+                "db": -1.7
+              },
+              {
+                "timestep": 15393,
+                "db": -4.31
+              },
+              {
+                "timestep": 15855,
+                "db": -5.81
+              },
+              {
+                "timestep": 16527,
+                "db": -8.2
+              },
+              {
+                "timestep": 17094,
+                "db": -10.4
+              },
+              {
+                "timestep": 17808,
+                "db": -14.05
+              },
+              {
+                "timestep": 18858,
+                "db": -20.47
+              },
+              {
+                "timestep": 19803,
+                "db": -26.71
+              },
+              {
+                "timestep": 20454,
+                "db": -31.54
+              },
+              {
+                "timestep": 20811,
+                "db": -34.25
+              },
+              {
+                "timestep": 21021,
+                "db": -36.43
+              },
+              {
+                "timestep": 21567,
+                "db": -41.15
+              },
+              {
+                "timestep": 22470,
+                "db": -50.31
+              },
+              {
+                "timestep": 23100,
+                "db": -57.02
+              },
+              {
+                "timestep": 23457,
+                "db": -60.52
+              },
+              {
+                "timestep": 24003,
+                "db": -66.17
+              },
+              {
+                "timestep": 24528,
+                "db": -73.42
+              },
+              {
+                "timestep": 24801,
+                "db": -77.11
+              }
+            ],
+            "hashes": {
+              "report": "6e03ea170c40d1e62e501cc8f11c3ccb6f1f3e87eae116131586326612cb6bce",
+              "input": "74b12a407d8de3f62c8556831c23cbf0e72499e67b5452a24bbb1da6a0efab58",
+              "physical_input": "3787b81340567f3e27d12cb397683c96a3882376c5d766c3d190dd899a37aa9e",
+              "spectra": "560ef758db6e500ee89f17371a5c4900a12c904cbc40f7496e14aee4d59bd7fc",
+              "native_statistics": "fa73be3d5e417fca40e4c469a39fe8b2fae8249900a8653221c1f424bc4a81b0",
+              "raw_probes": {
+                "port_it_1": "72d7fe8bb133bcbcf0ef320338babb117b8eac0f308dc720916c7cd445b091fa",
+                "port_it_2": "070649ead94a65c25a66f027a0ee4a865d94b0093b71a358d6ff4ee3a77d0c7e",
+                "port_ut_1": "4d99428de6bc964e9041a518ba1716d4e7b72cbb13286fb1f5bb58e794b217d2",
+                "port_ut_2": "6a492889ddd427dc002a65fc3d6c671dd94823cfa68372527045c133fc3fbc24"
+              },
+              "native_worker_log": "8aa2da7ecf49ca9f9f53ab49d8ad16efe552a612c4462106d77a76dcacc5ca7d",
+              "worker_receipt": "f9e22899f457ac443c14f4579b6d9dcb9e2c17339f503b074cddf898e12f9bca",
+              "enclosing_receipt": "04a859996fe1a7954d5b889c53341a9b3df17cfb0f149614d6397d0c244cac08",
+              "private_case_receipt": "cb837b67ddd569c17d3aedc9f6dd5e825fd62b3175bd1673c3b9d732f5ffe9ef"
+            },
+            "worker": {
+              "exit_code": 0,
+              "failure": null,
+              "deadline_seconds": 1800.0,
+              "wall_seconds": 154.6720209121704,
+              "monotonic_seconds": 154.67202309996355
+            },
+            "enclosing_guard": {
+              "exit_code": 0,
+              "timed_out": false,
+              "wall_seconds": 157.836,
+              "monotonic_seconds": 157.836,
+              "deadline_seconds": 1800.0
+            },
+            "forecast": {
+              "admission_seconds": 1072.7848953419493,
+              "full_allocation_seconds": 3888.480383427399,
+              "basis": "twice the longest completed primary physical stop, at unchanged lower-only speed",
+              "rate_mcps": 28.319637928680766,
+              "forecast_ceiling_seconds": 2700.0,
+              "actual_worker_guard_seconds": 1800.0,
+              "controller_sha256": "7bbf5260d4c8a468ecba53321bb569a80b79237ef269aec7b34d86aa823af858"
+            }
+          },
+          "hold": {
+            "kind": "hold60ns",
+            "native": {
+              "cells": 444675,
+              "dt_s": 5.794184636342246e-13,
+              "timesteps": 103553,
+              "numerical_time_s": 6.000052016471485e-08,
+              "iteration_wall_s": 244.00151
+            },
+            "run": {
+              "converged": false,
+              "hit_timestep_limit": true,
+              "threads": 4,
+              "engine": "cpu",
+              "exact_endcriteria": true,
+              "final_energy_db": -116.67,
+              "final_energy_bound_db": null,
+              "wall_time_s": 245.34
+            },
+            "max_timesteps": 103553,
+            "native_end_db": -150.0,
+            "case_elapsed_s": 247.25530195236206,
+            "source_cache": {
+              "records": {
+                "et": {
+                  "sha256": "a826a295b8d33bfb4820e6e5906017a48476a0fd0bba35ca67d22b85c7b043b0",
+                  "samples": 24722
+                },
+                "ht": {
+                  "sha256": "0fe5cbdf8035d859142d32fbb64ae7733bc4211b7d6af3ae3ecf474ad7fbd224",
+                  "samples": 24722
+                }
+              },
+              "complete_after_steps": 24723
+            },
+            "seed_report_sha256": "6e03ea170c40d1e62e501cc8f11c3ccb6f1f3e87eae116131586326612cb6bce",
+            "energy_trace": [
+              {
+                "timestep": 1680,
+                "db": -0.0
+              },
+              {
+                "timestep": 3402,
+                "db": -0.0
+              },
+              {
+                "timestep": 5103,
+                "db": -0.0
+              },
+              {
+                "timestep": 6867,
+                "db": -0.0
+              },
+              {
+                "timestep": 8589,
+                "db": -0.0
+              },
+              {
+                "timestep": 10353,
+                "db": -0.0
+              },
+              {
+                "timestep": 12138,
+                "db": -0.01
+              },
+              {
+                "timestep": 13944,
+                "db": -1.0
+              },
+              {
+                "timestep": 15645,
+                "db": -5.2
+              },
+              {
+                "timestep": 17262,
+                "db": -11.11
+              },
+              {
+                "timestep": 19005,
+                "db": -21.61
+              },
+              {
+                "timestep": 20622,
+                "db": -32.86
+              },
+              {
+                "timestep": 22323,
+                "db": -48.65
+              },
+              {
+                "timestep": 24066,
+                "db": -67.17
+              },
+              {
+                "timestep": 25830,
+                "db": -108.42
+              },
+              {
+                "timestep": 27594,
+                "db": -112.39
+              },
+              {
+                "timestep": 29253,
+                "db": -111.06
+              },
+              {
+                "timestep": 30933,
+                "db": -112.15
+              },
+              {
+                "timestep": 32655,
+                "db": -111.47
+              },
+              {
+                "timestep": 34335,
+                "db": -113.44
+              },
+              {
+                "timestep": 35994,
+                "db": -112.45
+              },
+              {
+                "timestep": 37695,
+                "db": -113.6
+              },
+              {
+                "timestep": 39417,
+                "db": -114.7
+              },
+              {
+                "timestep": 41181,
+                "db": -113.28
+              },
+              {
+                "timestep": 42882,
+                "db": -113.92
+              },
+              {
+                "timestep": 44625,
+                "db": -114.56
+              },
+              {
+                "timestep": 46368,
+                "db": -115.13
+              },
+              {
+                "timestep": 48069,
+                "db": -113.82
+              },
+              {
+                "timestep": 49770,
+                "db": -115.54
+              },
+              {
+                "timestep": 51492,
+                "db": -115.74
+              },
+              {
+                "timestep": 53235,
+                "db": -114.09
+              },
+              {
+                "timestep": 54936,
+                "db": -115.09
+              },
+              {
+                "timestep": 56679,
+                "db": -116.45
+              },
+              {
+                "timestep": 58380,
+                "db": -114.97
+              },
+              {
+                "timestep": 60102,
+                "db": -115.13
+              },
+              {
+                "timestep": 61761,
+                "db": -115.39
+              },
+              {
+                "timestep": 63525,
+                "db": -115.85
+              },
+              {
+                "timestep": 65310,
+                "db": -114.89
+              },
+              {
+                "timestep": 67053,
+                "db": -116.02
+              },
+              {
+                "timestep": 68796,
+                "db": -115.33
+              },
+              {
+                "timestep": 70476,
+                "db": -115.83
+              },
+              {
+                "timestep": 72156,
+                "db": -115.51
+              },
+              {
+                "timestep": 73857,
+                "db": -116.5
+              },
+              {
+                "timestep": 75537,
+                "db": -116.16
+              },
+              {
+                "timestep": 77196,
+                "db": -117.17
+              },
+              {
+                "timestep": 78876,
+                "db": -116.66
+              },
+              {
+                "timestep": 80556,
+                "db": -117.55
+              },
+              {
+                "timestep": 82257,
+                "db": -116.55
+              },
+              {
+                "timestep": 83895,
+                "db": -116.91
+              },
+              {
+                "timestep": 85575,
+                "db": -117.78
+              },
+              {
+                "timestep": 87318,
+                "db": -116.56
+              },
+              {
+                "timestep": 88935,
+                "db": -117.25
+              },
+              {
+                "timestep": 90531,
+                "db": -117.52
+              },
+              {
+                "timestep": 92190,
+                "db": -117.5
+              },
+              {
+                "timestep": 93807,
+                "db": -117.42
+              },
+              {
+                "timestep": 95361,
+                "db": -116.81
+              },
+              {
+                "timestep": 97083,
+                "db": -116.48
+              },
+              {
+                "timestep": 98826,
+                "db": -117.41
+              },
+              {
+                "timestep": 100611,
+                "db": -116.6
+              },
+              {
+                "timestep": 102396,
+                "db": -116.67
+              }
+            ],
+            "hashes": {
+              "report": "da56a2a9404ea5385997f9c7ee26ec64d545cd8671e36d5d70f60034049db3b4",
+              "input": "28abe4e3e275a59b97c0910ccb994a430b3518a55e93262856b75ed5840a3d81",
+              "physical_input": "b496d88145bc5e4f6361ebb4fb65413a9b1f4677fd0cdd2a3f721772f8a49bd8",
+              "spectra": "4957109493863bc5fb4c8c4f5c9e1130dcb48838f48cef5dba7b6a6f0c224ddd",
+              "native_statistics": "ec14c58a39d547fde133ca494791a259801af5dd728537ca46d9b9f3fc0a6be2",
+              "raw_probes": {
+                "port_it_1": "d0dca52524771c7d43810fec962f04ce04b0e5edb70d37fb3002b56acc7981fa",
+                "port_it_2": "2d3e6d345dddc19f0b8cffebda708dd27e09044598106e5f6909154ad508e7b9",
+                "port_ut_1": "00e88c9b53df39d7db9d2dbfff0b6708e7c4358511affa41be9186366c07c2c4",
+                "port_ut_2": "1dc7ca92338ebeac5f264a55be8955a73b440e8fb216e36813b1cd81bddc474c"
+              },
+              "native_worker_log": "6cdd584cd63d9679cb0df01627e41f50181bb8b9767d0284f11d91ab2c898ef5",
+              "worker_receipt": "33de05be24d6d94e0e4369f622d2f1151c6624fef26aaf70f3eb32547041b747",
+              "enclosing_receipt": "6b8432f3a63e0bda3bd81cecc496f29e31493b0d9aecf1046ef102e83693e921",
+              "private_case_receipt": "36f4d4235becbe3a602fe8054859d9391c96d61bd91ecdcc916b403d127e1874"
+            },
+            "worker": {
+              "exit_code": 0,
+              "failure": null,
+              "deadline_seconds": 1800.0,
+              "wall_seconds": 247.2378876209259,
+              "monotonic_seconds": 247.23788909998257
+            },
+            "enclosing_guard": {
+              "exit_code": 0,
+              "timed_out": false,
+              "wall_seconds": 251.229,
+              "monotonic_seconds": 251.229,
+              "deadline_seconds": 1800.0
+            },
+            "forecast": {
+              "admission_seconds": 2071.187245725287,
+              "full_allocation_seconds": 2071.187245725287,
+              "basis": "complete fixed 60 ns continuation allocation",
+              "rate_mcps": 28.319637928680766,
+              "forecast_ceiling_seconds": 2700.0,
+              "actual_worker_guard_seconds": 1800.0,
+              "controller_sha256": "7bbf5260d4c8a468ecba53321bb569a80b79237ef269aec7b34d86aa823af858"
+            }
+          },
+          "temporal_check": {
+            "passes": true,
+            "maximum_late_energy_db": -108.42,
+            "wave_change": {
+              "a": 1.1321419201124298e-06,
+              "b": 5.75833460755177e-06
+            },
+            "limits": {
+              "duration_s": 6e-08,
+              "end_db": -150.0,
+              "late_energy_db": -90.0,
+              "wave_abs": 0.002
+            }
+          }
+        },
+        {
+          "excited": 2,
+          "primary": {
+            "kind": "primary",
+            "native": {
+              "cells": 444675,
+              "dt_s": 5.794184636342246e-13,
+              "timesteps": 25200,
+              "numerical_time_s": 1.460134528358246e-08,
+              "iteration_wall_s": 55.781579
+            },
+            "run": {
+              "converged": true,
+              "hit_timestep_limit": false,
+              "threads": 4,
+              "engine": "cpu",
+              "exact_endcriteria": true,
+              "final_energy_db": null,
+              "final_energy_bound_db": -90.0,
+              "wall_time_s": 57.08
+            },
+            "max_timesteps": 200000,
+            "native_end_db": -90.0,
+            "case_elapsed_s": 58.7730507850647,
+            "source_cache": {
+              "records": {
+                "et": {
+                  "sha256": "a826a295b8d33bfb4820e6e5906017a48476a0fd0bba35ca67d22b85c7b043b0",
+                  "samples": 24722
+                },
+                "ht": {
+                  "sha256": "0fe5cbdf8035d859142d32fbb64ae7733bc4211b7d6af3ae3ecf474ad7fbd224",
+                  "samples": 24722
+                }
+              },
+              "complete_after_steps": 24723
+            },
+            "seed_report_sha256": null,
+            "energy_trace": [
+              {
+                "timestep": 1848,
+                "db": -0.0
+              },
+              {
+                "timestep": 3591,
+                "db": -0.0
+              },
+              {
+                "timestep": 5334,
+                "db": -0.0
+              },
+              {
+                "timestep": 7098,
+                "db": -0.0
+              },
+              {
+                "timestep": 8925,
+                "db": -0.0
+              },
+              {
+                "timestep": 10752,
+                "db": -0.0
+              },
+              {
+                "timestep": 12600,
+                "db": -0.58
+              },
+              {
+                "timestep": 14427,
+                "db": -0.86
+              },
+              {
+                "timestep": 16254,
+                "db": -6.96
+              },
+              {
+                "timestep": 18060,
+                "db": -15.07
+              },
+              {
+                "timestep": 19908,
+                "db": -26.94
+              },
+              {
+                "timestep": 21777,
+                "db": -43.31
+              },
+              {
+                "timestep": 23604,
+                "db": -61.15
+              }
+            ],
+            "hashes": {
+              "report": "a8251e960e6a4185644323fb798573c921d449870e38dbd94b495413d58233c4",
+              "input": "98c4387b7276c7c4803a66eaa2bdf58601832f72335ee118b4822ea2b385b097",
+              "physical_input": "6aa32331800ba98640fb6fbb3192c231d1303a42ac56a2bb2bdeceaed11d86f9",
+              "spectra": "0b6721acdcbf57b33749485507a2465c42c09cec2d80d8fd0e801a353b7e1f58",
+              "native_statistics": "357e1e2dccc428fdd68eb1830a53278b20158b05610332544e233c411eaebe7b",
+              "raw_probes": {
+                "port_it_1": "e8bef53903c2542b26a2dfd0c5fd947347fcd7a5624febac24d1290924d5efdf",
+                "port_it_2": "7c9d5612a688395a6932e7e9c2a693c316408d356edfde730737b47c20941a38",
+                "port_ut_1": "4ef9b9680273fdff8db1f9e112b79d85d2a6d1667310bb20d2178805b0aca147",
+                "port_ut_2": "8f74c954ee27783c000cfbc2295faf61a2ba125857abe2a4f46b37fc8749b8b8"
+              },
+              "native_worker_log": "67a05479fbd25cb86b0cf7fbf7944cdcbd1e62dafc1ee39fa83a0e65d873c82b",
+              "worker_receipt": "10bc4f09fdbfdf1150274d63514346908c4a2c1a3e4895739ddf34e06b949758",
+              "enclosing_receipt": "1cdf6a5d2567d00be72a94c5428a5f2bf3e35f08b8340073431b9d55384bf2da",
+              "private_case_receipt": "de2e53d398e12717a4678e2571e6ce819cb9c0b48cd49ab4eb756f371e9b8fc3"
+            },
+            "worker": {
+              "exit_code": 0,
+              "failure": null,
+              "deadline_seconds": 1800.0,
+              "wall_seconds": 58.758378744125366,
+              "monotonic_seconds": 58.75838010001462
+            },
+            "enclosing_guard": {
+              "exit_code": 0,
+              "timed_out": false,
+              "wall_seconds": 62.091,
+              "monotonic_seconds": 62.091,
+              "deadline_seconds": 1800.0
+            },
+            "forecast": {
+              "admission_seconds": 1072.7848953419493,
+              "full_allocation_seconds": 3888.480383427399,
+              "basis": "twice the longest completed primary physical stop, at unchanged lower-only speed",
+              "rate_mcps": 28.319637928680766,
+              "forecast_ceiling_seconds": 2700.0,
+              "actual_worker_guard_seconds": 1800.0,
+              "controller_sha256": "7bbf5260d4c8a468ecba53321bb569a80b79237ef269aec7b34d86aa823af858"
+            }
+          },
+          "hold": {
+            "kind": "hold60ns",
+            "native": {
+              "cells": 444675,
+              "dt_s": 5.794184636342246e-13,
+              "timesteps": 103553,
+              "numerical_time_s": 6.000052016471485e-08,
+              "iteration_wall_s": 253.475632
+            },
+            "run": {
+              "converged": false,
+              "hit_timestep_limit": true,
+              "threads": 4,
+              "engine": "cpu",
+              "exact_endcriteria": true,
+              "final_energy_db": -118.0,
+              "final_energy_bound_db": null,
+              "wall_time_s": 254.65
+            },
+            "max_timesteps": 103553,
+            "native_end_db": -150.0,
+            "case_elapsed_s": 256.5087728500366,
+            "source_cache": {
+              "records": {
+                "et": {
+                  "sha256": "a826a295b8d33bfb4820e6e5906017a48476a0fd0bba35ca67d22b85c7b043b0",
+                  "samples": 24722
+                },
+                "ht": {
+                  "sha256": "0fe5cbdf8035d859142d32fbb64ae7733bc4211b7d6af3ae3ecf474ad7fbd224",
+                  "samples": 24722
+                }
+              },
+              "complete_after_steps": 24723
+            },
+            "seed_report_sha256": "a8251e960e6a4185644323fb798573c921d449870e38dbd94b495413d58233c4",
+            "energy_trace": [
+              {
+                "timestep": 1848,
+                "db": -0.0
+              },
+              {
+                "timestep": 3612,
+                "db": -0.0
+              },
+              {
+                "timestep": 5355,
+                "db": -0.0
+              },
+              {
+                "timestep": 7161,
+                "db": -0.0
+              },
+              {
+                "timestep": 8841,
+                "db": -0.0
+              },
+              {
+                "timestep": 10584,
+                "db": -0.0
+              },
+              {
+                "timestep": 12348,
+                "db": -0.47
+              },
+              {
+                "timestep": 14049,
+                "db": -0.26
+              },
+              {
+                "timestep": 15813,
+                "db": -5.83
+              },
+              {
+                "timestep": 17577,
+                "db": -11.88
+              },
+              {
+                "timestep": 19257,
+                "db": -22.98
+              },
+              {
+                "timestep": 21021,
+                "db": -35.61
+              },
+              {
+                "timestep": 22743,
+                "db": -52.09
+              },
+              {
+                "timestep": 24507,
+                "db": -71.51
+              },
+              {
+                "timestep": 26250,
+                "db": -107.41
+              },
+              {
+                "timestep": 27993,
+                "db": -112.19
+              },
+              {
+                "timestep": 29757,
+                "db": -112.71
+              },
+              {
+                "timestep": 31395,
+                "db": -114.24
+              },
+              {
+                "timestep": 33138,
+                "db": -115.52
+              },
+              {
+                "timestep": 34881,
+                "db": -115.44
+              },
+              {
+                "timestep": 36624,
+                "db": -115.44
+              },
+              {
+                "timestep": 38346,
+                "db": -115.4
+              },
+              {
+                "timestep": 40089,
+                "db": -116.02
+              },
+              {
+                "timestep": 41874,
+                "db": -116.23
+              },
+              {
+                "timestep": 43701,
+                "db": -115.65
+              },
+              {
+                "timestep": 45444,
+                "db": -115.6
+              },
+              {
+                "timestep": 47187,
+                "db": -116.61
+              },
+              {
+                "timestep": 48993,
+                "db": -115.53
+              },
+              {
+                "timestep": 50841,
+                "db": -116.31
+              },
+              {
+                "timestep": 52647,
+                "db": -116.66
+              },
+              {
+                "timestep": 54411,
+                "db": -117.1
+              },
+              {
+                "timestep": 56154,
+                "db": -117.49
+              },
+              {
+                "timestep": 57918,
+                "db": -117.21
+              },
+              {
+                "timestep": 59745,
+                "db": -116.67
+              },
+              {
+                "timestep": 61551,
+                "db": -116.52
+              },
+              {
+                "timestep": 63357,
+                "db": -117.43
+              },
+              {
+                "timestep": 63882,
+                "db": -117.42
+              },
+              {
+                "timestep": 64050,
+                "db": -116.43
+              },
+              {
+                "timestep": 64218,
+                "db": -117.23
+              },
+              {
+                "timestep": 64491,
+                "db": -117.24
+              },
+              {
+                "timestep": 65478,
+                "db": -117.29
+              },
+              {
+                "timestep": 66927,
+                "db": -117.19
+              },
+              {
+                "timestep": 68607,
+                "db": -117.38
+              },
+              {
+                "timestep": 70224,
+                "db": -116.76
+              },
+              {
+                "timestep": 71862,
+                "db": -117.23
+              },
+              {
+                "timestep": 73668,
+                "db": -117.49
+              },
+              {
+                "timestep": 75495,
+                "db": -117.2
+              },
+              {
+                "timestep": 77301,
+                "db": -117.31
+              },
+              {
+                "timestep": 79170,
+                "db": -117.9
+              },
+              {
+                "timestep": 80976,
+                "db": -117.65
+              },
+              {
+                "timestep": 82845,
+                "db": -117.79
+              },
+              {
+                "timestep": 84609,
+                "db": -117.97
+              },
+              {
+                "timestep": 86373,
+                "db": -117.85
+              },
+              {
+                "timestep": 88158,
+                "db": -117.62
+              },
+              {
+                "timestep": 89859,
+                "db": -117.85
+              },
+              {
+                "timestep": 91623,
+                "db": -117.92
+              },
+              {
+                "timestep": 93408,
+                "db": -118.08
+              },
+              {
+                "timestep": 95277,
+                "db": -117.81
+              },
+              {
+                "timestep": 97041,
+                "db": -117.98
+              },
+              {
+                "timestep": 98847,
+                "db": -117.88
+              },
+              {
+                "timestep": 100569,
+                "db": -117.69
+              },
+              {
+                "timestep": 102270,
+                "db": -118.0
+              }
+            ],
+            "hashes": {
+              "report": "ec6c8401fdf9fbdaaa08ab6396f01468dc9e9d9fe1b44186298afb06320d05d7",
+              "input": "da36b4269f33e815c730d97c2034946623b137aa36c32a117b53f9371579bf33",
+              "physical_input": "83af52c613b743382c73c6b2324a37ed02d92dbea17b25bcd7294045a8d0a996",
+              "spectra": "05dbc945cfc4a9d5496d85f3918457a5e12b7fcac5d06b6d97a4b930829479c8",
+              "native_statistics": "5a6a70042cf46e58b5dad28fb3e4bd2b235cacb3a7ebd2378d596a3174393c94",
+              "raw_probes": {
+                "port_it_1": "c4a522c9d60f4c1ee811cba34b92574d1d3ca029b12b2e7a03fc514bc275868c",
+                "port_it_2": "e21e18de582218abb74bb475ecec49d3533cd17ebd6c505df84bc4f095240338",
+                "port_ut_1": "dc926f7cbd2ec1a6a3c238bb6f29d7eb2bef84755e6b9be3a3ad557dccdd8884",
+                "port_ut_2": "dae9dd27868c0b219b8805da10f78218fdd635bfb38358a62171741c16933113"
+              },
+              "native_worker_log": "c45dcdfa993d53d94cd3946b28d4c4a01e9795794f0327beb4437613b7acd239",
+              "worker_receipt": "8a47e63fbbbb2c748131aa172d8c194611a2f35ab2c780cfeeb2a188a1d77d93",
+              "enclosing_receipt": "d5bfa1affcecdf1a21940cf7fb8e04d541c7c852c27e3a65e32d926fa24d4420",
+              "private_case_receipt": "f875f8640af3e00799595c369a8b6a98b59ca7760337321d12907e80d6c22a6b"
+            },
+            "worker": {
+              "exit_code": 0,
+              "failure": null,
+              "deadline_seconds": 1800.0,
+              "wall_seconds": 256.4925105571747,
+              "monotonic_seconds": 256.4925122000277
+            },
+            "enclosing_guard": {
+              "exit_code": 0,
+              "timed_out": false,
+              "wall_seconds": 261.611,
+              "monotonic_seconds": 261.611,
+              "deadline_seconds": 1800.0
+            },
+            "forecast": {
+              "admission_seconds": 2071.187245725287,
+              "full_allocation_seconds": 2071.187245725287,
+              "basis": "complete fixed 60 ns continuation allocation",
+              "rate_mcps": 28.319637928680766,
+              "forecast_ceiling_seconds": 2700.0,
+              "actual_worker_guard_seconds": 1800.0,
+              "controller_sha256": "7bbf5260d4c8a468ecba53321bb569a80b79237ef269aec7b34d86aa823af858"
+            }
+          },
+          "temporal_check": {
+            "passes": true,
+            "maximum_late_energy_db": -107.41,
+            "wave_change": {
+              "a": 9.576909029236998e-07,
+              "b": 7.178113823091398e-06
+            },
+            "limits": {
+              "duration_s": 6e-08,
+              "end_db": -150.0,
+              "late_energy_db": -90.0,
+              "wave_abs": 0.002
+            }
+          }
+        }
+      ],
+      "incident_condition_max": 2.040336348045807
+    },
+    {
+      "cpw": 50,
+      "padding": 24,
+      "sample_prefix": "n50_p24",
+      "records": [
+        {
+          "excited": 1,
+          "primary": {
+            "kind": "primary",
+            "native": {
+              "cells": 290493,
+              "dt_s": 7.030066034017416e-13,
+              "timesteps": 20769,
+              "numerical_time_s": 1.460074414605077e-08,
+              "iteration_wall_s": 38.71268
+            },
+            "run": {
+              "converged": true,
+              "hit_timestep_limit": false,
+              "threads": 4,
+              "engine": "cpu",
+              "exact_endcriteria": true,
+              "final_energy_db": null,
+              "final_energy_bound_db": -90.0,
+              "wall_time_s": 39.56
+            },
+            "max_timesteps": 200000,
+            "native_end_db": -90.0,
+            "case_elapsed_s": 41.35526156425476,
+            "source_cache": {
+              "records": {
+                "et": {
+                  "sha256": "c47b1d2bec0c9cf95475fc8f910e92af5368e9d6b6ac158f93ffb510860e3b25",
+                  "samples": 20376
+                },
+                "ht": {
+                  "sha256": "f6a537a5c3b470a9fd3e3a5f0b6dbca93c157e3e319f401ca207ab2aaccf9be8",
+                  "samples": 20376
+                }
+              },
+              "complete_after_steps": 20377
+            },
+            "seed_report_sha256": null,
+            "energy_trace": [
+              {
+                "timestep": 2363,
+                "db": -0.0
+              },
+              {
+                "timestep": 4554,
+                "db": -0.0
+              },
+              {
+                "timestep": 6732,
+                "db": -0.0
+              },
+              {
+                "timestep": 8832,
+                "db": -0.0
+              },
+              {
+                "timestep": 10965,
+                "db": -0.26
+              },
+              {
+                "timestep": 13107,
+                "db": -5.55
+              },
+              {
+                "timestep": 15198,
+                "db": -17.74
+              },
+              {
+                "timestep": 17238,
+                "db": -35.32
+              },
+              {
+                "timestep": 19380,
+                "db": -60.71
+              }
+            ],
+            "hashes": {
+              "report": "6f35189d6e793939806e033398d171f942d37c3d294a4fb2b3d91f0153e38661",
+              "input": "3567df87b756ea35448f919769490a4f96fb666a7897a5451e1144eba5eadc9d",
+              "physical_input": "a8378233d6d059ede2434c75816d97cd0a67d71a3e7d27b96bb78ab4898b653d",
+              "spectra": "76a758be7f51f4d957ed62378c63d8b68de0f68fd095b109b24e66bffecb6080",
+              "native_statistics": "b45d5807420b84e45e13ce7f0eb3495469e45fc9e545981cc31296234484cc4f",
+              "raw_probes": {
+                "port_it_1": "fd6b1a2f53cb19c9d4fb259c38f4af8fa0b16cb995eff0e8900ca76c5b8a0ee9",
+                "port_it_2": "67c8c507348b6d8dc01e82a5400ca36aaf213dff9dd9e5664896ed52b44cbc47",
+                "port_ut_1": "0347173493d3862a628310d419d75085fed2fc2f9ef426e65e8229644797acda",
+                "port_ut_2": "fb21b24de5374d12038e21061cb06ba197c545fba2594cfae239e22fd2bf7392"
+              },
+              "native_worker_log": "76edac3f22d8aa24fe1950f9d9b8396a9b6ebf8d2e38e7fd95b73fd33f8888b8",
+              "worker_receipt": "ae229bd1a2a7904556fba27a81d9919a60a3bfe8a0fbf155ee9287e259d7ce42",
+              "enclosing_receipt": "79759aa1ccb179efa830e1a19920556ad69d2e7a81a889b2d00cc28f328a7819",
+              "private_case_receipt": "0dca49dc29086968938b92c82047f136434e1d0750b047c33d7aec2ded060b52"
+            },
+            "worker": {
+              "exit_code": 0,
+              "failure": null,
+              "deadline_seconds": 1800.0,
+              "wall_seconds": 41.33984327316284,
+              "monotonic_seconds": 41.33984460000647
+            },
+            "enclosing_guard": {
+              "exit_code": 0,
+              "timed_out": false,
+              "wall_seconds": 44.264,
+              "monotonic_seconds": 44.264,
+              "deadline_seconds": 1800.0
+            },
+            "forecast": {
+              "admission_seconds": 1022.5271948998458,
+              "full_allocation_seconds": 1022.5271948998458,
+              "basis": "full native allocation at lower-only measured speed",
+              "rate_mcps": 77.24788836721612,
+              "forecast_ceiling_seconds": 1800.0,
+              "actual_worker_guard_seconds": 1800.0,
+              "controller_sha256": "cd571e19693a4a062c4c76e6c95b34709f6595facc305a90ee26967fe7dc28ed"
+            }
+          },
+          "hold": {
+            "kind": "hold60ns",
+            "native": {
+              "cells": 290493,
+              "dt_s": 7.030066034017416e-13,
+              "timesteps": 85348,
+              "numerical_time_s": 6.000020758713184e-08,
+              "iteration_wall_s": 168.509667
+            },
+            "run": {
+              "converged": false,
+              "hit_timestep_limit": true,
+              "threads": 4,
+              "engine": "cpu",
+              "exact_endcriteria": true,
+              "final_energy_db": -119.42,
+              "final_energy_bound_db": null,
+              "wall_time_s": 169.37
+            },
+            "max_timesteps": 85348,
+            "native_end_db": -150.0,
+            "case_elapsed_s": 171.08565044403076,
+            "source_cache": {
+              "records": {
+                "et": {
+                  "sha256": "c47b1d2bec0c9cf95475fc8f910e92af5368e9d6b6ac158f93ffb510860e3b25",
+                  "samples": 20376
+                },
+                "ht": {
+                  "sha256": "f6a537a5c3b470a9fd3e3a5f0b6dbca93c157e3e319f401ca207ab2aaccf9be8",
+                  "samples": 20376
+                }
+              },
+              "complete_after_steps": 20377
+            },
+            "seed_report_sha256": "6f35189d6e793939806e033398d171f942d37c3d294a4fb2b3d91f0153e38661",
+            "energy_trace": [
+              {
+                "timestep": 2312,
+                "db": -0.0
+              },
+              {
+                "timestep": 4539,
+                "db": -0.0
+              },
+              {
+                "timestep": 6732,
+                "db": -0.0
+              },
+              {
+                "timestep": 8806,
+                "db": -0.0
+              },
+              {
+                "timestep": 10829,
+                "db": -0.14
+              },
+              {
+                "timestep": 12886,
+                "db": -4.74
+              },
+              {
+                "timestep": 14943,
+                "db": -15.77
+              },
+              {
+                "timestep": 16966,
+                "db": -32.45
+              },
+              {
+                "timestep": 19006,
+                "db": -55.97
+              },
+              {
+                "timestep": 21063,
+                "db": -101.62
+              },
+              {
+                "timestep": 23115,
+                "db": -115.12
+              },
+              {
+                "timestep": 25092,
+                "db": -115.9
+              },
+              {
+                "timestep": 27115,
+                "db": -116.39
+              },
+              {
+                "timestep": 29138,
+                "db": -115.69
+              },
+              {
+                "timestep": 31178,
+                "db": -115.9
+              },
+              {
+                "timestep": 33150,
+                "db": -115.94
+              },
+              {
+                "timestep": 35224,
+                "db": -116.52
+              },
+              {
+                "timestep": 37230,
+                "db": -116.92
+              },
+              {
+                "timestep": 39253,
+                "db": -117.73
+              },
+              {
+                "timestep": 41259,
+                "db": -118.42
+              },
+              {
+                "timestep": 43282,
+                "db": -118.09
+              },
+              {
+                "timestep": 45288,
+                "db": -117.62
+              },
+              {
+                "timestep": 47334,
+                "db": -117.1
+              },
+              {
+                "timestep": 49385,
+                "db": -117.52
+              },
+              {
+                "timestep": 51374,
+                "db": -117.86
+              },
+              {
+                "timestep": 53363,
+                "db": -118.31
+              },
+              {
+                "timestep": 55369,
+                "db": -118.68
+              },
+              {
+                "timestep": 57290,
+                "db": -118.56
+              },
+              {
+                "timestep": 59041,
+                "db": -118.32
+              },
+              {
+                "timestep": 61047,
+                "db": -118.2
+              },
+              {
+                "timestep": 63104,
+                "db": -118.42
+              },
+              {
+                "timestep": 65195,
+                "db": -119.17
+              },
+              {
+                "timestep": 67218,
+                "db": -119.27
+              },
+              {
+                "timestep": 69275,
+                "db": -119.15
+              },
+              {
+                "timestep": 71332,
+                "db": -118.7
+              },
+              {
+                "timestep": 73338,
+                "db": -118.7
+              },
+              {
+                "timestep": 75327,
+                "db": -118.86
+              },
+              {
+                "timestep": 77333,
+                "db": -119.0
+              },
+              {
+                "timestep": 79350,
+                "db": -119.52
+              },
+              {
+                "timestep": 81396,
+                "db": -119.65
+              },
+              {
+                "timestep": 83436,
+                "db": -119.42
+              }
+            ],
+            "hashes": {
+              "report": "c8b67f2d761563bd02c1aac9181dc5d4c851cb6bed06f9f1324153931632ff76",
+              "input": "860513afc4ab98233c688d98e8a89c1631bef08eab7947f6710b317f806ca0bf",
+              "physical_input": "516b7681a7769429e7910766f336b695096eb9a0b7d39b2f505dfdc108922028",
+              "spectra": "ffad1fe873c5719c5fdc1379cfbb74e95db3cbb69de65801975851e88453d81d",
+              "native_statistics": "1031740c4e3df7496c401ea7606731343333cce55fa905491babecf456d8233e",
+              "raw_probes": {
+                "port_it_1": "6bfab9dde21834869cf176281558004661d9eba9d3c5fd4f555228e5abd29d89",
+                "port_it_2": "9a8cb3bbec3a9ae9a597d3c949c98970924d2de7d9034384d7b0749b910ab944",
+                "port_ut_1": "287e6d4de1af697798dc77f2353030d65c6c014fcc0b9a0205730b54c0b0114a",
+                "port_ut_2": "e6b14aca731bc67fed8ef278050f359610cd1ea81a58e3e61243f5d5c3508a26"
+              },
+              "native_worker_log": "3e4415368e3a76cf291fc8f81165f132022724ee8384201e3766bed4f8246240",
+              "worker_receipt": "3232191edeb7e08d00799ff63b690ed1c1647a03c84ce40385a0945f528b199d",
+              "enclosing_receipt": "9e276613054e6a261c45d803eacebdf3a2a3b67f6fe40e27c7421acd7b8f40b7",
+              "private_case_receipt": "f2a8a049addb4424787b1ea7a2f7449e29a3198a39c9de49c3545bdf9232f56c"
+            },
+            "worker": {
+              "exit_code": 0,
+              "failure": null,
+              "deadline_seconds": 1800.0,
+              "wall_seconds": 171.06841373443604,
+              "monotonic_seconds": 171.06841439998243
+            },
+            "enclosing_guard": {
+              "exit_code": 0,
+              "timed_out": false,
+              "wall_seconds": 174.656,
+              "monotonic_seconds": 174.656,
+              "deadline_seconds": 1800.0
+            },
+            "forecast": {
+              "admission_seconds": 505.1444551515602,
+              "full_allocation_seconds": 505.1444551515602,
+              "basis": "full native allocation at lower-only measured speed",
+              "rate_mcps": 77.24788836721612,
+              "forecast_ceiling_seconds": 1800.0,
+              "actual_worker_guard_seconds": 1800.0,
+              "controller_sha256": "cd571e19693a4a062c4c76e6c95b34709f6595facc305a90ee26967fe7dc28ed"
+            }
+          },
+          "temporal_check": {
+            "passes": true,
+            "maximum_late_energy_db": -101.62,
+            "wave_change": {
+              "a": 7.680777645499916e-07,
+              "b": 6.413559900055971e-06
+            },
+            "limits": {
+              "duration_s": 6e-08,
+              "end_db": -150.0,
+              "late_energy_db": -90.0,
+              "wave_abs": 0.002
+            }
+          }
+        },
+        {
+          "excited": 2,
+          "primary": {
+            "kind": "primary",
+            "native": {
+              "cells": 290493,
+              "dt_s": 7.030066034017416e-13,
+              "timesteps": 20838,
+              "numerical_time_s": 1.464925160168549e-08,
+              "iteration_wall_s": 41.208206
+            },
+            "run": {
+              "converged": true,
+              "hit_timestep_limit": false,
+              "threads": 4,
+              "engine": "cpu",
+              "exact_endcriteria": true,
+              "final_energy_db": null,
+              "final_energy_bound_db": -90.0,
+              "wall_time_s": 42.1
+            },
+            "max_timesteps": 200000,
+            "native_end_db": -90.0,
+            "case_elapsed_s": 44.00993490219116,
+            "source_cache": {
+              "records": {
+                "et": {
+                  "sha256": "c47b1d2bec0c9cf95475fc8f910e92af5368e9d6b6ac158f93ffb510860e3b25",
+                  "samples": 20376
+                },
+                "ht": {
+                  "sha256": "f6a537a5c3b470a9fd3e3a5f0b6dbca93c157e3e319f401ca207ab2aaccf9be8",
+                  "samples": 20376
+                }
+              },
+              "complete_after_steps": 20377
+            },
+            "seed_report_sha256": null,
+            "energy_trace": [
+              {
+                "timestep": 2108,
+                "db": -0.0
+              },
+              {
+                "timestep": 4140,
+                "db": -0.0
+              },
+              {
+                "timestep": 6154,
+                "db": -0.0
+              },
+              {
+                "timestep": 8177,
+                "db": -0.0
+              },
+              {
+                "timestep": 10200,
+                "db": -1.37
+              },
+              {
+                "timestep": 12240,
+                "db": -2.47
+              },
+              {
+                "timestep": 14263,
+                "db": -11.29
+              },
+              {
+                "timestep": 16284,
+                "db": -26.87
+              },
+              {
+                "timestep": 18285,
+                "db": -48.2
+              },
+              {
+                "timestep": 20298,
+                "db": -75.18
+              }
+            ],
+            "hashes": {
+              "report": "19dde95ee64454ab90876e04c0ecff58643de0a6b5d68c2f7d3855b5e1f56a90",
+              "input": "e5356fca568560b80e8786f02a6498c695a50a749507899ba1f87014efcd42b2",
+              "physical_input": "269bf1d4a59087da8a3d90bb420e95c8129f2832d796a189bc8a0f74c9647941",
+              "spectra": "2bb73b0e92f169488c96fa846ad6fd7017a93041f510558af148e7975439ed0e",
+              "native_statistics": "9c0f40095d21062f001eb499395e2a86727037d62e3101fdd19d8076ab332a73",
+              "raw_probes": {
+                "port_it_1": "4878cc149486ceaa1519b9fac79ca63efd4a8761ee931ebbdc1f1751888dd545",
+                "port_it_2": "a6c6cead9d77b0967fc4402ca03bb4b21f0bb907be47cf0dbbcbe6ef0271d262",
+                "port_ut_1": "02a5c72cd2aa5e2648cc78ae7953621d2570d2845043355b7a5672e9c287671b",
+                "port_ut_2": "76aff75ee25016612fcb11db84f0311666551f933aefa13482757ae62b8e8563"
+              },
+              "native_worker_log": "dbb8b0074584dcf3be4e193f5304a304115a491ade1ec73a7039071463c8be1e",
+              "worker_receipt": "b8b672c914b5f8ff9192e9407c32d8e1f1340e0e1bbe6d7c4eb6ef8ba9c44c51",
+              "enclosing_receipt": "7a841d260ca2b703dced3ba003f6875030d977defc255a6e4ef0303bca695d50",
+              "private_case_receipt": "d803962ccc573d3773b0ee78129f54488bf0f28a8cf2ea1c5ea024fba7f54206"
+            },
+            "worker": {
+              "exit_code": 0,
+              "failure": null,
+              "deadline_seconds": 1800.0,
+              "wall_seconds": 43.9950475692749,
+              "monotonic_seconds": 43.99504900001921
+            },
+            "enclosing_guard": {
+              "exit_code": 0,
+              "timed_out": false,
+              "wall_seconds": 47.092,
+              "monotonic_seconds": 47.091,
+              "deadline_seconds": 1800.0
+            },
+            "forecast": {
+              "admission_seconds": 1022.5271948998458,
+              "full_allocation_seconds": 1022.5271948998458,
+              "basis": "full native allocation at lower-only measured speed",
+              "rate_mcps": 77.24788836721612,
+              "forecast_ceiling_seconds": 1800.0,
+              "actual_worker_guard_seconds": 1800.0,
+              "controller_sha256": "cd571e19693a4a062c4c76e6c95b34709f6595facc305a90ee26967fe7dc28ed"
+            }
+          },
+          "hold": {
+            "kind": "hold60ns",
+            "native": {
+              "cells": 290493,
+              "dt_s": 7.030066034017416e-13,
+              "timesteps": 85348,
+              "numerical_time_s": 6.000020758713184e-08,
+              "iteration_wall_s": 167.1542
+            },
+            "run": {
+              "converged": false,
+              "hit_timestep_limit": true,
+              "threads": 4,
+              "engine": "cpu",
+              "exact_endcriteria": true,
+              "final_energy_db": -119.53,
+              "final_energy_bound_db": null,
+              "wall_time_s": 168.04
+            },
+            "max_timesteps": 85348,
+            "native_end_db": -150.0,
+            "case_elapsed_s": 170.02154350280762,
+            "source_cache": {
+              "records": {
+                "et": {
+                  "sha256": "c47b1d2bec0c9cf95475fc8f910e92af5368e9d6b6ac158f93ffb510860e3b25",
+                  "samples": 20376
+                },
+                "ht": {
+                  "sha256": "f6a537a5c3b470a9fd3e3a5f0b6dbca93c157e3e319f401ca207ab2aaccf9be8",
+                  "samples": 20376
+                }
+              },
+              "complete_after_steps": 20377
+            },
+            "seed_report_sha256": "19dde95ee64454ab90876e04c0ecff58643de0a6b5d68c2f7d3855b5e1f56a90",
+            "energy_trace": [
+              {
+                "timestep": 2139,
+                "db": -0.0
+              },
+              {
+                "timestep": 4209,
+                "db": -0.0
+              },
+              {
+                "timestep": 6256,
+                "db": -0.0
+              },
+              {
+                "timestep": 8313,
+                "db": -0.0
+              },
+              {
+                "timestep": 10350,
+                "db": -0.22
+              },
+              {
+                "timestep": 12376,
+                "db": -2.86
+              },
+              {
+                "timestep": 14433,
+                "db": -12.27
+              },
+              {
+                "timestep": 16490,
+                "db": -27.83
+              },
+              {
+                "timestep": 18561,
+                "db": -50.99
+              },
+              {
+                "timestep": 20604,
+                "db": -80.86
+              },
+              {
+                "timestep": 22627,
+                "db": -111.09
+              },
+              {
+                "timestep": 24650,
+                "db": -115.65
+              },
+              {
+                "timestep": 26673,
+                "db": -115.58
+              },
+              {
+                "timestep": 28730,
+                "db": -116.97
+              },
+              {
+                "timestep": 30753,
+                "db": -117.34
+              },
+              {
+                "timestep": 32775,
+                "db": -116.51
+              },
+              {
+                "timestep": 34799,
+                "db": -117.58
+              },
+              {
+                "timestep": 36822,
+                "db": -118.05
+              },
+              {
+                "timestep": 38845,
+                "db": -117.43
+              },
+              {
+                "timestep": 40868,
+                "db": -117.71
+              },
+              {
+                "timestep": 42840,
+                "db": -116.34
+              },
+              {
+                "timestep": 44812,
+                "db": -116.68
+              },
+              {
+                "timestep": 46818,
+                "db": -117.48
+              },
+              {
+                "timestep": 48841,
+                "db": -118.11
+              },
+              {
+                "timestep": 50847,
+                "db": -118.19
+              },
+              {
+                "timestep": 52870,
+                "db": -117.78
+              },
+              {
+                "timestep": 54910,
+                "db": -118.52
+              },
+              {
+                "timestep": 56925,
+                "db": -117.49
+              },
+              {
+                "timestep": 58888,
+                "db": -118.56
+              },
+              {
+                "timestep": 60877,
+                "db": -118.45
+              },
+              {
+                "timestep": 62917,
+                "db": -118.64
+              },
+              {
+                "timestep": 64940,
+                "db": -118.94
+              },
+              {
+                "timestep": 66963,
+                "db": -118.6
+              },
+              {
+                "timestep": 68969,
+                "db": -118.64
+              },
+              {
+                "timestep": 70958,
+                "db": -118.97
+              },
+              {
+                "timestep": 72981,
+                "db": -119.18
+              },
+              {
+                "timestep": 75140,
+                "db": -119.55
+              },
+              {
+                "timestep": 77367,
+                "db": -118.64
+              },
+              {
+                "timestep": 79611,
+                "db": -119.07
+              },
+              {
+                "timestep": 81834,
+                "db": -118.95
+              },
+              {
+                "timestep": 83973,
+                "db": -119.53
+              }
+            ],
+            "hashes": {
+              "report": "db22b05054c13ea7cddb53fd8b4bf8bccc922162c5db7cc4a5f509fe29268ad1",
+              "input": "41403f8a2dfea07c56675cde391cb00136270de739fdb29d64583c1e9e9941ec",
+              "physical_input": "ae93c36077d77ab4df4636f9532cffd7f5ce2b011441d121d8e6c059fbea3ee5",
+              "spectra": "78c9c1188fbd94b97a0fa75bc5e252cec461bdfa0c7c49ef0e8d2e9b30b0a0e9",
+              "native_statistics": "f65259d97a4631a36bdbc29ac8acba0959638a9d6bc32143d2c3df046df20a01",
+              "raw_probes": {
+                "port_it_1": "22380a8f7d69cfa2c2432cf484c2e2a3301547b8e96c490b668ad695767e462d",
+                "port_it_2": "ef99c5c13030a429da846c7d7061402aa14dd3693a6becc726aed5503b713ca6",
+                "port_ut_1": "b52046bf9b2a6b150efd3077dd11c4fecec6d77ea7df31a2e049133ea0b57eec",
+                "port_ut_2": "719d96b4d6a2e519c69aaa28e67c30a0641659646b9bc7a8e352ecccbfe408b2"
+              },
+              "native_worker_log": "b6fc60d3960545fbbc390cc6fec2311c8b234c1e61f085dab7ca1b341b7ebb15",
+              "worker_receipt": "3b1ff8e6dbd105a3f68e8afadc5193921027a9c9f5fa63e55ebd30cb83939983",
+              "enclosing_receipt": "20a93f5c81b4aca94f8a05adfd3edab9ee6096e85e0b00abf8233161e60dae8b",
+              "private_case_receipt": "adb0b477fddcf927a1e6a10b95c3db0db81da1418154d5269c546e5db2269b9b"
+            },
+            "worker": {
+              "exit_code": 0,
+              "failure": null,
+              "deadline_seconds": 1800.0,
+              "wall_seconds": 170.00959753990173,
+              "monotonic_seconds": 170.0095989999827
+            },
+            "enclosing_guard": {
+              "exit_code": 0,
+              "timed_out": false,
+              "wall_seconds": 173.795,
+              "monotonic_seconds": 173.795,
+              "deadline_seconds": 1800.0
+            },
+            "forecast": {
+              "admission_seconds": 505.1444551515602,
+              "full_allocation_seconds": 505.1444551515602,
+              "basis": "full native allocation at lower-only measured speed",
+              "rate_mcps": 77.24788836721612,
+              "forecast_ceiling_seconds": 1800.0,
+              "actual_worker_guard_seconds": 1800.0,
+              "controller_sha256": "cd571e19693a4a062c4c76e6c95b34709f6595facc305a90ee26967fe7dc28ed"
+            }
+          },
+          "temporal_check": {
+            "passes": true,
+            "maximum_late_energy_db": -111.09,
+            "wave_change": {
+              "a": 1.7570114307776335e-06,
+              "b": 5.896558515072738e-06
+            },
+            "limits": {
+              "duration_s": 6e-08,
+              "end_db": -150.0,
+              "late_energy_db": -90.0,
+              "wave_abs": 0.002
+            }
+          }
+        }
+      ],
+      "incident_condition_max": 1.77929882028484
+    }
+  ],
+  "comparison": {
+    "protocol": "uniform-te10-dielectric-step-v3",
+    "limits": {
+      "target_abs": 0.01,
+      "mesh_abs": 0.003,
+      "boundary_abs": 0.002,
+      "reciprocity_abs": 0.002,
+      "power_abs": 0.01
+    },
+    "rows": [
+      {
+        "cpw": 40,
+        "target_abs_max": 0.004774206716389466,
+        "mesh_abs_max": null,
+        "reciprocity_abs_max": 4.838052833243454e-06,
+        "power_error_max": 8.13861254378434e-06,
+        "matches": true,
+        "mesh_pair_passes": false,
+        "qa_passes": true,
+        "samples": [
+          {
+            "f_ghz": 9.8,
+            "interface_rho": [
+              -0.320929025317585,
+              -0.0006299161921460844
+            ],
+            "s21_abs": 0.9470995455701808,
+            "s21_phase_deg": -155.62368221663527
+          },
+          {
+            "f_ghz": 9.9,
+            "interface_rho": [
+              -0.31836076227352,
+              -0.0004206617318914785
+            ],
+            "s21_abs": 0.9479704992433513,
+            "s21_phase_deg": -163.06169769539588
+          },
+          {
+            "f_ghz": 10.0,
+            "interface_rho": [
+              -0.31590205592364684,
+              -0.00019305232445974472
+            ],
+            "s21_abs": 0.9487919688040527,
+            "s21_phase_deg": -170.46571558918754
+          },
+          {
+            "f_ghz": 10.1,
+            "interface_rho": [
+              -0.3135433390562931,
+              5.414251809777408e-05
+            ],
+            "s21_abs": 0.9495729785795496,
+            "s21_phase_deg": -177.8372622059555
+          },
+          {
+            "f_ghz": 10.2,
+            "interface_rho": [
+              -0.3112717733832544,
+              0.00031911642727279764
+            ],
+            "s21_abs": 0.9503206188707256,
+            "s21_phase_deg": 174.82184714056393
+          }
+        ]
+      },
+      {
+        "cpw": 50,
+        "target_abs_max": 0.0030053592928392762,
+        "mesh_abs_max": 0.0017693016544993024,
+        "reciprocity_abs_max": 5.483538820422153e-06,
+        "power_error_max": 6.8944431178552534e-06,
+        "matches": true,
+        "mesh_pair_passes": true,
+        "qa_passes": true,
+        "samples": [
+          {
+            "f_ghz": 9.8,
+            "interface_rho": [
+              -0.32102045411463853,
+              -0.0004176210363329716
+            ],
+            "s21_abs": 0.9470712395903468,
+            "s21_phase_deg": -155.52774322999448
+          },
+          {
+            "f_ghz": 9.9,
+            "interface_rho": [
+              -0.31842045760506443,
+              -0.0002850578913562938
+            ],
+            "s21_abs": 0.9479501039922175,
+            "s21_phase_deg": -162.9630112459081
+          },
+          {
+            "f_ghz": 10.0,
+            "interface_rho": [
+              -0.3159336685427013,
+              -0.00013969384240165348
+            ],
+            "s21_abs": 0.9487813130675009,
+            "s21_phase_deg": -170.3644641079598
+          },
+          {
+            "f_ghz": 10.1,
+            "interface_rho": [
+              -0.31355286629790086,
+              1.8867654138344695e-05
+            ],
+            "s21_abs": 0.9495702030568304,
+            "s21_phase_deg": -177.73343100421667
+          },
+          {
+            "f_ghz": 10.2,
+            "interface_rho": [
+              -0.31126710800622287,
+              0.00019259458079840674
+            ],
+            "s21_abs": 0.950322511044265,
+            "s21_phase_deg": 174.9285199531111
+          }
+        ]
+      },
+      {
+        "cpw": 60,
+        "target_abs_max": 0.0020925130688866484,
+        "mesh_abs_max": 0.0009132587598427992,
+        "reciprocity_abs_max": 3.5100498694267752e-06,
+        "power_error_max": 1.0655478766774529e-05,
+        "matches": true,
+        "mesh_pair_passes": true,
+        "qa_passes": true,
+        "samples": [
+          {
+            "f_ghz": 9.8,
+            "interface_rho": [
+              -0.32107150479785584,
+              -0.00028531387468869277
+            ],
+            "s21_abs": 0.9470510021493648,
+            "s21_phase_deg": -155.47797289274234
+          },
+          {
+            "f_ghz": 9.9,
+            "interface_rho": [
+              -0.31845468964172813,
+              -0.00019728328697664297
+            ],
+            "s21_abs": 0.9479396104515194,
+            "s21_phase_deg": -162.91196887332822
+          },
+          {
+            "f_ghz": 10.0,
+            "interface_rho": [
+              -0.31595183114609693,
+              -9.733083582441977e-05
+            ],
+            "s21_abs": 0.9487753700393425,
+            "s21_phase_deg": -170.31209759873727
+          },
+          {
+            "f_ghz": 10.1,
+            "interface_rho": [
+              -0.31355807518290396,
+              1.2597811387667984e-05
+            ],
+            "s21_abs": 0.9495674462407316,
+            "s21_phase_deg": -177.67973835642982
+          },
+          {
+            "f_ghz": 10.2,
+            "interface_rho": [
+              -0.3112644204030405,
+              0.00013420386018660335
+            ],
+            "s21_abs": 0.9503246630742453,
+            "s21_phase_deg": 174.9835293145538
+          }
+        ]
+      }
+    ],
+    "missing_cases": [],
+    "boundary_abs_max": 7.40515385593804e-06,
+    "boundary_control": {
+      "target_abs_max": 0.003006872685588466,
+      "reciprocity_abs_max": 4.095001296237321e-06,
+      "power_error_max": 1.2834343464440678e-05,
+      "passes": true
+    },
+    "qualified_scope": true,
+    "scope": "complex TE10 power-wave S matrix on fixed planes, with recorded 60 ns MUR controls",
+    "termination": "MUR",
+    "hold_limits": {
+      "duration_s": 6e-08,
+      "end_db": -150.0,
+      "late_energy_db": -90.0,
+      "wave_abs": 0.002
+    }
+  },
+  "samples": {
+    "filename": "waveguide_step_mur_samples.npz",
+    "sha256": "96493145771183ecf158b9ed0781cfa803fcf1fe9ee25c0bf53daf8a3d49fc13",
+    "bytes": 83378
+  },
+  "exporter_sha256": "2b259cf8e91e45ab68be60fab633f5fa8c8e0a61e80c100ac3c8f243c88a29c0",
+  "plan_sha256": "3d329eb989b797fe00276ae57ecd1c628078fcb871bdef9a368a2f0fe9676a50",
+  "negative_raw_record_audit": {
+    "filename": "negative-integrity-audit.json",
+    "sha256": "43d546165177908cd478876b145dfcd9ddab0560634bafbd71e58b3c38438600",
+    "rejected_cases": 14,
+    "native_propagations": 0
+  },
+  "matched_termination_diagnostics": {
+    "diagnostic_only": true,
+    "source_head": "7886b55f0061a78238e822ed4ee7d0df943e56bb",
+    "private_driver_sha256": "f444491698dcd63dd031077e3a2b6da56f4043b2b0471f56f11afda19aa0b840",
+    "native_end_db": -150.0,
+    "physical_window_s": 6e-08,
+    "source_cache_matches_new_MUR_hold": true,
+    "common_input_sha256": "b4956c065026781efed2e31d618269ccc1d9a13d0fbd98147c12da1dfcb80a22",
+    "normalized_difference": "Only zmin/zmax and random display colors excluded",
+    "records": [
+      {
+        "termination": "PML_8",
+        "source_head": "7886b55f0061a78238e822ed4ee7d0df943e56bb",
+        "native": {
+          "cells": 290493,
+          "dt_s": 7.030066034017416e-13,
+          "timesteps": 85348,
+          "numerical_time_s": 6.000020758713184e-08,
+          "iteration_wall_s": 228.27134
+        },
+        "last_logged_energy_db": -73.78,
+        "last_logged_time_s": 5.9169956788514385e-08,
+        "energy_trace": [
+          {
+            "timestep": 1598,
+            "db": -0.0
+          },
+          {
+            "timestep": 3094,
+            "db": -0.0
+          },
+          {
+            "timestep": 4573,
+            "db": -0.0
+          },
+          {
+            "timestep": 6103,
+            "db": -0.0
+          },
+          {
+            "timestep": 7565,
+            "db": -0.0
+          },
+          {
+            "timestep": 9061,
+            "db": -0.0
+          },
+          {
+            "timestep": 10557,
+            "db": -0.55
+          },
+          {
+            "timestep": 12075,
+            "db": -2.41
+          },
+          {
+            "timestep": 13566,
+            "db": -9.34
+          },
+          {
+            "timestep": 15111,
+            "db": -17.24
+          },
+          {
+            "timestep": 16524,
+            "db": -28.73
+          },
+          {
+            "timestep": 18020,
+            "db": -45.59
+          },
+          {
+            "timestep": 19533,
+            "db": -62.92
+          },
+          {
+            "timestep": 21029,
+            "db": -86.77
+          },
+          {
+            "timestep": 22525,
+            "db": -88.96
+          },
+          {
+            "timestep": 24004,
+            "db": -87.58
+          },
+          {
+            "timestep": 25483,
+            "db": -87.47
+          },
+          {
+            "timestep": 27013,
+            "db": -86.7
+          },
+          {
+            "timestep": 28526,
+            "db": -86.01
+          },
+          {
+            "timestep": 30022,
+            "db": -85.31
+          },
+          {
+            "timestep": 31533,
+            "db": -84.66
+          },
+          {
+            "timestep": 33048,
+            "db": -84.08
+          },
+          {
+            "timestep": 34569,
+            "db": -83.49
+          },
+          {
+            "timestep": 36087,
+            "db": -82.96
+          },
+          {
+            "timestep": 37587,
+            "db": -82.48
+          },
+          {
+            "timestep": 39100,
+            "db": -82.01
+          },
+          {
+            "timestep": 40613,
+            "db": -81.56
+          },
+          {
+            "timestep": 42109,
+            "db": -81.13
+          },
+          {
+            "timestep": 43622,
+            "db": -80.72
+          },
+          {
+            "timestep": 45135,
+            "db": -80.33
+          },
+          {
+            "timestep": 46665,
+            "db": -79.96
+          },
+          {
+            "timestep": 48161,
+            "db": -79.62
+          },
+          {
+            "timestep": 49657,
+            "db": -79.27
+          },
+          {
+            "timestep": 51170,
+            "db": -78.94
+          },
+          {
+            "timestep": 52666,
+            "db": -78.62
+          },
+          {
+            "timestep": 54179,
+            "db": -78.32
+          },
+          {
+            "timestep": 55692,
+            "db": -78.02
+          },
+          {
+            "timestep": 57201,
+            "db": -77.73
+          },
+          {
+            "timestep": 58667,
+            "db": -77.47
+          },
+          {
+            "timestep": 60214,
+            "db": -77.2
+          },
+          {
+            "timestep": 61744,
+            "db": -76.93
+          },
+          {
+            "timestep": 63257,
+            "db": -76.68
+          },
+          {
+            "timestep": 64736,
+            "db": -76.43
+          },
+          {
+            "timestep": 66232,
+            "db": -76.2
+          },
+          {
+            "timestep": 67745,
+            "db": -75.97
+          },
+          {
+            "timestep": 69224,
+            "db": -75.74
+          },
+          {
+            "timestep": 70737,
+            "db": -75.52
+          },
+          {
+            "timestep": 72233,
+            "db": -75.32
+          },
+          {
+            "timestep": 73712,
+            "db": -75.1
+          },
+          {
+            "timestep": 75191,
+            "db": -74.91
+          },
+          {
+            "timestep": 76704,
+            "db": -74.7
+          },
+          {
+            "timestep": 78177,
+            "db": -74.51
+          },
+          {
+            "timestep": 79713,
+            "db": -74.31
+          },
+          {
+            "timestep": 81192,
+            "db": -74.13
+          },
+          {
+            "timestep": 82671,
+            "db": -73.95
+          },
+          {
+            "timestep": 84167,
+            "db": -73.78
+          }
+        ],
+        "report_sha256": "78e9f6e87e4f43dc5cb0ce59734d8354d1dbf32e21a04c14875b85ef11b50b86",
+        "input_sha256": "6128779df2ed86433638434b98b28c2bae2d41d08f9479997c07cd477df0f452",
+        "source_cache": {
+          "et": {
+            "sha256": "c47b1d2bec0c9cf95475fc8f910e92af5368e9d6b6ac158f93ffb510860e3b25",
+            "samples": 20376
+          },
+          "ht": {
+            "sha256": "f6a537a5c3b470a9fd3e3a5f0b6dbca93c157e3e319f401ca207ab2aaccf9be8",
+            "samples": 20376
+          }
+        },
+        "qualified_scope": false
+      },
+      {
+        "termination": "MUR",
+        "source_head": "7886b55f0061a78238e822ed4ee7d0df943e56bb",
+        "native": {
+          "cells": 290493,
+          "dt_s": 7.030066034017416e-13,
+          "timesteps": 85348,
+          "numerical_time_s": 6.000020758713184e-08,
+          "iteration_wall_s": 152.647893
+        },
+        "last_logged_energy_db": -119.48,
+        "last_logged_time_s": 5.99826324220468e-08,
+        "energy_trace": [
+          {
+            "timestep": 2550,
+            "db": -0.0
+          },
+          {
+            "timestep": 4658,
+            "db": -0.0
+          },
+          {
+            "timestep": 6936,
+            "db": -0.0
+          },
+          {
+            "timestep": 9177,
+            "db": -0.0
+          },
+          {
+            "timestep": 11424,
+            "db": -2.0
+          },
+          {
+            "timestep": 13702,
+            "db": -9.39
+          },
+          {
+            "timestep": 15929,
+            "db": -24.06
+          },
+          {
+            "timestep": 18173,
+            "db": -46.75
+          },
+          {
+            "timestep": 20366,
+            "db": -76.21
+          },
+          {
+            "timestep": 22542,
+            "db": -111.75
+          },
+          {
+            "timestep": 24616,
+            "db": -113.86
+          },
+          {
+            "timestep": 26724,
+            "db": -115.46
+          },
+          {
+            "timestep": 29002,
+            "db": -114.61
+          },
+          {
+            "timestep": 31280,
+            "db": -115.66
+          },
+          {
+            "timestep": 33507,
+            "db": -115.71
+          },
+          {
+            "timestep": 35802,
+            "db": -116.9
+          },
+          {
+            "timestep": 38046,
+            "db": -117.41
+          },
+          {
+            "timestep": 40273,
+            "db": -117.44
+          },
+          {
+            "timestep": 42534,
+            "db": -117.57
+          },
+          {
+            "timestep": 44761,
+            "db": -117.6
+          },
+          {
+            "timestep": 47056,
+            "db": -117.49
+          },
+          {
+            "timestep": 49317,
+            "db": -117.07
+          },
+          {
+            "timestep": 51680,
+            "db": -117.6
+          },
+          {
+            "timestep": 53975,
+            "db": -117.91
+          },
+          {
+            "timestep": 56219,
+            "db": -117.94
+          },
+          {
+            "timestep": 58463,
+            "db": -118.82
+          },
+          {
+            "timestep": 60720,
+            "db": -118.81
+          },
+          {
+            "timestep": 63002,
+            "db": -117.92
+          },
+          {
+            "timestep": 65178,
+            "db": -118.81
+          },
+          {
+            "timestep": 67456,
+            "db": -119.03
+          },
+          {
+            "timestep": 69751,
+            "db": -118.25
+          },
+          {
+            "timestep": 71876,
+            "db": -118.85
+          },
+          {
+            "timestep": 74103,
+            "db": -118.99
+          },
+          {
+            "timestep": 76347,
+            "db": -119.16
+          },
+          {
+            "timestep": 78557,
+            "db": -118.88
+          },
+          {
+            "timestep": 80818,
+            "db": -119.42
+          },
+          {
+            "timestep": 83045,
+            "db": -119.13
+          },
+          {
+            "timestep": 85323,
+            "db": -119.48
+          }
+        ],
+        "report_sha256": "55e750120f14abab9b73e1441164a8fa4def07f7852dc9b453b3eb30e9af2432",
+        "input_sha256": "23616b0ddc066b72bd527d0b2086919bc098271169ba1e2841228a61889508ac",
+        "source_cache": {
+          "et": {
+            "sha256": "c47b1d2bec0c9cf95475fc8f910e92af5368e9d6b6ac158f93ffb510860e3b25",
+            "samples": 20376
+          },
+          "ht": {
+            "sha256": "f6a537a5c3b470a9fd3e3a5f0b6dbca93c157e3e319f401ca207ab2aaccf9be8",
+            "samples": 20376
+          }
+        },
+        "qualified_scope": false
+      }
+    ],
+    "note": "Native energy is the relative internal proxy; these one-column controls are not a full-S qualification or unique causal attribution of PML growth."
+  },
+  "scope": "Complex TE10 power-wave S matrix for the own uniform dielectric interface and fixed planes/band, with the recorded three meshes, independent padding control and sampled 60 ns MUR continuations.",
+  "provenance": "Contributor-reported reduced measurements and hashes; offline arithmetic replay is not an independent maintainer replay of private raw fields. No PML stability or arbitrary-duration claim.",
+  "source_captures_relabelled": false,
+  "textbook_content_included": false,
+  "raw_native_bundles_included": false
+}
