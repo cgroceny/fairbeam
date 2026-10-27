@@ -10,7 +10,7 @@ from unittest.mock import patch
 import numpy as np
 
 from fairbeam import Simulation
-from fairbeam.design import build, check_design, empty_design, resolve_names, to_python
+from fairbeam.design import DesignError, build, check_design, empty_design, resolve_names, to_python
 from fairbeam.design_checks import lint
 from fairbeam.example_design import conversion_preview
 from fairbeam.local_mesh import LocalMeshError, apply_regions, capture_design_regions
@@ -37,6 +37,18 @@ def arrays(sim):
 
 
 class DesignLocalRegions(unittest.TestCase):
+    def test_nonobject_mesh_retains_original_precise_structure_error(self):
+        for mesh in (None, [], [1], "manual", "", False, 42):
+            d = design(); d["mesh"] = mesh
+            with self.subTest(mesh=mesh):
+                with self.assertRaises(DesignError) as caught:
+                    check_design(d)
+                self.assertEqual(caught.exception.where, "mesh")
+                self.assertEqual(caught.exception.detail, "mesh must be an object")
+                checks = lint(d)
+                self.assertTrue(any(c["code"] == "structure" and c["path"] == "mesh"
+                                    and c["message"] == "mesh must be an object" for c in checks))
+
     def test_same_simulation_replacement_and_empty_clear_old_capture(self):
         d = design(); d["mesh"]["local_regions"] = [region()]
         sim = build(d, {})

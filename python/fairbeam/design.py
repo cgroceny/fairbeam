@@ -491,13 +491,6 @@ def check_design(d: dict) -> None:
         raise DesignError("a design is a JSON object")
     if not schema_is(d.get("schema"), DESIGN_SCHEMA):
         raise DesignError(f"schema must be {DESIGN_SCHEMA!r}", "schema")
-    from .local_mesh import LocalMeshError, precision_marker, resolve_regions
-    try:
-        mesh = d.get("mesh", {})
-        precision_marker(mesh)
-        resolve_regions(mesh.get("local_regions", []), active=False)
-    except LocalMeshError as exc:
-        raise DesignError(exc.detail, exc.where) from None
     from .organization import organization_issues
     for path, detail in organization_issues(d):
         raise DesignError(detail, path)
@@ -666,6 +659,12 @@ def check_design(d: dict) -> None:
     mesh = d.get("mesh", {})
     if not isinstance(mesh, dict):
         raise DesignError("mesh must be an object", "mesh")
+    from .local_mesh import LocalMeshError, precision_marker, resolve_regions
+    try:
+        precision_marker(mesh)
+        resolve_regions(mesh.get("local_regions", []), active=False)
+    except LocalMeshError as exc:
+        raise DesignError(exc.detail, exc.where) from None
     if "refine_features" in mesh and not isinstance(mesh["refine_features"], bool):
         raise DesignError("refine features must be true or false", "mesh.refine_features")
     if mesh.get("mode", "auto") not in ("auto", "design", "manual"):

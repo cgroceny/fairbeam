@@ -20,6 +20,13 @@ assert.ok(check([{ ...region, cell_size: 'missing' }]).some(x => x.path.endsWith
 assert.ok(check([{ ...region, stop: [0, 1, 1] }]).some(x => x.path === 'mesh.local_regions[0].stop[0]' && x.message === 'region stop must be greater than start on every axis'));
 assert.ok(check([{ ...region, cell_size: 0 }]).some(x => x.message === 'region cell size must be greater than zero'));
 for (const id of ['', '1box', 'bad id', 'a'.repeat(65)]) assert.equal(check([{ ...region, id }])[0].path, 'mesh.local_regions[0].id');
+for (const suffix of ['\n', '\r', '\u2028', '\u2029']) for (const manual of [false, true]) {
+  const invalid = check([{ ...region, id: `feed_1${suffix}` }], manual);
+  assert.deepEqual(invalid, [{ path: 'mesh.local_regions[0].id', code: 'mesh-local-region',
+    message: 'region id must be 1–64 letters, digits, underscores or hyphens, starting with a letter or underscore' }],
+  'a final line terminator is not an identifier suffix, in active or inactive manual settings');
+}
+assert.deepEqual(check([{ ...region, id: `_${'a'.repeat(61)}-1` }]), [], '64 valid ASCII characters remain admissible');
 assert.ok(check([region, region]).some(x => x.path === 'mesh.local_regions[1].id'));
 assert.equal(check([{ ...region, name: '😀'.repeat(80) }]).length, 0, 'name limit counts Unicode code points');
 for (const name of ['', ' ', 'x'.repeat(81), 'x\n', 'x\x7f']) assert.equal(check([{ ...region, name }])[0].path, 'mesh.local_regions[0].name');
@@ -59,6 +66,10 @@ const b = { model: { id: 'synthetic-regions' }, units: { length_m: 0.001 }, part
       grading: { configured_max_ratio: 1.4, baseline_max_ratio: 2, admission_ceiling: 2, insertion_max_ratio: 2, final_max_ratio: 4 } } } } };
 const original = structuredClone(b);
 assert.equal(localMeshReport(b), b.mesh.auto.local_refinement);
+for (const suffix of ['\n', '\r', '\u2028', '\u2029']) {
+  const invalid = structuredClone(b); invalid.mesh.auto.local_refinement.regions[0].id += suffix;
+  assert.equal(localMeshReport(invalid), null, 'stored reports cannot bypass the full-string identifier contract');
+}
 const oneUlp = structuredClone(b); oneUlp.mesh.auto.local_refinement.regions[0].cell_size = 0.49999999999999994;
 assert.ok(localMeshReport(oneUlp), 'the declared one-ULP roundoff allowance accepts exactly the adjacent cap');
 const twoUlps = structuredClone(b); twoUlps.mesh.auto.local_refinement.regions[0].cell_size = 0.4999999999999999;
