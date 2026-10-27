@@ -5,7 +5,9 @@ python -m tests.test_waveguide_step --study --out C:\Temp\waveguide-step
 python -m tests.test_waveguide_step --compare --out C:\Temp\waveguide-step
 """
 import argparse
+import contextlib
 import hashlib
+import io
 import json
 import os
 from pathlib import Path
@@ -246,6 +248,21 @@ def compare(root, *, pulse='gaussian', termination='PML_8'):
 
 
 class StepTests(unittest.TestCase):
+    def test_mur_study_command_reports_structured_native_results_and_runs_all_holds(self):
+        meta = dict(native=dict(cells=123, dt_s=1e-12), run=dict(wall_time_s=1., converged=True))
+        output = io.StringIO()
+        with tempfile.TemporaryDirectory() as folder, \
+                patch.object(sys, 'argv', ['study', '--study', '--termination', 'MUR', '--out', folder]), \
+                patch(__name__+'.serial', return_value=meta) as worker, \
+                patch.object(f, 'read_mur_source') as checked, contextlib.redirect_stdout(output):
+            main()
+        rows = [json.loads(line) for line in output.getvalue().splitlines()]
+        self.assertEqual(len(rows), 8)
+        self.assertTrue(all(row['cells'] == 123 and row['dt_s'] == 1e-12 for row in rows))
+        self.assertEqual(worker.call_count, 16)
+        self.assertEqual(checked.call_count, 8)
+        self.assertEqual(sum(c.kwargs.get('hold_seed') is not None for c in worker.call_args_list), 8)
+
     def test_native_statistics_include_the_runtime_speed_row(self):
         with tempfile.TemporaryDirectory() as folder:
             path = Path(folder)/'openEMS_stats.txt'
@@ -658,8 +675,9 @@ def main():
                     if args.termination == 'MUR':
                         serial(target/'hold60ns', n, pn, padding, termination='MUR', hold_seed=target)
                         f.read_mur_source(target, n, pn, padding)
-                    print(json.dumps(dict(cpw=n, padding=padding, port=pn, cells=meta['cells'],
-                        dt_s=meta['dt_s'], seconds=meta['run']['wall_time_s'], energy_stopped=meta['run'].get('converged'))), flush=True)
+                    dimensions = meta['native'] if args.termination == 'MUR' else meta
+                    print(json.dumps(dict(cpw=n, padding=padding, port=pn, cells=dimensions['cells'],
+                        dt_s=dimensions['dt_s'], seconds=meta['run']['wall_time_s'], energy_stopped=meta['run'].get('converged'))), flush=True)
     else:
         unittest.main(argv=[sys.argv[0]])
 
