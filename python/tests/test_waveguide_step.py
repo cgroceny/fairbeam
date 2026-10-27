@@ -22,9 +22,15 @@ import numpy as np
 from fairbeam.multiport import assemble_s
 from fairbeam.procutil import popen_group, release_group, terminate_group
 from tests import waveguide_step_fixture as f
+from tests.test_coax_resonator import wait_owned
 
 
-def serial(out, cpw, excited, padding=f.PADDING, *, pulse='gaussian'):
+def serial(out, cpw, excited, padding=f.PADDING, *, pulse='gaussian', termination='PML_8', hold_seed=None):
+    f.controls(pulse, termination)
+    if termination == 'MUR':
+        return serial_mur(out, cpw, excited, padding, hold_seed=hold_seed)
+    if hold_seed is not None:
+        raise ValueError('a continuation seed requires the MUR control')
     out = Path(out).resolve()
     if out.exists():
         raise ValueError('use a fresh acquisition directory')
@@ -65,18 +71,66 @@ def serial(out, cpw, excited, padding=f.PADDING, *, pulse='gaussian'):
     return meta
 
 
-def read_pair(root, cpw, padding, *, pulse='gaussian'):
-    if pulse not in f.PULSES:
-        raise ValueError('unsupported research source pulse')
+def serial_mur(out, cpw, excited, padding, *, hold_seed=None):
+    """One owned worker per primary/continuation, each with its own deadline."""
+    out = Path(out).resolve()
+    receipt, log_path = (out.with_name(out.name+suffix) for suffix in ('.worker.json', '.log'))
+    if any(p.exists() for p in (out, receipt, log_path)):
+        raise ValueError('fresh MUR output/log/receipt paths required')
+    out.parent.mkdir(parents=True, exist_ok=True)
+    command = [sys.executable, '-X', 'utf8', '-m', 'tests.test_waveguide_step', '--fdtd', '--worker',
+               '--termination', 'MUR', '--mesh', str(cpw), '--excite', str(excited),
+               '--padding', str(padding), '--out', str(out)]
+    if hold_seed is not None:
+        command += ['--hold-seed', str(Path(hold_seed).resolve())]
+    source = f.mur_ids()
+    start, wall = time.monotonic(), time.time()
+    proc, code, failure = None, None, None
+    try:
+        with log_path.open('x', encoding='utf-8') as log:
+            proc = popen_group(command, cwd=Path(__file__).resolve().parents[1],
+                stdout=log, stderr=subprocess.STDOUT,
+                env={**os.environ, 'OPENBLAS_NUM_THREADS':'1', 'OMP_NUM_THREADS':'1'})
+            code = wait_owned(proc, seconds=f.CASE_SECONDS)
+        if code or max(time.monotonic()-start, time.time()-wall) > f.CASE_SECONDS:
+            raise RuntimeError('MUR worker failed or exceeded its deadline')
+    except BaseException as error:
+        failure = repr(error)
+        raise
+    finally:
+        if proc is not None:
+            if proc.poll() is None:
+                terminate_group(proc.pid, grace=0, job=proc.win_job)
+                proc.wait(timeout=15)
+            release_group(proc)
+        f._save(receipt, dict(command=command, source=source, exit_code=code, failure=failure,
+            deadline_seconds=f.CASE_SECONDS, wall_seconds=time.time()-wall, monotonic_seconds=time.monotonic()-start))
+    if source != f.mur_ids():
+        raise ValueError('MUR sources changed during worker execution')
+    meta = json.loads((out/'report.json').read_text(encoding='utf-8'))
+    meta['case_elapsed_s'] = max(time.monotonic()-start, time.time()-wall)
+    f._save(out/'report.json', meta)
+    return meta
+
+
+def read_pair(root, cpw, padding, *, pulse='gaussian', termination='PML_8'):
+    f.controls(pulse, termination)
     incoming, outgoing = [], []
     for pn in (1, 2):
         path = Path(root)/f'cpw{cpw}'/f'pad{padding}'/f'e{pn}'
+        if termination == 'MUR':
+            _, data = f.read_mur_source(path, cpw, pn, padding)
+            incoming.append(data['a'])
+            outgoing.append(data['b'])
+            continue
         meta = json.loads((path/'report.json').read_text(encoding='utf-8'))
         expected = dict(protocol=f.PROTOCOL, geometry=f.geometry(), cpw=cpw, padding=padding,
                         excited=pn, frequency_hz=f.FREQUENCIES.tolist(),
                         limits=f.LIMITS, source_ids=f.source_ids())
         if any(meta.get(k) != v for k, v in expected.items()):
             raise ValueError('case source, geometry, frequency or protocol identity mismatch')
+        if meta.get('termination', 'PML_8') != termination:
+            raise ValueError('termination cohort mismatch')
         stats = meta.get('run', {})
         energy = [stats.get(k) for k in ('final_energy_db', 'final_energy_bound_db')]
         energy = [x for x in energy if isinstance(x, (int, float)) and not isinstance(x, bool) and np.isfinite(x)]
@@ -137,14 +191,15 @@ def read_pair(root, cpw, padding, *, pulse='gaussian'):
     return assemble_s(a, np.array(outgoing), [1, 2], 2)
 
 
-def compare(root, *, pulse='gaussian'):
+def compare(root, *, pulse='gaussian', termination='PML_8'):
+    f.controls(pulse, termination)
     root, rows, spectra, missing = Path(root), [], {}, []
     for cpw, padding in [(n, f.PADDING) for n in f.MESHES]+[(f.CONTROL_MESH, f.CONTROL_PADDING)]:
         paths = [root/f'cpw{cpw}'/f'pad{padding}'/f'e{pn}'/'report.json' for pn in (1, 2)]
         if not all(p.is_file() for p in paths):
             missing.extend(str(p.relative_to(root)) for p in paths if not p.is_file())
             continue
-        spectra[cpw, padding] = read_pair(root, cpw, padding, pulse=pulse)
+        spectra[cpw, padding] = read_pair(root, cpw, padding, pulse=pulse, termination=termination)
     for cpw in f.MESHES:
         if (cpw, f.PADDING) not in spectra:
             continue
@@ -184,10 +239,147 @@ def compare(root, *, pulse='gaussian'):
                 scope='complex TE10 power-wave S matrix on the fixed measurement planes only')
     if pulse != 'gaussian':
         result['pulse'] = pulse
+    if termination != 'PML_8':
+        result.update(termination=termination, hold_limits=f.MUR_HOLD,
+                      scope='complex TE10 power-wave S matrix on fixed planes, with recorded 60 ns MUR controls')
     return result
 
 
 class StepTests(unittest.TestCase):
+    def test_native_statistics_include_the_runtime_speed_row(self):
+        with tempfile.TemporaryDirectory() as folder:
+            path = Path(folder)/'openEMS_stats.txt'
+            values = np.array([100., 1e-12, 60000., 60e-9, 1., 6e6])
+            np.savetxt(path, values)
+            self.assertEqual(f._native_stats(folder)['timesteps'], 60000)
+            for broken in (values[:-1], np.r_[values[:5], np.nan]):
+                np.savetxt(path, broken)
+                with self.assertRaises(ValueError):
+                    f._native_stats(folder)
+
+    def test_mur_changes_only_end_boundaries_and_is_explicitly_opt_in(self):
+        with tempfile.TemporaryDirectory() as folder:
+            for cpw, padding in [(n, f.PADDING) for n in f.MESHES]+[(f.CONTROL_MESH, f.CONTROL_PADDING)]:
+                for pn in (1, 2):
+                    paths = [Path(folder)/f'{k}.xml' for k in range(3)]
+                    sims = (f.build(cpw, pn, padding), f.build(cpw, pn, padding, termination='PML_8'),
+                            f.build(cpw, pn, padding, termination='MUR'))
+                    for sim, path in zip(sims, paths):
+                        sim.fdtd.Write2XML(str(path))
+                    self.assertEqual(f.physical_input_sha(paths[0]), f.physical_input_sha(paths[1]))
+                    control = ET.parse(paths[2])
+                    bc = control.getroot().find('FDTD/BoundaryCond')
+                    self.assertEqual(bc.attrib, dict(xmin='PEC', xmax='PEC', ymin='PEC', ymax='PEC', zmin='MUR', zmax='MUR'))
+                    bc.set('zmin', 'PML_8')
+                    bc.set('zmax', 'PML_8')
+                    control.write(paths[2], encoding='utf-8')
+                    self.assertEqual(f.physical_input_sha(paths[0]), f.physical_input_sha(paths[2]))
+        for pulse, termination in (('wrong', 'PML_8'), ('gaussian', 'wrong'), ('zero-integral-rf', 'MUR')):
+            with self.subTest(pulse=pulse, termination=termination), tempfile.TemporaryDirectory() as folder:
+                target = Path(folder)/'new'
+                with self.assertRaises(ValueError):
+                    f.acquire(target, 40, 1, pulse=pulse, termination=termination)
+                self.assertFalse(target.exists())
+
+    def hold_records(self):
+        cache = dict(records={'et':{'sha256':'e'}, 'ht':{'sha256':'h'}}, complete_after_steps=15000)
+        primary = dict(native=dict(dt_s=1e-12, timesteps=20000, cells=100, numerical_time_s=20e-9), cache=cache)
+        hold = dict(native=dict(dt_s=1e-12, timesteps=60000, cells=100, numerical_time_s=60e-9),
+            max_timesteps=60000, cache=cache, run=dict(energy_trace=[
+                dict(timestep=30000, db=-100.), dict(timestep=45000, db=-105.), dict(timestep=60000, db=-110.)]))
+        before = dict(a=np.ones((2, len(f.FREQUENCIES)), complex), b=np.ones((2, len(f.FREQUENCIES)), complex)*.2)
+        return primary, before, hold, {k:v.copy() for k,v in before.items()}
+
+    def test_mur_first_crossing_needs_a_complete_stable_continuation(self):
+        primary, before, hold, after = self.hold_records()
+        self.assertTrue(f.mur_hold_checks(primary, before, hold, after)['passes'])
+        for failure in ('late-growth', 'short-window', 'clock', 'grid', 'cache', 'too-few-samples', 'wave-change'):
+            with self.subTest(failure=failure):
+                primary, before, hold, after = self.hold_records()
+                if failure == 'late-growth':
+                    hold['run']['energy_trace'][-1]['db'] = -76.16
+                elif failure == 'short-window':
+                    hold['native']['timesteps'] -= 1
+                elif failure == 'clock':
+                    hold['native']['dt_s'] *= .99
+                elif failure == 'grid':
+                    hold['native']['cells'] += 1
+                elif failure == 'cache':
+                    hold['cache'] = {}
+                elif failure == 'too-few-samples':
+                    hold['run']['energy_trace'] = []
+                else:
+                    after['b'][0] += f.MUR_HOLD['wave_abs']*1.01
+                self.assertFalse(f.mur_hold_checks(primary, before, hold, after)['passes'])
+        before['a'] *= 0
+        with self.assertRaises(ValueError):
+            f.mur_hold_checks(primary, before, hold, after)
+        with patch.object(f, 'load_mur_record', side_effect=[(primary, before), FileNotFoundError('no hold')]):
+            with self.assertRaises(FileNotFoundError):
+                f.read_mur_source(Path('synthetic'), 40, 1, f.PADDING)
+
+    def test_mur_record_rejects_foreign_identity_before_reading_native_data(self):
+        header = dict(protocol='te10-mur-control-v1', kind='primary', termination='MUR', pulse='gaussian',
+            cpw=40, excited=1, padding=f.PADDING, geometry=f.geometry(), frequency_hz=f.FREQUENCIES.tolist(),
+            limits=f.LIMITS, hold_limits=f.MUR_HOLD, source_ids=f.source_ids(), mur_source_ids=f.mur_ids(),
+            runtime=f._mur_runtime(), seed_report_sha256=None)
+        with tempfile.TemporaryDirectory() as folder:
+            path = Path(folder)/'report.json'
+            for key, value in (('termination', 'PML_8'), ('pulse', 'zero-integral-rf'), ('kind', 'hold60ns'),
+                               ('geometry', {}), ('frequency_hz', []), ('limits', {}), ('hold_limits', {}),
+                               ('source_ids', {}), ('mur_source_ids', {}), ('runtime', {}), ('seed_report_sha256', 'wrong')):
+                with self.subTest(key=key):
+                    path.write_text(json.dumps({**header, key:value}), encoding='utf-8')
+                    with self.assertRaisesRegex(ValueError, 'identity mismatch'):
+                        f.load_mur_record(folder, 40, 1, f.PADDING)
+
+    def test_mur_matrix_requires_both_sources_and_their_hold_evidence(self):
+        reference = f.reference()
+        a = np.broadcast_to(np.array([[1, .02j], [.03, .9]]), reference.shape).copy()
+        b = reference@a
+        def admitted(path, cpw, pn, padding):
+            return {}, dict(a=a[:, :, pn-1].T, b=b[:, :, pn-1].T)
+        with patch.object(f, 'read_mur_source', side_effect=admitted) as reader:
+            np.testing.assert_allclose(read_pair(Path('synthetic'), 40, f.PADDING, termination='MUR'), reference, atol=4e-16)
+            self.assertEqual(reader.call_count, 2)
+        with patch.object(f, 'read_mur_source', side_effect=ValueError('missing or unstable hold')):
+            with self.assertRaises(ValueError):
+                read_pair(Path('synthetic'), 40, f.PADDING, termination='MUR')
+        with tempfile.TemporaryDirectory() as folder:
+            path = self.synthetic(folder)/'report.json'
+            meta = json.loads(path.read_text(encoding='utf-8'))
+            path.write_text(json.dumps({**meta, 'termination':'MUR'}), encoding='utf-8')
+            with self.assertRaisesRegex(ValueError, 'termination cohort'):
+                read_pair(folder, 40, f.PADDING)
+
+    def test_mur_real_waiter_deadline_writes_receipt_and_owns_cleanup(self):
+        clock = dict(wall=0.)
+        class Process:
+            pid, win_job, running = 123, object(), True
+            def wait(self, timeout):
+                if self.running:
+                    clock['wall'] = f.CASE_SECONDS+1
+                    raise subprocess.TimeoutExpired('worker', timeout)
+                return 1
+            def poll(self):
+                return None if self.running else 1
+        proc = Process()
+        def stop(*args, **kwargs):
+            proc.running = False
+        with tempfile.TemporaryDirectory() as folder, patch(__name__+'.popen_group', return_value=proc), \
+                patch(__name__+'.terminate_group') as outer_stop, patch(__name__+'.release_group') as released, \
+                patch('tests.test_coax_resonator.terminate_group', side_effect=stop) as owned_stop, \
+                patch('time.monotonic', return_value=0.), patch('time.time', side_effect=lambda: clock['wall']):
+            out = Path(folder)/'new'
+            with self.assertRaises(TimeoutError):
+                serial(out, 40, 1, termination='MUR')
+            owned_stop.assert_called_once_with(proc.pid, grace=0, job=proc.win_job)
+            outer_stop.assert_not_called()
+            released.assert_called_once_with(proc)
+            receipt = json.loads(out.with_name('new.worker.json').read_text(encoding='utf-8'))
+            self.assertIsNotNone(receipt['failure'])
+            self.assertEqual(receipt['deadline_seconds'], f.CASE_SECONDS)
+
     def test_finite_rf_pulse_has_zero_continuous_area_and_keeps_the_rf_band(self):
         t = np.linspace(0, f.PULSE_END_S, 40001)
         values = f.rf_values(t)
@@ -429,30 +621,43 @@ def main():
     parser.add_argument('--padding', type=int, choices=(f.PADDING, f.CONTROL_PADDING), default=f.PADDING)
     parser.add_argument('--worker', action='store_true', help=argparse.SUPPRESS)
     parser.add_argument('--pulse', choices=f.PULSES, default='gaussian', help='opt-in same-band research source control')
+    parser.add_argument('--termination', choices=f.TERMINATIONS, default='PML_8', help='opt-in research end termination')
+    parser.add_argument('--hold-seed', type=Path, help='MUR primary source to reconstruct for the fixed 60 ns diagnostic')
     args = parser.parse_args()
+    try:
+        f.controls(args.pulse, args.termination)
+    except ValueError as error:
+        parser.error(str(error))
     if args.worker and not args.fdtd:
         parser.error('internal worker requires --fdtd')
+    if args.hold_seed is not None and (not args.fdtd or args.termination != 'MUR'):
+        parser.error('--hold-seed requires --fdtd --termination MUR')
     if args.preflight:
         for n in f.MESHES:
-            sim = f.build(n, 1, pulse=args.pulse)
+            sim = f.build(n, 1, pulse=args.pulse, termination=args.termination)
             print(json.dumps(dict(cpw=n, geometry=f.geometry(),
                 cells=int(np.prod([len(sim.mesh.GetLines(a))-1 for a in 'xyz'])), limits=f.LIMITS)))
     elif args.study or args.fdtd or args.compare:
         if args.out is None:
             parser.error('--out is required')
         if args.compare:
-            result = compare(args.out, pulse=args.pulse)
+            result = compare(args.out, pulse=args.pulse, termination=args.termination)
             (args.out/'comparison.json').write_text(json.dumps(result, indent=2)+'\n', encoding='utf-8')
             print(json.dumps(result, indent=2))
         elif args.fdtd:
-            print(json.dumps((f.acquire if args.worker else serial)(args.out, args.mesh, args.excite, args.padding, pulse=args.pulse)))
+            print(json.dumps((f.acquire if args.worker else serial)(args.out, args.mesh, args.excite, args.padding,
+                pulse=args.pulse, termination=args.termination, hold_seed=args.hold_seed)))
         else:
             frozen = f.source_ids()
             for n, padding in [(n, f.PADDING) for n in f.MESHES]+[(f.CONTROL_MESH, f.CONTROL_PADDING)]:
                 for pn in (1, 2):
                     if f.source_ids() != frozen:
                         raise RuntimeError('acquisition sources changed during cohort')
-                    meta = serial(args.out/f'cpw{n}'/f'pad{padding}'/f'e{pn}', n, pn, padding, pulse=args.pulse)
+                    target = args.out/f'cpw{n}'/f'pad{padding}'/f'e{pn}'
+                    meta = serial(target, n, pn, padding, pulse=args.pulse, termination=args.termination)
+                    if args.termination == 'MUR':
+                        serial(target/'hold60ns', n, pn, padding, termination='MUR', hold_seed=target)
+                        f.read_mur_source(target, n, pn, padding)
                     print(json.dumps(dict(cpw=n, padding=padding, port=pn, cells=meta['cells'],
                         dt_s=meta['dt_s'], seconds=meta['run']['wall_time_s'], energy_stopped=meta['run'].get('converged'))), flush=True)
     else:
