@@ -13,13 +13,14 @@ import { sweep } from "../lib/rf.ts";
 import { technicalDrawing } from "../drawing/drawing.ts";
 import { COLUMN_WIDTH, ffTag, patternFigure, patternFigureFor, patternTag, s11Figure, smithFigure, sparamFigure, zinFigure } from "../drawing/charts.ts";
 import { arrayFarField, mainBeam, type Weight } from "../lib/array.ts";
-import { elementPatterns, sMatrix } from "../lib/sparams.ts";
+import { sMatrix } from "../lib/sparams.ts";
 import { comparisonFigures } from "../drawing/charts.ts";
 import { comparisonMetrics, metricsRows } from "../import/metrics.ts";
 import type { RefBundle } from "../import/reference.ts";
 import { toCsv } from "./csv.ts";
 import { fabFiles, fabModel } from "../fab/index.ts";
 import { designStem } from "../lib/exportNames.ts";
+import { arrayExportScope, arrayExportSets } from "./arrayFeed.ts";
 
 /**
  * N-port Touchstone writer, provided by the physics side in touchstone.ts (not edited here). The
@@ -36,8 +37,8 @@ export function touchstoneNPort(b: Bundle, exported: string): string | null {
 }
 
 /** Steered array patterns at the given weights, one per element-pattern frequency. */
-export function steeredPatterns(b: Bundle, weights: Map<number, Weight>) {
-  return elementPatterns(b).map((set) => {
+export function steeredPatterns(b: Bundle, weights: Map<number, Weight>, frequencyHz?: number) {
+  return arrayExportSets(b, frequencyHz).map((set) => {
     const ff = arrayFarField(b, set, weights);
     return { ff, beam: mainBeam(ff.theta, ff.phi, ff.directivity_dbi, !!b.half_space) };
   });
@@ -82,6 +83,8 @@ export interface PackageExtras {
   reportPdf?: Uint8Array | null;
   /** current beam-steering weights (bundles with element patterns) */
   arrayWeights?: Map<number, Weight> | null;
+  /** Exact stored frequency captured with arrayWeights; omitted only for legacy fixed-weight exports. */
+  arrayFrequencyHz?: number;
   /** imported reference data (Touchstone / CSV) to compare with */
   reference?: RefBundle | null;
   /** the workspace file the bundle was run from: the README's reproduce command runs it */
@@ -131,8 +134,8 @@ export function packageFiles(b: Bundle, include: Record<PackageGroup, boolean>, 
       add("data/sparams.csv", "All stored S_ij: dB, phase, re/im per frequency point", sparamsCsv(b));
     }
     if (extras.arrayWeights?.size) {
-      const set = elementPatterns(b)[0];
-      if (set) add("data/array_weights.csv", `Beam-steering weights (${weightsText(extras.arrayWeights)}) and active reflection`, arrayWeightsCsv(b, extras.arrayWeights, set.f));
+      const set = arrayExportSets(b, extras.arrayFrequencyHz)[0];
+      if (set) add("data/array_weights.csv", `Beam-steering weights (${weightsText(extras.arrayWeights)}) and active reflection at ${set.f} Hz. ${arrayExportScope(extras.arrayFrequencyHz)}`, arrayWeightsCsv(b, extras.arrayWeights, set.f));
     }
   }
   if (include.drawings) {
@@ -149,10 +152,10 @@ export function packageFiles(b: Bundle, include: Record<PackageGroup, boolean>, 
       add(`figures/sparams_reflection${suffix}.svg`, `|S_ii| of every port, ${what} wide`, sparamFigure(b, "reflection", { widthMm: w }));
       add(`figures/sparams_transmission${suffix}.svg`, `Port coupling |S_ij|, ${what} wide`, sparamFigure(b, "transmission", { widthMm: w }));
       if (extras.arrayWeights?.size) {
-        for (const { ff, beam } of steeredPatterns(b, extras.arrayWeights)) {
+        for (const { ff, beam } of steeredPatterns(b, extras.arrayWeights, extras.arrayFrequencyHz)) {
           add(
             `figures/array_pattern_${patternTag(ff.f)}${suffix}.svg`,
-            `Array pattern at the current weights (${weightsText(extras.arrayWeights)}), beam θ=${beam.theta}° φ=${beam.phi}°, ${what} wide`,
+            `Array pattern at the snapshotted weights (${weightsText(extras.arrayWeights)}), beam θ=${beam.theta}° φ=${beam.phi}°, ${what} wide. ${arrayExportScope(extras.arrayFrequencyHz)}`,
             patternFigureFor(b, ff, { widthMm: w, title: `Array directivity (dBi), f = ${Number((ff.f / 1e9).toFixed(3))} GHz` }),
           );
         }

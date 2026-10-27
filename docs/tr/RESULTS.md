@@ -23,6 +23,23 @@ Yönlülük, kazanç, gerçekleşen kazanç ve mevcut RHCP/LHCP kısmi yönlül�
 
 Örnekler'deki yayın şekli menüsü, etkin kayıtlı çalıştırmanın seçili kesitini, niceliğini ve izdüşümünü kullanır. SVG/PDF kaynağı görünen tahminleri ve sınırlamaları içerir; ayrıntılı sayısal ölçütler SVG açıklama üstverisindedir. Ekrandaki şekil dışa aktarımı görünen grafiği korur. Standart üretilen rapor paketleri açık ana düzlem varsayılanlarını korur; etkileşimli arayüz durumunu sessizce devralmaz. Kesit denetimleri, yeni çözücü veya ölçüm sonucuyla değil, belirlenimci sentetik analitik alanlarla doğrulanmıştır.
 
+## Tasarımcıda dizi sentezi
+
+En az iki eleman portunun kayıtlı örüntüsünü içeren çalıştırmada Tasarımcı'nın **Dizi**
+sekmesi, kayıtlı bir frekanstaki karmaşık alanlardan yönlülüğü sentezler. Genlik, faz
+ve yönlendirme denetimleri aynı çalıştırmanın açık Örüntü sekmesini ve 3B örüntüsünü
+de besler. Örüntü verisi ve şekil dışa aktarımları sentezlenen kesiti izler;
+karşılaştırmalar kayıtlı sonuçları korur. Besleme ayarları, ait oldukları çalıştırma
+veya frekans değişince sıfırlanır ve Örnekler görüntüleyicisinden ayrıdır. Paket dışa
+aktarımı ağırlıkları yalnızca tam olarak seçili çalıştırma için kullanır ve seçili kayıtlı
+frekansla birlikte alır: ağırlık CSV'sindeki etkin yansıma ve sentezlenmiş paket/rapor dizi
+şekilleri yalnızca o frekansı kullanır. Seçili kümede ikiden az eleman varsa Tasarımcı
+beslemesi sentezlenemez veya dışa aktarılamaz. Yaşam döngüsü
+ve dışa aktarım kuralları için [Tasarımcıda dizi beslemeleri](DESIGNER.md#array-feeds-in-the-designer),
+hesaplama için [ARRAYS.md](ARRAYS.md) belgesine bakın. Bu işlem çözücü çalıştırmadan
+kayıtlı örnekleri kullanır; yeni kazanç veya verimlilik doğruluğu, mesh ya da açısal
+ızgara yakınsaması kanıtlamaz.
+
 ## Açılmış faz ve grup gecikmesi
 
 S-parametreleri sonuç görünümünde veya Örnekler yansıma görünümünde veri biçimi

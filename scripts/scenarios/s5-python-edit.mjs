@@ -1,5 +1,6 @@
 // S5: model with Python while drawing: edit a dimension in the Python panel and Apply it (no solver).
 import assert from 'node:assert/strict';
+import { clickRibbonAction } from './ribbon-action.mjs';
 
 export default {
   id: 'S5',
@@ -22,7 +23,7 @@ export default {
       await s.wait('.rb');
       await s.waitFor(() => !!document.querySelector('.nt-row[data-id^="part:"]'), null, { what: 'the starter geometry' });
       await s.click('ribbon.tab.post', { sel: '.rb-tab' });
-      await s.clickSel('button[data-action="open-python"]');
+      await clickRibbonAction(s, 'ribbon.post.report', 'button[data-action="open-python"]');
       await s.wait('.python-panel .python-panel-code');
     });
     await s.step('Edit opens the script in an editor with line numbers', async () => {
@@ -80,7 +81,7 @@ export default {
       await s.click('header.screen.design');
       await s.wait('.rb');
       await s.click('ribbon.tab.post', {sel:'.rb-tab'});
-      await s.clickSel('button[data-action="open-python"]');
+      await clickRibbonAction(s, 'ribbon.post.report', 'button[data-action="open-python"]');
       await s.wait('.python-panel .cm-content');
       assert.equal(await script(), kept, 'retained draft is restored for its owner');
       const original = await s.store(async (_, m) => { await m.s.save(); return m.s.file().id; });
@@ -123,7 +124,7 @@ export default {
         assert.equal(await script(),kept,'successful Save adoption preserves the live Python editor');
         await s.click('header.screen.start');await s.wait('.home');
         await s.click('header.screen.design');await s.wait('.rb');
-        await s.click('ribbon.tab.post',{sel:'.rb-tab'});await s.clickSel('button[data-action="open-python"]');
+        await s.click('ribbon.tab.post',{sel:'.rb-tab'});await clickRibbonAction(s, 'ribbon.post.report', 'button[data-action="open-python"]');
         await s.wait('.python-panel .cm-content');
         assert.equal(await script(),kept,'restored text belongs to the current saved identity');
       }

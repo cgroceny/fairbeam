@@ -80,11 +80,11 @@ Piramit huni anten şablonlar arasında değildir: genişleyen duvarları, eksen
     - Çözücü: Deneysel çözücüler, Çözücü sınırları.
     - Çalıştır.
   - Optimizasyon: Parametre taraması, Optimizasyon aracı.
-  - Son işlem: açılacak sonuç sekmeleri (Özet, S-parametreleri, Smith, Verimlilik, Örüntü, 3B örüntü, Akımlar, Alan düzlemi, Alan haritası), Uzak alan (örüntü niceliği, yalnızca örüntü gösterilirken) ve Rapor ve dışa aktarma (PDF raporu, Paket, Python).
+  - Son işlem: açılacak sonuç sekmeleri (Özet, S-parametreleri, Smith, Verimlilik, Örüntü, Dizi, 3B örüntü, Akımlar, Alan düzlemi, Alan haritası), Uzak alan (örüntü niceliği, yalnızca örüntü gösterilirken) ve Rapor ve dışa aktarma (PDF raporu, Paket, Python).
 
   Şerit son sekmeyi hatırlar; katısı olmayan tasarım Modelleme'de açılır. Sonuç göstermek Son işlem'e geçirir; geometriye dönmek ayrıldığınız sekmeyi açar. Sekmeye çift tıklamak, sağdaki ok veya Ctrl+F1 (macOS'te ⌃F1) şeridi küçültür. Pencere daraldıkça düğmelerin etiketleri gizlenir (adları ipucunda kalır), ardından gruplar açılır düğmelere katlanır; tüm komutlara erişim korunur.
 - **Gezinti ağacı** (sol): tasarım ve **Parametreler** satırı (alt panelin Parametreler sekmesini açar), ardından **Katılar**, **Malzemeler**, **Portlar**, **Toplu elemanlar** ve **Sonuçlar**. Kırmızı veya sarı işaret, bir denetimin bu öğeyi işaret ettiğini gösterir. Simülasyon ayarları ağaçta değil, şeridin Simülasyon sekmesindedir. Bkz. [Gezinti ağacı](#the-navigation-tree).
-- **Ana alan**: **3B görünüm** ilk sekmedir ve kapanmaz; çalıştırmanın sonuç görünümleri (S-parametreleri, Empedans, VSWR, Smith, Verimlilik, Örüntü, Tablo) yanında ek sekmelerde açılır. Ctrl+Tab ve Ctrl+Shift+Tab sekme değiştirir; Delete veya orta tıklama sonuç sekmesini kapatır.
+- **Ana alan**: **3B görünüm** ilk sekmedir ve kapanmaz; çalıştırmanın sonuç görünümleri (S-parametreleri, Empedans, VSWR, Smith, Verimlilik, Örüntü, Dizi, Tablo) yanında ek sekmelerde açılır. Ctrl+Tab ve Ctrl+Shift+Tab sekme değiştirir; Delete veya orta tıklama sonuç sekmesini kapatır.
 - **3B görünüm**: kaydedilmemiş değişikliklerinizden sunucunun oluşturduğu geometriyi gösterir; gördüğünüz, openEMS'in mesh oluşturacağı geometridir. Tarayıcı her düzenlemeyi hemen çizer; biraz sonra sunucunun sürümü yerini alır. Katıya tıklayarak seçin. Görünüm, yakınlaştırmayı veya bakış merkezini değiştirmeden kamerayı ayarlar (İzometrik, Üst, Ön, Sağ, Alt, Arka, Sol). Sığdır, mevcut yönelimi koruyarak modeli çerçeveler. Sayı tuşları: **1** en yakın eksene hizalar, **2** Alt, **3** Arka, **4** Sol, **5** Ön, **6** Sağ, **8** Üst, **0** İzometrik. Sayısal tuş takımını (Num Lock kapalıyken de) veya sayı satırını kullanın. Kamera kısayolları 3B görünürken çalışır; alanlarda, düzenleyicilerde, menülerde, pencerelerde veya etkin çizim aracında çalışmaz. 3B görünüm odaktayken oklar döndürür (Shift kaydırır), +/− yakınlaştırır, Boşluk veya F sığdırır. Hazır açıdan döndürerek ayrılmak düğmenin basılı durumunu kaldırır. Sayı satırı eşdeğerleri dizüstü klavyeler içindir. **Açılış görünümü**: Görünüm › Açılış görünümü › **Kaydet**, geçerli kamerayı tasarımda tutar (`view` olarak: kameranın konumu ve baktığı nokta, mm cinsinden). Tasarım bundan sonra sığdırılmış izometrik görünüm yerine bu kamerayla açılır; böylece küçük bir ayrıntı (büyük bir dişteki prob ucu, bir kartın altındaki besleme) baştan görünür. **Git** ona geri döner, **Temizle** onu kaldırır. Kaydetme ve temizleme geri alınabilir adımlardır; Python Uygula görünümü korur; çözücü ve dışa aktarmalar onu dikkate almaz.
 - **Özellikler** (sağ): seçili öğenin alanları.
 - **Alt panel**: **Denetimler** ve **Parametreler**; burada başlatılan çalıştırma için ayrıca **Çalıştırma** (canlı ilerleme), **Çalıştırmalar** (tasarımın çalıştırmaları, farklı parametreleriyle yan yana) ve **Günlük**. Tüm sekmeleri birlikte boyutlandırmak için üst kenarını sürükleyin; yükseklik 120 piksel ile merkez alanın %70'i arasındadır. Kenara odaklanıp ok tuşlarını kullanın (10 piksel, Shift ile 50); Home/End sınırları seçer. Yükseklik yerel depolamada hatırlanır ve duyarlı varsayılanların önüne geçer. Çift tıklama sıfırlar. Sol ve sağ panel kenarları Tasarım ve Sonuçlar'da boyutlandırılabilir (en az 180 piksel, en fazla çalışma alanının %35'i veya 600 piksel). Ok tuşları boyutlandırır, çift tıklama sıfırlar. Hatırlanan genişlikler duyarlı varsayılanların önüne geçer; panel anahtarları yine gizler (Ctrl+Shift+1, 2 ve 3 ağacı, alt paneli ve özellikleri katlar; macOS'te ⌃⇧1, 2 ve 3).
@@ -116,6 +116,7 @@ Kısayollar: Ctrl/Cmd+S kaydeder, Ctrl/Cmd+Z geri alır, Shift+Ctrl/Cmd+Z veya C
 - **Sonuçlar**: tasarımın her çalıştırması için en yenisi üstte olacak şekilde, adı, zamanı ve motoruyla etiketli bir düğüm. En yenisi açıktır. Çalıştırmanın altında:
   - **1B Sonuçlar**: S-parametreleri, empedans, VSWR, Smith abağı, verimlilik;
   - **Uzak alanlar**: her uzak alan frekansı için örüntü kesitleri (**Uzak alan (f = …)**) ve **3B örüntü (f = …)**;
+  - **Dizi**: en az iki eleman portunun kayıtlı örüntüsü varsa besleme denetimleri;
   - **2B/3B Sonuçlar**: monitör frekansı başına yüzey akımı haritası ve her E/H alan düzlemi haritası için düğüm; örneğin “E alanı (z = 2,572 mm, 2,45 GHz)” (düzlemin kaydedildiği mesh çizgisi, girilen konumdan biraz farklı olabilir);
   - **Tablolar**: sayısal S-parametreleri ve empedans;
   - **Günlük**.
@@ -496,6 +497,33 @@ Seçili kesit çözümleyicisi, dairesel çıktılar varsa eksenel oranı da des
 **3B örüntü** görünürken sağ üst kart renk ölçeği, nicelik, uzak alan frekans etiketleri (çok portta uyarılan port), Dmax, kazanç, gerçekleşen kazanç, ışıma/uyumsuzluk/toplam verimlilik ve ana lob yönü θ, φ içerir. Oku yalnızca renk ölçeğine katlar. Çok portlu dizi, yalnızca yönlülük içeren dizi örüntüsünü (tüm portlar beslenmiş) gösterir.
 
 Başka çalıştırma ağaçtan açılır. Üst çubuk aktarımları (**Paketi dışa aktar**, **VBA makrosu dışa aktar**) ve Son işlem › PDF raporu / Paket, gösterilen çalıştırmayı kullanır. Sonuç sekmesi araç çubuğunun sağındaki ✕, gösterilen çalıştırmayı (sonuç sekmeleri ve alt paneldeki Çalıştırmalar/Günlük) kapatır; sekmenin ✕ işareti yalnızca o sekmeyi kapatır. Her sekmenin araç çubuğunda ayrıca **Karşılaştır**, veri biçimi menüsü, **Veriyi kopyala**, **Şekil**, **CSV** ve **Touchstone** vardır.
+
+### Tasarımcıda dizi beslemeleri
+
+En az iki eleman portunun kayıtlı örüntüsünü içeren çalıştırmalar, Sonuçlar ağacında
+ve Son işlem şeridinde **Dizi** seçeneğini sunar. Kayıtlı frekansı seçip port genlik
+ve fazlarını düzenleyin veya xz/yz düzleminde hüzmeyi yönlendirin. Örüntü kesitleri
+ve CSV/SVG/PNG dışa aktarımları o frekansta sentezlenen yönlülüğü kullanır. İşlem,
+kayıtlı karmaşık eleman alanlarını işler; çözücüyü başlatmaz ve yeni bir ışıma
+verimliliği ya da gerçekleşen kazanç doğrulaması sağlamaz.
+
+Besleme seçilen çalıştırmaya ve frekansa aittir. Bunlardan biri değişince, sonuç
+yenilenince, Dizi sekmesi kapanınca veya Tasarım'dan çıkınca düzgün beslemeye döner.
+Dizi açık kaldığı sürece Örüntü sekmesi ve 3B örüntü aynı beslemeyi kullanır.
+Karşılaştırmalar her zaman kayıtlı sonuçları gösterir. Görüntüleyici beslemeleri
+ayrıdır. Paket dışa aktarımı, dizi ağırlıklarını yalnızca aynı çalıştırmaya aitse
+içerir; başka çalıştırma veya geometri önizlemesi bunları kullanmaz. Paket, ağırlıkları
+ve seçili kayıtlı frekansı birlikte alır: `array_weights.csv` etkin yansımayı o frekansta
+hesaplar; sentezlenmiş dizi şekilleri ve rapor sayfaları yalnızca o frekansı kullanır.
+Diğer kayıtlı sonuç örüntüleri değişmez. Frekans belirtmeyen eski programatik dışa
+aktarımlar, aynı sabit ağırlıkları tüm kayıtlı frekanslara uyguladığını ve frekansa
+göre yeniden yönlendirme yapmadığını açıklar. İkiden az eleman örüntüsü içeren bir
+frekans veya çalıştırma seçilince Tasarımcı sentezi ve besleme dışa aktarımı kullanılamaz.
+Kayıtlı açısal
+ızgaranın çözünürlüğü hüzme genişliği ve yan lob ölçümlerini sınırlar. Genlik pencere
+seçenekleri, tarama süpürmeleri ve ızgara lobu denetimi ayrı çalışmalardır.
+Bu denetimler yeni bir native EM doğrulaması sunmaz; kayıtlı alan sentezi ve mevcut
+gösterimler için [ARRAYS.md](ARRAYS.md) belgesine bakın.
 
 ### Frekansa göre ışınım
 

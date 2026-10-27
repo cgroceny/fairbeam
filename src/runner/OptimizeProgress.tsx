@@ -7,7 +7,7 @@ import { isTerminal } from "./api";
 import { cancelRun, live, openBundlePath, saveOptimizationBest } from "./store";
 import { StatusBadge } from "./status";
 import { t, tEn } from "../i18n";
-import { compareBestVsStart, fmtG, goalText, goalTextEn, goalValue, labelOf, openBest, optBest, optDone, optEvals, optStart, pairName, presetOf } from "./optimize";
+import { compareBestVsStart, fmtG, goalText, goalTextEn, evaluationGoalValue, labelOf, openBest, optBest, optDone, optEvals, optStart, pairName, presetOf } from "./optimize";
 
 const COST_FLOOR = 1e-3; // log scale: a met goal has cost 0
 
@@ -43,7 +43,7 @@ export default function OptimizeProgress() {
     const paramKeys = [...new Set(entries.flatMap((e) => Object.keys(e.params)))];
     const goalNames = (spec()?.goals ?? []).map((g) => goalTextEn(g));
     const esc = (x: unknown) => `"${String(x ?? "").replaceAll('"', '""')}"`;
-    const rows = entries.map((e) => [e.index, ...paramKeys.map((k) => e.params[k]), ...(spec()?.goals ?? []).map((g, i) => e.goals?.[i]?.value ?? goalValue(g, e.metrics)), e.cost, e.skipped ? `skipped: ${e.skipped}` : tEn(statusOf(e)).toLowerCase(), e.wall_time_s, e.file]);
+    const rows = entries.map((e) => [e.index, ...paramKeys.map((k) => e.params[k]), ...(spec()?.goals ?? []).map((g, i) => evaluationGoalValue(g, e, i)), e.cost, e.skipped ? `skipped: ${e.skipped}` : tEn(statusOf(e)).toLowerCase(), e.wall_time_s, e.file]);
     return saveDownload(name, [["index", ...paramKeys, ...goalNames, "cost", "status", "duration_s", "file"].map(esc).join(","), ...rows.map((r) => r.map(esc).join(","))].join("\n"), "text/csv;charset=utf-8");
   };
   const saveBestRun = async () => {
@@ -83,16 +83,16 @@ export default function OptimizeProgress() {
       ? [
           { key: "f0", label: "f0", unit: "GHz", digits: 4, get: (e: ReturnType<typeof optEvals>[number]) => e.metrics.f0_ghz },
           s11Goal()
-            ? { key: "s11", label: "|S11|", unit: `dB @ ${s11Goal()!.at}`, digits: 1, get: (e: ReturnType<typeof optEvals>[number]) => e.metrics.s11_at?.[`${s11Goal()!.at}`] ?? null }
+            ? { key: "s11", label: "|S11|", unit: `dB @ ${s11Goal()!.at}${s11Goal()!.at_hi != null ? `..${s11Goal()!.at_hi}` : ""}`, digits: 1, get: (e: ReturnType<typeof optEvals>[number]) => evaluationGoalValue(s11Goal()!, e, spec()!.goals.indexOf(s11Goal()!)) }
             : { key: "s11", label: "|S11| (f0)", unit: "dB", digits: 1, get: (e: ReturnType<typeof optEvals>[number]) => e.metrics.s11_f0_db ?? null },
         ]
       : []),
     ...multiGoals().map((g, k) => ({
       key: `g:${k}`,
       label: g.kind === "match_all" ? "max |Sii|" : `|${pairName(g)}|`,
-      unit: `dB @ ${fmtG(g.at)}`,
+      unit: `dB @ ${fmtG(g.at)}${g.at_hi != null ? `..${fmtG(g.at_hi)}` : ""}`,
       digits: 2,
-      get: (e: ReturnType<typeof optEvals>[number]) => goalValue(g, e.metrics),
+      get: (e: ReturnType<typeof optEvals>[number]) => evaluationGoalValue(g, e, spec()!.goals.indexOf(g)),
     })),
     // one column per goal, keyed by its index: the evaluation's goal parts come in goal order, and two
     // goals may share a kind (e.g. |S11| at two frequencies)
@@ -166,8 +166,8 @@ export default function OptimizeProgress() {
               {t("opt.progress.cost", { value: num(best()!.cost, 4) })}
               {/* Show every objective, including bandwidth and directivity, for the best point. */}
               {(spec()?.goals ?? []).map((g, i) => {
-                const value = best()!.goals?.[i]?.value ?? (best()!.metrics ? goalValue(g, best()!.metrics) : null);
-                const unit = g.kind === "f0" ? "GHz" : g.kind === "bw_min" ? "MHz" : g.kind === "dmax_min" ? "dBi" : "dB";
+                const value = evaluationGoalValue(g, best()!, i);
+                const unit = g.kind === "f0" ? "GHz" : g.kind === "bw_min" ? "MHz" : g.kind === "efficiency_min" ? "%" : ["dmax_min", "realized_gain_min"].includes(g.kind) ? "dBi" : "dB";
                 return ` · ${goalText(g)}: ${num(value, 3)} ${unit}`;
               }).join("")}
               {" "}· {t("opt.progress.evaluationN", { n: best()!.index })}

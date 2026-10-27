@@ -55,6 +55,13 @@ export function ribbonFieldPlanes(): Availability {
   return fieldPlanesAvailability(runContentOf(result.file));
 }
 
+/** Array synthesis is available only for stored multi-element fields. */
+export function ribbonArray(): Availability {
+  const result = ribbonResult();
+  const ready = !!result && !!runContentOf(result.file)?.array?.length;
+  return { ok: ready, reason: ready ? t("dock.results.array") : t("array.noPatterns") };
+}
+
 /** The 3D pattern of the focused run: only a run with far fields offers it. */
 export function ribbonPattern3d(): Availability {
   const result = ribbonResult();
@@ -101,6 +108,11 @@ export function openRibbonResult(action: ResultView | "report" | "export") {
     const maps = runContentOf(result.file)!.fieldPlanes!;
     const shown = maps.find((m) => m.map === result.map) ?? maps[0];
     return focusResult({ file: result.file, view: "fieldmap", f: shown.f, map: shown.map }, "main");
+  }
+  if (action === "array") {
+    if (!ribbonArray().ok) return;
+    const result = ribbonResult()!;
+    return focusResult({ file: result.file, view: "array", f: runContentOf(result.file)!.array![0] }, "main");
   }
   // the 3D pattern toggles: off goes back to the geometry
   if (action === "pattern3d") {

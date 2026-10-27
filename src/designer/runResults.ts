@@ -4,6 +4,7 @@
 // the 3D view in place of the geometry preview, with the pattern or the surface currents on for
 // those views. Back to geometry (a geometry node, an edit, leaving the design) the preview returns.
 import { createEffect, createMemo, createRoot, createSignal, on } from "solid-js";
+import { setDisplayedRun } from "./displayedRun";
 import type { Bundle } from "../types";
 import { projectUrl } from "../env";
 import { nearestIndex } from "../lib/rf";
@@ -403,8 +404,10 @@ function display(f: ResultFocus, r: { file: string; bundle: Bundle }) {
       openBundle(r.bundle, r.file);
       shownBundle = bundle();
       shownSource = r.bundle;
+      setDisplayedRun(shownBundle ? { source: r.bundle, view: shownBundle } : null);
     } catch {
       shownBundle = shownSource = null;
+      setDisplayedRun(null);
       return;
     } finally {
       setKeepCamera(false);
@@ -417,6 +420,7 @@ function display(f: ResultFocus, r: { file: string; bundle: Bundle }) {
 function backToGeometry() {
   const showing = !!shownBundle && bundle() === shownBundle;
   shownBundle = shownSource = null;
+  setDisplayedRun(null);
   setLayers({ pattern: false, current: false });
   setFieldPlaneMap(null);
   if (showing && appMode() === "design" && designFile()) {
@@ -468,6 +472,7 @@ createRoot(() => {
   createEffect(on(bundle, (b) => {
     if (opening || !resultFocus() || !shownBundle || b === shownBundle) return;
     shownBundle = shownSource = null;
+    setDisplayedRun(null);
     focusResult(null);
   }, { defer: true }));
 
@@ -503,6 +508,7 @@ createRoot(() => {
           try { clearProject(); } finally { opening = false; }
         }
         shownBundle = shownSource = null;
+        setDisplayedRun(null);
         setLayers({ pattern: false, current: false });
         setFieldPlaneMap(null);
       } else focusResult(null);

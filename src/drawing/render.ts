@@ -42,7 +42,7 @@ export async function svgToPdf(svg: string, title: string): Promise<Uint8Array> 
 /** The one-file A4 PDF report for a bundle (src/export/reportPdf.ts). `files`: the paths of the package it goes into
  * (its "Files and formats" list); `model`: the workspace file the reproduce command runs. */
 export async function reportPdfFor(b: Bundle, now: Date = new Date(), arrayWeights?: Map<number, Weight> | null, reference?: RefBundle | null,
-  extra: { files?: readonly string[]; model?: ModelFileRef | null } = {}): Promise<Uint8Array> {
+  extra: { files?: readonly string[]; model?: ModelFileRef | null; arrayFrequencyHz?: number } = {}): Promise<Uint8Array> {
   const { reportPdf } = await import("../export/reportPdf.ts");
   const p = (x: number) => String(x).padStart(2, "0");
   const date = `${now.getFullYear()}-${p(now.getMonth() + 1)}-${p(now.getDate())}`;
