@@ -11,6 +11,38 @@ sim.add_nf2ff_box(center=[0, 0, 0])   # after the mesh: the NF2FF box is placed 
 
 Tüm düzenleyici şablonları (`python/templates/*.py`) bu yöntemi kullanır. Dipol ve yama modelleri, elle ayarlanmış mesh'leriyle karşılaştırma için `--set mesh=auto` seçeneğini kabul eder.
 
+## Seçenekler
+
+`sim.auto_mesh(**kw)`, `fairbeam.automesh.generate(sim, ...)` işlevine aktarır:
+
+| Seçenek | Varsayılan | Anlamı |
+| --- | --- | --- |
+| `f_max` | simülasyonun değeri | Dalga boyunu belirleyen frekans |
+| `cells_per_wavelength` | 20 | Geometrik ayrıntı ve dielektrik çözünürlüğü: λ(f_max) / hücre sayısı; dielektrik içinde sqrt(ε_r)'ye bölünür |
+| `air_cells_per_wavelength` | `cells_per_wavelength` ile aynı | Dış havada isteğe bağlı daha kaba en büyük hücre. Metal kenarı yerleşimi ve dielektrik çözünürlüğü yine `cells_per_wavelength` kullanır. Pozitif olmalı ve bu değeri aşmamalıdır |
+| `edge_rule` | `"thirds"` | `"thirds"`: serbest metal kenarlarının 1/3 içerisine ve 2/3 dışına çizgi; `"edge"`: kenarın üzerine çizgi |
+| `edge_res` | yerel en büyük hücrenin yarısı | Üçte bir kuralının kenar hücresi d ve eğik çokgenlerin dolgusu |
+| `metal_cells` | 6 | Dar metal boyunca en az hücre sayısı (genişliği 2 yerel hücreyi aşmayan şerit, kol veya direk) |
+| `dielectric_cells` | 4 | İnce dielektrik katman boyunca hücre sayısı |
+| `max_ratio` | 1,4 | Kademeli dolguda komşu hücreler arasındaki en büyük oran |
+| `min_cell` | istenen en ince hücrenin 0,45 katı | Bundan yakın çizgiler birleştirilir (aşağıya bakın) |
+| `pad` | λ(f_min) / 4 | Yapı ile emici sınırlar arasındaki hava (PML hücreleri buna eklenir). Tek sayı veya altı değer (x-, x+, y-, y+, z-, z+); 0, PML'e uzanan besleme dalga kılavuzunda (`pyramidal_horn.py`) o yüzü yapı üzerinde bırakır ve PML hücresi eklemez |
+| `refine_features` | `False` | Dar boşluk, çentik, ince veya eğik şerit gibi ince ayrıntıların çevresinde mesh'i yerel olarak sıklaştırır. Varsayılan olarak kapalıdır; aşağıya bakın. `mesh.refine_features` içermeyen tasarım JSON'u da `false` kullanır |
+| `keep_existing` | `True` | Izgaradaki mevcut çizgiler (modelin ekledikleri) sabit çizgi olarak korunur |
+| `verbose` | `False` | Raporu yazdırır |
+
+Tasarım dosyasında Simülasyon › Mesh ayarları penceresi *Otomatik* (`mesh.mode: "design"`, aşağıda açıklanır) ve *Otomatik (eski)* (`"auto"`; `mode` içermeyen tasarımın kullandığı mod da budur) modlarını sunar. `"manual"` çizgili tasarımda *Elle girilen çizgiler* görünür. Eski `auto` modundaki tasarım JSON'u, mevcut dalga boyu başına hücre ve hava payı alanlarının yanında `mesh.edge_rule`, `mesh.max_ratio` ve `mesh.air_cells_per_wavelength` ayarlayabilir. Bunları belirtmemek önceki mesh'i korur. İnce ayrıntıların sıklaştırılması ayrıca `mesh.refine_features` ile denetlenir. Tasarımcının hücre ve süre tahminleri dönen mesh çizgilerini ve zaman adımını kullanır; böylece önizleme üretildikten sonra seçilen seçenekleri kapsar.
+
+Simülasyon ayarları › Mesh altındaki **İnce ayrıntıları sıklaştırın**, iki otomatik modda da tasarım düzeyindeki `mesh.refine_features` mantıksal değerini denetler. **Varsayılan olarak kapalıdır**: yeni tasarımlarda (`"refine_features": false`), bu alanı içermeyen kayıtlı tasarımlarda ve Python API'sinde (`refine_features=False`). Bir tasarımı açmak veya dışa aktarmak ayarı hiçbir zaman açmaz; bu yüzden bir güncelleme mesh'inizi korur. Elle girilen mesh çizgileri hiçbir zaman sıklaştırılmaz. Tasarımdan üretilen Python her zaman tasarımın geçerli değerini açıkça yazar.
+
+Ne zaman açılmalı: tasarımda otomatik mesh'in üç hücreden azıyla (eğik şeritte tek hücreyle) kapladığı dar boşluklar, çentikler, besleme aralıkları veya eğik ince şeritler varsa. Ayar kapalıyken mesh değişmez; yine de Denetimler listesi bu tür ayrıntıları `mesh-fine-feature` olarak bildirir (sayıyı ve en kötü genişlikleri içeren bir bilgi) ve ayarı açmanızı önerir. Ayarı açtıktan sonra önizlemeyi yeniden oluşturun, hücre sayısını ve denetimleri karşılaştırın.
+
+Maliyet ve doğruluk uyarısı: sıklaştırma hücre ve zaman adımı sayısını, dolayısıyla çalışma süresini artırır; paketlenmiş örneklerde hücre sayısı yaklaşık 2 katına kadar, bıçak anteninde hücre × zaman adımı maliyeti 7,5 katına kadar çıkar (aşağıdaki tablolara bakın). Ayrıca besleme çevresindeki ızgarayı değiştirir; bu da tel antenlerin giriş empedansını kaydırabilir: aşağıdaki kaba helis denetiminde giriş direnci %27,7 değişmiştir. Geometrik çözünürlük, elektromanyetik yakınsama demek değildir; bu yüzden empedansa güvenmeden önce ayar açıkken ve kapalıyken birer çalıştırmayı karşılaştırın veya [yakınsama çalışmasını](#convergence-study) yapın. Dağıtımdan kaldırılan Blade araştırma kaynağı bu ayarı kullanır; artık örnek olarak sunulmaz.
+
+Uyarlamalı *Otomatik* modu `mesh: {"mode":"design", "overrides": {...}}` kullanır. İnce desenli metal levhalar için yaklaşık 30 hücre/λ ve tam levha kenarlarını, diğer durumlarda 24 hücre/λ ve üçte bir kuralını seçer. Hava çözünürlüğü şekil sayısıyla azalır (8 ile geometrik ayrıntı çözünürlüğü arasında sınırlıdır), varsa dielektrik katmanlar en az beş alt bölüme ayrılır ve kademelenme oranı 1,4'tür. Hava payı uzak alan hesaplanmıyorsa λ(f_min)/8, hesaplanıyorsa λ(f_min)/4'tür. NF2FF kutusu mesh çizgilerinden oluşturulur; openEMS, `Simulation.add_nf2ff_box` içinde asgari açıklık şartı getirmez. Daha büyük çeyrek dalga payı, ışıma sınırı için temkinli seçimdir. Alan değerleri `overrides` altında sabitlenebilir; bu değerler aynen raporlanır ve notları elle belirlenen ayarı gösterir. Uyarlamalı değerler oluşturma sırasında hesaplanır, tasarım JSON'una geri yazılmaz. Eksik mod ve `mode: auto` eski seçimleri korur.
+
+Yama, dipol ve mikroşerit tasarımlarındaki GPU karşılaştırması sonucunda bu mod, mevcut dosyalar için isteğe bağlı bırakılmıştır. Tam kenarlı 45 hücre/λ openEMS referansına göre uyarlamalı S11 MAE değeri, eski mesh'ten biraz daha yüksektir: yamada 0,724 ve 0,696 dB, dipolde 2,864 ve 2,852 dB, mikroşeritte 2,823 ve 2,596 dB. Bunlar tekil çalıştırmalardır; daha ince referans, yakınsaması garanti edilmiş çözüm değil sayısal karşılaştırmadır. Raporlanan seçimleri inceleyin ve tasarımınıza uygun alan ayarlarını kullanın.
+
 ## Açık yerel inceltme bölgeleri
 
 Simülasyon ayarları, `mesh.local_regions` içinde en fazla 32 yerel inceltme kutusu saklayabilir.
@@ -52,38 +84,6 @@ kullanır; bölgeler orada saklanır ancak etkin değildir. İşaretsiz manuel g
 serileştirme kuralını korur. Üretilmiş Tasarımın bölge ifadeleri yalnızca kayıtlı parametreleri
 uygulanan aynı bölgelere çözüldüğünde korunabilir. Genel Python modellerinden çözülmüş
 sayısal bölgeler alınır; keyfi formüllerin geri kazanıldığı iddia edilmez.
-
-## Seçenekler
-
-`sim.auto_mesh(**kw)`, `fairbeam.automesh.generate(sim, ...)` işlevine aktarır:
-
-| Seçenek | Varsayılan | Anlamı |
-| --- | --- | --- |
-| `f_max` | simülasyonun değeri | Dalga boyunu belirleyen frekans |
-| `cells_per_wavelength` | 20 | Geometrik ayrıntı ve dielektrik çözünürlüğü: λ(f_max) / hücre sayısı; dielektrik içinde sqrt(ε_r)'ye bölünür |
-| `air_cells_per_wavelength` | `cells_per_wavelength` ile aynı | Dış havada isteğe bağlı daha kaba en büyük hücre. Metal kenarı yerleşimi ve dielektrik çözünürlüğü yine `cells_per_wavelength` kullanır. Pozitif olmalı ve bu değeri aşmamalıdır |
-| `edge_rule` | `"thirds"` | `"thirds"`: serbest metal kenarlarının 1/3 içerisine ve 2/3 dışına çizgi; `"edge"`: kenarın üzerine çizgi |
-| `edge_res` | yerel en büyük hücrenin yarısı | Üçte bir kuralının kenar hücresi d ve eğik çokgenlerin dolgusu |
-| `metal_cells` | 6 | Dar metal boyunca en az hücre sayısı (genişliği 2 yerel hücreyi aşmayan şerit, kol veya direk) |
-| `dielectric_cells` | 4 | İnce dielektrik katman boyunca hücre sayısı |
-| `max_ratio` | 1,4 | Kademeli dolguda komşu hücreler arasındaki en büyük oran |
-| `min_cell` | istenen en ince hücrenin 0,45 katı | Bundan yakın çizgiler birleştirilir (aşağıya bakın) |
-| `pad` | λ(f_min) / 4 | Yapı ile emici sınırlar arasındaki hava (PML hücreleri buna eklenir). Tek sayı veya altı değer (x-, x+, y-, y+, z-, z+); 0, PML'e uzanan besleme dalga kılavuzunda (`pyramidal_horn.py`) o yüzü yapı üzerinde bırakır ve PML hücresi eklemez |
-| `refine_features` | `False` | Dar boşluk, çentik, ince veya eğik şerit gibi ince ayrıntıların çevresinde mesh'i yerel olarak sıklaştırır. Varsayılan olarak kapalıdır; aşağıya bakın. `mesh.refine_features` içermeyen tasarım JSON'u da `false` kullanır |
-| `keep_existing` | `True` | Izgaradaki mevcut çizgiler (modelin ekledikleri) sabit çizgi olarak korunur |
-| `verbose` | `False` | Raporu yazdırır |
-
-Tasarım dosyasında Simülasyon › Mesh ayarları penceresi *Otomatik* (`mesh.mode: "design"`, aşağıda açıklanır) ve *Otomatik (eski)* (`"auto"`; `mode` içermeyen tasarımın kullandığı mod da budur) modlarını sunar. `"manual"` çizgili tasarımda *Elle girilen çizgiler* görünür. Eski `auto` modundaki tasarım JSON'u, mevcut dalga boyu başına hücre ve hava payı alanlarının yanında `mesh.edge_rule`, `mesh.max_ratio` ve `mesh.air_cells_per_wavelength` ayarlayabilir. Bunları belirtmemek önceki mesh'i korur. İnce ayrıntıların sıklaştırılması ayrıca `mesh.refine_features` ile denetlenir. Tasarımcının hücre ve süre tahminleri dönen mesh çizgilerini ve zaman adımını kullanır; böylece önizleme üretildikten sonra seçilen seçenekleri kapsar.
-
-Simülasyon ayarları › Mesh altındaki **İnce ayrıntıları sıklaştırın**, iki otomatik modda da tasarım düzeyindeki `mesh.refine_features` mantıksal değerini denetler. **Varsayılan olarak kapalıdır**: yeni tasarımlarda (`"refine_features": false`), bu alanı içermeyen kayıtlı tasarımlarda ve Python API'sinde (`refine_features=False`). Bir tasarımı açmak veya dışa aktarmak ayarı hiçbir zaman açmaz; bu yüzden bir güncelleme mesh'inizi korur. Elle girilen mesh çizgileri hiçbir zaman sıklaştırılmaz. Tasarımdan üretilen Python her zaman tasarımın geçerli değerini açıkça yazar.
-
-Ne zaman açılmalı: tasarımda otomatik mesh'in üç hücreden azıyla (eğik şeritte tek hücreyle) kapladığı dar boşluklar, çentikler, besleme aralıkları veya eğik ince şeritler varsa. Ayar kapalıyken mesh değişmez; yine de Denetimler listesi bu tür ayrıntıları `mesh-fine-feature` olarak bildirir (sayıyı ve en kötü genişlikleri içeren bir bilgi) ve ayarı açmanızı önerir. Ayarı açtıktan sonra önizlemeyi yeniden oluşturun, hücre sayısını ve denetimleri karşılaştırın.
-
-Maliyet ve doğruluk uyarısı: sıklaştırma hücre ve zaman adımı sayısını, dolayısıyla çalışma süresini artırır; paketlenmiş örneklerde hücre sayısı yaklaşık 2 katına kadar, bıçak anteninde hücre × zaman adımı maliyeti 7,5 katına kadar çıkar (aşağıdaki tablolara bakın). Ayrıca besleme çevresindeki ızgarayı değiştirir; bu da tel antenlerin giriş empedansını kaydırabilir: aşağıdaki kaba helis denetiminde giriş direnci %27,7 değişmiştir. Geometrik çözünürlük, elektromanyetik yakınsama demek değildir; bu yüzden empedansa güvenmeden önce ayar açıkken ve kapalıyken birer çalıştırmayı karşılaştırın veya [yakınsama çalışmasını](#convergence-study) yapın. Dağıtımdan kaldırılan Blade araştırma kaynağı bu ayarı kullanır; artık örnek olarak sunulmaz.
-
-Uyarlamalı *Otomatik* modu `mesh: {"mode":"design", "overrides": {...}}` kullanır. İnce desenli metal levhalar için yaklaşık 30 hücre/λ ve tam levha kenarlarını, diğer durumlarda 24 hücre/λ ve üçte bir kuralını seçer. Hava çözünürlüğü şekil sayısıyla azalır (8 ile geometrik ayrıntı çözünürlüğü arasında sınırlıdır), varsa dielektrik katmanlar en az beş alt bölüme ayrılır ve kademelenme oranı 1,4'tür. Hava payı uzak alan hesaplanmıyorsa λ(f_min)/8, hesaplanıyorsa λ(f_min)/4'tür. NF2FF kutusu mesh çizgilerinden oluşturulur; openEMS, `Simulation.add_nf2ff_box` içinde asgari açıklık şartı getirmez. Daha büyük çeyrek dalga payı, ışıma sınırı için temkinli seçimdir. Alan değerleri `overrides` altında sabitlenebilir; bu değerler aynen raporlanır ve notları elle belirlenen ayarı gösterir. Uyarlamalı değerler oluşturma sırasında hesaplanır, tasarım JSON'una geri yazılmaz. Eksik mod ve `mode: auto` eski seçimleri korur.
-
-Yama, dipol ve mikroşerit tasarımlarındaki GPU karşılaştırması sonucunda bu mod, mevcut dosyalar için isteğe bağlı bırakılmıştır. Tam kenarlı 45 hücre/λ openEMS referansına göre uyarlamalı S11 MAE değeri, eski mesh'ten biraz daha yüksektir: yamada 0,724 ve 0,696 dB, dipolde 2,864 ve 2,852 dB, mikroşeritte 2,823 ve 2,596 dB. Bunlar tekil çalıştırmalardır; daha ince referans, yakınsaması garanti edilmiş çözüm değil sayısal karşılaştırmadır. Raporlanan seçimleri inceleyin ve tasarımınıza uygun alan ayarlarını kullanın.
 
 ## Kurallar
 

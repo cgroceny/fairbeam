@@ -411,7 +411,7 @@ bütçesi önizlemede hata verir; hiçbir bölge sessizce elenmez. Çizgiler tü
 uzanır; küçük kutuların da hücre maliyetini inceleyin. Bölge ekleme maliyeti ile port
 hizalamasından sonraki son hücre sayısı ayrıdır. Mesh görünümü eşleşen önizlemenin çözülmüş
 kutularını kullanır; taslak düzenlemesi eski çizgilere yeni kutular eklemez. Boyut, komşu
-hücre oranı ve raporlama kuralları için [yerel bölgeler](MESHING.md#açık-yerel-inceltme-bölgeleri)
+hücre oranı ve raporlama kuralları için [yerel bölgeler](MESHING.md#explicit-local-refinement-regions)
 bölümüne bakın. İnceltme tek başına elektromanyetik yakınsama kanıtı değildir.
 
 ## Mesh görünümü
