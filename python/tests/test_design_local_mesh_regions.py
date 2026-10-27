@@ -129,6 +129,14 @@ class DesignLocalRegions(unittest.TestCase):
         checks = design_checks(d, {}, None, failure)
         self.assertTrue(any(c["code"] == "mesh-local-limit" and c["path"] == "mesh.local_regions" for c in checks))
         checks = design_checks(d, {}, None, RuntimeError("ordinary"))
+        # This deliberately port-free mesh fixture already has a no-port error;
+        # legacy preview avoids adding an unlocated generic error on top of it.
+        self.assertTrue(any(c["code"] == "no-port" and c["severity"] == "error" for c in checks))
+        self.assertFalse(any(c["code"] == "build" for c in checks))
+        # Isolate formatting when lint has no pre-existing errors. Domain/local
+        # failures above still exercise the real lint and mapping path.
+        with patch("fairbeam.design_checks.lint", return_value=[]):
+            checks = design_checks(d, {}, None, RuntimeError("ordinary"))
         self.assertTrue(any(c["code"] == "build" and c["message"] == "does not build: RuntimeError: ordinary" for c in checks))
 
     def test_post_build_mutation_refused_at_export_and_before_native_run(self):
