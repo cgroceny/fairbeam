@@ -96,7 +96,8 @@ jobs:
     needs: [plan, web]
     if: needs.plan.outputs.full == 'true' && needs.plan.outputs.reuse != 'true'
     runs-on: windows-latest
-    timeout-minutes: 45
+    # Native checks plus both browser suites can exceed 45 minutes on slower hosted runners.
+    timeout-minutes: 60
     env:
       OPENEMS_TAG: v0.37.0-rc3
       # no PYTHONUTF8: run with the default ANSI code page (cp1252) that users have, so a missing
