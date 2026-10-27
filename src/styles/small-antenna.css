@@ -15,3 +15,14 @@
 .small-antenna :is(.small-antenna-geometry, .small-antenna-assumptions) > summary { cursor: pointer; }
 .small-antenna-comparison { min-width: 0; }
 .rdk-side .small-antenna-comparison { margin-top: var(--al-space-3); }
+
+/* Compact Designer handles float over the result area; keep this panel's text clear of them.
+   At desktop widths the workspace already reserves a grid column for each handle. */
+@media (max-width: 1040px) {
+  .workspace.design-mode:has(> .dw-strip-left) .dw-result .small-antenna {
+    margin-inline-start: calc(var(--dw-strip-w, 26px) + var(--al-space-1));
+  }
+  .workspace.design-mode:has(> .dw-strip-right) .dw-result .small-antenna {
+    margin-inline-end: calc(var(--dw-strip-w, 26px) + var(--al-space-1));
+  }
+}

@@ -1,6 +1,6 @@
 // Real Designer UI/export paths on analytical RLC fixtures. No EM/native/renderer jobs.
 import assert from 'node:assert/strict';
-import { mkdir, readFile, readdir, writeFile } from 'node:fs/promises';
+import { mkdir, readFile, readdir, rename, writeFile } from 'node:fs/promises';
 import { join, resolve } from 'node:path';
 import { tmpdir } from 'node:os';
 import puppeteer from 'puppeteer-core';
@@ -17,7 +17,44 @@ const mods = { a: '/src/designer/smallAntennaSession.ts', math: '/src/lib/smallA
   dr: '/src/runner/designRun.ts', rf: '/src/designer/resultFocus.ts', rr: '/src/designer/runResults.ts',
   pp: '/src/designer/portProcessingSession.ts', data: '/src/designer/resultData.ts', locale: '/src/i18n/index.ts' };
 let stack, browser, page, session, lang;
-const outcomes = [], forbidden = [];
+const outcomes = [], forbidden = [], projectReads = [], projectReadTasks = [], layouts = [];
+
+// Measure visible glyphs and controls, not just their containing panel's overflow.
+function edgeHandleLayout(selector) {
+  const panel = document.querySelector(selector), result = panel.closest('.dw-result');
+  const box = rect => ({ left: rect.left, top: rect.top, right: rect.right, bottom: rect.bottom });
+  const resultRect = result.getBoundingClientRect(), bodyRect = panel.closest('.rs').getBoundingClientRect();
+  const toolbar = result.querySelector('.dw-result-bar')?.getBoundingClientRect();
+  const clip = { left: Math.max(0, resultRect.left, bodyRect.left), right: Math.min(innerWidth, resultRect.right, bodyRect.right),
+    top: Math.max(0, resultRect.top, bodyRect.top, toolbar?.bottom ?? 0), bottom: Math.min(innerHeight, resultRect.bottom, bodyRect.bottom) };
+  const visible = rect => {
+    const clipped = { left: Math.max(rect.left, clip.left), right: Math.min(rect.right, clip.right),
+      top: Math.max(rect.top, clip.top), bottom: Math.min(rect.bottom, clip.bottom) };
+    return clipped.right > clipped.left && clipped.bottom > clipped.top ? clipped : null;
+  };
+  const strips = [...document.querySelectorAll('.workspace.design-mode > .dw-strip')]
+    .filter(element => element.getClientRects().length && getComputedStyle(element).visibility !== 'hidden')
+    .map(element => ({ side: element.classList.contains('dw-strip-left') ? 'left' : 'right', rect: box(element.getBoundingClientRect()) }));
+  const text = [...panel.querySelectorAll('dt, .mono, label > span, summary')].flatMap(element => {
+    const range = document.createRange(); range.selectNodeContents(element);
+    const metric = element.closest('[data-small-metric]')?.dataset.smallMetric ?? (element.tagName === 'DT' ? 'label' : null);
+    return [...range.getClientRects()].map(visible).filter(Boolean).map(rect => ({ kind: 'text', metric,
+      label: element.textContent.trim().slice(0, 100), rect }));
+  });
+  const controls = [...panel.querySelectorAll('input, select, button')].flatMap(element => {
+    const rect = visible(element.getBoundingClientRect());
+    return rect ? [{ kind: 'control', label: element.id || element.textContent.trim(), rect }] : [];
+  });
+  const overlapY = (a, b) => Math.min(a.bottom, b.bottom) > Math.max(a.top, b.top);
+  const collisions = strips.flatMap(strip => [...text, ...controls].filter(item => overlapY(item.rect, strip.rect) &&
+    Math.min(item.rect.right, strip.rect.right) > Math.max(item.rect.left, strip.rect.left))
+    .map(item => ({ side: strip.side, ...item })));
+  return { strips, text, controls, collisions, alignedMetrics: strips.map(strip => ({ side: strip.side,
+    count: text.filter(item => item.metric && overlapY(item.rect, strip.rect)).length })), clip,
+    heading: box(panel.querySelector('.small-antenna-panel > summary').getBoundingClientRect()),
+    ka: box(panel.querySelector('[data-small-metric="ka"] .mono').getBoundingClientRect()) };
+}
+
 try {
   stack = await startStack({ log: console.log });
   browser = await puppeteer.launch({ headless: true, executablePath: await chromePath(),
@@ -27,6 +64,21 @@ try {
     await context.overridePermissions(stack.url, ['clipboard-read', 'clipboard-write', 'clipboard-sanitized-write']);
     page = await context.newPage(); await page.setViewport({ width: 1280, height: 1000 });
     await page.evaluateOnNewDocument(language => localStorage.setItem('fairbeam.generalSettings', JSON.stringify({ language })), lang);
+    const fixturePaths = new Set(), language = lang;
+    page.on('response', response => {
+      const path = new URL(response.url()).pathname;
+      if (!fixturePaths.has(path)) return;
+      const record = { lang: language, path, status: response.status(), contentType: response.headers()['content-type'] ?? '' };
+      projectReads.push(record);
+      projectReadTasks.push(response.text().then(body => {
+        try { const data = JSON.parse(body); record.json = { model: data.model?.id, created: data.created, name: data.name }; }
+        catch { record.bodyError = 'not JSON'; record.prefix = body.slice(0, 160); }
+      }, error => { record.bodyError = String(error); }));
+    });
+    page.on('requestfailed', request => {
+      const path = new URL(request.url()).pathname;
+      if (fixturePaths.has(path)) projectReads.push({ lang: language, path, requestError: request.failure()?.errorText ?? 'unknown' });
+    });
     await page.setRequestInterception(true);
     page.on('request', request => {
       const path = new URL(request.url()).pathname;
@@ -49,14 +101,42 @@ try {
     c.half_space = { axis: 'z', side: 'min', position: -0.2, kind: 'PEC' }; c.solver.boundaries['z-'] = 'PEC';
     a.model.id = b.model.id = c.model.id = own.design.model.id;
     const files = [`${own.id}--small-a.json`, `${own.id}--small-b.json`, `${own.id}--small-c.json`];
+    files.forEach(file => fixturePaths.add(`/projects/${encodeURIComponent(file)}`));
     await writeFile(join(stack.projects, files[0]), JSON.stringify(a)); await writeFile(join(stack.projects, files[1]), JSON.stringify(b));
     await writeFile(join(stack.projects, files[2]), JSON.stringify(c));
-    await s.ev(({ a, b, c, files }, m) => {
-      m.st.setIndex([...m.st.index(), ...[a, b, c].map((bundle, i) => ({ file: files[i], model: bundle.model.id,
-        name: bundle.name, created: bundle.created, simulated: true, bands: [], params: [] }))]);
-      m.dr.setDesignResult({ file: files[0], bundle: a }); m.rr.ensureDesignRunBundles();
+    // Publish the same index identity the real writer gives these CPU fixtures. The app reads
+    // this temp index normally; no partial in-memory entry or metadata retry hides a failed read.
+    const entries = [a, b, c].map((bundle, i) => ({ file: files[i], model: bundle.model.id, name: bundle.name,
+      created: bundle.created, simulated: true, bands: [], params: [], cells: bundle.mesh.total_cells, engine: 'CPU' }));
+    const indexPath = join(stack.projects, 'index.json'), fixtureIndex = JSON.parse(await readFile(indexPath, 'utf8'));
+    fixtureIndex.projects = [...fixtureIndex.projects.filter(entry => !files.includes(entry.file)), ...entries];
+    fixtureIndex.updated = new Date().toISOString();
+    await writeFile(`${indexPath}.small-antenna.tmp`, JSON.stringify(fixtureIndex));
+    await rename(`${indexPath}.small-antenna.tmp`, indexPath);
+    await s.ev(async (entries, m) => {
+      const index = await m.st.loadIndex();
+      if (m.st.indexLoadError()) throw new Error(`Fixture index failed: ${m.st.indexLoadError()}`);
+      for (const expected of entries) {
+        const actual = index.find(entry => entry.file === expected.file);
+        if (!actual || Object.keys(expected).some(key => JSON.stringify(actual[key]) !== JSON.stringify(expected[key])))
+          throw new Error(`Fixture index identity differs: ${expected.file}`);
+      }
+      m.rr.ensureDesignRunBundles();
+    }, entries, mods);
+    await s.waitFor(async files => {
+      const m = await import('/src/designer/runResults.ts');
+      return files.some(file => m.designRunBundleLoadState(file) === 'error') || files.every(file => !!m.designRunBundle(file));
+    }, files, { what: 'all three synthetic bundles admitted, or an explicit read error' });
+    const admission = await s.ev((files, m) => files.map(file => ({ file, state: m.rr.designRunBundleLoadState(file) ?? null,
+      model: m.rr.designRunBundle(file)?.model.id, created: m.rr.designRunBundle(file)?.created,
+      name: m.rr.designRunBundle(file)?.name })), files, mods);
+    await Promise.allSettled(projectReadTasks);
+    assert.deepEqual(admission, entries.map(entry => ({ file: entry.file, state: null, model: entry.model,
+      created: entry.created, name: entry.name })), `Fixture read admission failed: ${JSON.stringify(projectReads)}`);
+    await s.ev((files, m) => {
+      m.dr.setDesignResult({ file: files[0], bundle: m.rr.designRunBundle(files[0]) });
       m.rf.focusResult({ file: files[0], view: 'impedance' }, 'main');
-    }, { a, b, c, files }, mods);
+    }, files, mods);
     const panel = '.dw-result [data-small-antenna]';
     const openPanel = async () => {
       await s.wait(panel);
@@ -114,7 +194,28 @@ try {
 
     for (const width of [1280, 768]) {
       await page.setViewport({ width, height: 1000 });
+      await page.evaluate(async selector => {
+        await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+        const panel = document.querySelector(selector), scroll = panel.closest('.rs'), result = panel.closest('.dw-result');
+        const toolbar = result.querySelector('.dw-result-bar').getBoundingClientRect();
+        scroll.scrollTop += panel.querySelector('.small-antenna-panel > summary').getBoundingClientRect().top -
+          Math.max(scroll.getBoundingClientRect().top, toolbar.bottom) - 8;
+        await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+      }, panel);
       assert.deepEqual(await page.evaluate(auditInPage, panel), []);
+      const layout = await page.evaluate(edgeHandleLayout, panel); layouts.push({ lang, width, ...layout });
+      assert.deepEqual(layout.collisions, [], `${lang}/${width}: actual panel glyph/control intersection with an edge handle`);
+      assert.ok(layout.heading.top >= layout.clip.top - 0.5 && layout.heading.bottom <= layout.clip.bottom,
+        `${lang}/${width}: panel heading is visible below the toolbar`);
+      assert.ok(layout.ka.top >= layout.clip.top && layout.ka.bottom <= layout.clip.bottom,
+        `${lang}/${width}: ka digits are visible with the panel heading`);
+      if (width === 768) {
+        assert.deepEqual(layout.strips.map(strip => strip.side).sort(), ['left', 'right']);
+        assert.ok(layout.alignedMetrics.every(item => item.count > 0), 'both handles are vertically aligned with actual metric text');
+      }
+      const readsBeforeCapture = await s.ev((files, m) => files.map(file => ({ file,
+        loaded: !!m.rr.designRunBundle(file), state: m.rr.designRunBundleLoadState(file) ?? null })), files, mods);
+      assert.deepEqual(readsBeforeCapture, files.map(file => ({ file, loaded: true, state: null })));
       await page.screenshot({ path: join(out, `${lang}-${width}-summary.png`) });
     }
     await page.setViewport({ width: 1280, height: 1000 });
@@ -176,11 +277,13 @@ try {
       explicitResonance: true, imageConvention: true, missingExactEfficiency: true, designUnchanged: true });
     await context.close();
   }
-  await writeFile(join(out, 'result.json'), JSON.stringify({ outcomes, forbidden }, null, 2));
+  await Promise.allSettled(projectReadTasks);
+  await writeFile(join(out, 'result.json'), JSON.stringify({ outcomes, forbidden, projectReads, layouts }, null, 2));
   console.log(JSON.stringify({ out, outcomes }, null, 2));
 } catch (error) {
+  await Promise.allSettled(projectReadTasks);
   await page?.screenshot({ path: join(out, 'failure.png') }).catch(() => {});
   await writeFile(join(out, 'failure.json'), JSON.stringify({ error: String(error?.stack || error), lang, url: page?.url(),
-    console: session?.consoleIssues, forbidden, outcomes, children: stack?.diagnostics() }, (_key, value) => typeof value === 'string' ? safeDiagnosticText(value) : value, 2));
+    console: session?.consoleIssues, forbidden, outcomes, projectReads, layouts, children: stack?.diagnostics() }, (_key, value) => typeof value === 'string' ? safeDiagnosticText(value) : value, 2));
   throw error;
 } finally { try { await browser?.close(); } finally { await stack?.stop(); } }
