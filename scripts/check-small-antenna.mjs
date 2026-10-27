@@ -196,6 +196,11 @@ const beforeStop = smallAntennaAnalysis(withPower(b => { b.run.energy_trace = [{
 ok(beforeStop.efficiency.available); eq(beforeStop.efficiency.energyBound, false); eq(beforeStop.efficiency.energyTimestep, 9000); eq(beforeStop.efficiency.energySource, 'recorded-sample');
 const explicitBound = smallAntennaAnalysis(withPower(b => { b.run.energy_trace = []; delete b.run.final_energy_db; b.run.final_energy_bound_db = -60; }));
 ok(explicitBound.efficiency.available); eq(explicitBound.efficiency.energyDb, -60); eq(explicitBound.efficiency.energyBound, true); eq(explicitBound.efficiency.energyTimestep, 10000); eq(explicitBound.efficiency.energySource, 'recorded-bound');
+for (const [sample, bound] of [[-20, -60], [-65, -70]]) {
+  rejectPower(b => { b.run.energy_trace = [{ timestep: 10000, db: sample }]; b.run.final_energy_db = sample; b.run.final_energy_bound_db = bound; }, 'efficiency-convergence');
+  const earlier = smallAntennaAnalysis(withPower(b => { b.run.energy_trace = [{ timestep: 9000, db: sample }]; b.run.final_energy_db = sample; b.run.final_energy_bound_db = bound; }));
+  ok(earlier.efficiency.available); eq(earlier.efficiency.energyDb, bound); eq(earlier.efficiency.energyBound, true); eq(earlier.efficiency.energyTimestep, 10000);
+}
 const terminalTrace = smallAntennaAnalysis(withPower(b => { delete b.run.final_energy_db; }));
 ok(terminalTrace.efficiency.available); eq(terminalTrace.efficiency.energySource, 'terminal-trace'); eq(terminalTrace.efficiency.energyBound, false);
 const norm = smallAntennaAnalysis(withPower(b => { Object.assign(b.results.farfield[0], { prad_w: .98, rad_efficiency: 1, rad_efficiency_raw: .98 }); }));

@@ -297,8 +297,12 @@ function convergedEnergy(b: Bundle, port: number) {
     || [run.port_runs[0].final_energy_db, run.port_runs[0].final_energy_bound_db].some(v => v !== undefined && (!finite(v) || v > criterion)))) return null;
   const last = run.energy_trace.at(-1);
   if (run.final_energy_db !== undefined && (!last || Math.abs(last.db - run.final_energy_db) > 1e-9)) return null;
-  if (run.final_energy_bound_db !== undefined) return run.final_energy_bound_db <= criterion
-    ? { db: run.final_energy_bound_db, bound: true, timestep: run.timesteps!, source: 'recorded-bound' as const } : null;
+  if (run.final_energy_bound_db !== undefined) {
+    // An earlier sample can exceed the stop bound; a sample at the stop cannot.
+    if (last?.timestep === run.timesteps && last.db > run.final_energy_bound_db) return null;
+    return run.final_energy_bound_db <= criterion
+      ? { db: run.final_energy_bound_db, bound: true, timestep: run.timesteps!, source: 'recorded-bound' as const } : null;
+  }
   if (!last || last.db > criterion) return null;
   if (run.final_energy_db !== undefined) return { db: run.final_energy_db, bound: false, timestep: last.timestep, source: 'recorded-sample' as const };
   return last.timestep === run.timesteps ? { db: last.db, bound: false, timestep: last.timestep, source: 'terminal-trace' as const } : null;
