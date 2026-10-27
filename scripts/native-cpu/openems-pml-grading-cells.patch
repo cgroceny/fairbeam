@@ -1,0 +1,51 @@
+diff --git a/openems.cpp b/openems.cpp
+index ec80b74..b85239b 100644
+--- a/openems.cpp
++++ b/openems.cpp
+@@ -18,6 +18,7 @@
+ #include "openems.h"
+ #include <iomanip>
+ #include <iostream>
++#include <stdexcept>
+ #include <fstream>
+ #include "tools/signal.h"
+ #include "tools/useful.h"
+@@ -259,6 +260,19 @@ void openEMS::collectCommandLineArguments()
+ 			"  multithreaded: \tengine using compressed "
+ 			"operator + sse vector extensions + multithreading\n"
+ 		)
++		(
++			"pml-grading-cells",
++			po::value<unsigned int>()->notifier(
++				[](unsigned int cells)
++				{
++					if (cells < 1 || cells > 64)
++						throw std::invalid_argument("pml-grading-cells must be in 1..64");
++					cout << "openEMS - PML grading reference cells: " << cells << endl;
++				}
++			),
++			"Opt-in reference cell count for exponential PML grading (1..64), "
++			"independent of the actual PML grid; omitted retains native grading"
++		)
+ 		(
+ 			"numThreads",
+ 			po::value<int>()->default_value(0)->notifier(
+@@ -415,7 +429,17 @@ bool openEMS::SetupBoundaryConditions()
+ 
+ 
+ 	//create the upml
+-	Operator_Ext_UPML::Create_UPML(FDTD_Op, m_BC_type, m_PML_size, string());
++	string pmlGrading;
++	if (g_settings.hasOption("pml-grading-cells"))
++	{
++		const string cells = std::to_string(g_settings.getOption("pml-grading-cells").as<unsigned int>());
++		const string width = "(W/" + cells + ")";
++		// Keep the reference dl fixed when the physical layer is subdivided.
++		// This is the existing exponential profile with only dl = W/Nref.
++		pmlGrading = "-log(1e-6)*log(2.5)/(2*" + width
++			+ "*Z*(pow(2.5,W/" + width + ")-1))*pow(2.5,D/" + width + ")";
++	}
++	Operator_Ext_UPML::Create_UPML(FDTD_Op, m_BC_type, m_PML_size, pmlGrading);
+ 
+ 	return true;
+ }
