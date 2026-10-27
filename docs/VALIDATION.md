@@ -1138,11 +1138,17 @@ noted above. No gallery model or generated bundle is changed.
 
 ## 20. Chapter 4 comparison scopes
 
-The [Chapter 4 record](benchmarks/pozar-chapter-04.md) collects the matching,
-mesh-qualified ideal-current modal amplitude and input resistance for 4.8. It passes
-two consecutive mesh-change gates, an independent boundary control and its own
-target/QA limits after source completion and exact -90 dB energy stops. The 4.2
-interface remains excluded because its new boundary control failed its energy stop.
+The [Chapter 4 record](benchmarks/pozar-chapter-04.md) collects two restricted scopes:
+the ideal-current modal amplitude and input resistance for 4.8, and the complex
+TE10 matrix of our uniform dielectric interface for 4.2 with opt-in MUR controls.
+Both pass two consecutive mesh-change gates, independent boundary controls and
+their own target/QA limits after source completion and exact -90 dB primary stops.
+For 4.2, eight additional fixed 60 ns observations pass sampled late-energy and
+port-wave-change gates; they do not claim convergence to their -150 dB observation
+criterion or arbitrary-duration stability. Reduced measurements and an offline
+arithmetic replay are linked in [PR #343](https://github.com/ismailakdag/fairbeam/pull/343).
+The default PML_8 interface remains excluded because its boundary control fails
+the energy stop; the unique cause is unresolved in [#340](https://github.com/ismailakdag/fairbeam/issues/340).
 
 Filament reactance, practical launches and general mode conversion are excluded.
 The probe's target errors are nonmonotone; boundary/triplet sensitivity limits the
