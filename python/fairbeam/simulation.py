@@ -731,6 +731,10 @@ class Simulation:
             # cancels a job) and stopped early: the fields are not converged, so nothing may be
             # post-processed or exported as if they were
             raise KeyboardInterrupt("openEMS run aborted by Ctrl+C / Ctrl+Break")
+        if bad_energy := _nonfinite_energy(text):
+            self.run_stats = {}
+            raise RuntimeError("openEMS reported non-finite linear energy; numerical run failed.\n"
+                               + bad_energy)
         stats = _parse_log(text, self.end_criteria_db, self.max_timesteps)
         if stats.get("timestep_s") and self.excitation["type"] == "gaussian-derivative":
             # openEMS reports a custom excitation as max-timesteps long; the pulse itself is shorter.
@@ -1580,6 +1584,19 @@ def _aborted(text: str) -> bool:
     Windows, ``Signal::Win32GracefulExitHandler(): Gracefully aborting simulation now``), then
     returns from Run normally, as if the end criterion had been met."""
     return bool(_ABORT_RE.search(text))
+
+
+def _nonfinite_energy(text: str) -> str | None:
+    """Return a native progress line with NaN/Inf linear energy.
+
+    A zero linear value with -inf dB can be legitimate. Inspect the linear
+    reading, and require the native progress prefix rather than user labels.
+    """
+    match = re.search(
+        r"^[ \t]*\[@[^\r\n]*?\][ \t]*Timestep:[ \t]*\d+[^\r\n]*?\bEnergy:[ \t]*~?[ \t]*"
+        r"[+-]?(?:nan(?:\([^)\r\n]*\))?|inf(?:inity)?)(?=\s|\(|$)[^\r\n]*",
+        text, re.I | re.M)
+    return match.group(0).strip() if match else None
 
 
 def _parse_log(text: str, end_db: float, max_timesteps: int | None = None) -> dict:
