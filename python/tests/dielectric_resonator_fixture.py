@@ -75,8 +75,13 @@ def identity():
     return {name: sha(base/name) for name in names}
 
 
-def outside(dr, clearance, pml, air_refinement=1):
-    """Refine coarse air; keep core-scale/sliver intervals, anchors and PML."""
+def outside(dr, clearance, pml, air_refinement=1, pml_refinement=1):
+    """Refine air or subdivide a fixed-thickness PML, keeping its start/end.
+
+    Native default PML grading also depends on its cell count. Subdivision is
+    therefore a joint grid/grading boundary diagnostic, not a fixed-profile
+    discretization-convergence claim.
+    """
     increments, distance, step = [], 0., dr
     while distance < clearance-1e-12:
         step = min(step*1.25, 3.)
@@ -94,7 +99,7 @@ def outside(dr, clearance, pml, air_refinement=1):
                 count *= 2
             parts.append(np.linspace(a, b, count+1)[:-1])
         air = np.concatenate(parts + [air[-1:]])
-    return np.r_[air, clearance+np.arange(1, pml+1)*3.]
+    return np.r_[air, clearance+np.arange(1, pml*pml_refinement+1)*3./pml_refinement]
 
 
 class _NativeLog:
@@ -121,17 +126,20 @@ class ResonatorSimulation(Simulation):
         raise ValueError('open cylindrical research geometry has no Cartesian bundle or ports')
 
 
-def build(n, kind, angular=4, clearance=30., pml=8, cap_s=190e-9, *, air_refinement=1):
+def build(n, kind, angular=4, clearance=30., pml=8, cap_s=190e-9, *, air_refinement=1, pml_refinement=1):
     if (isinstance(n, bool) or n not in MESHES or not isinstance(n, int)
             or kind not in KINDS or isinstance(angular, bool) or angular not in (4, 8)
             or not isinstance(angular, int) or clearance not in (30., 40.)
             or isinstance(pml, bool) or pml not in (8, 12) or not isinstance(pml, int)
             or isinstance(air_refinement, bool) or not isinstance(air_refinement, int)
-            or air_refinement not in (1, 2, 4)):
+            or air_refinement not in (1, 2, 4)
+            or isinstance(pml_refinement, bool) or not isinstance(pml_refinement, int)
+            or pml_refinement not in (1, 2, 4)):
         raise ValueError('supported mesh, loss case and independent controls required')
     if not np.isfinite(cap_s) or not 90e-9 <= cap_s <= 5e-6:
         raise ValueError('cap must cover all windows with a tail (90 ns), at most 5000 ns')
-    bc = ['PEC', f'PML_{pml}', 'PEC', 'PEC', f'PML_{pml}', f'PML_{pml}']
+    pml_cells = pml*pml_refinement
+    bc = ['PEC', f'PML_{pml_cells}', 'PEC', 'PEC', f'PML_{pml_cells}', f'PML_{pml_cells}']
     sim = ResonatorSimulation(*F_BAND, boundaries=bc, end_criteria_db=END_DB)
     csx = ContinuousStructure(CoordSystem=1)
     sim.fdtd.SetCSX(csx)
@@ -140,8 +148,8 @@ def build(n, kind, angular=4, clearance=30., pml=8, cap_s=190e-9, *, air_refinem
     sim.mesh.SetMeshType(1)
     sim.fdtd.SetCoordSystem(1)
     dr, dz = RADIUS_MM/n, LENGTH_MM/(2*n)
-    radius = np.r_[np.linspace(0, RADIUS_MM, n+1), RADIUS_MM+outside(dr, clearance, pml, air_refinement)[1:]]
-    positive_z = np.r_[np.linspace(0, LENGTH_MM/2, n+1), LENGTH_MM/2+outside(dz, clearance, pml, air_refinement)[1:]]
+    radius = np.r_[np.linspace(0, RADIUS_MM, n+1), RADIUS_MM+outside(dr, clearance, pml, air_refinement, pml_refinement)[1:]]
+    positive_z = np.r_[np.linspace(0, LENGTH_MM/2, n+1), LENGTH_MM/2+outside(dz, clearance, pml, air_refinement, pml_refinement)[1:]]
     z = np.r_[-positive_z[:0:-1], positive_z]
     phi = np.linspace(0, 2*np.pi, angular+1)
     for axis, lines in zip('xyz', (radius, phi, z)):
@@ -168,7 +176,7 @@ def build(n, kind, angular=4, clearance=30., pml=8, cap_s=190e-9, *, air_refinem
         probes.append([r, phi0, plane])
     native_lines = [len(radius), angular+2, len(z)]
     return sim, dict(n=n, kind=kind, angular=angular, clearance_mm=clearance, pml=pml,
-        air_refinement=air_refinement,
+        air_refinement=air_refinement, pml_refinement=pml_refinement,
         cap_s=cap_s, native_cells=int(np.prod(native_lines)), native_lines=native_lines,
         reported_grid_lines=[len(radius), angular, len(z)], declared_dt_s=float(dt),
         max_timesteps=steps, threads=THREADS, reference=reference(),
@@ -177,7 +185,7 @@ def build(n, kind, angular=4, clearance=30., pml=8, cap_s=190e-9, *, air_refinem
         probe_stride_steps=int(1/(2*sim.f_max*dt))//4,
         probes_mm=probes, physical_dimensions_mm=[RADIUS_MM, LENGTH_MM], eps_r=ER,
         sigma_dielectric_s_m=float(2*np.pi*F_REF*EPS0*ER*TAN_D) if kind == 'dielectric' else 0.,
-        pml_start_mm=[float(radius[-pml-1]), float(z[pml]), float(z[-pml-1])],
+        pml_start_mm=[float(radius[-pml_cells-1]), float(z[pml_cells]), float(z[-pml_cells-1])],
         boundaries=bc, axis_included=True, scope=SCOPE)
 
 
@@ -239,10 +247,11 @@ def pole(t, signal):
                      for v in oscillatory if v != value])
 
 
-def acquire(out, n, kind, angular, clearance, pml, cap_s, *, air_refinement=1):
+def acquire(out, n, kind, angular, clearance, pml, cap_s, *, air_refinement=1, pml_refinement=1):
     out = Path(out)
     out.mkdir(parents=True, exist_ok=False)
-    sim, meta = build(n, kind, angular, clearance, pml, cap_s, air_refinement=air_refinement)
+    sim, meta = build(n, kind, angular, clearance, pml, cap_s,
+                      air_refinement=air_refinement, pml_refinement=pml_refinement)
     source, runtime = identity(), runtime_identity()
     sim.fdtd.Write2XML(str(out/'input.xml'))
     meta.update(source_sha256=source, runtime=runtime, gates=GATES,
@@ -274,7 +283,7 @@ def read(out):
     if sha(out/'input.xml') != meta['input_sha256'] or sha(out/'data.npz') != meta['data_sha256']:
         raise ValueError('input or data changed')
     _, expected = build(meta['n'], meta['kind'], meta['angular'], meta['clearance_mm'], meta['pml'], meta['cap_s'],
-                        air_refinement=meta['air_refinement'])
+                        air_refinement=meta['air_refinement'], pml_refinement=meta['pml_refinement'])
     expected = json.loads(json.dumps(expected))
     if any(meta[key] != expected[key] for key in expected):
         raise ValueError('model parameter identity changed')
@@ -314,6 +323,7 @@ def read(out):
                 errors.append(str(exc))
     result = dict(n=meta['n'], kind=meta['kind'], angular=meta['angular'],
         clearance_mm=meta['clearance_mm'], pml=meta['pml'], air_refinement=meta['air_refinement'],
+        pml_refinement=meta['pml_refinement'],
         grid_ok=grid_ok, clock_ok=clock_ok,
         header_ok=header_ok, probe_clock_ok=probe_clock_ok, stopped=stopped,
         poles=poles, energy_proxy=proxy, extraction_errors=errors, completed_pole_control=False,
@@ -351,7 +361,7 @@ def loss_pair(lossless_out, dielectric_out):
     a, b = read(lossless_out), read(dielectric_out)
     if a['kind'] != 'lossless' or b['kind'] != 'dielectric':
         raise ValueError('lossless and dielectric records in that order required')
-    if any(a[key] != b[key] for key in ('n', 'angular', 'clearance_mm', 'pml', 'air_refinement')):
+    if any(a[key] != b[key] for key in ('n', 'angular', 'clearance_mm', 'pml', 'air_refinement', 'pml_refinement')):
         raise ValueError('paired geometry differs')
     result = dict(lossless=a, dielectric=b, qualified=False, intrinsic_q_inferred=None,
         completed_pair=bool(a['completed_pole_control'] and b['completed_pole_control']),
@@ -379,6 +389,8 @@ def study(out, kind='dielectric', meshes=COHORT):
     controls = [read(out/f'n{middle}_{suffix}') for suffix in ('angular', 'clearance', 'pml')]
     if any(row['air_refinement'] != 1 for row in rows+controls):
         raise ValueError('air-refinement diagnostics cannot replace the default study cohort')
+    if any(row['pml_refinement'] != 1 for row in rows+controls):
+        raise ValueError('PML-refinement diagnostics cannot replace the default study cohort')
     for row, n in zip(rows, meshes):
         if (row['n'], row['kind'], row['angular'], row['clearance_mm'], row['pml']) != (n, kind, 4, 30., 8):
             raise ValueError('radial cohort identity differs')

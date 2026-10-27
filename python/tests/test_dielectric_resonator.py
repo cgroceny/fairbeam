@@ -8,6 +8,9 @@ python -m tests.test_dielectric_resonator --analyse --out C:\Temp\dr-pilot
 Air-only diagnostics: add --air-refinement 2 or 4 to --preflight/--fdtd;
 these are maximum subdivisions; core-scale/smaller air intervals stay fixed.
 use --analyse on each fresh capture, separately from the default --study.
+Fixed-thickness PML diagnostics: add --pml-refinement 2 or 4. The native
+default grading depends on cell count, so this varies grid and grading together;
+it does not establish independent fixed-profile PML mesh convergence.
 """
 import argparse
 import json
@@ -54,18 +57,20 @@ def audit_header(text, meta):
                 axis_included=True, closed_alpha=True, pml_enabled=True)
 
 
-def acquire_serial(out, n, kind, angular, clearance, pml, cap_s, rate, *, air_refinement=1):
+def acquire_serial(out, n, kind, angular, clearance, pml, cap_s, rate, *, air_refinement=1, pml_refinement=1):
     out = Path(out).resolve()
     if out.exists():
         raise ValueError('retain existing acquisition; choose a fresh output')
-    _, meta = fixture.build(n, kind, angular, clearance, pml, cap_s, air_refinement=air_refinement)
+    _, meta = fixture.build(n, kind, angular, clearance, pml, cap_s,
+                            air_refinement=air_refinement, pml_refinement=pml_refinement)
     estimate = forecast(meta, rate)
     if estimate > 1800:
         raise ValueError(f'forecast {estimate/60:.2f} minutes exceeds 30; defer before launch')
     out.parent.mkdir(parents=True, exist_ok=True)
     command = [sys.executable, '-m', 'tests.test_dielectric_resonator', '--fdtd', '--worker-case',
         '--mesh', str(n), '--case', kind, '--angular', str(angular), '--clearance-mm', str(clearance),
-        '--pml', str(pml), '--cap-ns', str(cap_s*1e9), '--air-refinement', str(air_refinement), '--out', str(out)]
+        '--pml', str(pml), '--cap-ns', str(cap_s*1e9), '--air-refinement', str(air_refinement),
+        '--pml-refinement', str(pml_refinement), '--out', str(out)]
     log_path, code = out.with_name(out.name+'.log'), None
     with log_path.open('w', encoding='utf-8') as log:
         process = popen_group(command, cwd=Path(__file__).resolve().parents[1], stdout=log,
@@ -91,6 +96,79 @@ def acquire_serial(out, n, kind, angular, clearance, pml, cap_s, rate, *, air_re
 
 
 class References(unittest.TestCase):
+    def test_pml_refinement_preserves_thickness_interior_properties_and_clock(self):
+        for n, pml, gap, air in ((8, 8, 30., 1), (12, 12, 40., 2)):
+            base, meta = fixture.build(n, 'dielectric', pml=pml, clearance=gap,
+                                       air_refinement=air)
+            previous = base
+            for factor in (2, 4):
+                sim, refined = fixture.build(n, 'dielectric', pml=pml, clearance=gap,
+                    air_refinement=air, pml_refinement=factor)
+                self.assertEqual(refined['pml_refinement'], factor)
+                self.assertGreater(refined['native_cells'], meta['native_cells'])
+                for key in ('declared_dt_s', 'max_timesteps', 'probes_mm', 'physical_dimensions_mm',
+                            'sigma_dielectric_s_m', 'pml_start_mm', 'reference'):
+                    self.assertEqual(refined[key], meta[key], key)
+                for axis in ('x', 'z'):
+                    before, after = [np.asarray(s.mesh.GetLines(axis)) for s in (base, sim)]
+                    self.assertEqual((before[0], before[-1]), (after[0], after[-1]))
+                    np.testing.assert_array_equal(before[pml:-pml] if axis == 'z' else before[:-pml],
+                        after[pml*factor:-pml*factor] if axis == 'z' else after[:-pml*factor])
+                    self.assertTrue(np.isin(previous.mesh.GetLines(axis), after).all())
+                    np.testing.assert_allclose(np.diff(after[-pml*factor-1:]), 3./factor, rtol=0, atol=1e-12)
+                    self.assertAlmostEqual(after[-1]-after[-pml*factor-1], 3.*pml)
+                np.testing.assert_array_equal(base.mesh.GetLines('y'), sim.mesh.GetLines('y'))
+                with tempfile.TemporaryDirectory() as temp:
+                    properties = []
+                    for index, item in enumerate((base, sim)):
+                        path = Path(temp)/f'{index}.xml';item.fdtd.Write2XML(str(path))
+                        root = ET.parse(path).getroot()
+                        bc = root.find('FDTD/BoundaryCond')
+                        count = pml if index == 0 else pml*factor
+                        for side in ('xmax', 'zmin', 'zmax'):
+                            self.assertEqual(bc.get(side), f'PML_{count}')
+                        group = root.find('ContinuousStructure/Properties')
+                        for prop in group:
+                            for tag in ('FillColor', 'EdgeColor'):
+                                for color in prop.findall(tag):prop.remove(color)
+                        properties.append(ET.tostring(group))
+                    self.assertEqual(*properties)
+                previous = sim
+
+    def test_pml_refinement_refuses_invalid_or_overbudget_workers_and_forwards_option(self):
+        with tempfile.TemporaryDirectory() as temp, patch(__name__ + '.popen_group') as launch:
+            out = Path(temp)/'absent'
+            for factor in (True, 0, -1, 3, 2., float('nan')):
+                with self.assertRaises(ValueError):
+                    acquire_serial(out, 8, 'dielectric', 4, 30., 8, 110e-9, 20., pml_refinement=factor)
+            with self.assertRaisesRegex(ValueError, 'defer'):
+                acquire_serial(out, 8, 'dielectric', 4, 30., 8, 110e-9, .001, pml_refinement=4)
+            self.assertFalse(out.exists());launch.assert_not_called()
+            process = Mock(pid=123, win_job=None);process.poll.return_value=1;launch.return_value=process
+            with patch(__name__ + '.wait_owned', return_value=1), patch(__name__ + '.release_group'):
+                with self.assertRaisesRegex(RuntimeError, 'native exit'):
+                    acquire_serial(out, 8, 'dielectric', 4, 30., 8, 110e-9, 1000., pml_refinement=2)
+            command = launch.call_args.args[0]
+            self.assertEqual(command[command.index('--pml-refinement')+1], '2')
+            receipt = json.loads(out.with_name(out.name+'.worker.json').read_text())
+            self.assertEqual(receipt['estimated_seconds'], forecast(fixture.build(
+                8, 'dielectric', cap_s=110e-9, pml_refinement=2)[1], 1000.))
+
+    def test_pml_cli_rejects_invalid_factors_and_default_study_mixing_before_dispatch(self):
+        for arguments in (('--study', '--pml-refinement', '2'),
+                          ('--study', '--pml-refinement', '4'),
+                          ('--fdtd', '--pml-refinement', '3')):
+            with tempfile.TemporaryDirectory() as temp:
+                out = Path(temp)/'absent'
+                with patch.object(sys, 'argv', ['test_dielectric_resonator', *arguments, '--out', str(out)]), \
+                        patch('sys.stderr'), patch.object(fixture, 'build') as build, \
+                        patch.object(fixture, 'study') as study, patch(__name__ + '.popen_group') as launch:
+                    with self.assertRaises(SystemExit) as error:
+                        main()
+                    self.assertEqual(error.exception.code, 2)
+                    build.assert_not_called();study.assert_not_called();launch.assert_not_called()
+                    self.assertFalse(out.exists())
+
     def test_air_refinement_preserves_core_pml_clock_material_and_probe_planes(self):
         for n, pml, gap in ((8, 8, 30.), (8, 8, 40.), (16, 12, 40.)):
             base, meta = fixture.build(n, 'dielectric', pml=pml, clearance=gap)
@@ -287,7 +365,7 @@ class Analysis(unittest.TestCase):
                 audit_header(invalid, meta)
 
     def test_numerical_cohort_never_certifies_the_approximate_reference(self):
-        base = dict(kind='dielectric', angular=4, clearance_mm=30., pml=8, air_refinement=1,
+        base = dict(kind='dielectric', angular=4, clearance_mm=30., pml=8, air_refinement=1, pml_refinement=1,
                     f_hz=3.35e9, q=850., completed_pole_control=True)
         rows = [dict(base, n=n) for n in fixture.COHORT]
         rows += [dict(base, n=16, angular=8), dict(base, n=16, clearance_mm=40.), dict(base, n=16, pml=12)]
@@ -308,6 +386,10 @@ class Analysis(unittest.TestCase):
         changed = [dict(row) for row in rows];changed[1]['air_refinement'] = 2
         with tempfile.TemporaryDirectory() as directory, patch.object(fixture, 'read', side_effect=changed):
             with self.assertRaisesRegex(ValueError, 'air-refinement diagnostics'):
+                fixture.study(directory)
+        changed = [dict(row) for row in rows];changed[1]['pml_refinement'] = 2
+        with tempfile.TemporaryDirectory() as directory, patch.object(fixture, 'read', side_effect=changed):
+            with self.assertRaisesRegex(ValueError, 'PML-refinement diagnostics'):
                 fixture.study(directory)
         for meshes in ((12, 12, 20), (16, 12, 20), (12, 16), (4, 8, 12)):
             with self.assertRaises(ValueError):
@@ -349,6 +431,9 @@ class Analysis(unittest.TestCase):
                     fixture.save(out/'report.json', dict(meta, air_refinement=2))
                     with self.assertRaisesRegex(ValueError, 'model parameter'):
                         fixture.read(out)
+                    fixture.save(out/'report.json', dict(meta, pml_refinement=2))
+                    with self.assertRaisesRegex(ValueError, 'model parameter'):
+                        fixture.read(out)
                     meta['native_header']['pml_enabled'] = False
                     fixture.save(out/'report.json', meta)
                     self.assertFalse(fixture.read(out)['header_ok'])
@@ -357,7 +442,7 @@ class Analysis(unittest.TestCase):
                         fixture.read(out)
 
     def test_paired_loss_uses_signed_rates_and_rejects_different_geometry(self):
-        base = dict(n=12, angular=4, clearance_mm=30., pml=8, air_refinement=1, f_hz=3.35e9,
+        base = dict(n=12, angular=4, clearance_mm=30., pml=8, air_refinement=1, pml_refinement=1, f_hz=3.35e9,
                     field_stable=True, completed_pole_control=True)
         a = dict(base, kind='lossless', alpha_s=1e6)
         b = dict(base, kind='dielectric', alpha_s=11e6)
@@ -368,7 +453,7 @@ class Analysis(unittest.TestCase):
         self.assertFalse(value['qualified'])
         with patch.object(fixture, 'read', side_effect=[a, dict(b, alpha_s=.5e6)]):
             self.assertIsNone(fixture.loss_pair('a', 'b')['intrinsic_q_inferred'])
-        for changed in (dict(b, pml=12), dict(b, air_refinement=2)):
+        for changed in (dict(b, pml=12), dict(b, air_refinement=2), dict(b, pml_refinement=2)):
             with patch.object(fixture, 'read', side_effect=[a, changed]):
                 with self.assertRaisesRegex(ValueError, 'geometry'):
                     fixture.loss_pair('a', 'b')
@@ -387,6 +472,8 @@ def main():
     parser.add_argument('--pml', type=int, choices=(8, 12), default=8)
     parser.add_argument('--air-refinement', type=int, choices=(1, 2, 4), default=1,
                         help='opt-in maximum air subdivision; core-scale cells, PML and clock stay fixed')
+    parser.add_argument('--pml-refinement', type=int, choices=(1, 2, 4), default=1,
+                        help='fixed-thickness PML subdivision; native default grading also changes (diagnostic only)')
     parser.add_argument('--cap-ns', type=float, default=190.)
     parser.add_argument('--rate-mcps', type=float, default=20.)
     parser.add_argument('--meshes', type=int, nargs=3, default=fixture.COHORT)
@@ -394,6 +481,8 @@ def main():
     args = parser.parse_args()
     if args.study and args.air_refinement != 1:
         parser.error('air refinement is diagnostic; use --analyse on individual acquisitions')
+    if args.study and args.pml_refinement != 1:
+        parser.error('PML refinement is diagnostic; use --analyse on individual acquisitions')
     cap = args.cap_ns/1e9
     if args.preflight:
         args.out.mkdir(parents=True, exist_ok=False)
@@ -401,7 +490,8 @@ def main():
         cases = [(n, 4, 30., 8) for n in fixture.MESHES]+[(16, 8, 30., 8), (16, 4, 40., 8), (16, 4, 30., 12)]
         for n, angular, gap, pml in cases:
             for kind in fixture.KINDS:
-                sim, meta = fixture.build(n, kind, angular, gap, pml, cap, air_refinement=args.air_refinement)
+                sim, meta = fixture.build(n, kind, angular, gap, pml, cap,
+                    air_refinement=args.air_refinement, pml_refinement=args.pml_refinement)
                 xml = args.out/f'{kind}_n{n}_a{angular}_gap{gap:g}_pml{pml}.xml'
                 sim.fdtd.Write2XML(str(xml))
                 rows.append(dict(**meta, input_sha256=fixture.sha(xml), estimated_seconds=forecast(meta, args.rate_mcps)))
@@ -414,10 +504,10 @@ def main():
         print(json.dumps(fixture.study(args.out, args.case, args.meshes), indent=2))
     elif args.worker_case:
         print(json.dumps(fixture.acquire(args.out, args.mesh, args.case, args.angular, args.clearance_mm, args.pml, cap,
-                                        air_refinement=args.air_refinement), indent=2))
+                                        air_refinement=args.air_refinement, pml_refinement=args.pml_refinement), indent=2))
     else:
         print(json.dumps(acquire_serial(args.out, args.mesh, args.case, args.angular, args.clearance_mm, args.pml, cap, args.rate_mcps,
-                                       air_refinement=args.air_refinement), indent=2))
+                                       air_refinement=args.air_refinement, pml_refinement=args.pml_refinement), indent=2))
 
 
 if __name__ == '__main__':
