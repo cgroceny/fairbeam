@@ -645,10 +645,12 @@ export function ResultToolbar(props: { view: MainResultView }) {
     if (!run || !ready()) return;
     try {
       const frequency = resultFocus()?.f, options = dataOptions(selectedRuns().map(file => ({ file }))), smallRevision = designerSmallAntenna.revision();
+      const exportView = props.view, selection = selectedRuns().join("\n");
       const runs = await comparedBundles(run);
       if (options.smallAntenna) {
-        if (smallRevision !== designerSmallAntenna.revision() || designerSmallAntenna.source() !== run.bundle) throw new Error(t("results.compare.changed"));
-        options.smallAntenna = (runs ?? [run]).map(item => designerSmallAntenna.snapshot(item.bundle, item.file));
+        if (smallRevision !== designerSmallAntenna.revision() || designerSmallAntenna.source() !== run.bundle
+          || props.view !== exportView || selectedRuns().join("\n") !== selection) throw new Error(t("results.compare.changed"));
+        options.smallAntenna = Object.freeze((runs ?? [run]).map(item => designerSmallAntenna.snapshot(item.bundle, item.file)));
       }
       const result = await copyResultData(run.bundle, dataView(), frequency, runs, options);
       if (result.ok) flashCopied(); else feedback(t("results.toolbar.copyFailed", { error: result.message }), true);
@@ -659,11 +661,13 @@ export function ResultToolbar(props: { view: MainResultView }) {
     if (!run || !ready()) return;
     try {
       const frequency = resultFocus()?.f, options = dataOptions(selectedRuns().map(file => ({ file }))), smallRevision = designerSmallAntenna.revision();
+      const exportView = props.view, selection = selectedRuns().join("\n");
       const filename = `${exportBase(run.bundle)}.csv`;
       const runs = await comparedBundles(run);
       if (options.smallAntenna) {
-        if (smallRevision !== designerSmallAntenna.revision() || designerSmallAntenna.source() !== run.bundle) throw new Error(t("results.compare.changed"));
-        options.smallAntenna = (runs ?? [run]).map(item => designerSmallAntenna.snapshot(item.bundle, item.file));
+        if (smallRevision !== designerSmallAntenna.revision() || designerSmallAntenna.source() !== run.bundle
+          || props.view !== exportView || selectedRuns().join("\n") !== selection) throw new Error(t("results.compare.changed"));
+        options.smallAntenna = Object.freeze((runs ?? [run]).map(item => designerSmallAntenna.snapshot(item.bundle, item.file)));
       }
       saved(await exportResultCsv(run.bundle, dataView(), filename, frequency, runs, options));
     } catch (error) { feedback(error instanceof Error ? error.message : t("results.toolbar.exportFailed"), true); }
@@ -777,12 +781,12 @@ export function ResultToolbar(props: { view: MainResultView }) {
         <Show when={props.view === "sparams"}><option value="phase_unwrapped">{t("chart.q.unwrappedPhase")}</option><option value="gd">{t("chart.q.groupDelay")}</option></Show>
       </select>
       </Show>
-      <button class="btn btn-ghost btn-sm rdk-copy" classList={{ copied: copied() }} onClick={() => void copyData()} title={t("results.toolbar.copyDataTitle")} aria-live="polite">
+      <button class="btn btn-ghost btn-sm rdk-copy" disabled={!ready()} classList={{ copied: copied() }} onClick={() => void copyData()} title={t("results.toolbar.copyDataTitle")} aria-live="polite">
         <Show when={copied()} fallback={<><Copy size={14} aria-hidden="true" /> {t("results.toolbar.copyData")}</>}><Check size={14} aria-hidden="true" /> {t("results.toolbar.copied")}</Show>
       </button>
       <ResultFigureMenu disabled={!figureReady()} save={exportFigure} />
       {/* CSV and Touchstone: their own icons and a short label that stays when the bar folds to icons */}
-      <button class="btn btn-ghost btn-sm" onClick={exportData} title={t("results.toolbar.csvTitle")} aria-label={t("results.toolbar.csvTitle")}><FileSpreadsheet size={14} aria-hidden="true" /> <span class="btn-short">CSV</span></button>
+      <button class="btn btn-ghost btn-sm" disabled={!ready()} onClick={exportData} title={t("results.toolbar.csvTitle")} aria-label={t("results.toolbar.csvTitle")}><FileSpreadsheet size={14} aria-hidden="true" /> <span class="btn-short">CSV</span></button>
       <Show when={designResult()?.bundle.results && props.view !== "summary" && props.view !== "array"}>
         <button class="btn btn-ghost btn-sm" onClick={exportTouchstone} title={t("results.toolbar.touchstoneTitle")} aria-label={t("results.toolbar.touchstoneTitle")}>
           <FileChartLine size={14} aria-hidden="true" /> <span class="btn-short">{touchstoneExt()}</span>

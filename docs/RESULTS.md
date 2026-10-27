@@ -219,7 +219,7 @@ stored reference impedance. The companion sample-derived width uses that same hy
 match. Both threshold edges must be bracketed without gaps or another resonance. The
 predicted span must be no more than 10%; local Q variation and predicted-versus-sampled
 width disagreement must each be no more than 10%. These are software screening choices,
-not accuracy guarantees. A local Q can remain available when bandwidth is unresolved.
+not accuracy guarantees. A local Q can remain available when bandwidth is unresolved; a bracketed sample-derived width can also remain available when the predicted width fails its consistency screen.
 Neither width replaces the stored-reference VSWR or existing −10 dB band table.
 
 The radius is half the diagonal of the selected parts' union bounding box, converted
@@ -237,7 +237,7 @@ universal bound verdict or an optimality percentage. The combined electric/magne
 reference is a different expression. Radiation efficiency is shown separately only with
 matching physical-port/frequency and reliable power/convergence evidence; no nearest
 frequency or total-efficiency substitution is used. Model-normalized efficiency and
-the raw power ratio have separate labels. No efficiency correction is applied to the ratio.
+the raw power ratio have separate labels. The saved four-decimal efficiency fields are checked against the unrounded powers with their serialization rounding accounted for. Convergence requires an explicit recorded energy value or upper bound; any stored trace must be valid. Exports distinguish a sample and its actual timestep from a stop-derived bound, including valid fast runs with no trace samples. No efficiency correction is applied to the ratio.
 
 Copy data and CSV preserve full precision, units, selection, source/port identity,
 assumptions and unavailable reasons. New **Small antenna** columns in Summary leave

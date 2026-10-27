@@ -85,7 +85,7 @@ ok(explicit.q.available); eq(explicit.selectedCandidateId, eligible[1].id);
 const sharp = bundle(f => { const t = f / f0 - 1; return { re: R, im: 50 * (t + 10000 * t ** 3) }; },
   Array.from({ length: 21 }, (_, i) => f0 * (.9 + i * .01)));
 eq(smallAntennaAnalysis(sharp).q.reason, 'unresolved-derivative', '3/5 estimates disagree on an unresolved derivative');
-const clustered = bundle(f => { const t = f / f0; return { re: R, im: 1e8 * (t - .999) * (t - 1) * (t - 1.001) }; });
+const clustered = bundle(f => { const t = f / f0; return { re: R, im: 1e8 * (t - .99925) * (t - 1.00025) * (t - 1.00125) }; });
 ok(smallAntennaAnalysis(clustered).candidates.some(v => v.reason === 'multiple-resonances'));
 const endpoint = bundle(f => ({ re: R, im: (f - grid[0]) / 1e6 }));
 eq(smallAntennaAnalysis(endpoint).q.reason, 'edge-resonance');
@@ -158,7 +158,13 @@ ok(baseline.reference.ratio < 1, 'a diagnostic ratio is retained below one, not 
 function withPower(mutator = () => {}) { const b = bundle(); b.results.farfield = [{ f: f0, port: 7, prad_w: .8, pacc_w: 1, rad_efficiency: .8 }]; mutator(b); return b; }
 const power = smallAntennaAnalysis(withPower()); ok(power.efficiency.available, power.efficiency.reason); close(power.efficiency.value, .8); close(power.efficiency.raw, .8);
 eq(power.efficiency.kind, 'power-ratio'); eq(power.efficiency.port, 7); close(power.efficiency.frequencyHz, f0);
+const rounded = smallAntennaAnalysis(withPower(b => { Object.assign(b.results.farfield[0], { prad_w: .8123456, rad_efficiency: .8123 }); }));
+ok(rounded.efficiency.available); close(rounded.efficiency.value, .8123456, 1e-12);
+const lowRounded = smallAntennaAnalysis(withPower(b => { Object.assign(b.results.farfield[0], { prad_w: .000021, rad_efficiency: 0 }); }));
+ok(lowRounded.efficiency.available); close(lowRounded.efficiency.value, .000021, 1e-12);
 function rejectPower(mutator, expected) { eq(smallAntennaAnalysis(withPower(mutator)).efficiency.reason, expected); }
+rejectPower(b => { Object.assign(b.results.farfield[0], { prad_w: .812351, rad_efficiency: .8123 }); }, 'efficiency-power');
+rejectPower(b => { Object.assign(b.results.farfield[0], { prad_w: .8123456, rad_efficiency: .81231 }); }, 'efficiency-power');
 rejectPower(b => { b.results.farfield[0].f += 1; }, 'efficiency-frequency');
 rejectPower(b => { b.results.farfield[0].port = 19; }, 'efficiency-port');
 rejectPower(b => { b.results.farfield[0].pacc_w = 0; }, 'efficiency-power');
@@ -175,10 +181,38 @@ rejectPower(b => { b.run.final_energy_bound_db = -20; }, 'efficiency-convergence
 rejectPower(b => { b.run.excitation_timesteps = -1; }, 'efficiency-convergence');
 rejectPower(b => { b.run.port_runs = [{ port: 19, converged: true }]; }, 'efficiency-convergence');
 rejectPower(b => { b.run.port_runs = [{ port: 7, converged: true, final_energy_db: NaN }]; }, 'efficiency-convergence');
-const norm = smallAntennaAnalysis(withPower(b => { b.results.farfield[0].rad_efficiency = 1; b.results.farfield[0].rad_efficiency_raw = .8; }));
-eq(norm.efficiency.available, false); eq(norm.efficiency.reason, 'model-normalized'); eq(norm.efficiency.kind, 'model-normalized'); close(norm.efficiency.raw, .8); eq(norm.efficiency.value, 1);
+rejectPower(b => { b.run.energy_trace = []; }, 'efficiency-convergence');
+rejectPower(b => { b.run.energy_trace = []; delete b.run.final_energy_db; }, 'efficiency-convergence');
+rejectPower(b => { b.run.energy_trace = undefined; }, 'efficiency-convergence');
+rejectPower(b => { b.run.final_energy_db = -69; }, 'efficiency-convergence');
+rejectPower(b => { b.run.timesteps = b.solver.max_timesteps; }, 'efficiency-convergence');
+for (const trace of [
+  [{ timestep: .5, db: -70 }], [{ timestep: -1, db: -70 }], [{ timestep: 10001, db: -70 }],
+  [{ timestep: 10000, db: NaN }], [{ timestep: 10000, db: null }],
+  [{ timestep: 10000, db: -70 }, { timestep: 10000, db: -70 }],
+  [{ timestep: 10000, db: -70 }, { timestep: 9000, db: -70 }],
+]) rejectPower(b => { b.run.energy_trace = trace; }, 'efficiency-convergence');
+const beforeStop = smallAntennaAnalysis(withPower(b => { b.run.energy_trace = [{ timestep: 9000, db: -70 }]; }));
+ok(beforeStop.efficiency.available); eq(beforeStop.efficiency.energyBound, false); eq(beforeStop.efficiency.energyTimestep, 9000); eq(beforeStop.efficiency.energySource, 'recorded-sample');
+const explicitBound = smallAntennaAnalysis(withPower(b => { b.run.energy_trace = []; delete b.run.final_energy_db; b.run.final_energy_bound_db = -60; }));
+ok(explicitBound.efficiency.available); eq(explicitBound.efficiency.energyDb, -60); eq(explicitBound.efficiency.energyBound, true); eq(explicitBound.efficiency.energyTimestep, 10000); eq(explicitBound.efficiency.energySource, 'recorded-bound');
+const terminalTrace = smallAntennaAnalysis(withPower(b => { delete b.run.final_energy_db; }));
+ok(terminalTrace.efficiency.available); eq(terminalTrace.efficiency.energySource, 'terminal-trace'); eq(terminalTrace.efficiency.energyBound, false);
+const norm = smallAntennaAnalysis(withPower(b => { Object.assign(b.results.farfield[0], { prad_w: .98, rad_efficiency: 1, rad_efficiency_raw: .98 }); }));
+eq(norm.efficiency.available, false); eq(norm.efficiency.reason, 'model-normalized'); eq(norm.efficiency.kind, 'model-normalized'); close(norm.efficiency.raw, .98); eq(norm.efficiency.value, 1);
 close(norm.reference.ratio, baseline.reference.ratio, 1e-12, 'no efficiency correction is applied');
+const normalizedAboveOne = smallAntennaAnalysis(withPower(b => { Object.assign(b.results.farfield[0], { prad_w: 1.04, rad_efficiency: 1, rad_efficiency_raw: 1.04, qa_warnings: ['lossless normalization note'] }); }));
+eq(normalizedAboveOne.efficiency.available, false); eq(normalizedAboveOne.efficiency.reason, 'model-normalized'); close(normalizedAboveOne.efficiency.raw, 1.04); eq(normalizedAboveOne.efficiency.value, 1);
+const normalizedRounded = smallAntennaAnalysis(withPower(b => { Object.assign(b.results.farfield[0], { prad_w: .9876543, rad_efficiency: 1, rad_efficiency_raw: .9877 }); }));
+eq(normalizedRounded.efficiency.reason, 'model-normalized'); close(normalizedRounded.efficiency.raw, .9876543, 1e-12);
+for (const changes of [{ prad_w: 2, rad_efficiency_raw: 2 }, { prad_w: .8, rad_efficiency_raw: .8 }, { prad_w: 1.0501, rad_efficiency_raw: 1.0501 }, { prad_w: NaN, rad_efficiency_raw: NaN }, { pacc_w: 0, rad_efficiency_raw: .8 }, { prad_w: .987649, rad_efficiency_raw: .9877 }]) {
+  const badNorm = smallAntennaAnalysis(withPower(b => { Object.assign(b.results.farfield[0], { rad_efficiency: 1 }, changes); }));
+  eq(badNorm.efficiency.reason, 'efficiency-power'); eq(badNorm.efficiency.kind, 'unavailable'); eq(badNorm.efficiency.value, null);
+}
+rejectPower(b => { Object.assign(b.results.farfield[0], { prad_w: .98, rad_efficiency: 1, rad_efficiency_raw: .98 });
+  b.results.farfield.push({ f: f0, port: 7, prad_w: .98, pacc_w: 1, rad_efficiency: .98 }); }, 'efficiency-power');
 rejectPower(b => { b.results.farfield.push({ ...b.results.farfield[0], prad_w: .7, rad_efficiency: .7 }); }, 'efficiency-power');
+rejectPower(b => { b.results.farfield.push({ ...b.results.farfield[0], prad_w: .800008 }); }, 'efficiency-power', 'cross-record powers do not inherit serializer rounding tolerance');
 const efficiencySweep = withPower(b => { b.results.farfield = []; b.results.efficiency = [{ port: 7, f: [f0], prad_w: [.8], pacc_w: [1], rad_efficiency: [.8], reliable: [true], pacc_error: [.01] }]; });
 ok(smallAntennaAnalysis(efficiencySweep).efficiency.available);
 for (const change of [b => { b.results.efficiency[0].reliable = [false]; }, b => { b.results.efficiency[0].pacc_error = [.11]; }, b => { b.results.efficiency[0].pacc_w = []; }]) {
@@ -188,7 +222,10 @@ for (const change of [b => { b.results.efficiency[0].reliable = [false]; }, b =>
 const columns = smallAntennaColumns(power); eq(columns.header.length, columns.row.length); eq(new Set(columns.header).size, columns.header.length);
 const record = Object.fromEntries(columns.header.map((h, i) => [h, columns.row[i]]));
 eq(record.small_antenna_qz, power.q.qz); eq(record.small_antenna_f0_hz, power.q.f0Hz); eq(record.small_antenna_radiation_efficiency, .8);
-eq(record.small_antenna_efficiency_prad_w, .8); eq(record.small_antenna_efficiency_pacc_w, 1); eq(record.small_antenna_efficiency_final_energy_db, -70);
+eq(record.small_antenna_efficiency_prad_w, .8); eq(record.small_antenna_efficiency_pacc_w, 1); eq(record.small_antenna_efficiency_sample_energy_db, -70);
+eq(record.small_antenna_efficiency_final_energy_bound_db, null); eq(record.small_antenna_efficiency_energy_source, 'recorded-sample');
+const boundColumns = smallAntennaColumns(explicitBound), boundRecord = Object.fromEntries(boundColumns.header.map((h, i) => [h, boundColumns.row[i]]));
+eq(boundRecord.small_antenna_efficiency_sample_energy_db, null); eq(boundRecord.small_antenna_efficiency_final_energy_bound_db, -60); eq(boundRecord.small_antenna_efficiency_energy_source, 'recorded-bound');
 eq(record.small_antenna_predicted_bw_hz, power.bandwidth.predicted.hz); eq(record.small_antenna_qz_reference_ratio, power.reference.ratio);
 const before = structuredClone(fresh); smallAntennaAnalysis(fresh); eq(fresh, before, 'pure analysis does not mutate source');
 console.log(`small antenna: ${checks} independent analytic, metadata, refusal, geometry, and export controls passed; no EM solver qualification`);

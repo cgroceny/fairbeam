@@ -5,7 +5,6 @@ import type { Bundle, Vec3 } from '../types.ts';
 import { sweep, type Sweep } from './rf.ts';
 import { hasSParameterPhase, physicalPortNumber, sMatrix } from './sparams.ts';
 import { portProcessingInfo } from './portProcessingMetadata.ts';
-import { finalEnergy } from './run.ts';
 
 export const SMALL_ANTENNA_REASONS = [
   'no-results', 'projected-plane', 'not-single-port', 'missing-phase', 'invalid-reference',
@@ -48,7 +47,8 @@ export interface SmallAntennaAnalysis extends Availability {
   geometry: SmallAntennaGeometry;
   reference: Availability & { qChuMcLean: number | null; ratio: number | null; ratioReason: SmallAntennaReason | null };
   efficiency: Availability & { value: number | null; kind: 'power-ratio' | 'model-normalized' | 'unavailable'; raw: number | null; frequencyHz: number | null; port: number | null;
-    pradW: number | null; paccW: number | null; qa: string[]; energyDb: number | null; endCriterionDb: number | null };
+    pradW: number | null; paccW: number | null; qa: string[]; energyDb: number | null; energyBound: boolean | null;
+    energyTimestep: number | null; energySource: 'recorded-sample' | 'recorded-bound' | 'terminal-trace' | null; endCriterionDb: number | null };
   provenance: { port: number | null; portType: string | null; plane: 'original-stored' | 'projected' | 'unknown'; source: string; feedMetadata: string };
   assumptions: string[];
 }
@@ -280,10 +280,35 @@ function ratioEligibility(b: Bundle, g: SmallAntennaGeometry): SmallAntennaReaso
   return null;
 }
 
+/** Admit recorded evidence, never the legacy display helper's inferred criterion.
+ * Native logs can have no energy lines; an explicitly exported stop bound is still
+ * evidence. A pre-stop measured sample keeps its own timestep, not the stop time. */
+function convergedEnergy(b: Bundle, port: number) {
+  const run = b.run, criterion = b.solver?.end_criteria_db, allocation = b.solver?.max_timesteps;
+  if (!run || run.converged !== true || run.hit_timestep_limit !== false || !finite(criterion) || criterion >= 0
+    || !Number.isInteger(run.timesteps) || run.timesteps! <= 0 || !Number.isInteger(allocation) || allocation <= run.timesteps!
+    || !Array.isArray(run.energy_trace)
+    || (run.excitation_timesteps !== undefined && (!Number.isInteger(run.excitation_timesteps) || run.excitation_timesteps <= 0 || run.excitation_timesteps >= run.timesteps!))
+    || [run.final_energy_db, run.final_energy_bound_db].some(v => v !== undefined && !finite(v))) return null;
+  if (run.energy_trace.some((e, i, trace) => !e || !Number.isInteger(e.timestep) || e.timestep < 0 || e.timestep > run.timesteps!
+    || !finite(e.db) || (i > 0 && e.timestep <= trace[i - 1].timestep))) return null;
+  if (run.port_runs !== undefined && (run.port_runs.length !== 1 || run.port_runs[0].port !== port || run.port_runs[0].converged !== true
+    || (run.port_runs[0].timesteps !== undefined && run.port_runs[0].timesteps !== run.timesteps)
+    || [run.port_runs[0].final_energy_db, run.port_runs[0].final_energy_bound_db].some(v => v !== undefined && (!finite(v) || v > criterion)))) return null;
+  const last = run.energy_trace.at(-1);
+  if (run.final_energy_db !== undefined && (!last || Math.abs(last.db - run.final_energy_db) > 1e-9)) return null;
+  if (run.final_energy_bound_db !== undefined) return run.final_energy_bound_db <= criterion
+    ? { db: run.final_energy_bound_db, bound: true, timestep: run.timesteps!, source: 'recorded-bound' as const } : null;
+  if (!last || last.db > criterion) return null;
+  if (run.final_energy_db !== undefined) return { db: run.final_energy_db, bound: false, timestep: last.timestep, source: 'recorded-sample' as const };
+  return last.timestep === run.timesteps ? { db: last.db, bound: false, timestep: last.timestep, source: 'terminal-trace' as const } : null;
+}
+
 function efficiency(b: Bundle, f0: number | null): SmallAntennaAnalysis['efficiency'] {
   const port = b.ports?.length === 1 ? b.ports[0].number : null;
   const result: SmallAntennaAnalysis['efficiency'] = { ...unavailable('unavailable-efficiency'), value: null, raw: null, kind: 'unavailable', frequencyHz: null, port,
-    pradW: null, paccW: null, qa: [], energyDb: null, endCriterionDb: finite(b.solver?.end_criteria_db) ? b.solver.end_criteria_db : null };
+    pradW: null, paccW: null, qa: [], energyDb: null, energyBound: null, energyTimestep: null, energySource: null,
+    endCriterionDb: finite(b.solver?.end_criteria_db) ? b.solver.end_criteria_db : null };
   const fail = (reason: SmallAntennaReason) => ({ ...result, ...unavailable(reason) });
   if (portProcessingInfo(b)) return fail('projected-plane');
   if (port === null) return fail('efficiency-port');
@@ -319,27 +344,28 @@ function efficiency(b: Bundle, f0: number | null): SmallAntennaAnalysis['efficie
     result.raw = finite(raw) ? raw : null;
   }
   const normalized = powers.some(p => p.raw !== undefined && p.raw !== null && p.value === 1);
-  if (normalized) { result.kind = 'model-normalized'; result.value = 1; }
   const ratioClose = (a: number, c: number) => Math.abs(a - c) <= 1e-6 * Math.max(1, Math.abs(a), Math.abs(c));
+  // The project exporter rounds eta/raw to four decimals, but not Prad or Pacc.
+  // Only a value on that serializer lattice receives its half-bin allowance.
+  const storedRatioClose = (stored: number, raw: number) => {
+    const scaled = stored * 1e4;
+    const rounded = Math.abs(scaled - Math.round(scaled)) <= 32 * Number.EPSILON * Math.max(1, Math.abs(scaled));
+    return rounded ? Math.abs(stored - raw) <= 5e-5 + 32 * Number.EPSILON * Math.max(1, Math.abs(raw), Math.abs(stored)) : ratioClose(stored, raw);
+  };
   for (const p of powers) {
-    if (!positive(p.pacc) || !finite(p.prad) || p.prad <= 0 || !positive(p.value) || p.value > 1) return fail('efficiency-power');
+    if (!positive(p.pacc) || !finite(p.prad) || p.prad <= 0 || !finite(p.value) || p.value < 0 || p.value > 1) return fail('efficiency-power');
     const raw = p.prad / p.pacc;
-    if (!positive(raw) || raw > 1 || (p.raw !== undefined && (!finite(p.raw) || !ratioClose(p.raw, raw)))
-      || (!normalized && !ratioClose(p.value, raw)) || !ratioClose(raw, result.raw!)) return fail('efficiency-power');
+    const modelNormalized = p.raw !== undefined && p.raw !== null && p.value === 1;
+    const withinLosslessRange = Math.abs(raw - 1) <= .05 + 32 * Number.EPSILON;
+    if (!positive(raw) || (modelNormalized ? !withinLosslessRange : raw > 1)
+      || (normalized && !modelNormalized) || (p.raw !== undefined && (!finite(p.raw) || !storedRatioClose(p.raw, raw)))
+      || (!modelNormalized && !storedRatioClose(p.value, raw)) || !ratioClose(raw, result.raw!)) return fail('efficiency-power');
   }
-  if (normalized) return fail('model-normalized');
+  if (normalized) { result.kind = 'model-normalized'; result.value = 1; return fail('model-normalized'); }
   if (powers.some(p => !p.quality)) return fail('efficiency-quality');
-  const run = b.run;
-  if (!run || run.converged !== true || run.hit_timestep_limit !== false || !finite(b.solver?.end_criteria_db) || b.solver.end_criteria_db >= 0
-    || !Array.isArray(run.energy_trace) || !Number.isInteger(run.timesteps) || run.timesteps! <= 0
-    || (run.excitation_timesteps !== undefined && (!Number.isInteger(run.excitation_timesteps) || run.excitation_timesteps <= 0 || run.excitation_timesteps >= run.timesteps!))
-    || [run.final_energy_db, run.final_energy_bound_db].some(v => v !== undefined && !finite(v))) return fail('efficiency-convergence');
-  const energy = finalEnergy(run, b.solver.end_criteria_db);
-  result.energyDb = finite(energy.db) ? energy.db : null;
-  if (!finite(energy.db) || energy.db > b.solver.end_criteria_db) return fail('efficiency-convergence');
-  if (run.final_energy_bound_db !== undefined && run.final_energy_bound_db > b.solver.end_criteria_db) return fail('efficiency-convergence');
-  if (run.port_runs !== undefined && (run.port_runs.length !== 1 || run.port_runs[0].port !== port || run.port_runs[0].converged !== true
-    || [run.port_runs[0].final_energy_db, run.port_runs[0].final_energy_bound_db].some(v => v !== undefined && (!finite(v) || v > b.solver.end_criteria_db)))) return fail('efficiency-convergence');
+  const energy = convergedEnergy(b, port);
+  if (!energy) return fail('efficiency-convergence');
+  result.energyDb = energy.db; result.energyBound = energy.bound; result.energyTimestep = energy.timestep; result.energySource = energy.source;
   return { ...result, ...available(), value: result.raw, kind: 'power-ratio' };
 }
 
@@ -406,7 +432,10 @@ export function smallAntennaColumns(a: SmallAntennaAnalysis): { header: string[]
   add('efficiency_status', a.efficiency.reason ?? 'available'); add('efficiency_kind', a.efficiency.kind); add('radiation_efficiency', a.efficiency.value);
   add('efficiency_raw_power_ratio', a.efficiency.raw); add('efficiency_frequency_hz', a.efficiency.frequencyHz); add('efficiency_port', a.efficiency.port);
   add('efficiency_prad_w', a.efficiency.pradW); add('efficiency_pacc_w', a.efficiency.paccW); add('efficiency_qa', JSON.stringify(a.efficiency.qa));
-  add('efficiency_final_energy_db', a.efficiency.energyDb); add('efficiency_end_criterion_db', a.efficiency.endCriterionDb);
+  add('efficiency_sample_energy_db', a.efficiency.energyBound === false ? a.efficiency.energyDb : null);
+  add('efficiency_final_energy_bound_db', a.efficiency.energyBound === true ? a.efficiency.energyDb : null);
+  add('efficiency_energy_timestep', a.efficiency.energyTimestep); add('efficiency_energy_source', a.efficiency.energySource);
+  add('efficiency_end_criterion_db', a.efficiency.endCriterionDb);
   add('assumptions', a.assumptions.join(';'));
   return { header: entries.map(e => e[0]), row: entries.map(e => e[1]) };
 }

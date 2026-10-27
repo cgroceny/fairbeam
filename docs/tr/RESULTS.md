@@ -190,7 +190,7 @@ olmak zorunda değildir. Örneklerden elde edilen eşlenmiş genişlik de aynı 
 İki eşik kenarı, boşluk veya başka rezonans olmadan örneklerle çevrelenmelidir. Tahmini
 bağıl genişlik %10'u aşmamalı; yerel Q değişimi ve tahmini/örneklenmiş genişlik farkı ayrı
 ayrı %10 içinde kalmalıdır. Bunlar yazılımın eleme ölçütleridir, doğruluk garantisi değildir.
-Bant genişliği çözümlenemese de yerel Q kullanılabilir olabilir. Bu genişlikler kayıtlı
+Bant genişliği çözümlenemese de yerel Q kullanılabilir olabilir. Tahmini genişlik tutarlılık ölçütünü geçemediğinde, kenarları çevrelenmiş örnek tabanlı genişlik yine kullanılabilir olabilir. Bu genişlikler kayıtlı
 referansın VSWR değerini veya mevcut −10 dB bant tablosunu değiştirmez.
 
 Yarıçap, seçili parçaların birleşik sınırlayıcı kutusunun köşegeninin yarısıdır ve metreye
@@ -207,7 +207,7 @@ kullanıldığında verilmez. Kayıp ve mod varsayımları önemlidir: bu evrens
 veya eniyilik yüzdesi değildir. Birleşik elektrik/manyetik modun referansı farklıdır.
 Işıma verimi yalnızca aynı fiziksel port/frekans ve güvenilir güç/yakınsama kanıtıyla ayrı
 gösterilir; en yakın frekans veya toplam verim yerine konmaz. Modelle normalize edilmiş
-verim ve ham güç oranı ayrı etiketlenir. Orana verim düzeltmesi uygulanmaz.
+verim ve ham güç oranı ayrı etiketlenir. Dört ondalıkla kaydedilen verim alanları, kaydın yuvarlaması hesaba katılarak tam hassasiyetli güçlerle karşılaştırılır. Yakınsama için açıkça kaydedilmiş enerji değeri veya üst sınır gerekir; varsa kayıtlı iz geçerli olmalıdır. Dışa aktarma, örneği ve gerçek zaman adımını durma koşulundan gelen sınırdan ayırır; iz örneği olmayan geçerli hızlı çalıştırmalar da buna dahildir. Orana verim düzeltmesi uygulanmaz.
 
 Veri kopyalama ve CSV; tam hassasiyeti, birimleri, seçimi, kaynak/port kimliğini,
 varsayımları ve kullanılamama nedenlerini korur. Özet'teki yeni **Small antenna** sütunları

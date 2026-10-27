@@ -29,9 +29,10 @@ export function smallAntennaFixture({ f0 = 1e9, q = 20, scale = 1, multiple = fa
   bundle.half_space = null;
   bundle.solver.boundaries = { 'x-': 'PML_8', 'x+': 'PML_8', 'y-': 'PML_8', 'y+': 'PML_8', 'z-': 'PML_8', 'z+': 'PML_8' };
   bundle.solver.excitation = { type: 'gaussian', f_min: f[0], f_max: f.at(-1), dc_free: false };
+  bundle.solver.end_criteria_db = -60;
   bundle.run = { ...(bundle.run ?? {}), engine: 'cpu', engine_requested: 'cpu', timesteps: 1000, excitation_timesteps: 100, solver_time_s: 0,
     final_energy_db: -60, hit_timestep_limit: false, converged: true, threads: 1,
-    energy_trace: [], host: { os: 'Synthetic', machine: 'Software control', cpu: null }, log_tail: ['Synthetic RLC fixture; no solver run.'] };
+    energy_trace: [{ timestep: 1000, db: -60 }], host: { os: 'Synthetic', machine: 'Software control', cpu: null }, log_tail: ['Synthetic RLC fixture; no solver run.'] };
   delete bundle.run.final_energy_bound_db;
   bundle.results = { frequency: f, ports: { '7': { s11_re: gammaRe, s11_im: gammaIm, zin_re: re, zin_im: im, z_ref: resistance } },
     bands: [], farfield: [], signals: {}, efficiency: [{ port: 7, f: [f0], prad_w: [0.8], pacc_w: [1], rad_efficiency: [0.8],
