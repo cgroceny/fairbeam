@@ -6,6 +6,7 @@ python -m tests.test_waveguide_step --compare --out C:\Temp\waveguide-step
 """
 import argparse
 import contextlib
+import copy
 import hashlib
 import io
 import json
@@ -87,7 +88,7 @@ def serial_mur(out, cpw, excited, padding, *, hold_seed=None):
         command += ['--hold-seed', str(Path(hold_seed).resolve())]
     source = f.mur_ids()
     start, wall = time.monotonic(), time.time()
-    proc, code, failure = None, None, None
+    proc, code, failure, log, worker_error = None, None, None, None, None
     try:
         with log_path.open('x', encoding='utf-8') as log:
             proc = popen_group(command, cwd=Path(__file__).resolve().parents[1],
@@ -97,20 +98,47 @@ def serial_mur(out, cpw, excited, padding, *, hold_seed=None):
         if code or max(time.monotonic()-start, time.time()-wall) > f.CASE_SECONDS:
             raise RuntimeError('MUR worker failed or exceeded its deadline')
     except BaseException as error:
+        worker_error = error
         failure = repr(error)
         raise
     finally:
-        if proc is not None:
-            if proc.poll() is None:
-                terminate_group(proc.pid, grace=0, job=proc.win_job)
-                proc.wait(timeout=15)
-            release_group(proc)
-        f._save(receipt, dict(command=command, source=source, exit_code=code, failure=failure,
-            deadline_seconds=f.CASE_SECONDS, wall_seconds=time.time()-wall, monotonic_seconds=time.monotonic()-start))
+        cleanup_error = log_error = None
+        binding = None
+        try:
+            if proc is not None:
+                try:
+                    if proc.poll() is None:
+                        terminate_group(proc.pid, grace=0, job=proc.win_job)
+                        proc.wait(timeout=15)
+                finally:
+                    release_group(proc)
+        except BaseException as error:
+            cleanup_error = repr(error)
+        try:
+            if proc is None or proc.poll() is None or log is None or not log.closed:
+                raise ValueError('worker exit and stream closure required before log finalization')
+            binding = f.finalized_mur_log(log_path)
+        except Exception as error:
+            log_error = repr(error)
+        # Preserve failed attempts without replacing their original exception.
+        try:
+            f._save(receipt, dict(protocol=f.WORKER_PROTOCOL, command=command, source=source,
+                exit_code=code, failure=failure or cleanup_error or log_error,
+                cleanup_error=cleanup_error, log_finalization_error=log_error,
+                log_finalized=binding is not None, log=binding,
+                deadline_seconds=f.CASE_SECONDS, wall_seconds=time.time()-wall,
+                monotonic_seconds=time.monotonic()-start))
+        except Exception as error:
+            if worker_error is None:
+                raise
+            worker_error.add_note(f'MUR failure receipt could not be saved: {error!r}')
+        if failure is None and (cleanup_error is not None or log_error is not None):
+            raise RuntimeError('MUR worker cleanup or finished-log finalization failed')
     if source != f.mur_ids():
         raise ValueError('MUR sources changed during worker execution')
     meta = json.loads((out/'report.json').read_text(encoding='utf-8'))
     meta['case_elapsed_s'] = max(time.monotonic()-start, time.time()-wall)
+    meta['worker_receipt_sha256'] = f._sha(receipt)
     f._save(out/'report.json', meta)
     return meta
 
@@ -269,7 +297,12 @@ class StepTests(unittest.TestCase):
             values = np.array([100., 1e-12, 60000., 60e-9, 1., 6e6])
             np.savetxt(path, values)
             self.assertEqual(f._native_stats(folder)['timesteps'], 60000)
-            for broken in (values[:-1], np.r_[values[:5], np.nan]):
+            invalid = [values[:-1], np.r_[values[:5], np.nan]]
+            for index, value in ((0, 100.5), (2, 60000.5), (1, 0.), (4, -1.)):
+                broken = values.copy()
+                broken[index] = value
+                invalid.append(broken)
+            for broken in invalid:
                 np.savetxt(path, broken)
                 with self.assertRaises(ValueError):
                     f._native_stats(folder)
@@ -317,6 +350,7 @@ class StepTests(unittest.TestCase):
                     hold['run']['energy_trace'][-1]['db'] = -76.16
                 elif failure == 'short-window':
                     hold['native']['timesteps'] -= 1
+                    hold['run']['energy_trace'][-1]['timestep'] -= 1
                 elif failure == 'clock':
                     hold['native']['dt_s'] *= .99
                 elif failure == 'grid':
@@ -336,19 +370,181 @@ class StepTests(unittest.TestCase):
                 f.read_mur_source(Path('synthetic'), 40, 1, f.PADDING)
 
     def test_mur_record_rejects_foreign_identity_before_reading_native_data(self):
-        header = dict(protocol='te10-mur-control-v1', kind='primary', termination='MUR', pulse='gaussian',
+        header = dict(protocol=f.MUR_PROTOCOL, native_log_contract=f.LOG_CONTRACT,
+            kind='primary', termination='MUR', pulse='gaussian',
             cpw=40, excited=1, padding=f.PADDING, geometry=f.geometry(), frequency_hz=f.FREQUENCIES.tolist(),
             limits=f.LIMITS, hold_limits=f.MUR_HOLD, source_ids=f.source_ids(), mur_source_ids=f.mur_ids(),
             runtime=f._mur_runtime(), seed_report_sha256=None)
         with tempfile.TemporaryDirectory() as folder:
             path = Path(folder)/'report.json'
-            for key, value in (('termination', 'PML_8'), ('pulse', 'zero-integral-rf'), ('kind', 'hold60ns'),
+            for key, value in (('protocol', 'te10-mur-control-v1'), ('native_log_contract', None),
+                               ('termination', 'PML_8'), ('pulse', 'zero-integral-rf'), ('kind', 'hold60ns'),
                                ('geometry', {}), ('frequency_hz', []), ('limits', {}), ('hold_limits', {}),
                                ('source_ids', {}), ('mur_source_ids', {}), ('runtime', {}), ('seed_report_sha256', 'wrong')):
                 with self.subTest(key=key):
                     path.write_text(json.dumps({**header, key:value}), encoding='utf-8')
                     with self.assertRaisesRegex(ValueError, 'identity mismatch'):
                         f.load_mur_record(folder, 40, 1, f.PADDING)
+
+    def test_mur_trace_rejects_false_distinct_observations_and_invalid_rows(self):
+        primary, before, valid, after = self.hold_records()
+        traces = [
+            [dict(timestep=30000, db=-100.)]*3,
+            [dict(timestep=n, db=-100.) for n in (70000, 70001, 70002)],
+            valid['run']['energy_trace'][::-1],
+        ]
+        for step in (45000.5, 45000., True, float('nan'), float('inf'), 0, -1, '45000', None):
+            rows = copy.deepcopy(valid['run']['energy_trace'])
+            rows[1]['timestep'] = step
+            traces.append(rows)
+        for db in (float('nan'), float('inf'), -float('inf'), True, '-105', None):
+            rows = copy.deepcopy(valid['run']['energy_trace'])
+            rows[1]['db'] = db
+            traces.append(rows)
+        traces += [[{'db': -100.}], [None], {'timestep': 30000, 'db': -100.}]
+        # Even a corrupt row before the primary stop invalidates the complete trace.
+        traces.append([dict(timestep=0, db=-100.)]+valid['run']['energy_trace'])
+        for rows in traces:
+            with self.subTest(rows=rows):
+                hold = copy.deepcopy(valid)
+                hold['run']['energy_trace'] = rows
+                with self.assertRaises(ValueError):
+                    f.mur_hold_checks(primary, before, hold, after)
+        for step in (True, 60000., float('nan')):
+            with self.subTest(final_timestep=step):
+                hold = copy.deepcopy(valid)
+                hold['native']['timesteps'] = step
+                with self.assertRaises(ValueError):
+                    f.mur_hold_checks(primary, before, hold, after)
+        valid['run']['energy_trace'].insert(0, dict(timestep=10000, db=-20.))
+        self.assertTrue(f.mur_hold_checks(primary, before, valid, after)['passes'])
+        valid['run']['energy_trace'].pop()
+        self.assertFalse(f.mur_hold_checks(primary, before, valid, after)['passes'])
+
+    def synthetic_mur_log(self, folder, *, primary=False):
+        """Synthetic parser control, never a native acquisition/qualification."""
+        path = Path(folder)/'case'
+        path.mkdir()
+        steps = 20000 if primary else 60000
+        body = 'FDTD simulation size: 5x4x5\nFDTD timestep is: 1e-12 s\n'
+        if not primary:
+            body += ''.join(f'Timestep: {n} Energy: ~ 1e-10 (-{db}dB)\n'
+                            for n, db in ((30000, 100), (45000, 105), (60000, 110)))
+        body += f'Time for {steps} iterations with 1e+02 cells : 1.00 sec\n'
+        maximum, end_db = (200000, -90.) if primary else (60000, -150.)
+        run = f.simulation_module._parse_log(body, end_db, maximum)
+        meta = dict(protocol=f.MUR_PROTOCOL, native_log_contract=f.LOG_CONTRACT,
+            native=dict(cells=100, dt_s=1e-12, timesteps=steps, numerical_time_s=steps*1e-12),
+            run=run, max_timesteps=maximum, native_end_db=end_db)
+        # Deliberately repeat every energy line inside the worker's final JSON.
+        text = f'{f.NATIVE_BEGIN}\n{body}{f.NATIVE_END}\n'+json.dumps(meta)+'\n'
+        self.bind_synthetic_mur_log(path, meta, text)
+        return path, meta, text
+
+    def bind_synthetic_mur_log(self, path, meta, text):
+        log = path.with_name(path.name+'.log')
+        log.write_text(text, encoding='utf-8')
+        receipt = dict(protocol=f.WORKER_PROTOCOL, log_finalized=True,
+            log_finalization_error=None, cleanup_error=None, log=f.finalized_mur_log(log))
+        receipt_path = path.with_name(path.name+'.worker.json')
+        f._save(receipt_path, receipt)
+        meta['worker_receipt_sha256'] = f._sha(receipt_path)
+        return receipt
+
+    def test_mur_log_replay_excludes_json_tail_and_handles_unsampled_primary_stop(self):
+        for primary in (False, True):
+            with self.subTest(primary=primary), tempfile.TemporaryDirectory() as folder:
+                path, meta, text = self.synthetic_mur_log(folder, primary=primary)
+                receipt = json.loads(path.with_name('case.worker.json').read_text(encoding='utf-8'))
+                parsed = f.verify_mur_log(path, meta, receipt)
+                self.assertEqual(len(parsed['energy_trace']), 0 if primary else 3)
+                if primary:
+                    self.assertEqual(parsed['final_energy_bound_db'], -90.)
+                    self.assertTrue(parsed['converged'])
+                else:
+                    self.assertGreater(len(f.simulation_module._parse_log(text, -150., 60000)['energy_trace']), 3)
+                    self.assertFalse(parsed['converged'])
+
+    def test_mur_log_replay_rejects_changed_finished_bytes_or_receipt(self):
+        for kind in ('bytes', 'receipt', 'unfinalized'):
+            with self.subTest(kind=kind), tempfile.TemporaryDirectory() as folder:
+                path, meta, text = self.synthetic_mur_log(folder)
+                receipt_path = path.with_name('case.worker.json')
+                receipt = json.loads(receipt_path.read_text(encoding='utf-8'))
+                if kind == 'bytes':
+                    with path.with_name('case.log').open('a', encoding='utf-8') as stream:
+                        stream.write('late bytes after finalization\n')
+                elif kind == 'receipt':
+                    with receipt_path.open('a', encoding='utf-8') as stream:
+                        stream.write('\n')
+                else:
+                    receipt['log_finalized'] = False
+                    f._save(receipt_path, receipt)
+                    meta['worker_receipt_sha256'] = f._sha(receipt_path)
+                with self.assertRaises(ValueError):
+                    f.verify_mur_log(path, meta, receipt)
+
+    def test_mur_log_replay_rejects_ambiguous_frames_abort_and_malformed_energy(self):
+        for kind in ('missing', 'repeated', 'reversed', 'inline', 'two-runs', 'abort', 'malformed'):
+            with self.subTest(kind=kind), tempfile.TemporaryDirectory() as folder:
+                path, meta, text = self.synthetic_mur_log(folder)
+                if kind == 'missing': text = text.replace(f.NATIVE_END, '')
+                elif kind == 'repeated': text += f.NATIVE_BEGIN+'\n'
+                elif kind == 'reversed': text = text.replace(f.NATIVE_BEGIN, 'TEMP').replace(f.NATIVE_END, f.NATIVE_BEGIN).replace('TEMP', f.NATIVE_END)
+                elif kind == 'inline': text = text.replace(f.NATIVE_BEGIN, 'prefix '+f.NATIVE_BEGIN)
+                elif kind == 'two-runs': text = text.replace(f.NATIVE_END, 'FDTD simulation size: 5x4x5\n'+f.NATIVE_END)
+                elif kind == 'abort': text = text.replace(f.NATIVE_END, 'Gracefully aborting simulation now\n'+f.NATIVE_END)
+                else: text = text.replace('Timestep: 45000 Energy: ~ 1e-10 (-105dB)', 'Timestep: 45000.5 Energy: ~ 1e-10 (-105dB)', 1)
+                receipt = self.bind_synthetic_mur_log(path, meta, text)
+                with self.assertRaises(ValueError):
+                    f.verify_mur_log(path, meta, receipt)
+
+    def test_mur_log_replay_rejects_report_trace_stop_grid_and_clock_changes(self):
+        changes = [('energy_trace', [dict(timestep=n, db=-100.) for n in (30000, 45000, 60000)]),
+            ('grid', [4, 5, 5]), ('timesteps', 59000), ('timesteps', True),
+            ('timestep_s', 2e-12), ('solver_time_s', 2.), ('converged', True),
+            ('hit_timestep_limit', False), ('final_energy_db', -120.), ('final_energy_db', float('nan')),
+            ('final_energy_bound_db', -150.)]
+        for key, value in changes:
+            with self.subTest(key=key, value=value), tempfile.TemporaryDirectory() as folder:
+                path, meta, text = self.synthetic_mur_log(folder)
+                receipt = json.loads(path.with_name('case.worker.json').read_text(encoding='utf-8'))
+                meta['run'][key] = value
+                with self.assertRaises(ValueError):
+                    f.verify_mur_log(path, meta, receipt)
+        for key, value in (('cells', 101), ('dt_s', 2e-12)):
+            with self.subTest(native=key), tempfile.TemporaryDirectory() as folder:
+                path, meta, text = self.synthetic_mur_log(folder)
+                receipt = json.loads(path.with_name('case.worker.json').read_text(encoding='utf-8'))
+                meta['native'][key] = value
+                with self.assertRaises(ValueError):
+                    f.verify_mur_log(path, meta, receipt)
+
+    def test_mur_native_tokens_reject_prefix_parsing_and_accept_real_log_layout(self):
+        for token in ('45000.5', '45000.0', '45000e0', '45000x', '45000,5',
+                      '+45000', '-45000', 'True', 'nan', 'inf'):
+            with self.subTest(timestep=token), tempfile.TemporaryDirectory() as folder:
+                path, meta, text = self.synthetic_mur_log(folder)
+                text = text.replace('Timestep: 45000 ', f'Timestep: {token} ', 1)
+                receipt = self.bind_synthetic_mur_log(path, meta, text)
+                with self.assertRaises(ValueError):
+                    f.verify_mur_log(path, meta, receipt)
+        for token in ('5x4x5.5', '5x4x5e0', '5x4x5x2', '5x4xTrue'):
+            with self.subTest(grid=token), tempfile.TemporaryDirectory() as folder:
+                path, meta, text = self.synthetic_mur_log(folder)
+                text = text.replace('FDTD simulation size: 5x4x5', f'FDTD simulation size: {token}', 1)
+                receipt = self.bind_synthetic_mur_log(path, meta, text)
+                with self.assertRaises(ValueError):
+                    f.verify_mur_log(path, meta, receipt)
+        with tempfile.TemporaryDirectory() as folder:
+            path, meta, text = self.synthetic_mur_log(folder)
+            # Native layout observed in retained CI logs, with synthetic values.
+            text = text.replace('FDTD simulation size: 5x4x5\n',
+                                'FDTD simulation size: 5x4x5 --> 100 FDTD cells \n', 1)
+            text = text.replace('Timestep: 45000 Energy:',
+                                '[@        4s] Timestep:         45000 || Speed: 37.7 MC/s || Energy:', 1)
+            receipt = self.bind_synthetic_mur_log(path, meta, text)
+            self.assertEqual(len(f.verify_mur_log(path, meta, receipt)['energy_trace']), 3)
 
     def test_mur_matrix_requires_both_sources_and_their_hold_evidence(self):
         reference = f.reference()
@@ -396,6 +592,91 @@ class StepTests(unittest.TestCase):
             receipt = json.loads(out.with_name('new.worker.json').read_text(encoding='utf-8'))
             self.assertIsNotNone(receipt['failure'])
             self.assertEqual(receipt['deadline_seconds'], f.CASE_SECONDS)
+
+    def test_mur_parent_finalizes_after_exit_stream_close_and_final_json(self):
+        state = dict(released=False)
+        class Process:
+            pid, win_job, running = 123, object(), True
+            def poll(self): return None if self.running else 0
+        proc = Process()
+        original_finalizer = f.finalized_mur_log
+        def spawn(command, **kwargs):
+            state['stream'] = kwargs['stdout']
+            state['stream'].write('synthetic native output\n')
+            out = Path(command[command.index('--out')+1])
+            out.mkdir()
+            f._save(out/'report.json', dict(protocol=f.MUR_PROTOCOL))
+            return proc
+        def finish(worker, seconds):
+            self.assertEqual(seconds, 1800.)
+            state['stream'].write('{"final_worker_json": true}\n')
+            proc.running = False
+            return 0
+        def finalize(path):
+            self.assertFalse(proc.running)
+            self.assertTrue(state['stream'].closed)
+            self.assertTrue(state['released'])
+            self.assertTrue(Path(path).read_bytes().endswith(b'{"final_worker_json": true}\r\n')
+                            or Path(path).read_bytes().endswith(b'{"final_worker_json": true}\n'))
+            return original_finalizer(path)
+        with tempfile.TemporaryDirectory() as folder, patch(__name__+'.popen_group', side_effect=spawn), \
+                patch(__name__+'.wait_owned', side_effect=finish), \
+                patch(__name__+'.release_group', side_effect=lambda p: state.update(released=True)), \
+                patch.object(f, 'finalized_mur_log', side_effect=finalize) as finalized:
+            out = Path(folder)/'new'
+            result = serial(out, 40, 1, termination='MUR')
+            finalized.assert_called_once()
+            receipt_path = out.with_name('new.worker.json')
+            receipt = json.loads(receipt_path.read_text(encoding='utf-8'))
+            self.assertEqual(result['worker_receipt_sha256'], f._sha(receipt_path))
+            self.assertEqual(receipt['log'], original_finalizer(out.with_name('new.log')))
+            self.assertTrue(receipt['log_finalized'])
+            self.assertIsNone(receipt['failure'])
+
+    def test_mur_finalization_failure_preserves_original_worker_exception(self):
+        class Process:
+            pid, win_job = 123, object()
+            def poll(self): return 1
+        original = TimeoutError('original owned-worker deadline')
+        with tempfile.TemporaryDirectory() as folder, patch(__name__+'.popen_group', return_value=Process()), \
+                patch(__name__+'.wait_owned', side_effect=original), patch(__name__+'.release_group'), \
+                patch.object(f, 'finalized_mur_log', side_effect=OSError('synthetic log read failure')):
+            out = Path(folder)/'new'
+            with self.assertRaises(TimeoutError) as raised:
+                serial(out, 40, 1, termination='MUR')
+            self.assertIs(raised.exception, original)
+            receipt = json.loads(out.with_name('new.worker.json').read_text(encoding='utf-8'))
+            self.assertFalse(receipt['log_finalized'])
+            self.assertIn('original owned-worker deadline', receipt['failure'])
+            self.assertIn('synthetic log read failure', receipt['log_finalization_error'])
+
+    def test_mur_successful_exit_with_unreadable_log_is_not_finalized(self):
+        class Process:
+            pid, win_job = 123, object()
+            def poll(self): return 0
+        with tempfile.TemporaryDirectory() as folder, patch(__name__+'.popen_group', return_value=Process()), \
+                patch(__name__+'.wait_owned', return_value=0), patch(__name__+'.release_group'), \
+                patch.object(f, 'finalized_mur_log', side_effect=OSError('synthetic missing log')):
+            out = Path(folder)/'new'
+            with self.assertRaisesRegex(RuntimeError, 'finalization failed'):
+                serial(out, 40, 1, termination='MUR')
+            receipt = json.loads(out.with_name('new.worker.json').read_text(encoding='utf-8'))
+            self.assertEqual(receipt['exit_code'], 0)
+            self.assertFalse(receipt['log_finalized'])
+            self.assertIsNotNone(receipt['failure'])
+
+    def test_mur_unwritable_failure_receipt_keeps_the_original_error(self):
+        class Process:
+            pid, win_job = 123, object()
+            def poll(self): return 1
+        original = TimeoutError('original owned-worker deadline')
+        with tempfile.TemporaryDirectory() as folder, patch(__name__+'.popen_group', return_value=Process()), \
+                patch(__name__+'.wait_owned', side_effect=original), patch(__name__+'.release_group'), \
+                patch.object(f, '_save', side_effect=OSError('synthetic unwritable receipt')):
+            with self.assertRaises(TimeoutError) as raised:
+                serial(Path(folder)/'new', 40, 1, termination='MUR')
+            self.assertIs(raised.exception, original)
+            self.assertIn('synthetic unwritable receipt', original.__notes__[0])
 
     def test_finite_rf_pulse_has_zero_continuous_area_and_keeps_the_rf_band(self):
         t = np.linspace(0, f.PULSE_END_S, 40001)

@@ -11,6 +11,7 @@ from pathlib import Path
 import sys
 import unittest
 import numpy as np
+from tests.waveguide_step_admission import checked_trace, finite_real, late_energies, positive_integer
 
 EVIDENCE=Path(__file__).parent/'fixtures/waveguide_step_mur_evidence.json'
 LIMITS=dict(target_abs=.01,mesh_abs=.003,boundary_abs=.002,reciprocity_abs=.002,power_abs=.01)
@@ -47,16 +48,22 @@ def reference(m,frequency):
 def execution(record,primary):
     native,run=record['native'],record['run']
     require(run['threads']==4 and run['engine']=='cpu' and run['exact_endcriteria'] is True,'native CPU/thread/stop identity')
-    require(native['dt_s']>0 and 0<native['timesteps']<=record['max_timesteps'],'native clock/allocation')
+    require(finite_real(native['dt_s']) and native['dt_s']>0 and positive_integer(native['timesteps'])
+            and positive_integer(native['cells']) and positive_integer(record['max_timesteps'])
+            and native['timesteps']<=record['max_timesteps'],'native clock/allocation')
+    checked_trace(record['energy_trace'],native['timesteps'])
     require(np.isclose(native['numerical_time_s'],native['timesteps']*native['dt_s'],rtol=1e-8,atol=0),'native elapsed time')
-    require(0<record['case_elapsed_s']<=1800 and 0<run['wall_time_s']<=1800,'native case deadline')
+    require(all(finite_real(v) and 0<v<=1800 for v in (record['case_elapsed_s'],run['wall_time_s'])),'native case deadline')
     for guard in ('worker','enclosing_guard'):
         receipt=record[guard]
-        require(receipt['deadline_seconds']==1800 and receipt['exit_code']==0,'guard deadline/exit')
-        require(all(0<receipt[k]<=1800 for k in ('wall_seconds','monotonic_seconds')),'guard duration')
+        require(receipt['deadline_seconds']==1800 and type(receipt['exit_code']) is int and receipt['exit_code']==0,'guard deadline/exit')
+        require(all(finite_real(receipt[k]) and 0<receipt[k]<=1800 for k in ('wall_seconds','monotonic_seconds')),'guard duration')
     require(record['worker']['failure'] is None and record['enclosing_guard']['timed_out'] is False,'failed worker')
+    # This historical reduced schema uses null placeholders for absent stop data.
+    # Every actual value must be finite before max(), whose NaN ordering can hide it.
+    energy=[run[k] for k in ('final_energy_db','final_energy_bound_db') if run.get(k) is not None]
+    require(all(finite_real(value) for value in energy),'finite non-Boolean native stop energy')
     if primary:
-        energy=[run[k] for k in ('final_energy_db','final_energy_bound_db') if run.get(k) is not None]
         require(run['converged'] is True and run['hit_timestep_limit'] is False and energy and max(energy)<=-90.,'primary exact energy stop')
         require(record['native_end_db']==-90. and record['max_timesteps']==200000,'primary native settings')
         require(native['timesteps']>=record['source_cache']['complete_after_steps'],'incomplete Gaussian source')
@@ -99,7 +106,7 @@ def analyze(m,arrays):
             require(primary['native']['dt_s']==hold['native']['dt_s'] and primary['native']['cells']==hold['native']['cells'],'same primary/hold native clock/grid')
             require(primary['source_cache']==hold['source_cache'],'same source caches')
             require(hold['seed_report_sha256']==primary['hashes']['report'],'continuation seed hash')
-            late=[e['db'] for e in hold['energy_trace'] if e['timestep']*hold['native']['dt_s']>primary['native']['numerical_time_s']]
+            late=late_energies(hold['energy_trace'],hold['native']['timesteps'],hold['native']['dt_s'],primary['native']['numerical_time_s'])
             require(len(late)>=3 and all(np.isfinite(v) and v<=-90. for v in late),'late energy rebound or missing samples')
             norm=abs(a[drive]).max(axis=0);require(np.all(norm>0),'primary incident normalization')
             changes={key:float((abs(waves['hold_'+key][drive]-before[drive])/norm).max()) for key,before in (('a',a),('b',b))}
@@ -151,6 +158,55 @@ class MeasuredMUR(unittest.TestCase):
             elif kind=='short':hold['native']['timesteps']-=1
             else:hold['worker']['wall_seconds']=1801.
             with self.assertRaises(ValueError):analyze(bad,self.samples)
+    def test_reduced_trace_cannot_count_duplicate_outside_or_invalid_observations(self):
+        for kind in ('duplicate','outside','reverse','fractional','integer-float','boolean',
+                     'nan-step','infinite-step','zero','negative','nan-energy','infinite-energy','boolean-energy','missing'):
+            with self.subTest(kind=kind):
+                bad=copy.deepcopy(self.manifest);hold=bad['grids'][0]['records'][0]['hold']
+                rows=hold['energy_trace']
+                if kind=='duplicate':hold['energy_trace']=[copy.deepcopy(rows[-1])]*3
+                elif kind=='outside':hold['energy_trace']=[dict(timestep=hold['native']['timesteps']+n,db=-100.) for n in (1,2,3)]
+                elif kind=='reverse':hold['energy_trace']=rows[::-1]
+                elif kind=='fractional':rows[0]['timestep']+=.5
+                elif kind=='integer-float':rows[0]['timestep']=float(rows[0]['timestep'])
+                elif kind=='boolean':rows[0]['timestep']=True
+                elif kind=='nan-step':rows[0]['timestep']=float('nan')
+                elif kind=='infinite-step':rows[0]['timestep']=float('inf')
+                elif kind=='zero':rows[0]['timestep']=0
+                elif kind=='negative':rows[0]['timestep']=-1
+                elif kind=='nan-energy':rows[0]['db']=float('nan')
+                elif kind=='infinite-energy':rows[0]['db']=-float('inf')
+                elif kind=='boolean-energy':rows[0]['db']=True
+                else:rows[0].pop('timestep')
+                with self.assertRaises(ValueError):analyze(bad,self.samples)
+    def test_nonfinite_stop_energy_boolean_deadlines_exits_and_invalid_cells_are_rejected(self):
+        for field in ('final_energy_db','final_energy_bound_db'):
+            for value in (float('nan'),float('inf'),-float('inf'),True):
+                with self.subTest(field=field,value=value):
+                    bad=copy.deepcopy(self.manifest);run=bad['grids'][0]['records'][0]['primary']['run']
+                    run.update(final_energy_db=-100.,final_energy_bound_db=None)
+                    run[field]=value
+                    with self.assertRaises(ValueError):analyze(bad,self.samples)
+        for route in (('case_elapsed_s',),('run','wall_time_s'),
+                      ('worker','wall_seconds'),('worker','monotonic_seconds'),
+                      ('enclosing_guard','wall_seconds'),('enclosing_guard','monotonic_seconds')):
+            for value in (True,float('nan'),float('inf')):
+                with self.subTest(duration=route,value=value):
+                    bad=copy.deepcopy(self.manifest);target=bad['grids'][0]['records'][0]['primary']
+                    for key in route[:-1]:target=target[key]
+                    target[route[-1]]=value
+                    with self.assertRaises(ValueError):analyze(bad,self.samples)
+        for guard in ('worker','enclosing_guard'):
+            for value in (False,0.):
+                with self.subTest(guard=guard,exit=value):
+                    bad=copy.deepcopy(self.manifest)
+                    bad['grids'][0]['records'][0]['primary'][guard]['exit_code']=value
+                    with self.assertRaises(ValueError):analyze(bad,self.samples)
+        for value in (True,0,-1,100.5,float('nan'),float('inf')):
+            with self.subTest(cells=value):
+                bad=copy.deepcopy(self.manifest);record=bad['grids'][0]['records'][0]
+                for kind in ('primary','hold'):record[kind]['native']['cells']=value
+                with self.assertRaises(ValueError):analyze(bad,self.samples)
 
 if __name__=='__main__':
     parser=argparse.ArgumentParser(description=__doc__)
