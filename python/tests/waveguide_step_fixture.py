@@ -17,6 +17,9 @@ import numpy as np
 from fairbeam import Simulation
 from fairbeam import simulation as simulation_module
 from fairbeam.simulation import excite_only
+from tests.waveguide_step_admission import (LOG_CONTRACT, MUR_PROTOCOL, NATIVE_BEGIN,
+    NATIVE_END, WORKER_PROTOCOL, checked_native_grid, checked_native_trace, checked_trace, finite_real, late_energies,
+    native_log_frame, positive_integer)
 
 C0, ETA0 = 299792458., 376.730313668
 A, B, ER, PLANE = 22.86, 10.16, 2.54, 20.  # mm, relative permittivity
@@ -29,6 +32,15 @@ PROTOCOL = 'uniform-te10-dielectric-step-v3'
 CASE_SECONDS = 1800.
 END_DB, PULSE_END_S = -90., 9/(np.pi*2e8)
 PULSES = ('gaussian', 'zero-integral-rf')
+TERMINATIONS = ('PML_8', 'MUR')
+MUR_HOLD = dict(duration_s=60e-9, end_db=-150., late_energy_db=END_DB, wave_abs=.002)
+
+
+def controls(pulse, termination):
+    if pulse not in PULSES or termination not in TERMINATIONS:
+        raise ValueError('unsupported research pulse or termination')
+    if termination == 'MUR' and pulse != 'gaussian':
+        raise ValueError('the MUR control currently requires the unchanged Gaussian source')
 
 
 def physical_input_sha(path):
@@ -137,15 +149,14 @@ def reference(f=FREQUENCIES, eps_r=ER):
     return s
 
 
-def build(cpw, excited, padding=PADDING, *, pulse='gaussian'):
+def build(cpw, excited, padding=PADDING, *, pulse='gaussian', termination='PML_8'):
     if (isinstance(cpw, bool) or not isinstance(cpw, int) or cpw not in range(10, 81, 10)
             or isinstance(excited, bool) or excited not in (1, 2)
             or isinstance(padding, bool) or not isinstance(padding, int) or padding < 16):
         raise ValueError('cpw=10..80 by ten, port=1/2 and padding>=16 required')
-    if pulse not in PULSES:
-        raise ValueError('unsupported research source pulse')
+    controls(pulse, termination)
     sim = Simulation(FREQUENCIES[0], FREQUENCIES[-1], excitation='gauss',
-        boundaries=['PEC']*4+['PML_8']*2, end_criteria_db=END_DB, max_timesteps=200000)
+        boundaries=['PEC']*4+[termination]*2, end_criteria_db=END_DB, max_timesteps=200000)
     if pulse == 'zero-integral-rf':
         expression = rf_expression()
         sim.fdtd.SetCustomExcite(expression, 1e10, float(FREQUENCIES[-1]))
@@ -169,7 +180,12 @@ def build(cpw, excited, padding=PADDING, *, pulse='gaussian'):
     return sim
 
 
-def acquire(out, cpw, excited, padding=PADDING, *, pulse='gaussian'):
+def acquire(out, cpw, excited, padding=PADDING, *, pulse='gaussian', termination='PML_8', hold_seed=None):
+    controls(pulse, termination)
+    if termination == 'MUR':
+        return acquire_mur(out, cpw, excited, padding, hold_seed=hold_seed)
+    if hold_seed is not None:
+        raise ValueError('a continuation seed requires the MUR control')
     out = Path(out)
     out.mkdir(parents=True, exist_ok=False)
     sim = build(cpw, excited, padding, pulse=pulse)
@@ -209,3 +225,258 @@ def acquire(out, cpw, excited, padding=PADDING, *, pulse='gaussian'):
             source_audit=rf_source_audit(out/'raw', dt))
     (out/'report.json').write_text(json.dumps(meta, indent=2)+'\n', encoding='utf-8')
     return meta
+
+
+def _sha(path):
+    return hashlib.sha256(Path(path).read_bytes()).hexdigest()
+
+
+def _save(path, value):
+    Path(path).write_text(json.dumps(value, indent=2, allow_nan=False)+'\n', encoding='utf-8')
+
+
+def mur_ids():
+    root = Path(__file__).resolve().parents[1]
+    names = ('fairbeam/multiport.py', 'fairbeam/procutil.py',
+             'tests/coupled_stripline_fixture.py', 'tests/test_coax_resonator.py',
+             'tests/waveguide_step_admission.py')
+    return dict(**source_ids(), **{n: _sha(root/n) for n in names})
+
+
+def _mur_runtime():
+    from tests.coupled_stripline_fixture import runtime_identity
+    return runtime_identity()
+
+
+def _native_stats(raw):
+    values = np.loadtxt(Path(raw)/'openEMS_stats.txt', comments='%')
+    if (values.shape != (6,) or not np.isfinite(values).all()
+            or np.any(values <= 0) or any(v != int(v) for v in values[[0, 2]])):
+        raise ValueError('complete finite native statistics required')
+    return dict(cells=int(values[0]), dt_s=float(values[1]), timesteps=int(values[2]),
+                numerical_time_s=float(values[3]), iteration_wall_s=float(values[4]))
+
+
+def _gaussian_cache(raw, dt):
+    if not np.isfinite(dt) or dt <= 0:
+        raise ValueError('positive Gaussian native clock required')
+    records = {}
+    for name, offset in (('et', 0.), ('ht', .5)):
+        path = Path(raw)/name
+        values = np.loadtxt(path, ndmin=2)
+        if (values.shape[1] != 2 or not np.isfinite(values).all() or not np.any(values[:, 1])
+                or abs(len(values)-int(np.ceil(PULSE_END_S/dt))) > 1
+                or not np.allclose(values[:, 0], (np.arange(len(values))+offset)*dt,
+                                   rtol=6e-6, atol=dt*1e-5)):
+            raise ValueError('incomplete Gaussian cache or changed clock')
+        records[name] = dict(sha256=_sha(path), samples=len(values))
+    return dict(records=records, complete_after_steps=int(np.ceil(PULSE_END_S/dt))+1)
+
+
+def _mur_data(sim, raw):
+    sim.sim_path = str(raw)
+    sim.evaluate(n_freq=len(FREQUENCIES))
+    ports = sim._port_objs
+    z = np.array([np.broadcast_to(p.Z_ref, FREQUENCIES.shape) for p in ports])
+    return dict(f=FREQUENCIES, z_ref=z, a=np.array([p.uf_inc for p in ports])/np.sqrt(z),
+                b=np.array([p.uf_ref for p in ports])/np.sqrt(z),
+                voltage=np.array([p.uf_tot for p in ports]), current=np.array([p.if_tot for p in ports]))
+
+
+def _mur_sim(cpw, excited, padding, seed=None):
+    sim = build(cpw, excited, padding, termination='MUR')
+    if seed is not None:
+        if seed['native']['numerical_time_s'] >= MUR_HOLD['duration_s']:
+            raise ValueError('the fixed continuation window does not extend beyond the primary run')
+        steps = int(np.ceil(MUR_HOLD['duration_s']/seed['native']['dt_s']))
+        sim.fdtd.SetNumberOfTimeSteps(steps)
+        sim.max_timesteps = steps
+        sim.fdtd.SetEndCriteria(10**(MUR_HOLD['end_db']/10))
+        sim.end_criteria_db = MUR_HOLD['end_db']
+    return sim
+
+
+def acquire_mur(out, cpw, excited, padding=PADDING, *, hold_seed=None):
+    seed_path = None if hold_seed is None else Path(hold_seed)
+    seed = None if seed_path is None else load_mur_record(seed_path, cpw, excited, padding)[0]
+    out = Path(out)
+    out.mkdir(parents=True, exist_ok=False)
+    ids, runtime = mur_ids(), _mur_runtime()
+    sim = _mur_sim(cpw, excited, padding, seed)
+    sim.fdtd.Write2XML(str(out/'input.xml'))
+    # Frame this run's echoed output before evaluation and the worker's final JSON.
+    # The reader requires a complete native grid/clock/completion record; the
+    # underlying capture pump has a bounded join, not an unlimited drain promise.
+    print(NATIVE_BEGIN, flush=True)
+    sim.run(str(out/'raw'), threads=4, exact=True, echo=True, dump_statistics=True)
+    print('\n'+NATIVE_END, flush=True)
+    native = _native_stats(out/'raw')
+    data = _mur_data(sim, out/'raw')
+    if not all(np.isfinite(v).all() for v in data.values()):
+        raise ValueError('finite native port spectra required')
+    np.savez_compressed(out/'data.npz', **data)
+    probe_names = {n for p in sim._port_objs for n in tuple(p.U_filenames)+tuple(p.I_filenames)}
+    meta = dict(protocol=MUR_PROTOCOL, native_log_contract=LOG_CONTRACT,
+        kind='primary' if seed is None else 'hold60ns',
+        termination='MUR', pulse='gaussian', cpw=cpw, excited=excited, padding=padding,
+        geometry=geometry(), frequency_hz=FREQUENCIES.tolist(), limits=LIMITS, hold_limits=MUR_HOLD,
+        source_ids=source_ids(), mur_source_ids=ids, runtime=runtime, native=native, run=sim.run_stats,
+        max_timesteps=sim.max_timesteps, native_end_db=sim.end_criteria_db,
+        cache=_gaussian_cache(out/'raw', native['dt_s']),
+        input_sha256=_sha(out/'input.xml'), physical_input_sha256=physical_input_sha(out/'input.xml'),
+        data_sha256=_sha(out/'data.npz'), native_stats_sha256=_sha(out/'raw/openEMS_stats.txt'),
+        probe_sha256={n: _sha(out/'raw'/n) for n in sorted(probe_names)},
+        seed_report_sha256=None if seed_path is None else _sha(seed_path/'report.json'),
+        qualified_scope=False)
+    if ids != mur_ids() or runtime != _mur_runtime():
+        raise ValueError('capture source/runtime changed')
+    _save(out/'report.json', meta)
+    return meta
+
+
+def finalized_mur_log(path):
+    """Called by the parent only after worker exit and output stream closure."""
+    data = Path(path).read_bytes()
+    return dict(contract=LOG_CONTRACT, bytes=len(data), sha256=hashlib.sha256(data).hexdigest())
+
+
+def verify_mur_log(path, meta, receipt):
+    """Bind the finished owned log, then independently reparse its native frame."""
+    path = Path(path)
+    if (receipt.get('protocol') != WORKER_PROTOCOL or receipt.get('log_finalized') is not True
+            or receipt.get('log_finalization_error') is not None or receipt.get('cleanup_error') is not None
+            or meta.get('worker_receipt_sha256') != _sha(path.with_name(path.name+'.worker.json'))):
+        raise ValueError('MUR finalized worker/log receipt is missing or changed')
+    log_path = path.with_name(path.name+'.log')
+    data = log_path.read_bytes()
+    binding = receipt.get('log', {})
+    if (not isinstance(binding, dict) or not positive_integer(binding.get('bytes'))
+            or binding != dict(contract=LOG_CONTRACT, bytes=len(data), sha256=hashlib.sha256(data).hexdigest())):
+        raise ValueError('MUR finished native log bytes/hash changed')
+    text = native_log_frame(data.decode('utf-8', errors='replace'))
+    if simulation_module._aborted(text):
+        raise ValueError('MUR native log records an aborted simulation')
+    # A frame contains one run, not a concatenation that first-match parsing can hide.
+    if any(len(simulation_module._RE[k].findall(text)) != 1 for k in ('size', 'time', 'dt')):
+        raise ValueError('MUR native log requires one grid, clock and completion record')
+    native, run = meta['native'], meta['run']
+    if not positive_integer(meta.get('max_timesteps')) or not finite_real(meta.get('native_end_db')):
+        raise ValueError('MUR native log allocation/criterion invalid')
+    parsed = simulation_module._parse_log(text, meta['native_end_db'], meta['max_timesteps'])
+    checked_native_trace(text, parsed['energy_trace'], parsed.get('timesteps'))
+    checked_native_grid(text, parsed.get('grid'))
+    checked_trace(run.get('energy_trace'), native.get('timesteps'))
+    if (not isinstance(run.get('grid'), list) or len(run['grid']) != 3
+            or not all(positive_integer(v) for v in run['grid'])
+            or not positive_integer(run.get('timesteps'))
+            or not finite_real(run.get('timestep_s')) or run['timestep_s'] <= 0
+            or not finite_real(run.get('solver_time_s')) or run['solver_time_s'] <= 0
+            or any(not finite_real(run[k]) for k in ('final_energy_db', 'final_energy_bound_db') if k in run)):
+        raise ValueError('MUR reported native log values are invalid')
+    missing = object()
+    keys = ('grid', 'timesteps', 'timestep_s', 'solver_time_s', 'energy_trace',
+            'final_energy_db', 'final_energy_bound_db')
+    if (any(parsed.get(k, missing) != run.get(k, missing) for k in keys)
+            or any(parsed[k] is not run.get(k) for k in ('converged', 'hit_timestep_limit'))
+            or parsed['timesteps'] != native['timesteps']
+            or int(np.prod(parsed['grid'])) != native['cells']
+            or not np.isclose(parsed['timestep_s'], native['dt_s'], rtol=6e-6, atol=0)):
+        raise ValueError('MUR native log trace/stop/grid/clock does not match the record')
+    return parsed
+
+
+def load_mur_record(path, cpw, excited, padding, *, seed_path=None):
+    """Replay a v2 raw record; a primary stop alone is insufficient.
+
+    Historical unframed v1 captures require their acquisition-pinned reader.
+    They cannot be relabeled v2 by this reader or by reduced-data arithmetic.
+    """
+    path = Path(path)
+    meta = json.loads((path/'report.json').read_text(encoding='utf-8'))
+    seed = None if seed_path is None else load_mur_record(seed_path, cpw, excited, padding)[0]
+    expected = dict(protocol=MUR_PROTOCOL, native_log_contract=LOG_CONTRACT,
+        kind='primary' if seed is None else 'hold60ns',
+        termination='MUR', pulse='gaussian', cpw=cpw, excited=excited, padding=padding,
+        geometry=geometry(), frequency_hz=FREQUENCIES.tolist(), limits=LIMITS, hold_limits=MUR_HOLD,
+        source_ids=source_ids(), mur_source_ids=mur_ids(), runtime=_mur_runtime(),
+        seed_report_sha256=None if seed is None else _sha(Path(seed_path)/'report.json'))
+    if any(meta.get(k) != v for k, v in expected.items()):
+        raise ValueError('MUR record source/runtime/model/seed identity mismatch')
+    native, run = _native_stats(path/'raw'), meta['run']
+    if meta.get('native') != native:
+        raise ValueError('MUR native statistics changed')
+    durations = [run.get('wall_time_s'), meta.get('case_elapsed_s')]
+    if (run.get('threads') != 4 or run.get('engine') != 'cpu' or run.get('exact_endcriteria') is not True
+            or native['timesteps'] != run.get('timesteps') or native['cells'] != int(np.prod(run.get('grid', [])))
+            or not positive_integer(meta.get('max_timesteps'))
+            or not 0 < native['dt_s'] or not 0 < native['timesteps'] <= meta['max_timesteps']
+            or any(isinstance(t, bool) or not isinstance(t, (int, float)) or not np.isfinite(t)
+                   or not 0 < t <= CASE_SECONDS for t in durations)
+            or not np.isclose(native['numerical_time_s'], native['timesteps']*native['dt_s'], rtol=1e-8, atol=0)):
+        raise ValueError('MUR native execution or deadline mismatch')
+    if seed is None:
+        energy = [run[k] for k in ('final_energy_db', 'final_energy_bound_db')
+                  if isinstance(run.get(k), (int, float)) and not isinstance(run[k], bool) and np.isfinite(run[k])]
+        if (run.get('converged') is not True or run.get('hit_timestep_limit') is not False
+                or native['timesteps'] >= 200000 or not energy or max(energy) > END_DB+1e-9):
+            raise ValueError('MUR primary lacks an exact native stop')
+    sim = _mur_sim(cpw, excited, padding, seed)
+    if meta.get('max_timesteps') != sim.max_timesteps or meta.get('native_end_db') != sim.end_criteria_db:
+        raise ValueError('MUR time allocation or criterion changed')
+    import tempfile
+    with tempfile.TemporaryDirectory() as folder:
+        rebuilt = Path(folder)/'input.xml'
+        sim.fdtd.Write2XML(str(rebuilt))
+        if physical_input_sha(rebuilt) != meta.get('physical_input_sha256'):
+            raise ValueError('rebuilt MUR physical input changed')
+    for rel, key in (('input.xml', 'input_sha256'), ('data.npz', 'data_sha256'),
+                     ('raw/openEMS_stats.txt', 'native_stats_sha256')):
+        if _sha(path/rel) != meta.get(key):
+            raise ValueError('MUR input/data/statistics hash changed')
+    receipt = json.loads(path.with_name(path.name+'.worker.json').read_text(encoding='utf-8'))
+    if (type(receipt.get('exit_code')) is not int or receipt['exit_code'] != 0 or receipt.get('failure') is not None
+            or receipt.get('deadline_seconds') != CASE_SECONDS or receipt.get('source') != meta['mur_source_ids']
+            or any(not isinstance(receipt.get(k), (int, float)) or isinstance(receipt[k], bool)
+                   or not np.isfinite(receipt[k]) or not 0 < receipt[k] <= CASE_SECONDS
+                   for k in ('wall_seconds', 'monotonic_seconds'))):
+        raise ValueError('MUR owned-worker receipt changed or exceeded its deadline')
+    verify_mur_log(path, meta, receipt)
+    replay = _mur_data(sim, path/'raw')
+    names = {n for p in sim._port_objs for n in tuple(p.U_filenames)+tuple(p.I_filenames)}
+    if meta.get('probe_sha256') != {n: _sha(path/'raw'/n) for n in sorted(names)}:
+        raise ValueError('MUR raw port probes changed')
+    with np.load(path/'data.npz') as archive:
+        if set(archive.files) != set(replay) or any(not np.array_equal(archive[k], v) for k, v in replay.items()):
+            raise ValueError('MUR raw-port replay differs from stored spectra')
+    cache = _gaussian_cache(path/'raw', native['dt_s'])
+    if cache != meta.get('cache') or native['timesteps'] < cache['complete_after_steps']:
+        raise ValueError('MUR native Gaussian cache is incomplete or changed')
+    return meta, replay
+
+
+def mur_hold_checks(primary, before, hold, after):
+    """Require the complete fixed window and no rebound after the primary stop."""
+    native = hold['native']
+    late = late_energies(hold['run']['energy_trace'], native['timesteps'],
+                        native['dt_s'], primary['native']['numerical_time_s'])
+    scale = abs(before['a']).max(axis=0)
+    if np.any(scale <= 0):
+        raise ValueError('nonzero primary incident spectrum required')
+    change = {k: float((abs(after[k]-before[k])/scale).max()) for k in ('a', 'b')}
+    passed = (native['timesteps'] == hold['max_timesteps']
+        and abs(native['numerical_time_s']-MUR_HOLD['duration_s']) <= native['dt_s']*1.001
+        and native['dt_s'] == primary['native']['dt_s'] and native['cells'] == primary['native']['cells']
+        and hold['cache'] == primary['cache'] and len(late) >= 3
+        and all(np.isfinite(v) and v <= MUR_HOLD['late_energy_db']+1e-9 for v in late)
+        and all(np.isfinite(v) and v <= MUR_HOLD['wave_abs'] for v in change.values()))
+    return dict(passes=bool(passed), maximum_late_energy_db=max(late) if late else None,
+                wave_change=change, limits=MUR_HOLD)
+
+
+def read_mur_source(path, cpw, excited, padding):
+    primary, before = load_mur_record(path, cpw, excited, padding)
+    hold, after = load_mur_record(Path(path)/'hold60ns', cpw, excited, padding, seed_path=path)
+    check = mur_hold_checks(primary, before, hold, after)
+    if not check['passes']:
+        raise ValueError('MUR continuation lacks complete, stable late-time evidence')
+    return dict(primary=primary, hold=hold, temporal_check=check), before
