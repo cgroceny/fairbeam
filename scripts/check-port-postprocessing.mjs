@@ -289,7 +289,9 @@ const mixedData=resultDataTable(mixed,'sparams',undefined,{format:'re_im'});
 assert.match(mixedData.header[1],/^Re Sdd11/); near(mixedData.rows[0][1],mm.get(1,1).re[0]);
 near(sweep(mixed).s11Re[0],mm.get(1,1).re[0]);
 const modalSummary=summaryTable([{file:'modal',label:'Modal',bundle:mixed},{file:'raw',label:'Raw',bundle:circuit}],{deltas:true});
-assert.match(modalSummary.rows[0].at(-1),/^Sdd11/); assert.equal(modalSummary.rows[1].at(-1),'S11');
+assert.equal(modalSummary.header.filter(header=>header==='Network reflection').length,1,'the modal coordinate label has one semantic column');
+const networkReflectionColumn=modalSummary.header.indexOf('Network reflection');
+assert.match(modalSummary.rows[0][networkReflectionColumn],/^Sdd11/); assert.equal(modalSummary.rows[1][networkReflectionColumn],'S11');
 assert.equal(modalSummary.rows[1][modalSummary.header.indexOf('Δ |Network reflection| min (dB)')],null,'unlike coordinates cannot imply improvement');
 
 // Independent limited Touchstone2 decoder for the exported Full RI grammar (not the

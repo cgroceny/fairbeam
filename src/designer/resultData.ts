@@ -12,6 +12,7 @@ import { phasorColumns } from "../scene/fieldPlaneModel.ts";
 import { t, tEn } from "../i18n/index.ts";
 import { summaryTable } from "./runSummary.ts";
 import { radiationTable, type RadiationQuantity } from "../lib/radiationFrequency.ts";
+import { smallAntennaResultColumns, type SmallAntennaSnapshot } from "../lib/smallAntennaResult.ts";
 import { analyzeCut, cutLabel, cutSpecs, patternMetrics, type PatternCutChoice } from '../lib/patternMetrics.ts';
 
 export interface ResultDataTable {
@@ -23,6 +24,8 @@ export type ResultDataFormat = "db" | "db_phase" | "re_im" | "mag_phase" | "all"
 
 /** What the active plot shows, so copied/exported data matches it (both Results docks pass it). */
 export interface ResultDataOptions {
+  /** Immutable result-owned analysis; compared rows resolve by exact bundle identity. */
+  smallAntenna?: readonly SmallAntennaSnapshot[];
   radiationQuantity?: RadiationQuantity;
   /** the S_ij picked in the S-parameter picker; every stored pair only when omitted */
   pairs?: [number, number][];
@@ -91,7 +94,12 @@ function zColumns(re: number[], im: number[], format: ResultDataFormat) {
 
 /** Raw, unsampled data for a result view. Numeric cells retain the precision stored in the bundle. */
 export function resultDataTable(bundle: Bundle | null | undefined, view: ResultView, frequencyHz?: number, options: ResultDataOptions = {}): ResultDataTable {
-  const table = baseResultDataTable(bundle, view, frequencyHz, options), info = portProcessingInfo(bundle);
+  let table = baseResultDataTable(bundle, view, frequencyHz, options);
+  if (bundle?.results && view === "impedance" && table.rows.length) {
+    const small = smallAntennaResultColumns(bundle, options.smallAntenna);
+    table = { header: [...table.header, ...small.header], rows: table.rows.map(row => [...row, ...small.row]) };
+  }
+  const info = portProcessingInfo(bundle);
   return info ? { header: [...table.header, "Port processing"], rows: table.rows.map(row => [...row, info.description]) } : table;
 }
 
@@ -104,7 +112,7 @@ function baseResultDataTable(bundle: Bundle | null | undefined, view: ResultView
   if (!phaseKnown && (view === "smith" || view === "impedance")) return empty(["f (GHz)", "Re Zin (Ω)", "Im Zin (Ω)"]);
 
   // the run card's headline numbers: one row (the comparison's per-run table has one row per run)
-  if (view === "summary") return summaryTable([{ label: options.runNames?.[0] ?? bundle.model.name, file: "", bundle }]);
+  if (view === "summary") return summaryTable([{ label: options.runNames?.[0] ?? bundle.model.name, file: "", bundle }], { smallAntenna: options.smallAntenna });
 
   if (view === "sparams") {
     const matrix = sMatrix(bundle);
@@ -284,7 +292,11 @@ function baseResultDataTable(bundle: Bundle | null | undefined, view: ResultView
 }
 
 const cell = (v: string | number | null | undefined) => v == null ? "" : String(v);
-const tsv = (table: ResultDataTable) => [table.header, ...table.rows].map((row) => row.map(cell).join("\t")).join("\n");
+const tsvCell = (v: string | number | null | undefined) => {
+  const s = cell(v);
+  return /["\t\r\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+};
+const tsv = (table: ResultDataTable) => [table.header, ...table.rows].map((row) => row.map(tsvCell).join("\t")).join("\n");
 const csvCell = (v: string | number | null | undefined) => {
   const s = cell(v);
   return /[",\r\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
@@ -334,7 +346,7 @@ export function comparedResultDataTable(runs: { file: string; bundle: Bundle }[]
 export function activeResultDataTable(bundle: Bundle | null | undefined, view: ResultView, frequencyHz?: number, runs?: { file: string; bundle: Bundle }[], options: ResultDataOptions = {}): ResultDataTable {
   // the summary lists its runs as rows, one run included (its file name is a column)
   if (view === "summary" && runs?.length) {
-    const table = summaryTable(runs.map((r, i) => ({ label: options.runNames?.[i] ?? r.bundle.model.name, file: r.file, bundle: r.bundle })), { deltas: options.summaryDeltas, reference: options.summaryReference });
+    const table = summaryTable(runs.map((r, i) => ({ label: options.runNames?.[i] ?? r.bundle.model.name, file: r.file, bundle: r.bundle })), { deltas: options.summaryDeltas, reference: options.summaryReference, smallAntenna: options.smallAntenna });
     return runs.some(r => portProcessingInfo(r.bundle)) ? { header: [...table.header, "Port processing"], rows: table.rows.map((row, i) => [...row, portProcessingInfo(runs[i].bundle)?.description ?? "Original stored result"]) } : table;
   }
   return runs && runs.length >= 2 ? comparedResultDataTable(runs, view, frequencyHz, options) : resultDataTable(bundle, view, frequencyHz, options);

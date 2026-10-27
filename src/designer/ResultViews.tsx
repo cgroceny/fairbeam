@@ -50,6 +50,8 @@ import { exportNotice, registerSurfaceExports } from "../components/exportContex
 import { saveVisibleFigure, visibleFigureSvgs } from "../components/visibleFigure";
 import ResultFigureMenu from "../components/ResultFigureMenu";
 import MatchingPanel, { createMatching } from "../components/MatchingPanel";
+import SmallAntennaPanel, { SmallAntennaComparison } from "../components/SmallAntennaPanel";
+import { designerSmallAntenna } from "./smallAntennaSession";
 import { resultExportStem, resultFrequencyTag } from "../lib/resultExportNames";
 import FieldMapView from "./FieldMapView";
 import RadiationFrequencyView, { RadiationQuantitySelect } from "../components/RadiationFrequencyView";
@@ -198,12 +200,13 @@ function ResultImpedance(props: { b: Bundle }) {
           inspection={{ key: `designer:${designResult()?.file ?? ""}:impedance:${zPart()}`, chart: `designer:${designResult()?.file ?? ""}:impedance`, kind: "other" }}
           series={series()} {...ghzAxis} yLabel={cmp() ? `${zPart() === "re" ? "Re" : "Im"} Zin (Ω)` : "Zin (Ω)"} yFormat={(v) => v.toFixed(1)}
           hlines={cmp() && zPart() === "im" ? [{ y: 0, label: "" }] : [{ y: sw()!.zRef, label: t("results.impedance.referenceLine", { z: num(sw()!.zRef, sw()!.zRef >= 100 ? 0 : 1) }) }, { y: 0, label: "" }]} />
-        <Show when={cmp()} fallback={<div class="rdk-side"><dl class="kv"><dt>{t("results.impedance.reference")}</dt><dd class="mono">{num(sw()!.zRef, 1)} Ω</dd></dl><Show when={matching()}>{(m) => <><h3>{t("feed.complexReference")}</h3><dl class="kv"><dt>Zref</dt><dd class="mono">{m().ref.real} + j({m().ref.imag}) Ω</dd><dt>f</dt><dd class="mono">{num(m().f / 1e9, 4)} GHz</dd><dt>|Γ|</dt><dd class="mono">{num(m().magnitude, 4)}</dd><dt>{t("feed.transfer")}</dt><dd class="mono">{num(m().transfer * 100, 2)} %</dd></dl><p class="note">{t("feed.referenceNote")}</p></>}</Show><MatchingPanel state={ideal} /></div>}>
+        <Show when={cmp()} fallback={<div class="rdk-side"><dl class="kv"><dt>{t("results.impedance.reference")}</dt><dd class="mono">{num(sw()!.zRef, 1)} Ω</dd></dl><Show when={matching()}>{(m) => <><h3>{t("feed.complexReference")}</h3><dl class="kv"><dt>Zref</dt><dd class="mono">{m().ref.real} + j({m().ref.imag}) Ω</dd><dt>f</dt><dd class="mono">{num(m().f / 1e9, 4)} GHz</dd><dt>|Γ|</dt><dd class="mono">{num(m().magnitude, 4)}</dd><dt>{t("feed.transfer")}</dt><dd class="mono">{num(m().transfer * 100, 2)} %</dd></dl><p class="note">{t("feed.referenceNote")}</p></>}</Show><MatchingPanel state={ideal} /><SmallAntennaPanel bundle={props.b} session={designerSmallAntenna} /></div>}>
           <div class="rdk-side">
             <div class="seg seg-sm" role="radiogroup" aria-label={t("results.impedance.part")} onKeyDown={radioGroupKeys}>
               <button class="seg-btn" role="radio" aria-checked={zPart() === "re"} onClick={() => setZPart("re")}>Re</button>
               <button class="seg-btn" role="radio" aria-checked={zPart() === "im"} onClick={() => setZPart("im")}>Im</button>
             </div>
+            <SmallAntennaComparison runs={[{ file: designResult()?.file ?? "", bundle: props.b }, ...comparedRuns()].map(run => ({ ...run, label: runLabel(run.file) }))} session={designerSmallAntenna} />
           </div>
         </Show>
       </div>
@@ -608,6 +611,9 @@ export function ResultToolbar(props: { view: MainResultView }) {
     fieldPlane: resultFocus()?.map,
     summaryDeltas: summaryMode() === "delta",
     summaryReference: summaryReference(),
+    ...(["impedance", "summary"].includes(props.view) && designResult() ? {
+      smallAntenna: [designResult()!, ...comparedRuns()].map(run => designerSmallAntenna.snapshot(run.bundle, run.file)),
+    } : {}),
   });
   const comparedBundles = async (run: { file: string; bundle: Bundle }) => {
     const processingRevision = portProcessingSession.revision();
@@ -622,7 +628,9 @@ export function ResultToolbar(props: { view: MainResultView }) {
   const exportFrequency = () => props.view === "array" ? designerArray.set()?.f : props.view === "pattern" ? resultFocus()?.f ?? designResult()?.bundle.results?.farfield[0]?.f : undefined;
   const exportBase = (b: Bundle) => resultExportStem(b, props.view, exportFrequency()) + (portProcessingInfo(b) ? "_postprocessed" : "");
   const plot = () => bar.closest(".dw-result")?.querySelector<HTMLElement>(".dw-result-plot") ?? null;
-  const ready = () => (props.view !== "array" || !!designerArray.steered() && !resultFocus()?.compare?.length) && !!designResult()?.bundle.results && (!resultFocus() || resultFocus()?.file === designResult()?.file);
+  const ready = () => (props.view !== "array" || !!designerArray.steered() && !resultFocus()?.compare?.length)
+    && (!["impedance", "summary"].includes(props.view) || designerSmallAntenna.source() === designResult()?.bundle)
+    && !!designResult()?.bundle.results && (!resultFocus() || resultFocus()?.file === designResult()?.file);
   const figureReady = () => ready() && comparisonReady() && !["table", "summary", "fieldmap"].includes(props.view);
   const exportFigure = async (format: "png" | "svg") => {
     const run = designResult();
@@ -636,8 +644,14 @@ export function ResultToolbar(props: { view: MainResultView }) {
     const run = designResult();
     if (!run || !ready()) return;
     try {
-      const frequency = resultFocus()?.f, options = dataOptions(selectedRuns().map(file => ({ file })));
+      const frequency = resultFocus()?.f, options = dataOptions(selectedRuns().map(file => ({ file }))), smallRevision = designerSmallAntenna.revision();
+      const exportView = props.view, selection = selectedRuns().join("\n");
       const runs = await comparedBundles(run);
+      if (options.smallAntenna) {
+        if (smallRevision !== designerSmallAntenna.revision() || designerSmallAntenna.source() !== run.bundle
+          || props.view !== exportView || selectedRuns().join("\n") !== selection) throw new Error(t("results.compare.changed"));
+        options.smallAntenna = Object.freeze((runs ?? [run]).map(item => designerSmallAntenna.snapshot(item.bundle, item.file)));
+      }
       const result = await copyResultData(run.bundle, dataView(), frequency, runs, options);
       if (result.ok) flashCopied(); else feedback(t("results.toolbar.copyFailed", { error: result.message }), true);
     } catch (error) { feedback(t("results.toolbar.copyFailed", { error: error instanceof Error ? error.message : String(error) }), true); }
@@ -646,9 +660,15 @@ export function ResultToolbar(props: { view: MainResultView }) {
     const run = designResult();
     if (!run || !ready()) return;
     try {
-      const frequency = resultFocus()?.f, options = dataOptions(selectedRuns().map(file => ({ file })));
+      const frequency = resultFocus()?.f, options = dataOptions(selectedRuns().map(file => ({ file }))), smallRevision = designerSmallAntenna.revision();
+      const exportView = props.view, selection = selectedRuns().join("\n");
       const filename = `${exportBase(run.bundle)}.csv`;
       const runs = await comparedBundles(run);
+      if (options.smallAntenna) {
+        if (smallRevision !== designerSmallAntenna.revision() || designerSmallAntenna.source() !== run.bundle
+          || props.view !== exportView || selectedRuns().join("\n") !== selection) throw new Error(t("results.compare.changed"));
+        options.smallAntenna = Object.freeze((runs ?? [run]).map(item => designerSmallAntenna.snapshot(item.bundle, item.file)));
+      }
       saved(await exportResultCsv(run.bundle, dataView(), filename, frequency, runs, options));
     } catch (error) { feedback(error instanceof Error ? error.message : t("results.toolbar.exportFailed"), true); }
   };
@@ -761,12 +781,12 @@ export function ResultToolbar(props: { view: MainResultView }) {
         <Show when={props.view === "sparams"}><option value="phase_unwrapped">{t("chart.q.unwrappedPhase")}</option><option value="gd">{t("chart.q.groupDelay")}</option></Show>
       </select>
       </Show>
-      <button class="btn btn-ghost btn-sm rdk-copy" classList={{ copied: copied() }} onClick={() => void copyData()} title={t("results.toolbar.copyDataTitle")} aria-live="polite">
+      <button class="btn btn-ghost btn-sm rdk-copy" disabled={!ready()} classList={{ copied: copied() }} onClick={() => void copyData()} title={t("results.toolbar.copyDataTitle")} aria-live="polite">
         <Show when={copied()} fallback={<><Copy size={14} aria-hidden="true" /> {t("results.toolbar.copyData")}</>}><Check size={14} aria-hidden="true" /> {t("results.toolbar.copied")}</Show>
       </button>
       <ResultFigureMenu disabled={!figureReady()} save={exportFigure} />
       {/* CSV and Touchstone: their own icons and a short label that stays when the bar folds to icons */}
-      <button class="btn btn-ghost btn-sm" onClick={exportData} title={t("results.toolbar.csvTitle")} aria-label={t("results.toolbar.csvTitle")}><FileSpreadsheet size={14} aria-hidden="true" /> <span class="btn-short">CSV</span></button>
+      <button class="btn btn-ghost btn-sm" disabled={!ready()} onClick={exportData} title={t("results.toolbar.csvTitle")} aria-label={t("results.toolbar.csvTitle")}><FileSpreadsheet size={14} aria-hidden="true" /> <span class="btn-short">CSV</span></button>
       <Show when={designResult()?.bundle.results && props.view !== "summary" && props.view !== "array"}>
         <button class="btn btn-ghost btn-sm" onClick={exportTouchstone} title={t("results.toolbar.touchstoneTitle")} aria-label={t("results.toolbar.touchstoneTitle")}>
           <FileChartLine size={14} aria-hidden="true" /> <span class="btn-short">{touchstoneExt()}</span>

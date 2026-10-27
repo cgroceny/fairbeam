@@ -1,0 +1,28 @@
+/* Result-side analysis uses the existing disclosure, field, checkbox and key/value vocabulary. */
+.small-antenna { min-width: 0; margin-top: var(--al-space-3); }
+.small-antenna-panel > summary { cursor: pointer; overflow-wrap: anywhere; }
+.small-antenna-headline { margin-inline-start: var(--al-space-2); font-size: var(--al-text-xs); color: var(--al-text-2); }
+.small-antenna-panel > :not(summary) { margin-top: var(--al-space-2); }
+.small-antenna-controls { display: flex; flex-wrap: wrap; gap: var(--al-space-2); }
+.small-antenna-controls .rdk-field { min-width: 0; flex: 1 1 140px; }
+.small-antenna-controls :is(input, select) { width: 100%; min-width: 0; }
+.small-antenna-values { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+.small-antenna-values :is(dt, dd) { min-width: 0; overflow-wrap: anywhere; }
+.small-antenna-reason { display: block; }
+.small-antenna-parts { border: 0; padding: 0; min-width: 0; margin: var(--al-space-2) 0; display: grid; gap: var(--al-space-1); }
+.small-antenna-parts label { display: flex; align-items: baseline; gap: var(--al-space-2); overflow-wrap: anywhere; }
+.small-antenna-parts input { flex: none; }
+.small-antenna :is(.small-antenna-geometry, .small-antenna-assumptions) > summary { cursor: pointer; }
+.small-antenna-comparison { min-width: 0; }
+.rdk-side .small-antenna-comparison { margin-top: var(--al-space-3); }
+
+/* Compact Designer handles float over the result area; keep this panel's text clear of them.
+   At desktop widths the workspace already reserves a grid column for each handle. */
+@media (max-width: 1040px) {
+  .workspace.design-mode:has(> .dw-strip-left) .dw-result .small-antenna {
+    margin-inline-start: calc(var(--dw-strip-w, 26px) + var(--al-space-1));
+  }
+  .workspace.design-mode:has(> .dw-strip-right) .dw-result .small-antenna {
+    margin-inline-end: calc(var(--dw-strip-w, 26px) + var(--al-space-1));
+  }
+}

@@ -14,6 +14,7 @@ import { bandCentre } from "../lib/bands.ts";
 import { differingParams, madeLabels } from "./resultTabs.ts";
 import { t } from "../i18n/index.ts";
 import { hasMixedPortCoordinates, primaryPortLabel, samePortProcessing } from "../lib/portProcessingMetadata.ts";
+import { smallAntennaResultColumns, type SmallAntennaSnapshot } from "../lib/smallAntennaResult.ts";
 
 /** The far-field entry nearest the resonance, with the numbers the summary shows. */
 export interface FarfieldHeadline {
@@ -273,16 +274,17 @@ const DELTA_REFERENCE_HEADER = "Δ reference run";
 
 /** One row per run with the headline numbers, and one column per parameter that differs between the
  * runs. English headers and decimal points whatever the UI language, like the other exports.
- * `deltas` (the Summary tab's "Δ vs A" view, with two runs or more) adds the Δ columns at the end:
+ * `deltas` (the Summary tab's "Δ vs A" view, with two runs or more) adds Δ after the headline columns, before analysis metadata:
  * each run's difference from the reference run (empty for the reference run itself and for a missing
  * value) and the file of that reference run. The reference is `reference` (a run's file) when it is
  * among the runs, else the oldest run. */
-export function summaryTable(runs: readonly SummaryRun[], options: { deltas?: boolean; reference?: string | null } = {}): SummaryTable {
+export function summaryTable(runs: readonly SummaryRun[], options: { deltas?: boolean; reference?: string | null; smallAntenna?: readonly SmallAntennaSnapshot[] } = {}): SummaryTable {
   const modal = runs.some(r => hasMixedPortCoordinates(r.bundle));
   const withDeltas = !!options.deltas && runs.length >= 2;
   const columns = differingParams(runs.map((r) => r.bundle.model));
   const made = madeLabels(runs.map((r) => r.bundle.created));
   const all = runs.map((r) => bundleMetrics(r.bundle));
+  const small = runs.map(run => smallAntennaResultColumns(run.bundle, options.smallAntenna, run.file || undefined));
   const bandCount = Math.max(1, ...all.map((m) => m?.bands.length ?? 0));
   const header = [
     "Run", "File", "Made", ...columns.map((c) => `${c.key}${c.unit ? ` (${c.unit})` : ""}`),
@@ -290,6 +292,7 @@ export function summaryTable(runs: readonly SummaryRun[], options: { deltas?: bo
     "Far field f (GHz)", "Dmax (dBi)", "Gain (dBi)", "Realized gain (dBi)", "Radiation efficiency (%)", "Total efficiency (%)", "Cells",
     ...(withDeltas ? [...DELTA_COLUMNS.map((c) => modal && c.key === "s11" ? "Δ |Network reflection| min (dB)" : c.header), DELTA_REFERENCE_HEADER] : []),
     ...(modal ? ["Network reflection"] : []),
+    ...(small[0]?.header ?? []),
   ];
   const ref = withDeltas ? referenceIndex(runs, options.reference) : -1;
   const rows = runs.map((r, i) => {
@@ -311,6 +314,7 @@ export function summaryTable(runs: readonly SummaryRun[], options: { deltas?: bo
       round(ff?.radEff == null ? null : ff.radEff * 100, 2), round(m?.totalEff == null ? null : m.totalEff * 100, 2), m?.cells ?? null,
       ...(withDeltas ? [...DELTA_COLUMNS.map((c) => round(deltas?.[c.key]?.value, c.digits)), i === ref ? null : runs[ref].label] : []),
       ...(modal ? [primaryPortLabel(r.bundle)] : []),
+      ...small[i].row,
     ];
   });
   return { header, rows };

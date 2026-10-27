@@ -188,3 +188,66 @@ references and invalid frequency grids are refused. Complex target chip referenc
 mixed mode are supported; this is not launch-discontinuity removal, a TRL calibration,
 or a dispersive feed model. The standalone Examples viewer continues to
 show original data; this control is scoped to Designer result tabs.
+
+## Small-antenna estimates
+
+The Designer's **Impedance** and **Summary** views share **Small-antenna estimates**.
+They analyze the selected saved result, not the current draft or an ideal matching
+network. Choose a natural reactance zero crossing, a VSWR limit (default 2), and the
+result parts that define the enclosing geometry. Multiple crossings require an explicit
+choice. Selection survives switching between these views; changing result, document or
+port processing resets it. Comparisons evaluate each run independently, using the focused
+run's selection and explicit defaults for other runs. Open a run to customize its selection.
+
+Only original single-port complex data with an ordered, finite frequency grid and a
+constant positive real reference is admitted. Port projections, magnitude-only data and
+multiport results explain why the estimate is unavailable. An S11 minimum is not
+automatically a reactance zero crossing; **Q resonance** is separate from Summary's
+existing best-match frequency.
+
+At a resolved natural crossing, the input-impedance estimate is
+`Q_Z = f0 * sqrt((dR/df)^2 + (dX/df)^2) / (2 R0)`, with frequency in Hz.
+The derivative includes resistance as well as reactance. It uses local nonuniform-grid
+polynomial estimates from three and five contiguous samples. The estimates must agree
+within 5%, and the crossing estimates within one quarter of the bracketing interval.
+Gaps, nonpositive resistance, endpoints, flat zeros and unresolved derivatives leave an
+unavailable result. This is an impedance diagnostic, not a stored-field energy integral.
+
+For VSWR `s > 1`, predicted fractional bandwidth is `(s - 1) / (sqrt(s) * Q_Z)`.
+It assumes an ideal real match to **R0 at this resonance**, which need not equal the
+stored reference impedance. The companion sample-derived width uses that same hypothetical
+match. Both threshold edges must be bracketed without gaps or another resonance. The
+predicted span must be no more than 10%; local Q variation and predicted-versus-sampled
+width disagreement must each be no more than 10%. These are software screening choices,
+not accuracy guarantees. A local Q can remain available when bandwidth is unresolved; a bracketed sample-derived width can also remain available when the predicted width fails its consistency screen.
+Neither width replaces the stored-reference VSWR or existing −10 dB band table.
+
+The radius is half the diagonal of the selected parts' union bounding box, converted
+to meters. This conservative enclosing sphere is not a minimum sphere. All non-void
+parts are included initially, including finite ground, substrate and feed structures;
+excluded parts are recorded. The **PEC image enclosure** reflects the selected bounds
+through the recorded z-min PEC plane before taking their union. It does not simply
+double a radius. Electrical size uses free-space `ka = 2π f0 a / 299792458`.
+
+For `0 < ka < 1`, the named **single-mode Chu/McLean reference** is
+`1/(ka)^3 + 1/ka`. Its Q_Z/reference ratio is a qualified diagnostic for a complete
+finite free-space enclosure. It is withheld for excluded parts, uncertain boundary
+provenance and PEC image enclosures. Loss and modal assumptions matter: this is not a
+universal bound verdict or an optimality percentage. The combined electric/magnetic-mode
+reference is a different expression. Radiation efficiency is shown separately only with
+matching physical-port/frequency and reliable power/convergence evidence; no nearest
+frequency or total-efficiency substitution is used. Model-normalized efficiency and
+the raw power ratio have separate labels. The saved four-decimal efficiency fields are checked against the unrounded powers with their serialization rounding accounted for. Convergence requires an explicit recorded energy value or upper bound; any stored trace must be valid. Exports distinguish a sample and its actual timestep from a stop-derived bound, including valid fast runs with no trace samples. No efficiency correction is applied to the ratio.
+
+Copy data and CSV preserve full precision, units, selection, source/port identity,
+assumptions and unavailable reasons. New **Small antenna** columns in Summary leave
+existing metrics unchanged. In Impedance exports these scalar columns repeat alongside
+each original frequency/impedance row; they are one selected-resonance analysis, not
+independent estimates at every row. Changing the selection during an asynchronous
+comparison load cancels that export rather than mixing states. None of these operations
+changes the saved result or Design, runs a solver, or establishes mesh convergence.
+
+The equations follow [Yaghjian and Best (2005)](https://doi.org/10.1109/TAP.2005.844443),
+the [versioned bandwidth derivation](https://arxiv.org/html/2501.03146v5), and
+[McLean (1996)](https://doi.org/10.1109/8.496253). Independent analytic circuit and geometry
+controls verify the software calculation; numerical antenna qualification remains separate.
