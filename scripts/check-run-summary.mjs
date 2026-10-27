@@ -279,12 +279,25 @@ assert.ok(metrics.size >= 10, "the example bundles were read");
   assert.equal(plain.header.some((h) => h.startsWith("Δ")), false, "no Δ columns in the Values view");
   const withD = summaryTable([{ label: "A", file: "a.json", bundle: a }, { label: "B", file: "b.json", bundle: b }], { deltas: true });
   const deltaHeaders = ["Δ f res (MHz)", "Δ |S11| min (dB)", "Δ Bandwidth -10 dB (MHz)", "Δ Dmax (dB)", "Δ Realized gain (dB)", "Δ Total efficiency (pp)", "Δ reference run"];
-  assert.deepEqual(withD.header.slice(plain.header.length), deltaHeaders, "English headers with units, after the plain columns");
-  assert.deepEqual(withD.header.slice(0, plain.header.length), plain.header, "the plain columns are unchanged");
-  assert.equal(withD.header.length, withD.rows[0].length, "a cell for every header");
-  assert.deepEqual(withD.rows[0].slice(plain.header.length), deltaHeaders.map(() => null), "the oldest run (a tie: the first) is the reference: empty Δ cells");
-  assert.deepEqual(withD.rows[1].slice(0, plain.header.length), plain.rows[1], "the plain cells are unchanged");
-  assert.deepEqual(withD.rows[1].slice(plain.header.length), [0, 0, 0, 0, 0, 0, "A"], "the same results: every Δ is 0, and the reference run is named");
+  const plainScalarStart = plain.header.indexOf("small_antenna_status");
+  const deltaStart = withD.header.indexOf(deltaHeaders[0]), deltaEnd = deltaStart + deltaHeaders.length;
+  assert.ok(plainScalarStart > 0, "the appended analysis has a named boundary");
+  assert.equal(plain.header[plainScalarStart - 1], "Cells", "the original plain prefix ends with Cells");
+  assert.equal(deltaStart, plainScalarStart, "Δ columns follow the original plain prefix");
+  assert.equal(deltaEnd, withD.header.indexOf("small_antenna_status"), "the complete Δ span precedes the appended analysis");
+  assert.deepEqual(withD.header.slice(deltaStart, deltaEnd), deltaHeaders, "English Δ headers retain exact order and units");
+  assert.deepEqual(withD.header, [...plain.header.slice(0, plainScalarStart), ...deltaHeaders, ...plain.header.slice(plainScalarStart)],
+    "only the exact Δ span is inserted; every plain and appended analysis header is unchanged");
+  const expectedDeltas = [deltaHeaders.map(() => null), [0, 0, 0, 0, 0, 0, "A"]];
+  withD.rows.forEach((row, i) => {
+    assert.equal(row.length, withD.header.length, `run ${i}: a cell for every header`);
+    assert.deepEqual(row.slice(deltaStart, deltaEnd), expectedDeltas[i], i === 0
+      ? "the oldest run (a tie: the first) is the reference: empty Δ cells"
+      : "the same results: every Δ is 0, and the reference run is named");
+    assert.deepEqual(row.slice(deltaEnd), plain.rows[i].slice(plainScalarStart), `run ${i}: all appended analysis scalars stay equal in Values and Δ`);
+    assert.deepEqual(row, [...plain.rows[i].slice(0, plainScalarStart), ...expectedDeltas[i], ...plain.rows[i].slice(plainScalarStart)],
+      `run ${i}: the full row changes only by the exact Δ insertion`);
+  });
   // real differences, in the units of the headers
   const c = structuredClone(a);
   c.results.bands[0].f_center += 12e6;
@@ -315,12 +328,23 @@ assert.ok(metrics.size >= 10, "the example bundles were read");
   const csvD = resultDataCsv(tool(true));
   const csvV = resultDataCsv(tool(false));
   setDecimalChoice("language");
-  const rowsOf = (x) => x.trim().split("\r\n");
-  assert.ok(rowsOf(csvD)[0].endsWith(",Δ f res (MHz),Δ |S11| min (dB),Δ Bandwidth -10 dB (MHz),Δ Dmax (dB),Δ Realized gain (dB),Δ Total efficiency (pp),Δ reference run"), "CSV: the Δ headers end the header row");
-  assert.equal(rowsOf(csvV)[0].includes("Δ"), false, "CSV without Δ has no Δ column");
-  assert.equal(rowsOf(csvD).length, 3);
-  assert.ok(/,12,-0\.4,10,/.test(rowsOf(csvD)[2]), `CSV: the Δ cells of run C use a decimal point: ${rowsOf(csvD)[2]}`);
-  assert.equal(/\d,\d+"/.test(csvD) || /"\d+,\d/.test(csvD), false, "no decimal comma inside a quoted CSV cell");
+  const csvDelta = parseCsv(csvD), csvValues = parseCsv(csvV);
+  const csvDeltaStart = csvDelta[0].indexOf(deltaHeaders[0]), csvDeltaEnd = csvDeltaStart + deltaHeaders.length;
+  const csvScalarStart = csvValues[0].indexOf("small_antenna_status");
+  assert.equal(csvDeltaStart, csvScalarStart, "CSV Δ columns begin after the original plain prefix");
+  assert.equal(csvDeltaEnd, csvDelta[0].indexOf("small_antenna_status"), "CSV Δ columns end before analysis scalars");
+  assert.deepEqual(csvDelta[0], [...csvValues[0].slice(0, csvScalarStart), ...deltaHeaders, ...csvValues[0].slice(csvScalarStart)],
+    "CSV preserves the exact prefix, ordered Δ span and entire appended analysis header");
+  assert.equal(csvValues[0].some(header => header.startsWith("Δ")), false, "CSV without Δ has no Δ column");
+  assert.equal(csvDelta.length, 3);
+  assert.deepEqual(csvDelta[1].slice(csvDeltaStart, csvDeltaEnd), deltaHeaders.map(() => ""), "CSV reference Δ cells are empty");
+  assert.deepEqual(csvDelta[2].slice(csvDeltaStart, csvDeltaEnd), ["12", "-0.4", "10", "0", "0", "0", "A"], "CSV preserves every run C delta and decimal point");
+  for (let i = 1; i < csvDelta.length; i++) assert.deepEqual(csvDelta[i].slice(csvDeltaEnd), csvValues[i].slice(csvScalarStart),
+    `CSV run ${i}: all appended analysis scalars are unchanged by Δ mode`);
+  for (const [parsed, table] of [[csvDelta, tool(true)], [csvValues, tool(false)]]) {
+    assert.deepEqual(parsed, [table.header, ...table.rows.map(row => row.map(value => value == null ? "" : String(value)))],
+      "every CSV cell retains its complete scalar value and decimal point, including quoted provenance");
+  }
   assert.ok(csvD.startsWith("Run,File,Made,"));
 }
 

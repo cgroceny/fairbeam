@@ -274,7 +274,7 @@ const DELTA_REFERENCE_HEADER = "Δ reference run";
 
 /** One row per run with the headline numbers, and one column per parameter that differs between the
  * runs. English headers and decimal points whatever the UI language, like the other exports.
- * `deltas` (the Summary tab's "Δ vs A" view, with two runs or more) adds the Δ columns at the end:
+ * `deltas` (the Summary tab's "Δ vs A" view, with two runs or more) adds Δ after the headline columns, before analysis metadata:
  * each run's difference from the reference run (empty for the reference run itself and for a missing
  * value) and the file of that reference run. The reference is `reference` (a run's file) when it is
  * among the runs, else the oldest run. */
