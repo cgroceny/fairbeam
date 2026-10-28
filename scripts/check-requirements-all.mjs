@@ -1,4 +1,4 @@
-// Serial SDK-free Python/TypeScript parity and saved-source/export integration.
+// Serial Python/TypeScript parity and saved-source/export integration; needs NumPy, no solver SDK.
 // Uses only an owned temporary fixture directory; no app state, browser or solver.
 import { execFileSync } from 'node:child_process';
 import { existsSync, lstatSync, mkdtempSync, realpathSync, rmSync } from 'node:fs';

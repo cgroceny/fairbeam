@@ -67,6 +67,18 @@ jobs:
       - run: npm run -s check:no-antenlab
       - run: npm run -s check:installer-info
       - run: npm run -s check:linux-desktop
+      - uses: actions/setup-python@v5
+        if: needs.plan.outputs.full == 'true'
+        id: web-python
+        with:
+          python-version: "3.13"
+      - name: Numerical parity dependency (no solver SDK)
+        if: needs.plan.outputs.full == 'true'
+        # Requirements and complex far-field fixtures share production NumPy calculations.
+        # Match python/pyproject.toml; require a wheel rather than compiling on this runner.
+        run: |
+          python -m pip install --only-binary=:all: "numpy>=1.24"
+          echo "FAIRBEAM_PYTHON=${{ steps.web-python.outputs.python-path }}" >> "$GITHUB_ENV"
       - if: needs.plan.outputs.full == 'true'
         run: npm run -s check:designer
       - if: needs.plan.outputs.full == 'true'
