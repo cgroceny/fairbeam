@@ -9,6 +9,8 @@ from __future__ import annotations
 import copy
 import math
 
+from .legacy import schema_is
+
 # Keep design-format admission stdlib-only. Numerical evaluation lazily reuses optimize;
 # these JSON grammar rules are checked against make_goal and the TypeScript mirror.
 GOAL_KINDS = ("f0", "s11_max", "bw_min", "dmax_min", "sij_max", "sij_min", "match_all", "realized_gain_min", "efficiency_min")
@@ -50,7 +52,7 @@ def attach_requirements(bundle, source_bytes, *, source_id, resolved_parameters)
     if source_id != expected:
         raise ValueError("requirements-source-mismatch")
     document = json.loads(source_bytes.decode("utf-8-sig"))
-    if not isinstance(document, dict) or document.get("schema") not in ("fairbeam.design/1", "antenlab.design/1"):
+    if not isinstance(document, dict) or not schema_is(document.get("schema"), "fairbeam.design/1"):
         raise ValueError("requirements-source-design")
     if not isinstance(bundle, dict):
         raise ValueError("requirements-source-bundle")

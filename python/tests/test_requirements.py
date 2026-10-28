@@ -81,6 +81,32 @@ def integration_cases():
 
 
 class Requirements(unittest.TestCase):
+    def test_current_and_legacy_design_keep_exact_saved_source_identity(self):
+        import hashlib
+        fixtures = list((FIXTURE.parent / "legacy").glob("*.design.json"))
+        self.assertEqual(len(fixtures), 1)
+        legacy_schema = json.loads(fixtures[0].read_text(encoding="utf-8"))["schema"]
+        self.assertNotEqual(legacy_schema, "fairbeam.design/1")
+        mask = spec({"kind": "s11_max", "target": -10, "at": 2.5})
+        identities = []
+        for schema in ("fairbeam.design/1", legacy_schema):
+            with self.subTest(schema=schema):
+                raw = json.dumps({"schema": schema, "requirements": mask}).encode("utf-8")
+                identity = module.requirement_source_id(raw, {})
+                result = module.attach_requirements({}, raw, source_id=identity, resolved_parameters={})
+                self.assertEqual(result["requirements_source"]["input_sha256"], hashlib.sha256(raw).hexdigest())
+                self.assertEqual(result["requirements_snapshot"]["source_id"], identity)
+                self.assertEqual(result["requirements_snapshot"]["requirements"], mask)
+                identities.append(identity)
+        self.assertNotEqual(*identities)
+
+    def test_source_design_schema_refuses_other_versions_families_and_types(self):
+        for schema in (None, [], {}, 1, True, "fairbeam.design/2", "fairbeam.project/1", "unknown"):
+            with self.subTest(schema=schema):
+                raw = json.dumps({"schema": schema}).encode("utf-8")
+                with self.assertRaisesRegex(ValueError, "requirements-source-design"):
+                    module.attach_requirements({}, raw, source_id=module.requirement_source_id(raw, {}), resolved_parameters={})
+
     def test_shared_design_admission(self):
         for case in integration_cases()["designCases"]:
             with self.subTest(case=case["name"]):
