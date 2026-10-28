@@ -161,8 +161,9 @@ class ArchiveTests(unittest.TestCase):
         existing.write_bytes(b"owned input")
         original = a._linked
         for linked in (self.base, self.raw, existing):
+            canonical_link = linked.resolve()
             with self.subTest(linked=linked), patch.object(
-                    a, "_linked", side_effect=lambda path: path == linked or original(path)):
+                    a, "_linked", side_effect=lambda path: path.resolve() == canonical_link or original(path)):
                 with self.assertRaisesRegex(ValueError, "link|reparse"):
                     a.safe_file(self.raw, "input.json")
 
