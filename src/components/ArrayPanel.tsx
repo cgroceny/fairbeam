@@ -13,6 +13,7 @@ import { sMatrix } from "../lib/sparams";
 import { num } from "../lib/format";
 import { t } from "../i18n";
 import NumberField from "./NumberField";
+import ArrayAnalysisPanel from "./ArrayAnalysisPanel";
 
 const clampNum = (v: string, lo: number, hi: number, fallback: number) => {
   const x = Number(v);
@@ -100,8 +101,8 @@ export default function ArrayPanel(props: { session?: ArraySession }) {
                         <td class="mono">P{p}</td>
                         <td><Phasor w={w()} maxAmp={maxAmp()} /></td>
                         <td class="num">
-                          <NumberField class="rp-input array-input" step="0.5" min="-60" max="20" aria-label={t("array.amplitudeAria", { port: p })} value={w().ampDb}
-                            onChange={(e) => update(p, { ampDb: clampNum(e.currentTarget.value, -60, 20, w().ampDb) })} />
+                          <NumberField class="rp-input array-input" step="0.5" min="-400" max="20" aria-label={t("array.amplitudeAria", { port: p })} value={w().ampDb}
+                            onChange={(e) => update(p, { ampDb: clampNum(e.currentTarget.value, -400, 20, w().ampDb) })} />
                         </td>
                         <td class="num">
                           <NumberField class="rp-input array-input" step="5" min="-360" max="360" aria-label={t("array.phaseAria", { port: p })} value={w().phaseDeg}
@@ -134,6 +135,11 @@ export default function ArrayPanel(props: { session?: ArraySession }) {
               <button class="seg-btn" role="radio" aria-checked={scanPhi() === 0} aria-label={t("array.planeXzAria")} title={t("array.planeXz")} onClick={() => steer(scanTheta(), 0)}>xz</button>
               <button class="seg-btn" role="radio" aria-checked={scanPhi() === 90} aria-label={t("array.planeYzAria")} title={t("array.planeYz")} onClick={() => steer(scanTheta(), 90)}>yz</button>
             </div>
+            <label class="cluster-sm"><span>{t("array.analysis.phi")}</span>
+              <NumberField class="rp-input array-input" min="0" max="360" step="1" value={scanPhi()}
+                onChange={e => steer(scanTheta(), clampNum(e.currentTarget.value, 0, 360, scanPhi()))} />
+              <span class="rp-unit">°</span>
+            </label>
             <label class="rp-mini" for={`array-scan-${uid}`}>{t("array.scanAngle")}</label>
             <div class="array-scan">
               <input id={`array-scan-${uid}`} type="range" min={-thetaMax()} max={thetaMax()} step="1" value={scanTheta()}
@@ -172,6 +178,7 @@ export default function ArrayPanel(props: { session?: ArraySession }) {
             <p class="note" role="status">{t("array.unavailableReflection")}</p>
           </Show>
         </section>
+        <ArrayAnalysisPanel session={session} />
       </div></div>
     </Show>
   );

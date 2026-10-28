@@ -12,6 +12,27 @@ const code=(Array.isArray(built)?built[0]:built).output[0].code;
 const {createDesignerSession,createRoot,createMemo}=await import('data:text/javascript;base64,'+Buffer.from(code).toString('base64'));
 const design=()=>({schema:'fairbeam.design/1',model:{id:'same-id',name:'Original',description:''},params:[],materials:[{name:'copper',kind:'metal'}],parts:[{name:'part',material:'copper',primitives:[{kind:'box',start:[0,0,0],stop:[1,1,1]}]}],ports:[],resistors:[],simulation:{f_min:1,f_max:2,boundaries:'MUR'},mesh:{},far_field:{enabled:false}});
 const saved=()=>({id:'same-id',file:'same-id.design.json',hash:'base',readonly:false,design:design()});
+// Saved requirements change the input snapshot and save/undo state, but never rebuild geometry
+// or detach an imported Python model. A later geometry edit still does both.
+const requirementEdits=[], requirementRestores=[];
+const requirementSession=createDesignerSession({edited:changed=>requirementEdits.push(changed),restored:changed=>requirementRestores.push(changed)});
+requirementSession.takeFile({...saved(),design:{...design(),python_source_model:'source.py',python_source_hash:'source-hash'}});
+const beforeRequirements=requirementSession.snapshot(), requirementTicket=requirementSession.asyncState.ticket();
+const requirementSet={schema:'fairbeam.requirements/1',items:[{id:'s11',goal:{kind:'s11_max',target:-10,at:2.45}}]};
+requirementSession.edit(d=>d.requirements=structuredClone(requirementSet),'requirements');
+assert.deepEqual(requirementEdits,[false]);assert.equal(requirementSession.dirty(),true);
+assert.equal(requirementSession.asyncState.isPreviewCurrent(requirementTicket),true,'requirement edits retain geometry preview');
+assert.equal(requirementSession.asyncState.isDraftCurrent(requirementTicket),false,'saved input identity still changes');
+assert.equal(requirementSession.draft.python_source_model,'source.py');
+const withRequirements=JSON.parse(requirementSession.snapshot());assert.deepEqual(withRequirements.requirements,requirementSet);
+requirementSession.undo();assert.equal(requirementSession.snapshot(),beforeRequirements);
+requirementSession.redo();assert.deepEqual(JSON.parse(requirementSession.snapshot()).requirements,requirementSet);
+assert.deepEqual(requirementRestores,[false,false]);
+requirementSession.takeFile({...saved(),design:withRequirements});assert.equal(requirementSession.dirty(),false);
+assert.deepEqual(JSON.parse(requirementSession.snapshot()).requirements,requirementSet,'saved and reopened requirement list persists');
+requirementSession.edit(d=>d.parts[0].primitives[0].stop[0]=2,'geometry');
+assert.equal(requirementEdits.at(-1),true);assert.equal(requirementSession.draft.python_source_model,undefined);
+requirementSession.dispose();
 // A server error belongs to the previewed draft. Correcting an expression must remove it
 // immediately, even when the replacement preview has not returned yet.
 const validation=createDesignerSession();

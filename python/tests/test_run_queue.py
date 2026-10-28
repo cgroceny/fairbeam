@@ -512,15 +512,21 @@ class CliFolders(unittest.TestCase):
         projects.mkdir(parents=True)
         (projects / "toy.json").write_text('{"name": "app result"}', encoding="utf-8")
         (projects / "toy--geometry.json").write_text('{"name": "app geometry"}', encoding="utf-8")
+        model = self.root / "toy.py"
+        saved_source = b"# Saved toy model; construction and solver are replaced below.\n"
+        model.write_bytes(saved_source)
         sim = mock.Mock()
         sim.to_bundle.return_value = {"schema": "fairbeam.bundle/1", "name": "toy"}
         built = (mock.Mock(MODEL={"id": "toy", "name": "Toy"}), sim, [], "toy", "Toy")
         with mock.patch.object(cli, "REPO", self.runtime), mock.patch.object(cli, "_build", return_value=built), \
                 mock.patch.object(cli, "_run", side_effect=lambda a, m, s, p, slug, label, sp: print(
-                    "wrote", cli._write(s.to_bundle(), Path(a.out), slug, keep_existing=cli._keeps_existing(a)))), \
+                    "wrote", cli._write(s.to_bundle(), Path(a.out), slug, keep_existing=cli._keeps_existing(a)))) as run, \
                 contextlib.redirect_stdout(io.StringIO()):
-            self.assertEqual(cli.main(["geometry", "toy.py"]), 0)
-            self.assertEqual(cli.main(["run", "toy.py"]), 0)
+            self.assertEqual(cli.main(["geometry", str(model)]), 0)
+            self.assertEqual(cli.main(["run", str(model)]), 0)
+        run.assert_called_once()
+        self.assertEqual(run.call_args.args[0]._saved_source, saved_source)
+        self.assertEqual(model.read_bytes(), saved_source, "CLI preserves the saved source")
         self.assertEqual(json.loads((projects / "toy.json").read_text(encoding="utf-8"))["name"], "app result")
         self.assertEqual(json.loads((projects / "toy--geometry.json").read_text(encoding="utf-8"))["name"], "app geometry")
         self.assertEqual(len(list(projects.glob("toy-2*.json"))), 1, "the run's result beside it")

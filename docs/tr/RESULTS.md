@@ -23,6 +23,53 @@ Yönlülük, kazanç, gerçekleşen kazanç ve mevcut RHCP/LHCP kısmi yönlül�
 
 Örnekler'deki yayın şekli menüsü, etkin kayıtlı çalıştırmanın seçili kesitini, niceliğini ve izdüşümünü kullanır. SVG/PDF kaynağı görünen tahminleri ve sınırlamaları içerir; ayrıntılı sayısal ölçütler SVG açıklama üstverisindedir. Ekrandaki şekil dışa aktarımı görünen grafiği korur. Standart üretilen rapor paketleri açık ana düzlem varsayılanlarını korur; etkileşimli arayüz durumunu sessizce devralmaz. Kesit denetimleri, yeni çözücü veya ölçüm sonucuyla değil, belirlenimci sentetik analitik alanlarla doğrulanmıştır.
 
+## Ludwig-3 kutuplanması
+
+Çalıştırmadan önce isteğe bağlı karmaşık uzak alan kaydı etkinleştirildiğinde Örüntü paneli
+**Ludwig-3 eş kutuplu**, **Ludwig-3 çapraz kutuplu** ve **Çapraz kutup ayrımı (XPD)**
+seçeneklerini sunar. Sabit doğrusal referans açısı α, genel xy düzleminde +x'ten +y'ye
+doğru ölçülür: 0° x, 90° y yönüdür; açı 180° periyotludur. Aynı oturum tercihi 3B
+örüntüyü, kesit çözümleyicisini, örneklenmiş tepe/+z değerlerini ve açık açı içeren dışa
+aktarımları yönetir. Işını takip etmez veya ışın merkezindeki çapraz kutuplanmayı sıfıra
+zorlamaz. Örneğin dairesel kutuplanmada her doğrusal referans için eş/çapraz güçler eşittir.
+
+δ = φ − α için [Ludwig'in üçüncü tanımı](https://orbit.dtu.dk/en/publications/the-definition-of-cross-polarization/)
+(IEEE TAP 21(1), 116–119, 1973, DOI 10.1109/TAP.1973.1140406) şöyledir:
+
+```
+Eco    = Etheta cos(delta) - Ephi sin(delta)
+Ecross = Etheta sin(delta) + Ephi cos(delta)
+```
+
+Genliklerin karesi alınmadan önce tam karmaşık alanlar döndürülür. Eş/çapraz kısmi
+yönlülük, ortak ölçek birimlerindeki kayıtlı yerel normalizasyonla
+`Dmax_dBi + 10 log10(Pcomponent / power_peak)` olarak hesaplanır. Dmax fiziksel uzayın
+ayna düzeltmesini zaten içerir; düzeltme tekrarlanmaz. Ortak int16 kodlaması bağıl fazı
+nicemleme duyarlılığı içinde korur. Değerler kısmi **yönlülüktür (dBi)**; gerçekleşen kazanç değildir.
+
+XPD, **dB** cinsinden `10 log10(Pco/Pcross)` değeridir; işaretli −60…+60 ölçeğinde
+gösterilir. Toplam alan gücü kayıtlı tepeden 20 dB aşağıdaysa kullanılamaz. ±60 dB
+değerleri sınırdır ve okumalarda ≥60/≤−60 gösterilir. Eş/çapraz değerlerin tabanı
+Dmax−60 dB'dir; bu taban tam bir sıfırda sonlu güç ölçüldüğü anlamına gelmez.
+Kayıtlı sıfır alanlar (nicemlemeyle sıfıra düşenler dahil) ve θ=180° kullanılamaz:
+sabit enine referans −z kutbunda tekildir. +z okuması kayıtlı θ=0 örneğini kullanır;
+bu örnek yoksa değer üretilmez.
+
+Eş/çapraz nicelikler kesit çözümleyicisinin mevcut, ızgarayla sınırlı lob tahminlerini
+kullanır. XPD güç oranıdır: kutupsal yarıçap ışınım gücü değildir ve HPBW, SLL ile
+ön/arka ölçütleri uygulanmaz. Örneklenmemiş kesitlerde bitişik sonlu dB değerleri
+arasında enterpolasyon yapılır; boşluklar korunur. CSV/kopya ve seçili kesit SVG/PDF
+aktarımları gerçek normalize referans açısını, birimleri, maskeyi, tabanı, doygunluk
+sınırını ve normalizasyon kuralını kaydeder; eksik türetilmiş CSV değerleri boş kalır.
+Paket örüntü/uzak alan CSV'leri alanlar varsa aynı türetilmiş değerleri aktarım işleminin
+açıkça verdiği açıyla taşır (saf API'lerin varsayılanı 0°'dir). Standart rapor şekilleri
+açık yönlülük/ana düzlem varsayılanlarını korur.
+
+Geçerli karmaşık örnekleri olmayan eski paketler skaler nicelikleri korur ve Ludwig-3
+seçeneklerinin neden kullanılamadığını gösterir. Döndürme, faz, nicemleme, port kimliği
+ve dışa aktarım testleri sentetik kontrollerdir; anten için mesh/zaman yakınsamasını
+veya ölçülmüş çapraz kutuplanma doğruluğunu kanıtlamaz.
+
 ## Tasarımcıda dizi sentezi
 
 En az iki eleman portunun kayıtlı örüntüsünü içeren çalıştırmada Tasarımcı'nın **Dizi**
@@ -221,3 +268,34 @@ Denklemler [Yaghjian ve Best (2005)](https://doi.org/10.1109/TAP.2005.844443),
 [sürümü belirtilmiş bant genişliği türetimi](https://arxiv.org/html/2501.03146v5) ve
 [McLean (1996)](https://doi.org/10.1109/8.496253) çalışmalarını izler. Bağımsız analitik
 devre ve geometri kontrolleri yazılım hesabını doğrular; antenin sayısal yeterliliği ayrıdır.
+
+## Kayıtlı sonuçlardan MIMO çeşitliliği
+
+2–64 fiziksel portu olan tam bir çalıştırmada **MIMO çeşitliliği** görünümünü açın. S-matrisinin her sütunu, açıkça kayıtlı pozitif gerçek güç dalgası referansları ve fiziksel port kimlikleri bulunmalıdır. Kısmi çalıştırmalar, yalnızca genlik içeren aktarımlar ve dönüştürülmüş port koordinatları kullanılamaz. Bir fiziksel port çifti seçin; belirli eşzamanlı uyartımı incelemek için her portun gelen güç dalgası ağırlığının gerçek ve sanal kısımlarını girin. Başlangıçta tüm ağırlıklar 1+j0’dır. Bu görünüm ve CSV’si çalıştırmayı değiştirmez, simülasyon başlatmaz.
+
+Pasif ve tam bir matris için R = I − SᴴS alınır. S-parametrelerinden zarf korelasyonu kestirimi ECC_S(i,j) = |Rᵢⱼ|²/(RᵢᵢRⱼⱼ)’dir. Tam Hermit pozitif yarı tanımlılık denetimi yapılır; yalnızca sütun güçlerini kontrol etmek yeterli değildir. Tekil veya sayısal olarak çözülemeyen determinantta CCL, sıfır normalizasyonda ECC kullanılamaz. 1e−10 cebir toleransı kayan nokta yuvarlaması içindir; fiziksel doğruluk hedefi değildir.
+
+ECC_field, uyumlu gömülü iki alan örüntüsünün tam küre üzerindeki karmaşık vektör iç çarpımının mutlak karesinin ayrı güç integrallerine bölümüdür. Eθ ve Eφ birlikte, açısal hücrelerin katı açı ağırlıklarıyla kullanılır. Yalnızca tam kayıtlı frekanslar nokta olarak gösterilir. Eksik örneklere, uyumsuz baza, bozuk verilere ve aynalı/yarım uzay örüntülerine ara değer veya tahmin uygulanmaz. İki alanın faz merkezi ve güç dalgası bazı ortak olmalıdır. Açısal ayrıklaştırma ve nicemleme sınırlamaları sürer; hesap örüntü yakınsamasını doğrulamaz.
+
+S tabanlı ışıma/alım kestirimleri; ihmal edilebilir kayıplı karşılıklı anten, kullanılmayan portların uyumlu yüklenmesi ve izotropik, kutuplanmamış çok yollu ortam varsayar. Bilinen ışıma verimi 0,9’un altındaysa kayıp uyarısı çıkar; tam örnekte verimin bilinmediği de belirtilir. S ve alan ECC’si arasındaki mutlak fark 0,05’i aşarsa karşılaştırma uyarısı çıkar. Bunlar yorum ipuçlarıdır; tasarım kabulü veya ağ yakınsaması eşiği değildir.
+
+Ayrı etiketli DG yaklaşımı, her korelasyon yöntemi için açıkça seçilmiş 10√(1−ECC²) dB tanımını kullanır; kesinti olasılığına göre ölçülmüş çeşitlilik kazancı değildir. TARC = ‖S a‖/‖a‖, kayıtlı fiziksel port uyartımının doğrusal yansıyan dalga oranıdır. Isıl kayıpları içermez; en kötü durum veya rastgele faz sonucu değildir. CCL = −log₂ det(R), bits/s/Hz biriminde yüksek SNR anten yaklaşımıdır; ölçülmüş kanal kapasitesi değildir. MEG_S = Rᵢᵢ/2, izotropik ve iki kutuplanmanın eşit güçlü olduğu ortamda kayıpsız karşılıklı anten için doğrusal kestirimdir.
+
+CSV; fiziksel portları, tam frekansları, kullanılan karmaşık uyartımı, birimleri, kullanılamama nedenlerini, uyarıları ve varsayımları kaydeder. Sayısal kestirimler tek başına EM doğruluğunu, alan yakınsamasını veya haberleşme kanalı performansını doğrulamaz.
+
+Birincil tanımlar: [Blanch, Romeu ve Corbella (2003)](https://upcommons.upc.edu/handle/2117/10272), [karmaşık alan/S-parametresi ECC’si ve seçilen DG tanımı](https://www.nature.com/articles/s41598-023-41302-2) ve [Lynch, *A Modal Description of Multiport Antennas* (2011)](https://onlinelibrary.wiley.com/doi/10.1155/2011/438437). Bu kaynaklar belirtilen idealleştirilmiş tanımları destekler; sentetik yazılım testleri bağımsız anten ölçümleri değildir.
+
+Paket ZIP/README/PDF raporları seçili çalıştırmayı oturum uyartım ağırlıkları olmadan özetler; bu nedenle bu raporlarda TARC kullanılamaz. MIMO görünümünün CSV’si girilen uyartımı korur. Eksik veya hatalı ağırlıklar, kullanılamama nedeniyle boş bir kayıt olarak aktarılır; sayısal değer uydurulmaz.
+
+## Gereksinimler kaydedilmiş çalıştırmaya aittir
+Özet, sonuç ağacı ve dışa aktarımlar özgün çalıştırmanın girdisiyle kaydedilmiş listeyi kullanır. Güncel Tasarımın düzenlenmesi geçmiş sonuçları yeniden etiketlemez. Kopyası bulunmayan sonuçlar belirsiz kalır. Yeni Tasarım sonuçları tam girdi baytları ve çözümlenmiş parametrelerden türetilen SHA256 kimliği taşır; kopya ve kaynak bağları eşleşmelidir. Bu kaynak kaydıdır, dijital imza değildir.
+
+Sayısal sınırlar, enerji yakınsaması, mesh doğrulaması ve toplam doğrulanmış sonuç ayrı gösterilir. Eksik/geçersiz örnekler, kaynağı belirsiz veriler, eşleşen alanın yokluğu ve doğrulanmamış mesh çalışması belirsiz kalır. Enerji azalması, dosya adı veya kaydedilmiş başarı bayrağı mesh yakınsaması yerine geçmez. Mevcut mesh çalışması kayıtları gereken değişmez girdi üyeliğini taşımadığı için otomatik mesh doğrulaması sayılmaz. Sayısal sınır ihlali, toplam doğrulama belirsizken de görünür.
+
+S-parametresi bantları uçları ve tüm iç örnekleri içerir. S11 dB üzerinden, Sij/tüm-port uyumu genlik üzerinden ara değerler; sonra dB'ye dönüştürülür. Bant dışına uzatma veya eksik veri doldurma yapılmaz. Bant genişliği -10 dB altındaki ardışık kayıtlı örneklere dayanır; açık uç alt sınır verir. Örnekler arasındaki sürekli davranış veya fiziksel doğruluk kanıtlanmış sayılmaz.
+
+Özgün tek çalıştırmanın dB grafiği bant sınırını kesikli parça, nokta sınırını işaret olarak gösterir. Maskeler fiziksel portla eşleşir; veri ekstremumlarına ve işaret aramasına katılmaz. Karşılaştırma ve oturumdaki port dönüşümleri özgün uyarı maskelerini devralmaz. Rapor/paket tam hedefleri, kaynak kimliklerini, gerekçeleri ve ayrı doğrulamaları korur; data/requirements.csv paketin LF satır sonunu kullanır.
+
+## Ek uzak alan frekansları
+
+Yerel bir çalıştırmanın ham E/H kaydı saklanırsa ek uzak alan frekansları ayrı bir sonuç olarak hesaplanabilir. İlk çalıştırmadan önce Çalıştır penceresinde ham veri saklamayı etkinleştirin. Işınım paneli kaynak işi ve çalışma alanını kontrol eder; yalnızca içe aktarılmış bir dosya ham verilere erişim sağlamaz. Depolama, frekans, çalışma ortamı ve kaynak kayıtları için [ham veriden uzak alan hesabına](NF2FF-POSTPROCESS.md) bakın.

@@ -43,6 +43,48 @@ Uyarlamalı *Otomatik* modu `mesh: {"mode":"design", "overrides": {...}}` kullan
 
 Yama, dipol ve mikroşerit tasarımlarındaki GPU karşılaştırması sonucunda bu mod, mevcut dosyalar için isteğe bağlı bırakılmıştır. Tam kenarlı 45 hücre/λ openEMS referansına göre uyarlamalı S11 MAE değeri, eski mesh'ten biraz daha yüksektir: yamada 0,724 ve 0,696 dB, dipolde 2,864 ve 2,852 dB, mikroşeritte 2,823 ve 2,596 dB. Bunlar tekil çalıştırmalardır; daha ince referans, yakınsaması garanti edilmiş çözüm değil sayısal karşılaştırmadır. Raporlanan seçimleri inceleyin ve tasarımınıza uygun alan ayarlarını kullanın.
 
+## Açık yerel inceltme bölgeleri
+
+Simülasyon ayarları, `mesh.local_regions` içinde en fazla 32 yerel inceltme kutusu saklayabilir.
+Her kayıt sabit bir `id`, görünen `name`, `start` ve `stop` koordinat üçlüleri ile istenen en
+büyük hücre aralığı olan `cell_size` değerini taşır. Tasarımda koordinatlar ve boyutlar,
+Tasarımın uzunluk birimindeki parametre ifadelerini kabul eder. Sınırlar genel model
+koordinatlarındadır; seçili katıyı veya çalışma koordinat sistemini izlemez. Python API'si
+aynı kayıtların çözülmüş sayısal biçimini `sim.auto_mesh(local_regions=[...])` ile alır.
+
+Bölgeler iki otomatik modda da uygulanır. Manuel mod listeyi etkin olmayan ayarlar olarak
+korur; yazılmış mesh çizgileri belirleyicidir. Alanın bulunmaması veya listenin boş olması
+mevcut mesh yolunu korur. Etkin kutunun üç eksende de pozitif genişliği, pozitif sonlu hücre
+boyutu ve hesaplanan alan içinde sınırları olmalıdır. Dışarı taşan kutu kırpılmaz veya alanı
+büyütmez; önizleme isteği reddeder.
+
+Her eksende sınır, kutunun aralığıyla pozitif örtüşen tüm hücre aralıklarına uygulanır.
+Yalnızca yüz teması örtüşme sayılmaz; örtüşen isteklerde küçük sınır kullanılır. Mevcut
+düzlemler korunur ve oluşan gerçek aralık genişlikleri denetlenir. Mesh sınırı zaten
+sağlıyorsa kutu uçlarına yeni çizgi veya yapay ince hücre eklenmez. Kartezyen çizgiler tüm
+alana uzandığı için küçük bir kutu toplam hücre sayısını belirgin artırabilir. Açık istekler
+hücre bütçesine sığmak için elenmez: sığmayan veya doğru temsil edilemeyen istek hata verir.
+
+İsteğe bağlı `mesh.auto.local_refinement` raporu, bölge ekleme aşamasındaki önce/sonra
+hücre sayılarını sonraki port hizalamaları bitince oluşan son sayılardan ayırır. CFL zaman
+adımı geçerli grid'den hesaplanan bir tahmindir; ölçülmüş çözücü saati veya süre öngörüsü
+değildir. Ekleme aşamasındaki komşu hücre oranı sınırı, ayarlanan değer ile başlangıç
+mesh'inden devralınan en büyük oranın büyük olanıdır. Sonraki port değişimleri ayrı
+raporlanır. Boyut sınırları ve değişmeyen hücre bütçesi son oluşturma, çalıştırma ve dışa
+aktarma sınırlarında yeniden denetlenir. Sıfır ekleme maliyeti, sonraki tüm port kaymalarının
+istenen boyut sınırıyla uyumlu olacağı anlamına gelmez.
+
+Mesh görünümü yalnızca gösterilen önizlemeyle eşleşen çözülmüş kutuları gösterir. Bölgeyi
+düzenledikten sonra çizimi veya maliyeti yorumlamadan önce önizlemeyi yenileyin. Daha küçük
+aralık geometrik isteği sağlar; elektromanyetik doğruluk veya yakınsama kanıtı değildir.
+
+Etkin bölgeli paketin eksenleri sonlu kayan noktalı hassasiyetini korur. Bu grid'i manuel
+çizgiler olarak aktaran Python–Tasarım kopyası `mesh.axis_precision: "float64"` işaretini
+kullanır; bölgeler orada saklanır ancak etkin değildir. İşaretsiz manuel grid'ler mevcut
+serileştirme kuralını korur. Üretilmiş Tasarımın bölge ifadeleri yalnızca kayıtlı parametreleri
+uygulanan aynı bölgelere çözüldüğünde korunabilir. Genel Python modellerinden çözülmüş
+sayısal bölgeler alınır; keyfi formüllerin geri kazanıldığı iddia edilmez.
+
 ## Kurallar
 
 Mesh oluşturucu tüm CSXCAD şekillerini (box, polygon, linpoly, cylinder, cylindrical shell, sphere, polyhedron, curve, wire; diğer türler ve dönüştürülmüş şekiller için sınırlayıcı kutuyu), `Simulation` port ve toplu eleman kayıtlarını ve sınır koşullarını okur. Her eksen için:

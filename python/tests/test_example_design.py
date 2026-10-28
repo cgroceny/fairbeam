@@ -3,6 +3,7 @@
 import math
 import json
 import re
+import tempfile
 import numpy as np
 import unittest
 from pathlib import Path
@@ -175,22 +176,80 @@ class ExampleDesignTests(unittest.TestCase):
         self.assertIn("mesh_div=30", by_code["frozen"]["values"]["params"])
         # every note the converter writes has its text in both UI languages, with the same values
         root = MODELS.parents[1]
+        note_codes = {"source", "meshLines", "carried", "partial", "frozen", "currents", "coaxMesh",
+                      "meshLinesFloat64", "meshRegionExpressions", "meshRegionNumeric", "meshRegionSnapshot"}
         for lang in ("en", "tr"):
             table = json.loads((root / "src" / "i18n" / f"{lang}.json").read_text(encoding="utf-8"))
-            for code in ("source", "meshLines", "carried", "partial", "frozen", "currents", "coaxMesh"):
+            for code in note_codes:
                 with self.subTest(lang=lang, code=code):
                     text = table[f"exampleCopy.note.{code}"]
+                    self.assertTrue(text.strip())
                     wanted = {"source": {"example", "file"}, "carried": {"params", "count"}, "partial": {"params"},
                               "frozen": {"params"}}.get(code, set())
                     self.assertEqual(set(re.findall(r"\{(\w+)\}", text)), wanted)
         source_text = (root / "python" / "fairbeam" / "example_design.py").read_text(encoding="utf-8")
-        self.assertEqual(set(re.findall(r'_note\("(\w+)"', source_text)), {"source", "meshLines", "carried", "partial", "frozen", "currents", "coaxMesh"})
+        self.assertEqual(set(re.findall(r'_note\("(\w+)"', source_text)), note_codes)
         # the design format holds it, and refuses a malformed one
         check_design(design)
         broken = json.loads(json.dumps(design))
         broken["model"]["conversion"]["notes"][0].pop("text")
         with self.assertRaises(DesignError):
             check_design(broken)
+
+    def test_local_region_capture_notes_follow_both_conversion_routes_and_translate(self):
+        from fairbeam.design import check_design, to_python
+        from tests.test_design_local_mesh_regions import design as local_design, region
+
+        # Reuse the small in-memory construction fixture, with one genuinely
+        # symbolic request and one generic Python request without source metadata.
+        source_design = local_design()
+        source_design["params"] = [{"key": "h", "default": 1}, {"key": "half", "expr": "h/2"}]
+        source_design["mesh"]["local_regions"] = [region("half")]
+        generic = '''from fairbeam import Simulation
+MODEL = {"id": "numeric_local", "name": "Numeric local", "description": "Numeric capture control"}
+PARAMS = []
+def build(p):
+    sim = Simulation(1e9, 2e9, boundaries=["MUR"] * 6, max_timesteps=1000)
+    sim.metal("pec").AddBox(start=[-1] * 3, stop=[1] * 3, priority=10)
+    sim.auto_mesh(pad=2, edge_rule="edge", local_regions=[
+        {"id": "region_1", "name": "Local box", "start": [-.1] * 3, "stop": [.1] * 3, "cell_size": .5}])
+    return sim
+'''
+        outputs = {}
+        with tempfile.TemporaryDirectory() as tmp:
+            for route, text in (("symbolic", to_python(source_design)), ("numeric", generic)):
+                path = Path(tmp) / f"{route}_local.py"
+                path.write_text(text, encoding="utf-8")
+                outputs[route] = conversion_preview(path, f"{route}_local", "Capture control")["design"]
+        new_codes = {"meshLinesFloat64", "meshRegionExpressions", "meshRegionNumeric", "meshRegionSnapshot"}
+        tables = {lang: json.loads((MODELS.parents[1] / "src" / "i18n" / f"{lang}.json").read_text(encoding="utf-8"))
+                  for lang in ("en", "tr")}
+        observed = set()
+        for route, converted in outputs.items():
+            with self.subTest(route=route):
+                check_design(converted)
+                self.assertEqual(converted["mesh"]["mode"], "manual")
+                self.assertEqual(converted["mesh"]["axis_precision"], "float64")
+                emitted = {n["code"]: n for n in converted["model"]["conversion"]["notes"]}
+                expected = {"meshLinesFloat64", "meshRegionSnapshot",
+                            "meshRegionExpressions" if route == "symbolic" else "meshRegionNumeric"}
+                self.assertEqual(set(emitted) & new_codes, expected)
+                self.assertNotIn("meshLines", emitted)
+                if route == "symbolic":
+                    self.assertEqual(converted["mesh"]["local_regions"][0]["cell_size"], "half")
+                else:
+                    self.assertEqual(converted["mesh"]["local_regions"][0]["cell_size"], .5)
+                for code in expected:
+                    note = emitted[code]
+                    self.assertEqual(note.get("values", {}), {})
+                    self.assertEqual(tables["en"][f"exampleCopy.note.{code}"], note["text"])
+                    for lang in ("en", "tr"):
+                        translated = tables[lang][f"exampleCopy.note.{code}"]
+                        self.assertTrue(translated.strip())
+                        self.assertEqual(set(re.findall(r"\{(\w+)\}", translated)), set(note.get("values", {})))
+                    self.assertNotEqual(tables["en"][f"exampleCopy.note.{code}"], tables["tr"][f"exampleCopy.note.{code}"])
+                observed.update(expected)
+        self.assertEqual(observed, new_codes)
 
     def test_a_changed_parameter_moves_the_design_like_the_model(self):
         from fairbeam.design import build

@@ -4,8 +4,10 @@
 // resolved geometry or the preview bundle (a floating feed, a hidden part, the mesh size) come
 // only from the server. scripts/check-designer.mjs compares both sides on shared cases.
 import { evaluate, nameMap, namesIn } from "./expr.ts";
+import { validateRequirements } from "../lib/requirements.ts";
 import { resolvedDatasheet } from "./dispersion.ts";
 import { portFeedEntries, portGroupProblem } from "../lib/portGroups.ts";
+import { localMeshRegionChecks, LOCAL_MESH_REGION_EXPLANATION, LOCAL_MESH_RESOLVED_MESSAGES } from "./localMeshRegions.ts";
 import type { Axis, Design, DesignFieldPlane, DesignPart, DesignPrimitive, Expr } from "./types.ts";
 
 /** "info": nothing is wrong, the build does something the drawing does not show (server only) */
@@ -29,17 +31,21 @@ export interface Check {
  * `port-at-null` stays server-only on both sides: the patch/substrate/ground test needs resolved
  * geometry, so the browser keeps the server warning and its conditional explanation intact. */
 export const CHEAP = new Set([
+  "requirements",
   "coax-port", "coax-mesh", "planar-port", "expr", "param-range", "part-name-duplicate", "part-empty", "brick-flat", "brick-inverted", "radius",
   "inner-radius", "cylinder-length", "polygon-points", "polygon-area", "polygon-self-intersect", "dispersion", "dispersion-band",
   "linpoly-length", "polyhedron", "polyhedron-flat", "copies", "mu-r", "eps-r", "tan-d", "tan-d-freq", "f-min", "f-order", "f-ratio", "ff-band", "nf2ff-pec",
   "cells-per-wavelength", "end-criterion", "port-length", "port-volume", "port-r", "port-reference", "port-overlap", "no-port",
   "no-metal", "resistor-r", "resistor-length", "component-path", "cone-radii", "cone-length", "torus-radii",
   "wire-points", "wg-mode", "wg-size", "wg-cutoff", "wg-aperture", "cut-sheet", "boolean-transform-angle", "sheet-transform-angle", "scale", "mesh-lines",
-  "monitor-efficiency", "field-plane", "conductivity", "metal-thickness", "tan-d-band", "ff-step",
+  "monitor-efficiency", "field-plane", "conductivity", "metal-thickness", "tan-d-band", "ff-step", "ff-field-budget", "mesh-local-region",
 ]);
 
 /** Keep CHEAP wording in sync with Python EXPLANATIONS (checked by check-designer). */
 export const EXPLANATIONS: Readonly<Record<string, string>> = {
+  "requirements": "Use a versioned requirement list with unique IDs, finite targets, ordered GHz bands and explicit physical ports for Sij limits. Missing data and unverified convergence remain unknown; optimizer goals alone do not certify a requirement.",
+  "ff-field-budget": "Complex fields preserve phase for Ludwig-3 polarization. Use at most 65,536 angular cells per frequency, 16 frequencies and 262,144 angular-frequency cells per driven port; increase angular steps or reduce frequencies. The automatic frequency list reserves four frequencies.",
+  "mesh-local-region": LOCAL_MESH_REGION_EXPLANATION,
   "ff-step": "Use an angular step from 0.25 to 90 degrees. Smaller steps resolve narrower beams but increase far-field processing time and bundle size; they do not establish solver or mesh convergence.",
   "dispersion": "Use a nonmagnetic dielectric datasheet point with an explicit positive reference frequency. The corner exponents are log10(rad/s), m2 > m1. Calibration must have positive eps_inf and nonnegative strength. The optional 1–32 poles control fit resources, not certified accuracy.",
   "dispersion-band": "The datasheet reference is outside the simulation band. A one-point causal model is an assumption, not evidence of broadband material accuracy. Check additional measured data; do not move the datasheet frequency just to remove this warning.",
@@ -147,6 +153,10 @@ export function designChecks(d: Design): Check[] {
     out.push({ severity, path, code, message, explain: EXPLANATIONS[code], ...(fix ? { fix } : {}) });
   const error = (path: string, code: string, message: string) => add("error", path, code, message);
   const warn = (path: string, code: string, message: string, fix?: CheckFix) => add("warning", path, code, message, fix);
+  if (d.requirements !== undefined) {
+    const requirements = validateRequirements(d.requirements);
+    if (!requirements.ok) { error("requirements", "requirements", requirements.reason); return out; }
+  }
   for (const [i, port] of (d.ports ?? []).entries()) {
     const problem = portGroupProblem(port, `ports[${i}]`);
     if (problem) { error(problem.path, "expr", problem.message); return out; }
@@ -578,6 +588,9 @@ export function designChecks(d: Design): Check[] {
     else if (end < END_DB_MIN) error("simulation.end_criteria_db", "end-criterion", `${g(end)} dB is below the ${END_DB_MIN} dB limit that runs accept`);
   }
   const rawMesh = d.mesh ?? ({} as Design["mesh"]);
+  if (rawMesh.axis_precision !== undefined && rawMesh.axis_precision !== "float64")
+    error("mesh.axis_precision", "mesh-local-region", "axis precision must be float64");
+  for (const issue of localMeshRegionChecks(rawMesh.local_regions, rawMesh.mode === "manual", names)) error(issue.path, issue.code, issue.message);
   if (rawMesh.mode === "manual") {
     const resolved: Partial<Record<Axis, number[]>> = {};
     for (const axis of AXES) {
@@ -651,12 +664,21 @@ export function designChecks(d: Design): Check[] {
   }
   const ff = d.far_field ?? { enabled: true };
   if (ff.circular !== undefined && typeof ff.circular !== "boolean") error("far_field.circular", "expr", "circular must be true or false");
+  if ("complex_fields" in ff && typeof ff.complex_fields !== "boolean") error("far_field.complex_fields", "expr", "complex_fields must be true or false");
   if (ff.enabled !== false) {
+    const resolvedSteps: (number | null)[] = [];
     for (const [axis, fallback] of [["theta", 3], ["phi", 5]] as const) {
       const path = `far_field.${axis}_step`;
       const step = ev(path, ff[`${axis}_step`] === undefined ? fallback : ff[`${axis}_step`]);
+      resolvedSteps.push(step);
       if (step !== null && !(step >= PATTERN_STEP_MIN && step <= PATTERN_STEP_MAX))
         error(path, "ff-step", `angular step must be from ${PATTERN_STEP_MIN} to ${PATTERN_STEP_MAX} degrees`);
+    }
+    if (ff.complex_fields === true && resolvedSteps.every(v => v !== null && v >= PATTERN_STEP_MIN && v <= PATTERN_STEP_MAX)) {
+      const cells = (Math.ceil((180 - 1e-9) / resolvedSteps[0]!) + 1) * Math.ceil((360 - 1e-9) / resolvedSteps[1]!);
+      const frequencies = ff.frequencies?.length || 4;
+      if (cells > 65536 || frequencies > 16 || cells * frequencies > 262144)
+        error("far_field.complex_fields", "ff-field-budget", "complex far-field storage exceeds the per-driven-port budget");
     }
     if (ff.phase_center !== undefined) {
       if (!Array.isArray(ff.phase_center) || ff.phase_center.length !== 3) error("far_field.phase_center", "expr", "expected a list of 3 values");
@@ -889,7 +911,8 @@ export function mergeChecks(live: Check[], server: Check[]): Check[] {
   // without one needs comes from the resolved geometry), matched by code and field
   const fixes = new Map(server.filter((c) => c.fix).map((c) => [`${c.code}|${c.path}`, c.fix!]));
   const all = [...live.map((c) => (c.fix || !fixes.has(`${c.code}|${c.path}`) ? c : { ...c, fix: fixes.get(`${c.code}|${c.path}`) })),
-    ...server.filter((c) => !CHEAP.has(c.code))];
+    ...server.filter((c) => !CHEAP.has(c.code) ||
+      (c.code === "mesh-local-region" && LOCAL_MESH_RESOLVED_MESSAGES.has(c.message)))];
   const rank = { error: 0, warning: 1, info: 2 } as const;
   return all.sort((a, b) => rank[a.severity] - rank[b.severity]);
 }

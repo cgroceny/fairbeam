@@ -46,6 +46,34 @@ const fails = (message, data) => async () => { throw Object.assign(new Error(mes
   assert.equal(JSON.stringify(s.draft), before, "one Undo brings the previous design back");
 }
 
+// Requirements belong to the saved Design, not the geometry converter. Apply must neither drop
+// existing masks nor adopt a script-supplied replacement, and ordinary one-step Undo still works.
+{
+  const masks = { schema: "fairbeam.requirements/1", items: [{ id: "match", goal: { kind: "s11_max", target: -12.3456789, at: 2.4, at_hi: 2.48 } }] };
+  const incoming = { schema: "fairbeam.requirements/1", items: [{ id: "injected", goal: { kind: "s11_max", target: 0, at: 1 } }] };
+  for (const replacement of [undefined, incoming]) {
+    const s = store(design(32, { requirements: masks }));
+    const before = JSON.stringify(s.draft);
+    const next = design(40, replacement ? { requirements: replacement } : {});
+    const r = await applyPythonScript("src", {
+      convert: async () => ({ design: next, python: "# regenerated", normalized: false }),
+      current: () => true, replace: value => s.edit(d => replaceDesignContent(d, value)),
+    });
+    assert.equal(r.ok, true);
+    assert.deepEqual(s.draft.requirements, masks, "geometry Apply preserves exact saved mask values");
+    assert.equal(s.draft.params[0].default, 40, "geometry still updates");
+    assert.notEqual(s.draft.requirements, next.requirements, "converter cannot alias owned masks");
+    if (next.requirements) next.requirements.items[0].goal.target = 99;
+    assert.deepEqual(s.draft.requirements, masks, "later converter mutation cannot alter masks");
+    assert.equal(s.undo.length, 1);
+    s.undoOnce();
+    assert.equal(JSON.stringify(s.draft), before, "one Undo restores geometry and exact masks");
+  }
+  const plain = design(32);
+  replaceDesignContent(plain, design(40, { requirements: incoming }));
+  assert.equal(Object.hasOwn(plain, "requirements"), false, "script cannot introduce masks to a Design without them");
+}
+
 // an error keeps the design: the line and the timeout flag come through, nothing is edited
 for (const [data, line, timeout] of [[{ line: 7 }, 7, false], [{ timeout: true }, undefined, true], [{}, undefined, false], [{ line: 0 }, undefined, false]]) {
   const s = store(design(32));

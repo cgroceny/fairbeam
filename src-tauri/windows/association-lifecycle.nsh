@@ -58,6 +58,13 @@ fb_associate_register_class:
   WriteRegStr SHCTX "Software\Classes\${FILECLASS}\shell\open" "" `${COMMANDTEXT}`
   WriteRegStr SHCTX "Software\Classes\${FILECLASS}\shell\open\command" "" '"$INSTDIR\${MAINBINARYNAME}.exe" "%1"'
   WriteRegStr SHCTX "Software\Classes\.${EXT}\OpenWithProgids" "${FILECLASS}" ""
+  ; Register the executable candidate as well as the document ProgID. Windows
+  ; may store an explicit Open With choice as Applications\fairbeam.exe.
+  ; This metadata makes that registration installer-owned; it does not set or
+  ; rewrite UserChoice, and does not prove Explorer picker discovery on its own.
+  WriteRegStr SHCTX "Software\Classes\Applications\${MAINBINARYNAME}.exe" "FriendlyAppName" "Fairbeam"
+  WriteRegStr SHCTX "Software\Classes\Applications\${MAINBINARYNAME}.exe\SupportedTypes" ".${EXT}" ""
+  WriteRegStr SHCTX "Software\Classes\Applications\${MAINBINARYNAME}.exe\shell\open\command" "" '"$INSTDIR\${MAINBINARYNAME}.exe" "%1"'
   !insertmacro UPDATEFILEASSOC
   Pop $R0
 !macroend
@@ -66,11 +73,31 @@ fb_associate_register_class:
   !insertmacro FairbeamAssertAssociation "${EXT}" "${FILECLASS}"
   Push $R0
   ReadRegStr $R0 SHCTX "Software\Classes\${FILECLASS}\shell\open\command" ""
-  StrCmp $R0 '"$INSTDIR\${MAINBINARYNAME}.exe" "%1"' 0 fb_unassociate_done
+  StrCmp $R0 '"$INSTDIR\${MAINBINARYNAME}.exe" "%1"' 0 fb_unassociate_application
   ; Microsoft recommends leaving extension defaults; an unregistered ProgID
   ; is ignored. Remove only our candidate value and this command-owned class.
   DeleteRegValue SHCTX "Software\Classes\.${EXT}\OpenWithProgids" "${FILECLASS}"
   DeleteRegKey SHCTX "Software\Classes\${FILECLASS}"
+  !insertmacro UPDATEFILEASSOC
+fb_unassociate_application:
+  ; The executable registration can exist independently of our ProgID after
+  ; the user selects an executable in Open With. Verify its command separately
+  ; so an old uninstall cannot remove a newer installation's candidate.
+  ReadRegStr $R0 SHCTX "Software\Classes\Applications\${MAINBINARYNAME}.exe\shell\open\command" ""
+  StrCmp $R0 '"$INSTDIR\${MAINBINARYNAME}.exe" "%1"' 0 fb_unassociate_done
+  ; Applications can also carry user-added verbs/types. Remove our values,
+  ; then prune empty keys only; do not delete those independent additions.
+  DeleteRegValue SHCTX "Software\Classes\Applications\${MAINBINARYNAME}.exe\shell\open\command" ""
+  DeleteRegValue SHCTX "Software\Classes\Applications\${MAINBINARYNAME}.exe\SupportedTypes" ".${EXT}"
+  ReadRegStr $R0 SHCTX "Software\Classes\Applications\${MAINBINARYNAME}.exe" "FriendlyAppName"
+  StrCmp $R0 "Fairbeam" 0 fb_unassociate_application_prune
+  DeleteRegValue SHCTX "Software\Classes\Applications\${MAINBINARYNAME}.exe" "FriendlyAppName"
+fb_unassociate_application_prune:
+  DeleteRegKey /ifempty SHCTX "Software\Classes\Applications\${MAINBINARYNAME}.exe\shell\open\command"
+  DeleteRegKey /ifempty SHCTX "Software\Classes\Applications\${MAINBINARYNAME}.exe\shell\open"
+  DeleteRegKey /ifempty SHCTX "Software\Classes\Applications\${MAINBINARYNAME}.exe\shell"
+  DeleteRegKey /ifempty SHCTX "Software\Classes\Applications\${MAINBINARYNAME}.exe\SupportedTypes"
+  DeleteRegKey /ifempty SHCTX "Software\Classes\Applications\${MAINBINARYNAME}.exe"
   !insertmacro UPDATEFILEASSOC
 fb_unassociate_done:
   Pop $R0

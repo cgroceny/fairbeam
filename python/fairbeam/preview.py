@@ -141,6 +141,7 @@ def design_checks(design: dict, overrides: dict, bundle: dict | None, build_erro
     design does not build and no check already points at that field."""
     from .design import DesignError
     from .design_checks import EXPLANATIONS, lint
+    from .local_mesh import LocalMeshError
 
     values = {}
     for k, v in (overrides or {}).items():
@@ -156,10 +157,13 @@ def design_checks(design: dict, overrides: dict, bundle: dict | None, build_erro
         if endpoint_contacts is not None:
             endpoint_contacts.clear()
     if build_error is not None:
-        where = build_error.where if isinstance(build_error, DesignError) else ""
-        detail = build_error.detail if isinstance(build_error, DesignError) else f"{type(build_error).__name__}: {build_error}"
+        where = build_error.where if isinstance(build_error, (DesignError, LocalMeshError)) else ""
+        detail = build_error.detail if isinstance(build_error, (DesignError, LocalMeshError)) else f"{type(build_error).__name__}: {build_error}"
         if not any(c["severity"] == "error" and (c["path"] == where or not where) for c in checks):
-            checks.append({"severity": "error", "path": where, "code": "build", "message": f"does not build: {detail}", "explain": EXPLANATIONS["build"]})
+            code = build_error.code if isinstance(build_error, LocalMeshError) else "build"
+            checks.append({"severity": "error", "path": where, "code": code,
+                           "message": detail if isinstance(build_error, LocalMeshError) else f"does not build: {detail}",
+                           "explain": EXPLANATIONS[code]})
     return checks
 
 

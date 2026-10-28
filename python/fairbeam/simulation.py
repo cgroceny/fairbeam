@@ -141,6 +141,7 @@ class Simulation:
         self.sim_path: str | None = None
         #: add RHCP/LHCP directivity and axial ratio to every far-field entry (bundle field "cp")
         self.cp_outputs = False
+        self.complex_field_outputs = False  # opt-in Ludwig-3 fields; bounded storage
         # default far-field frequencies (Hz) when evaluate() gets none; None = band centres. For
         # broadband antennas (horns, helices) the S11 minimum says little about the design frequency.
         self.pattern_freqs = None
@@ -576,6 +577,11 @@ class Simulation:
         return self.lumped_element(name, a.tolist(), c.tolist(), direction, label=label, priority=priority,
                                    **{key: value})
 
+    def finalize_local_regions(self):
+        """Validate explicit caps and refresh actual counts after port finalizers."""
+        from .local_mesh import finalize_regions
+        finalize_regions(self)
+
     def auto_mesh(self, verbose: bool = False, **kw) -> dict:
         """Generate the whole FDTD mesh from the geometry (``fairbeam.automesh.generate``; see
         docs/MESHING.md). Call after the geometry and ports, before ``add_nf2ff_box``. Returns the
@@ -688,6 +694,7 @@ class Simulation:
             raise ValueError("experimental native coaxial ports currently support CPU runs only; CUDA/Metal excitation and probe parity is not qualified")
         self.finalize_coaxial_ports()
         self.finalize_planar_ports()
+        self.finalize_local_regions()
         # refuse meshes that would exhaust memory (about 90 bytes per cell in the CPU engine)
         cells = int(np.prod([max(len(self.mesh.GetLines(a)) - 1, 1) for a in "xyz"]))
         limit = int(float(os.environ.get("FAIRBEAM_MAX_CELLS", 40e6)))
@@ -709,8 +716,14 @@ class Simulation:
         openems_kw.setdefault("exact_endcriteria", True if exact is None else bool(exact))
         # openEMS chdirs into sim_path and does not change back; keep relative paths working
         sim_path = os.path.abspath(sim_path)
+        from .nf2ff_archive import MANIFEST
+        if os.path.exists(os.path.join(sim_path, MANIFEST)):
+            raise ValueError("retained NF2FF source already exists; use a new run name")
         os.makedirs(sim_path, exist_ok=True)
         self.sim_path = sim_path
+        if getattr(self, "retain_nf2ff", False):
+            from .nf2ff_archive import recording_descriptor
+            self._retained_nf2ff = recording_descriptor(self)
         t0 = time.time()
         cwd = os.getcwd()
         try:
@@ -817,6 +830,12 @@ class Simulation:
             self.results = out
             return out
         p_meta, p, s11, p_acc = port
+        if getattr(self, "_retained_nf2ff", None) is not None:
+            # These are the original per-drive port measurements, before the
+            # multiport merge replaces reflections with the network diagonal.
+            self._retained_nf2ff["network"] = {
+                "frequency_hz": f.tolist(), "pacc_w": _rf_values(p_acc),
+                "gamma2": _rf_values(np.abs(s11) ** 2), "port_type": p_meta.get("type")}
         s11_db = 20 * np.log10(np.abs(s11))
         out["bands"] = _bands(f, s11_db, s11_band_db)
         out["s11_band_db"] = float(s11_band_db)
@@ -833,6 +852,9 @@ class Simulation:
                 pattern_freqs = [b["f_center"] for b in out["bands"]][:4] or [float(f[np.argmin(s11_db)])]
             pattern_freqs = [float(v) for v in pattern_freqs]
             theta, phi = angular_grid(theta_step, phi_step)
+            if getattr(self, "complex_field_outputs", False):
+                from .farfield_fields import check_field_budget, encode_farfield_fields
+                check_field_budget(len(theta), len(phi), len(pattern_freqs))
             center = np.array(self.nf2ff_center if self.nf2ff_center is not None else _center(self))
             res = self.nf2ff.CalcNF2FF(self.sim_path, pattern_freqs, theta, phi, center=center * self.unit)
             # kept for the embedded element patterns of multi-port runs (fairbeam.multiport)
@@ -869,6 +891,10 @@ class Simulation:
                     entry["dmax_pattern_dbi"] = round(10 * np.log10(d_pat), 3)
                 if self.cp_outputs:
                     entry["cp"] = _circular(res, i, d_dbi, theta, phi)
+                if getattr(self, "complex_field_outputs", False):
+                    entry["fields"] = encode_farfield_fields(
+                        fp, theta, phi, res.E_theta[i], res.E_phi[i], mirror_planes=mirrors,
+                        phase_center_m=center * self.unit, radius_m=float(np.asarray(res.r).item()))
                 if eff is not None and eff > 0:
                     entry["gain_dbi"] = round(10 * np.log10(eff * d_max), 3)
                     entry["realized_gain_dbi"] = round(10 * np.log10(eff * d_max * (1 - gamma2)), 3)
@@ -1070,6 +1096,7 @@ class Simulation:
     def to_bundle(self, model: dict, params: list[dict], name: str | None = None) -> dict:
         self.finalize_coaxial_ports()
         self.finalize_planar_ports()
+        self.finalize_local_regions()
         from ._meta import BUNDLE_SCHEMA, __version__
         from .geometry import read_structure
         import CSXCAD
@@ -1078,6 +1105,7 @@ class Simulation:
         parts, _helpers, nf2ff_box = read_structure(self.csx, self.materials, self.unit)
         _show_drawn_thickness(parts, self.thin_sheets)
         lines = {a: np.asarray(self.mesh.GetLines(a)) for a in "xyz"}
+        precise_axes = bool(getattr(self, "_local_mesh_state", None) or getattr(self, "_mesh_axis_precision", False))
         cells = [int(len(lines[a]) - 1) for a in "xyz"]
         widths = np.concatenate([np.diff(lines[a]) for a in "xyz"])
         half_space = None
@@ -1102,7 +1130,8 @@ class Simulation:
             "parts": parts,
             "ports": self.ports,
             "half_space": half_space,
-            "mesh": {"x": _r(lines["x"], 4), "y": _r(lines["y"], 4), "z": _r(lines["z"], 4),
+            "mesh": {**{a: lines[a].tolist() if precise_axes else _r(lines[a], 4) for a in "xyz"},
+                     **({"axis_precision": "float64"} if precise_axes else {}),
                      "cells": cells, "total_cells": int(np.prod(cells)),
                      "min_cell": round(float(widths.min()), 5), "max_cell": round(float(widths.max()), 5),
                      **({"auto": getattr(self, "mesh_report")} if getattr(self, "mesh_report", None) else {})},

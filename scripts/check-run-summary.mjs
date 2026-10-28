@@ -543,7 +543,8 @@ assert.ok(metrics.size >= 10, "the example bundles were read");
   has("src/designer/runResults.ts", /COMPARABLE = new Set<ResultView>\(\[[^\]]*"summary"\]/, "runResults: several runs can be selected under Summary");
   has("src/designer/DesignWorkspace.tsx", /label=\{t\("ribbon\.post\.summary"\)\}[^\n]*openRibbonResult\("summary"\)/, "Post-processing opens the Summary tab");
   has("src/designer/NavTree.tsx", /<span class="nt-metrics">\{r\.metrics\}<\/span>/, "the tree row shows the run's headline numbers");
-  has("src/designer/runResults.ts", /resultNodes\([^\n]*metricsLine\(runMetricsOf\(file\), fmt\.fixed\)/, "the tree's numbers follow the Decimal separator (fmt.fixed)");
+  has("src/designer/runResults.ts", /return resultNodes\([^\n]*file => \{\s*const masks = runRequirementsOf\(file\);\s*return \[metricsLine\(runMetricsOf\(file\), fmt\.fixed\)/,
+    "the tree's numbers retain Decimal separator formatting alongside the saved requirement verdict");
   has("src/designer/RunDock.tsx", /bundleRunMetrics\(r\.bundle\)/, "the Runs table reads the headline numbers");
   has("src/designer/RunDock.tsx", /runDock\.runs\.col\.f0[\s\S]*runDock\.runs\.col\.s11[\s\S]*runDock\.runs\.col\.bw[\s\S]*runDock\.runs\.col\.dmax[\s\S]*runDock\.runs\.col\.eff/, "the Runs table has the fixed metric columns");
   has("src/designer/ResultViews.tsx", /props\.view === "summary" \? \[\{ file: run\.file, bundle: run\.bundle \}\]/, "Copy data / CSV of a single run go through the summary table");

@@ -2,6 +2,9 @@
 // vector PDF by src/drawing/pdfdoc.ts with IBM Plex Sans embedded.
 
 import { withoutVoids } from "../lib/voidParts.ts";
+import { ludwigExportNote, readComplexFarField } from "../lib/ludwig.ts";
+import { bundleDiversityReport, DIVERSITY_REPORT_HEADERS } from "./diversityReport.ts";
+import { bundleRequirementsReport, REQUIREMENTS_REPORT_HEADERS } from "./requirementsReport.ts";
 import type { Bundle } from "../types";
 import { convergenceText, efficiencyWarning, energyText, finalEnergy } from "../lib/run.ts";
 import { technicalDrawing } from "../drawing/drawing.ts";
@@ -32,6 +35,8 @@ const FS = 3.1; // body ≈ 8.8 pt
 const FS_S = 2.7; // tables ≈ 7.7 pt
 
 export interface ReportOptions {
+  /** Captured fixed xy polarization reference, degrees. */
+  ludwigReferenceDeg?: number;
   /** "YYYY-MM-DD HH:MM" shown as the report date */
   generated: string;
   /** date for the drawing's title block (YYYY-MM-DD) */
@@ -328,6 +333,30 @@ export function reportPages(bundle: Bundle, opt: ReportOptions): string[] {
       d.para("Own stored angular grids; accepted-power reliability unassessed here. These points never fill a coarse-curve gap.", FS_S);
       d.table(["Port", "f (GHz)", "AR at D peak (dB)", "AR boresight (dB)"], stored.map(p => [String(p.port ?? "unknown"), f3(p.f), ...[p.values.ar_peak_db,p.values.ar_boresight_db].map(v => v === null ? "—" : `${v >= 60 ? "≥" : ""}${fx(v)}`)]), [1,1,1.5,1.5], ["r","r","r","r"]);
     }
+  }
+
+  if (b.results?.farfield.some(ff => readComplexFarField(ff))) { d.h2("Ludwig-3 polarization"); d.para(ludwigExportNote(opt.ludwigReferenceDeg ?? 0), FS_S); }
+
+  const diversity = bundleDiversityReport(bundle);
+  if (diversity) {
+    d.h2("MIMO diversity");
+    d.para(diversity.scope, FS_S);
+    d.para(diversity.assumptions, FS_S);
+    if (diversity.frequencyHz) d.para(`Stored frequency range: ${diversity.frequencyHz.join(" to ")} Hz.`, FS_S);
+    if (diversity.rows.length) d.table(DIVERSITY_REPORT_HEADERS, diversity.rows, [1.2,2,1,1,1.3]);
+    if (diversity.omittedGroups) d.para(`${diversity.omittedGroups} additional metric/port groups omitted from this bounded report; the CSV contains all groups.`, FS_S);
+    for (const reason of diversity.reasons) d.para(`Unavailable: ${reason}`, FS_S);
+    for (const warning of diversity.warnings) d.para(`Warning: ${warning}`, FS_S);
+  }
+
+  if (bundle.requirements_snapshot !== undefined) {
+    const requirements = bundleRequirementsReport(bundle);
+    d.h2("Saved requirements");
+    d.para(requirements.scope, FS_S);
+    d.para(`Source ID: ${requirements.sourceId ?? "unavailable"}.`, FS_S);
+    d.para(`Numeric limits: ${requirements.metric}. Energy: ${requirements.energy}. Mesh: ${requirements.mesh}. Qualified verdict: ${requirements.status}.`, FS_S);
+    if (requirements.reason) d.para(requirements.reason, FS_S);
+    if (requirements.rows.length) d.table(REQUIREMENTS_REPORT_HEADERS, requirements.rows, [1.4,1.4,1,1,0.8,1,2]);
   }
 
   // at a glance: |S11| and the first pattern

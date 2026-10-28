@@ -11,6 +11,7 @@ import { CameraViewIcon } from "./CameraViewIcon";
 import { stackLabels } from "./labelStack";
 import { bundle, centerView, farfieldIndex, setFarfieldIndex, hiddenParts, hoverPart, layers, meshPlane, meshHighlight, selectedPart, selectedShape, setHoverPart, setViewCursor, solidFade, theme } from "../state";
 import { bottleneckTarget, meshHighlightSegments } from "../designer/meshBottlenecks";
+import { localMeshRegionSegments, localMeshReport } from "../designer/localMeshReport";
 import { keepCamera, openingView, setOpeningView } from "../state";
 import { designStem } from "../lib/exportNames";
 import { previewGeometry } from "../designer/transforms";
@@ -29,7 +30,7 @@ import type { PortGlyph } from "./portGlyphs";
 import { patternMesh } from "./pattern";
 import FarfieldCard from "../components/FarfieldCard";
 import { effectiveQuantity, quantityGrid, quantityMax, quantityRange } from "../lib/farfieldQuantity";
-import { patternQuantity } from "../lib/patternQuantityStore";
+import { ludwigReferenceDeg, patternQuantity } from "../lib/patternQuantityStore";
 import { showPattern3dEntry } from "../designer/runResults";
 import { currentArray, arrayOverrideFor, arraySourceMatches } from "../lib/currentArray";
 import { currentLayer, fieldExcitation, shownFieldFrequency, hasCurrentPhase, updateCurrentPhase } from "./fields";
@@ -102,6 +103,7 @@ function pickHit(hits: THREE.Intersection[]): THREE.Intersection | undefined {
 }
 
 export default function Viewport() {
+  const localRegions = createMemo(() => localMeshReport(bundle()));
   let host!: HTMLDivElement;
   const [view, setView] = createSignal<ViewName | null>("iso");
   const [scaleBar, setScaleBar] = createSignal<{ px: number; label: string } | null>(null);
@@ -865,6 +867,16 @@ export default function Viewport() {
       const shown = k > 1 ? { ...b, mesh: { ...b.mesh, x: thin(b.mesh.x), y: thin(b.mesh.y), z: thin(b.mesh.z) } } : b;
       setMeshNote(k > 1 ? t("viewport.meshThinned", { k, total }) : null);
       const obj = meshPlaneLines(shown, axis, pos, cssVar("--al-text"), 0.35);
+      const regionReport = localRegions();
+      if (regionReport) {
+        const geometry = new THREE.BufferGeometry();
+        geometry.setAttribute("position", new THREE.Float32BufferAttribute(localMeshRegionSegments(regionReport), 3));
+        const regions = new THREE.LineSegments(geometry, new THREE.LineBasicMaterial({ color: cssVar("--al-series-2"), depthTest: false, depthWrite: false }));
+        regions.name = "mesh-local-regions";
+        regions.userData.regionIds = regionReport.regions.map(region => region.id);
+        regions.renderOrder = 6;
+        obj.add(regions);
+      }
       const marked = meshHighlightSegments(b, meshHighlight(), meshPlane.axis, Math.min(meshPlane.index, lines.length - 1));
       if (marked.length) {
         const geometry = new THREE.BufferGeometry();
@@ -901,10 +913,10 @@ export default function Viewport() {
       const ctr = new THREE.Vector3(c0[0], c0[1], b.half_space ? b.half_space.position : c0[2]);
       // the chosen quantity (gain, realized gain, a circular part; directivity when the entry lacks it)
       const q = farfieldOverride() ? "directivity" : effectiveQuantity(b, f, patternQuantity());
-      patternRoot.add(patternMesh(f, ctr, radius * 1.15, fieldStops(), !!b.half_space, { values: quantityGrid(b, f, q), max: quantityMax(b, f, q), range: quantityRange(q), maskMissing: q === "axial_ratio" }));
+      patternRoot.add(patternMesh(f, ctr, radius * 1.15, fieldStops(), !!b.half_space, { values: quantityGrid(b, f, q, ludwigReferenceDeg()), max: quantityMax(b, f, q), range: quantityRange(q), maskMissing: q === "axial_ratio" || q === "co" || q === "cross" || q === "xpd" }));
       requestRender();
     }
-    createEffect(on([() => layers.pattern, farfieldIndex, farfieldOverride, patternQuantity], buildPattern, { defer: true }));
+    createEffect(on([() => layers.pattern, farfieldIndex, farfieldOverride, patternQuantity, ludwigReferenceDeg], buildPattern, { defer: true }));
 
     // array feed on the port labels while the array pattern is shown: "P2 · 0 dB ∠ −90°"
     function writePortFeeds() {

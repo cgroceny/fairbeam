@@ -1544,6 +1544,8 @@ class App:
             raise ApiError(422, pre["messages"][0], preflight=pre)
 
     def submit(self, body: dict) -> dict:
+        if type(body.get("retain_nf2ff", False)) is not bool:
+            raise ApiError(422, "retain_nf2ff must be a boolean")
         m, resolved, overrides = self._validated(body)
         cells = self._refuse_broken_design(m, overrides=overrides, require_mesh=True)
         admission_body = {**body, "cells": cells} if cells is not None else body
@@ -1559,8 +1561,30 @@ class App:
         if pre["level"] == "refuse":
             raise ApiError(422, pre["messages"][0], preflight=pre)
         job = self.manager.submit(model=m["key"], model_id=(m.get("model") or {}).get("id"), model_path=m["path"], design_input=m.get("_queued_design"),
-                                  params=resolved, overrides=overrides, **st)
+                                  params=resolved, overrides=overrides, retain_nf2ff=body.get("retain_nf2ff", False), **st)
         return {**job.to_dict(), "preflight": pre}
+
+    def farfield_capability(self, job_id: str) -> dict:
+        try:
+            _, manifest, _ = self.manager.retained_source(job_id)
+        except KeyError:
+            raise ApiError(404, "run not found") from None
+        except (ValueError, OSError) as e:
+            return {"available": False, "reason": str(e)}
+        return {"available": True, "parent_sha256": manifest["parent"]["sha256"],
+                "ports": [{"port": p["port"], "domain": "TD" if p["descriptor"]["recording"]["dump_type"] == 0 else "FD",
+                           "band_hz": p["descriptor"]["band_hz"], "recorded_frequencies_hz": p["descriptor"]["recording"]["frequencies"]}
+                          for p in manifest["ports"]],
+                "raw_bytes": sum(f["bytes"] for p in manifest["ports"] for f in p["files"]),
+                "max_frequencies": 16, "max_cells_per_frequency": 65536, "max_total_cells_per_port": 262144}
+
+    def submit_farfield(self, job_id: str, body: dict) -> dict:
+        try:
+            return self.manager.submit_postprocess(job_id, body).to_dict()
+        except KeyError:
+            raise ApiError(404, "run not found") from None
+        except (ValueError, OSError) as e:
+            raise ApiError(422, str(e)) from None
 
     def external_runs(self) -> list[dict]:
         """``fairbeam run`` processes started outside this server (a terminal, a script) that write
@@ -2102,6 +2126,8 @@ class Handler(BaseHTTPRequestHandler):
             ("POST", r"/api/research/runs/([\w.-]+)/cancel", self._cancel_research),
             ("GET", r"/api/runs", lambda: self._json(200, {"runs": app.manager.list(include_results=not summary)})),
             ("POST", r"/api/runs", lambda: self._json(201, app.submit(self._body()))),
+            ("GET", r"/api/runs/([\w.-]+)/farfield", lambda i: self._json(200, app.farfield_capability(i))),
+            ("POST", r"/api/runs/([\w.-]+)/farfield", lambda i: self._json(201, app.submit_farfield(i, self._body()))),
             ("GET", r"/api/runs/([\w.-]+)", lambda i: self._json(200, app.job(i).to_dict())),
             ("GET", r"/api/runs/([\w.-]+)/events", self._events),
             ("GET", r"/api/runs/([\w.-]+)/log", self._log),

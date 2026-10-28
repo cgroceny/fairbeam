@@ -399,6 +399,7 @@ export interface OptDone {
 }
 
 /** Experimental results are never ordinary antenna bundles. */
+export type ResearchBackend = "periodic" | "stock" | "elmer";
 export interface ResearchResult {
   farfield?: { frequency_hz: number; theta_deg: number[]; phi_deg: number[]; directivity: number[][]; peak_directivity_dbi: number; gain_qualified: false };
   schema?: string;
@@ -409,6 +410,10 @@ export interface ResearchResult {
   s11_imag?: number[];
   s21_real?: number[];
   s21_imag?: number[];
+  reflection_phase_deg?: (number | null)[];
+  material?: { requested: boolean; available: boolean; qualified: false; thickness_mm: number; reason?: string | null;
+    reliable?: boolean[]; eps_real?: (number | null)[]; eps_imag?: (number | null)[];
+    mu_real?: (number | null)[]; mu_imag?: (number | null)[] };
   mode1?: { family: string; analytic_frequency_hz: number; relative_frequency_error: number; complex_field_shape_correlation?: number };
   precision_converged?: boolean;
   limitations?: string[];
@@ -418,8 +423,11 @@ export interface ResearchResult {
 export interface Job {
   id: string;
   /** "run" (fairbeam run) or "optimize" (fairbeam optimize) */
-  kind?: "run" | "optimize" | "research";
-  research?: { backend: "periodic" | "elmer"; path: string; settings: Record<string, unknown>; snapshot_sha256: string;
+  kind?: "run" | "optimize" | "research" | "postprocess";
+  retain_nf2ff?: boolean;
+  retained_nf2ff?: { root: string; sha256: string } | null;
+  postprocess?: { source_job_id: string; parent_sha256: string; request_sha256: string; frequencies_hz: number[]; theta_step: number; phi_step: number } | null;
+  research?: { backend: ResearchBackend; path: string; settings: Record<string, unknown>; snapshot_sha256: string;
     source?: { model_id: string; workspace_hash: string; backup_scope: string; design_sha256: string } };
   /** Omitted by polling summaries; explicit researchRun details include the result. */
   result?: ResearchResult | null;
@@ -542,14 +550,21 @@ async function call<T>(method: "GET" | "POST" | "PUT", path: string, body?: unkn
   return data as T;
 }
 
+export type FarfieldCapability = { available: false; reason: string } | {
+  available: true; parent_sha256: string; raw_bytes: number; max_frequencies: number;
+  max_cells_per_frequency: number; max_total_cells_per_port: number;
+  ports: { port: number; domain: "TD" | "FD"; band_hz: [number, number]; recorded_frequencies_hz: number[] }[];
+};
+export interface FarfieldRequest { frequencies_hz: number[]; theta_step: number; phi_step: number }
+
 export const api = {
-  researchProbe: (backend: "periodic" | "elmer", path: string, signal?: AbortSignal) =>
+  researchProbe: (backend: ResearchBackend, path: string, signal?: AbortSignal) =>
     call<{ backend: string; available: boolean; reason?: string }>("POST", "/research/probe", { backend, path }, signal),
   elmerRuntime: (signal?: AbortSignal) => call<ElmerRuntime>("GET", "/research/elmer/runtime", undefined, signal),
   elmerInstall: (signal?: AbortSignal) => call<ElmerRuntime>("POST", "/research/elmer/install", {}, signal),
   researchRuns: (signal?: AbortSignal) => call<{ runs: Job[] }>("GET", "/research/runs?summary=1", undefined, signal),
   researchRun: (id: string, signal?: AbortSignal) => call<Job>("GET", `/research/runs/${encodeURIComponent(id)}`, undefined, signal),
-  researchStart: (body: { backend: "periodic" | "elmer"; path: string; settings: Record<string, unknown>; design?: Design;
+  researchStart: (body: { backend: ResearchBackend; path: string; settings: Record<string, unknown>; design?: Design;
     source?: { model_id: string; workspace_hash: string; backup_scope: string } }, signal?: AbortSignal) =>
     call<Job>("POST", "/research/runs", body, signal),
   researchCancel: (id: string, signal?: AbortSignal) => call<Job>("POST", `/research/runs/${encodeURIComponent(id)}/cancel`, {}, signal),
@@ -565,8 +580,10 @@ export const api = {
     call<PreviewResult>("POST", "/preview", { model, params }, signal),
   runs: (signal?: AbortSignal) => call<{ runs: Job[] }>("GET", "/runs?summary=1", undefined, signal).then((d) => d.runs),
   closeActivity: (signal?: AbortSignal) => call<unknown>("GET", "/close-activity", undefined, signal).then(parseCloseActivity),
-  submit: (body: { model: string; params: Record<string, ParamValue>; threads: number; engine?: string; name?: string; end_criteria_db?: number; points?: number; cells?: number }) =>
+  submit: (body: { model: string; params: Record<string, ParamValue>; threads: number; engine?: string; name?: string; end_criteria_db?: number; points?: number; cells?: number; retain_nf2ff?: boolean }) =>
     call<Job>("POST", "/runs", withThreads(body)),
+  farfieldCapability: (id: string, signal?: AbortSignal) => call<FarfieldCapability>("GET", `/runs/${encodeURIComponent(id)}/farfield`, undefined, signal),
+  submitFarfield: (id: string, body: FarfieldRequest) => call<Job>("POST", `/runs/${encodeURIComponent(id)}/farfield`, body),
   /** memory / CPU check of a planned run; level "unknown" means it could not be checked */
   preflight: (body: { cells?: number; engine?: string }) => call<Preflight>("POST", "/preflight", body),
   cancel: (id: string) => call<Job>("POST", `/runs/${encodeURIComponent(id)}/cancel`, {}),

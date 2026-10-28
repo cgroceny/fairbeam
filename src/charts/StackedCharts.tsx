@@ -12,7 +12,7 @@ import { PHASE_TICKS, quantityDomain, quantityLines } from "./quantityAxes";
 import "../styles/charts.css";
 import { t } from "../i18n";
 
-type PaneExtras = Pick<LineChartProps, "markers" | "onMarker" | "onPick" | "bands" | "extra">;
+type PaneExtras = Pick<LineChartProps, "markers" | "onMarker" | "onPick" | "bands" | "extra" | "limitSegments">;
 
 export default function StackedCharts(props: {
   groups: PlotQuantity[];
@@ -41,7 +41,7 @@ export default function StackedCharts(props: {
             yDomain={quantityDomain(g())} yTickValues={g().key === "phase" ? PHASE_TICKS : undefined} hlines={quantityLines(g())}
             yFormat={(v) => v.toFixed(1)}
             inspection={props.inspectionChart ? { key: `${props.inspectionChart}:${g().key}`, chart: props.inspectionChart, kind: g().kind, toolbar: i === 0 } : undefined}
-            markers={extras(g()).markers} onMarker={extras(g()).onMarker} onPick={extras(g()).onPick} bands={extras(g()).bands} extra={extras(g()).extra} />
+            markers={extras(g()).markers} onMarker={extras(g()).onMarker} onPick={extras(g()).onPick} bands={extras(g()).bands} extra={extras(g()).extra} limitSegments={extras(g()).limitSegments} />
         </div>
       )}</Index>
     </div>

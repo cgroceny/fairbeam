@@ -77,6 +77,49 @@ microstrip (2.823 vs 2.596 dB). These are single runs and the finer reference is
 comparison, not a guaranteed converged solution. Inspect the reported choices and use per-field
 overrides for the design at hand.
 
+## Explicit local refinement regions
+
+Simulation settings can store up to 32 local refinement boxes in `mesh.local_regions`.
+Each entry has a stable `id`, a display `name`, `start` and `stop` coordinate triples, and
+`cell_size`, the requested maximum interval width. Design coordinates and sizes accept
+parameter expressions in the Design length unit. Bounds use global model coordinates;
+they do not follow a selected part or the work coordinate system. The Python API accepts
+the corresponding resolved numeric entries through `sim.auto_mesh(local_regions=[...])`.
+
+Regions apply in both automatic modes. Manual mode retains the list as inactive settings
+and leaves the authored grid authoritative. An omitted or empty list keeps the existing
+meshing path. Every active box must have positive extent on all three axes, a positive
+finite cell size and bounds inside the computed domain. An outside box is refused rather
+than clipped or used to enlarge the domain.
+
+For each axis, the cap applies to every cell interval with positive overlap with that
+box's span. Face touching alone is not overlap; overlapping requests use the smaller cap.
+The mesher preserves existing planes and checks the actual resulting widths. A cap that
+the current grid already satisfies does not insert box endpoints or artificial slivers.
+These are Cartesian grid planes across the whole domain, so a small box can still raise
+the total cell count substantially. Explicit requests are not dropped to meet the cell
+budget: requests that cannot fit, or cannot be represented faithfully, fail the preview.
+
+The optional `mesh.auto.local_refinement` report separates the before/after interval-cell
+counts at the region insertion stage from the final counts after port alignment. Its CFL
+timestep is an estimate from the current grid, not a measured native solver clock or a
+runtime prediction. Grading admission uses the larger of the configured ratio and the
+inherited baseline maximum at the insertion stage; later port changes are reported
+separately. Caps and the unchanged cell budget are checked again at final build, run and
+export boundaries. A zero insertion cost does not promise that every later port shift is
+compatible with the cap.
+
+Mesh view shows resolved boxes only for the matching displayed preview. Rebuild after
+editing a region before interpreting the overlay or cost. A smaller interval satisfies a
+geometric request; it does not establish electromagnetic accuracy or convergence.
+
+Active-region bundle axes keep their finite floating-point precision. A Python-to-Design
+copy that preserves such a grid as manual lines marks it with `mesh.axis_precision:
+"float64"`; the regions remain stored but inactive there. Unmarked manual grids keep the
+existing serialization convention. Generated-Design capture can retain symbolic region
+settings only when their recorded parameters resolve to the same applied regions. Generic
+Python models supply resolved numeric regions; capture does not recover arbitrary formulas.
+
 ## Rules
 
 The mesher reads every CSXCAD primitive (box, polygon, linpoly, cylinder, cylindrical shell,

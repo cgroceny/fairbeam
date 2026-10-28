@@ -6,6 +6,8 @@ import { cutPhi, setCutPhi } from '../compare/store';
 import { analyzeCut, cutLabel, cutSpecs, patternMetrics, type CutMetric } from '../lib/patternMetrics';
 import { cutTheta, patternCutChoice, patternCutMode, patternProjection, setCutTheta, setPatternCutMode, setPatternProjection } from '../lib/patternCutStore';
 import { quantityGrid, quantityUnit, type PatternQuantity } from '../lib/farfieldQuantity';
+import { isLudwigQuantity } from '../lib/ludwig';
+import { ludwigReferenceDeg } from '../lib/patternQuantityStore';
 import { axialRatioNote } from './FarfieldCard';
 import NumberField from './NumberField';
 import { num } from '../lib/format';
@@ -20,19 +22,21 @@ export function PatternCutPanel(props: { entries: PatternEntry[]; principalAvail
   const principal = () => props.principalAvailable ?? props.entries.length === 1;
   const mode = () => patternCutMode() === 'principal' && !principal() ? 'elevation' : patternCutMode();
   const cuts = createMemo(() => props.entries.flatMap(entry => {
-    const grid = quantityGrid(entry.bundle, entry.field, entry.quantity);
+    const grid = quantityGrid(entry.bundle, entry.field, entry.quantity, ludwigReferenceDeg());
     return cutSpecs(patternCutChoice(), principal(), cutPhi()).map((spec, i) => {
       const cut = analyzeCut(entry.field.theta, entry.field.phi, grid, spec, !!entry.bundle.half_space);
       // The parent resolves the base quantity once; missing reference CP stays a gap.
       const quantity = entry.quantity;
       return { ...cut, id: `${entry.id}-${i}`, color: principal() && i ? '--al-series-2' : entry.color,
-        label: `${entry.label ? `${entry.label} · ` : ''}${cutLabel(spec)} · ${t(`farfield.quantity.${quantity}`)}`,
+        label: `${entry.label ? `${entry.label} · ` : ''}${cutLabel(spec)} · ${t(`farfield.quantity.${quantity}`)}${isLudwigQuantity(quantity) ? ` · α ${num(ludwigReferenceDeg(), 2)}°` : ''}`,
         metrics: patternMetrics(cut, entry.field.theta, entry.field.phi, grid, !!entry.bundle.half_space, quantity) };
     });
   }));
   const axialRatio = () => props.entries[0]?.quantity === 'axial_ratio';
+  const xpd = () => props.entries[0]?.quantity === 'xpd';
+  const ludwig = () => isLudwigQuantity(props.entries[0]?.quantity ?? '');
   const unit = () => quantityUnit(props.entries[0]?.quantity ?? 'directivity');
-  const maximum = () => axialRatio() ? 60 : Math.ceil(Math.max(-60, ...cuts().flatMap(c => c.value.filter(Number.isFinite))));
+  const maximum = () => axialRatio() || xpd() ? 60 : Math.ceil(Math.max(-60, ...cuts().flatMap(c => c.value.filter(Number.isFinite))));
   const half = () => mode() !== 'conical' && props.entries.every(e => !!e.bundle.half_space);
   const angleLabel = () => mode() === 'conical' ? 'φ' : 'θ';
   const metric = (m: CutMetric, unit: string) => m.value === null ? t(`patternCuts.reason.${m.reason}`) : `${num(m.value, 2)} ${unit}`;
@@ -70,15 +74,16 @@ export function PatternCutPanel(props: { entries: PatternEntry[]; principalAvail
         <Show when={cuts().some(c => c.value.some(Number.isFinite))} fallback={<p class="panel-empty">{t('patternCuts.noCoverage')}</p>}>
           <Show when={patternProjection() === 'polar'} fallback={<LineChart ariaLabel={t('patternCuts.cartesianChart')}
             series={cuts().map(c => ({ id: c.id, label: c.label, color: c.color, x: c.angle, y: c.value }))}
-            xLabel={`${angleLabel()} (°)`} yLabel={unit()} yDomain={axialRatio() ? [0, 60] : undefined} xFormat={v => num(v, 1)} yFormat={v => num(v, 1)} />}>
+            xLabel={`${angleLabel()} (°)`} yLabel={unit()} yDomain={axialRatio() ? [0, 60] : xpd() ? [-60, 60] : undefined} xFormat={v => num(v, 1)} yFormat={v => num(v, 1)} />}>
             <PolarChart ariaLabel={t('patternCuts.polarChart')} series={cuts()} directLabels={props.entries.length > 1}
-              half={half()} unit={unit()} range={axialRatio() ? 60 : 40} max={maximum()} angleLabel={angleLabel()} />
+              half={half()} unit={unit()} range={axialRatio() ? 60 : xpd() ? 120 : 40} max={maximum()} angleLabel={angleLabel()} />
           </Show>
         </Show>
       </div>
       <div class="pattern-analyzer-details stack">
         {props.children}
-        <p class="rdk-note" role="note">{axialRatio() ? axialRatioNote() : t('patternCuts.estimate')}</p>
+        <p class="rdk-note" role="note">{axialRatio() ? axialRatioNote() : xpd() ? t('ludwig.xpdScale') : t('patternCuts.estimate')}</p>
+        <Show when={ludwig()}><p class="rdk-note" role="note">{t('ludwig.limits')}</p></Show>
         <For each={cuts()}>{cut => <section class="stack-sm" data-pattern-metrics={cut.id}>
           <strong>{cut.label}</strong>
           <dl class="kv kv-left">
@@ -90,7 +95,7 @@ export function PatternCutPanel(props: { entries: PatternEntry[]; principalAvail
           </dl>
           <Show when={cut.interpolated}><p class="rdk-note">{t('patternCuts.interpolated')}</p></Show>
         </section>}</For>
-        <Show when={!axialRatio()}><p class="rdk-note">{t('patternCuts.fbNote')}</p></Show>
+        <Show when={!axialRatio() && !xpd()}><p class="rdk-note">{t('patternCuts.fbNote')}</p></Show>
       </div>
     </div>
   </section>;

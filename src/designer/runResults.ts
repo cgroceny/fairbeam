@@ -25,6 +25,8 @@ import { activeMainResult } from "./mainTabsState";
 import { runLetters } from "./resultTabs";
 import { fmt, t } from "../i18n";
 import { documentResultFiles, nativeDocumentFor } from "../lib/nativeDocuments";
+import { savedRequirements } from "../lib/requirementsSnapshot";
+import type { RequirementEvaluation } from "../lib/requirements";
 
 /** The runs of the open design, newest first, labelled for the tree (name · time · engine). */
 export const designRuns = createRoot(() => createMemo(() => {
@@ -52,7 +54,12 @@ export const designResultNodes = () => {
   if (!f) return [];
   const included = documentResultFiles(f, jobs());
   const ownJobs = included ? jobs().filter(job => job.model === f.id || (job.bundle && included.has(job.bundle))) : jobs();
-  return resultNodes(designRuns(), ownJobs, f.design.model.id, runContentOf, (file) => metricsLine(runMetricsOf(file), fmt.fixed));
+  return resultNodes(designRuns(), ownJobs, f.design.model.id, runContentOf, file => {
+    const masks = runRequirementsOf(file);
+    return [metricsLine(runMetricsOf(file), fmt.fixed), masks ? t("requirements.tree", {
+      metric: t(`requirements.verdict.${masks.metric}`), status: t(`requirements.verdict.${masks.status}`),
+    }) : ""].filter(Boolean).join(" · ");
+  });
 };
 
 export const [sweepViewId, setSweepViewId] = createSignal<string | null>(null);
@@ -261,6 +268,7 @@ export function bundleRunMetrics(b: Bundle): RunMetrics | null {
 }
 // headlines of runs known only from the raw JSON the tree read for their children
 const [readMetrics, setReadMetrics] = createSignal<ReadonlyMap<string, RunMetrics | null>>(new Map());
+const [readRequirements, setReadRequirements] = createSignal<ReadonlyMap<string, RequirementEvaluation>>(new Map());
 // The index generation at each read: replacement under the same filename invalidates its metadata.
 const readStamp = new Map<string, string | undefined>();
 
@@ -276,6 +284,17 @@ export function runMetricsOf(file: string): RunMetrics | null {
   const raw = readMetrics().get(file);
   if (raw && readStamp.get(file) === runStamp(file)) return raw;
   return indexMetrics(indexedRuns().get(file));
+}
+
+/** Result-owned metadata only, with the same file-generation invalidation as tree metrics. */
+export function runRequirementsOf(file: string): RequirementEvaluation | null {
+  const shown = designResult();
+  if (shown?.file === file && matchesIndex(file, shown.bundle)) return savedRequirements(shown.bundle);
+  const compared = comparedRuns().find(c => c.file === file);
+  if (compared && matchesIndex(file, compared.bundle)) return savedRequirements(compared.bundle);
+  const read = designRunBundle(file);
+  if (read) return savedRequirements(read);
+  return readStamp.get(file) === runStamp(file) ? readRequirements().get(file) ?? null : null;
 }
 
 /** Far-field and surface-current frequencies of a run, once its bundle has been read. */
@@ -303,6 +322,7 @@ export async function readRunContent(file: string) {
     setContents((m) => new Map(m).set(file, c));
     setReadQuality((m) => new Map(m).set(file, q));
     setReadMetrics((m) => new Map(m).set(file, rawMetrics(raw)));
+    setReadRequirements(m => new Map(m).set(file, savedRequirements(raw)));
   } catch {
     /* the node keeps its fixed children; selecting a view reports the error */
   } finally {
@@ -486,6 +506,7 @@ createRoot(() => {
     setContents(new Map());
     setReadQuality(new Map());
     setReadMetrics(new Map());
+    setReadRequirements(new Map());
     readStamp.clear();
     reading.clear();
     bundleCache.clear();

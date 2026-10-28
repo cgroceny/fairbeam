@@ -104,7 +104,8 @@ inner control handles it first.
 
   **What the copy of a Python example contains.** The dialog's note lists it. The example is built at
   the values of the open project (its defaults for the bundled ones) and read back as shapes,
-  materials, ports, band, boundaries and its own mesh lines (rounded to 1e-6 mm). Identical metals
+  materials, ports, band, boundaries and its own mesh lines (normally rounded to 1e-6 mm;
+  active local-region captures preserve full precision). Identical metals
   share one material (the parts keep their names). The example's **parameters** come along: Fairbeam
   rebuilds the example with each numeric parameter moved a little (two builds per parameter at most,
   one for a parameter that changes nothing) and every coordinate or value that is an exact linear
@@ -1050,6 +1051,14 @@ without the dialog.
     The IEEE e^(+jωt) convention is E_R = (E_θ + jE_φ)/√2 and E_L = (E_θ − jE_φ)/√2.
     Saving a request does not qualify the antenna as circularly polarized: run and check angular,
     frequency, mesh and time convergence before drawing a bandwidth or efficiency conclusion.
+  - **Store complex fields for Ludwig-3** is optional and defaults off. It saves
+    `far_field.complex_fields: true`, retaining NF2FF relative phase for co-polar, cross-polar
+    partial directivity and XPD after the run. It does not enable a disabled Far field monitor.
+    Per driven port the limits are 65,536 angular cells per frequency, 16 frequencies and
+    262,144 angular-frequency cells; automatic frequency selection reserves four frequencies.
+    Use larger angular steps or fewer frequencies when the budget check fails. No samples are
+    silently decimated. The Pattern panel's fixed reference angle is shared by the 3D view,
+    cuts and exports, with [explicit masks and bounds](RESULTS.md#ludwig-3-polarization).
   - **Surface current**: frequencies at which surface-current maps are recorded on the metal
     sheets, as `fairbeam run --fields` does. After a run they are under the run's 2D/3D Results in
     the navigation tree. Ribbon Simulation › Monitors › **Surface current** opens this field; when
@@ -1090,6 +1099,32 @@ without the dialog.
 **Experimental Elmer FEM.** Simulation › Experimental solvers opens setup and limitations. The Elmer choices in Run do not automatically replace openEMS. Read the [experimental solver guide](EXPERIMENTAL-SOLVERS.md) first.
 
 **Coaxial TEM port (experimental).** This port-type choice needs a compatible runtime and explicit acceptance. [Coaxial ports](COAXIAL-PORTS.md) describes supported geometry and numerical qualification criteria that are still unmet.
+
+### Local mesh regions
+
+In Simulation settings › Mesh, add a local region to request a maximum cell width near a
+feed, gap or other area of interest. Give it a name, start and stop coordinates and a
+positive cell size. Coordinates use the Design length unit and global model axes; all
+numeric fields accept parameter expressions. You can edit or remove each region, with
+the dialog's normal Apply/Cancel and undo behavior. At most 32 regions are allowed.
+
+Both automatic modes apply the current list; Manual lines retains it as inactive. A box
+must fit inside the computed domain. Impossible sizes or cell budgets fail the preview
+without silently discarding a region. Lines extend across the full Cartesian domain,
+so check the cell-count impact even for a small box. The region-insertion cost and the
+final mesh count after port alignment are distinct. Mesh view uses resolved boxes from
+the matching displayed preview; editing a draft does not put new boxes on stale lines.
+See [explicit regions](MESHING.md#explicit-local-refinement-regions) for the cap, grading
+and reporting rules. Refinement alone does not establish electromagnetic convergence.
+
+### Saved requirements
+Open Simulation settings → Requirements and expand the editor. Add a limit, choose its quantity and enter its numeric target. Frequency inputs use GHz, bandwidth uses MHz, efficiency uses percent, and S-parameter limits use dB. An Sij limit names the physical receiving and driven port numbers. A band applies only between the entered lower and upper frequencies. IDs remain stable when labels change.
+
+Apply writes the list into the current Design and its undo history. Discard in the requirement editor restores the list before that local edit; the settings dialog's Discard restores all settings from when it opened. Unapplied requirement edits must be applied or discarded before OK. Requirement changes need saving, but do not rebuild geometry or detach an imported Python model. Save/reopen retains the exact numeric list.
+
+Use as optimizer goals saves/checks the Design and prepares the optimizer form. It does not start a solve. The optimizer's existing limit is four goals; larger saved lists are preserved and conversion is refused with an explanation. No requirement is silently omitted. The existing f0 tolerance remains 0.25%. Optimizer success is not requirement certification: the requirement evaluator uses stricter data admission.
+
+The current format supports the nine existing optimizer quantities: resonance frequency, sampled -10 dB bandwidth, S11 maximum, Sij maximum/minimum, all-port match, directivity minimum, realized-gain minimum and radiation-efficiency minimum. S-parameter limits may be point or band limits; radiation quantities require matching stored fields at a point frequency. Unsupported quantities such as axial-ratio masks and radiation bands are rejected.
 
 ## Mesh view
 
@@ -1804,6 +1839,20 @@ Other files, bad numbers or too many files answer 422 (413 beyond the size limit
   (More info › Run anyway; [DESKTOP.md](DESKTOP.md)).
 
 Contributor scenario checks are in the [check guide](CHECKS.md#scenario-checks).
+
+## Stock symmetry-cell research
+
+The Research dialog offers **Stock openEMS · PEC/PMC cell** with the installed CPU
+runtime. It compares an empty reference and a sample at normal incidence with Ey
+polarization. Supported inputs are mirror-symmetric, axis-aligned PEC or lossless
+dielectric boxes. Cell settings replace the Design's simulation settings and monitors;
+the source Design is preserved. Unsupported physics is refused.
+
+Results include co-polar complex S11/S21, reflection phase at the front sample face,
+and optional NRW retrieval for one homogeneous full-cell dielectric slab. Completion,
+energy decay, mesh convergence and material accuracy are separate claims. See
+[Research solvers](RESEARCH-SOLVERS.md#stock-openems-pecpmc-cell) for limits,
+normalization, reliability masks and retained evidence.
 
 ## Feedback
 

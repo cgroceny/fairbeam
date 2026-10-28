@@ -14,7 +14,7 @@ export { IN_3D } from "./resultSessionState";
 /** summary: the run card (headline numbers, matched bands, far field, efficiency; a table of runs when several are compared) */
 /** fieldplane: an E/H field map on a cut plane, drawn in the 3D view (`map` picks it); fieldmap: the
  * same map as a 2D heat map in a main-area tab */
-export type ResultView = "array" | "sparams" | "impedance" | "vswr" | "smith" | "efficiency" | "pattern" | "pattern3d" | "currents" | "fieldplane" | "fieldmap" | "table" | "summary" | "log";
+export type ResultView = "diversity" | "array" | "sparams" | "impedance" | "vswr" | "smith" | "efficiency" | "pattern" | "pattern3d" | "currents" | "fieldplane" | "fieldmap" | "table" | "summary" | "log";
 
 export interface ResultFocus {
   /** the run's bundle file in the projects folder */

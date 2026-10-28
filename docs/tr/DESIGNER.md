@@ -30,7 +30,7 @@ Dar pencerelerde ağaç ve özellikler panelleri aynı açılır alanı paylaş�
 - **Tasarım**, kendi çalıştırmalarını içerir. Gezinti ağacında Sonuçlar altında listelenip yerinde açılırlar: 3B görünüm, çalıştırmanın geometrisini örüntü veya yüzey akımlarıyla; alt panel grafiklerini gösterir.
 - **Örnekler**, [README](../README.md) ve [RESULTS.md](RESULTS.md) içinde açıklanan görüntüleyicidir. Sonuçları hazır yerleşik örnekleri ve Python modellerinizin çalıştırmalarını gösterir. Üst çubuktaki aranabilir sonuç seçici (filtrelemek için yazın, modele göre grupludur) bunları listeler; tasarımlarınızın çalıştırmaları burada yer almaz. **Yeni tasarım olarak aç…** (seçicinin yanında ve model panelinde), açık örnekten düzenlenebilir tasarım oluşturur. Tasarım biçiminin temsil edemediği örnekte veya yerleşik örnek olmayan sonuçta devre dışıdır; nedeni ipucunda gösterilir. Sonuç kendi tasarımlarınızdan birinden simüle edilmişse model panelinde **Tasarımcıda aç** görünür. Çalıştırma sunucusu yokken (herkese açık demo) her sonuç örnektir ve Tasarım kullanılamaz.
 
-  **Python örneğinin kopyası neleri içerir?** Penceredeki not bunları listeler. Örnek, açık sonucun değerleriyle (yerleşiklerde varsayılanlarıyla) oluşturulur; şekiller, malzemeler, portlar, bant, sınırlar ve kendi mesh çizgileri (1e-6 mm'ye yuvarlanmış) geri okunur. Aynı metaller tek malzeme paylaşır (katıların adları korunur). Örneğin **parametreleri** de aktarılır: Fairbeam her sayısal parametreyi biraz değiştirerek örneği yeniden oluşturur (parametre başına en fazla iki oluşturma, hiçbir şeyi değiştirmeyen parametrede bir). Parametrelerin tam doğrusal işlevi olan (1e-9 içinde) her koordinat veya değer ifade olarak yazılır: yama örneğinin kutusu `-patch_w/2, -patch_l/2, sub_h` ile `patch_w/2, patch_l/2, sub_h`, dielektrik sabiti `eps_r`, beslemesi `feed_x` olur. Böylece kopya bu parametrelerle kendi tasarımınız gibi taranabilir ve optimize edilebilir. Bu koordinatlarda duran mesh çizgileri onları izler; aradaki çizgiler oransal yerlerini korur, mesh geometriyle esner. Büyük geometri parametresi değişiminden sonra **Otomatik mesh'e geç** (Simülasyon ayarları) daha güvenlidir. Diğer sayılar sabit sayı kalır. Hiçbir ifadede görünmeyen parametre (yalnızca `mesh_div` gibi mesh'i veya fraktalın `iterations` değeri gibi model yapısını değiştiriyorsa) kopyaya eklenmez; açıklamada oluşturulduğu değerle listelenir. Aktarılan parametre *kısmen izleniyor* olarak işaretlenebilir: örnek başka boyutları bundan doğrusal olmayan kuralla türetiyorsa (`eps_r` üzerinden mikroşerit genişliği, `f0` üzerinden saplama uzunluğu), parametreyi değiştirdiğinizde bu geometri varsayılan boyutunda kalır. Örneğin sonuçları kopyaya dahil değildir; kendi sonuçlarınız için kopyayı çalıştırın.
+  **Python örneğinin kopyası neleri içerir?** Penceredeki not bunları listeler. Örnek, açık sonucun değerleriyle (yerleşiklerde varsayılanlarıyla) oluşturulur; şekiller, malzemeler, portlar, bant, sınırlar ve kendi mesh çizgileri (normalde 1e-6 mm'ye yuvarlanır; etkin yerel bölge aktarımında tam hassasiyet korunur) geri okunur. Aynı metaller tek malzeme paylaşır (katıların adları korunur). Örneğin **parametreleri** de aktarılır: Fairbeam her sayısal parametreyi biraz değiştirerek örneği yeniden oluşturur (parametre başına en fazla iki oluşturma, hiçbir şeyi değiştirmeyen parametrede bir). Parametrelerin tam doğrusal işlevi olan (1e-9 içinde) her koordinat veya değer ifade olarak yazılır: yama örneğinin kutusu `-patch_w/2, -patch_l/2, sub_h` ile `patch_w/2, patch_l/2, sub_h`, dielektrik sabiti `eps_r`, beslemesi `feed_x` olur. Böylece kopya bu parametrelerle kendi tasarımınız gibi taranabilir ve optimize edilebilir. Bu koordinatlarda duran mesh çizgileri onları izler; aradaki çizgiler oransal yerlerini korur, mesh geometriyle esner. Büyük geometri parametresi değişiminden sonra **Otomatik mesh'e geç** (Simülasyon ayarları) daha güvenlidir. Diğer sayılar sabit sayı kalır. Hiçbir ifadede görünmeyen parametre (yalnızca `mesh_div` gibi mesh'i veya fraktalın `iterations` değeri gibi model yapısını değiştiriyorsa) kopyaya eklenmez; açıklamada oluşturulduğu değerle listelenir. Aktarılan parametre *kısmen izleniyor* olarak işaretlenebilir: örnek başka boyutları bundan doğrusal olmayan kuralla türetiyorsa (`eps_r` üzerinden mikroşerit genişliği, `f0` üzerinden saplama uzunluğu), parametreyi değiştirdiğinizde bu geometri varsayılan boyutunda kalır. Örneğin sonuçları kopyaya dahil değildir; kendi sonuçlarınız için kopyayı çalıştırın.
 
 ### Şablonlar
 
@@ -396,6 +396,33 @@ Simülasyon sekmesinin düğmeleri (Frekans bandı, Sınırlar, Mesh ayarları, 
 
 **Deneysel koaksiyel TEM portu.** Port türü seçimindeki bu seçenek, uyumlu çalışma ortamı ve açık kabul gerektirir. [Koaksiyel portlar](COAXIAL-PORTS.md) desteklenen geometriyi ve henüz sağlanmayan sayısal doğrulama ölçütlerini açıklar.
 
+### Yerel mesh bölgeleri
+
+Simülasyon ayarları › Mesh bölümünde besleme, aralık veya başka bir alanın yakınında en
+büyük hücre genişliğini belirlemek için yerel bölge ekleyin. Ad, başlangıç ve bitiş
+koordinatları ile pozitif hücre boyutu girin. Koordinatlar Tasarımın uzunluk biriminde ve
+genel model eksenlerindedir; sayısal alanlar parametre ifadelerini kabul eder. Bölgeler
+pencerenin normal Uygula/İptal ve geri alma davranışıyla düzenlenebilir veya silinebilir.
+En fazla 32 bölge kullanılabilir.
+
+İki otomatik mod da geçerli listeyi uygular; Manuel çizgiler listeyi etkin olmayan ayar
+olarak korur. Kutu hesaplanan alanın içinde kalmalıdır. Sağlanamayan boyut veya hücre
+bütçesi önizlemede hata verir; hiçbir bölge sessizce elenmez. Çizgiler tüm Kartezyen alana
+uzanır; küçük kutuların da hücre maliyetini inceleyin. Bölge ekleme maliyeti ile port
+hizalamasından sonraki son hücre sayısı ayrıdır. Mesh görünümü eşleşen önizlemenin çözülmüş
+kutularını kullanır; taslak düzenlemesi eski çizgilere yeni kutular eklemez. Boyut, komşu
+hücre oranı ve raporlama kuralları için [yerel bölgeler](MESHING.md#explicit-local-refinement-regions)
+bölümüne bakın. İnceltme tek başına elektromanyetik yakınsama kanıtı değildir.
+
+### Kaydedilmiş gereksinimler
+Simülasyon ayarları → Gereksinimler bölümünü açın. Bir sınır ekleyin, büyüklüğü seçin ve sayısal hedefi girin. Frekans GHz, bant genişliği MHz, verim yüzde, S-parametresi sınırları dB kullanır. Sij sınırında alıcı ve uyarılan fiziksel port numaralarını seçin. Bant yalnızca alt ve üst frekans arasında geçerlidir. Etiket değiştiğinde kimlik korunur.
+
+Uygula listeyi Tasarım ve geri alma geçmişine yazar. Gereksinim düzenleyicisindeki Geri al yerel değişikliği; ayarlar penceresindeki Vazgeç pencere açılırken geçerli olan tüm ayarları geri yükler. Tamam'dan önce uygulanmamış gereksinim değişikliklerini uygulayın veya geri alın. Değişiklikler kaydedilmelidir; geometriyi yeniden oluşturmaz ve içe aktarılmış Python modelini ayırmaz. Kaydet/aç işlemi tam sayısal listeyi korur.
+
+Optimizer hedefleri olarak kullan Tasarımı kaydeder/doğrular ve optimizer formunu hazırlar; simülasyon başlatmaz. Mevcut dört hedef sınırı korunur. Daha uzun liste kesilmez; dönüşüm açıklamayla reddedilir. f0 toleransı %0,25 olarak kalır. Optimizer başarısı gereksinim doğrulaması değildir; gereksinim değerlendirmesi daha sıkı veri kabulü kullanır.
+
+Mevcut dokuz hedef türü desteklenir: rezonans frekansı, örneklenmiş -10 dB bant genişliği, S11 üst sınırı, Sij üst/alt sınırı, tüm portların uyumu, direktivite alt sınırı, gerçekleşen kazanç alt sınırı ve ışıma verimi alt sınırı. S-parametreleri nokta veya bant olabilir. Işıma büyüklükleri aynı frekansta kayıtlı alan gerektirir. Eksenel oran maskeleri ve ışıma bantları gibi desteklenmeyen istekler reddedilir.
+
 ## Mesh görünümü
 
 Şeritte Simülasyon › **Mesh görünümü** (veya durum çubuğunda hücre sayısına tıklama), geçerli önizlemenin FDTD mesh çizgilerini tek düzlemde gösterir; çizgiler görünsün diye katıları soluklaştırır. Mesh, çalıştırmayla aynı oluşturucudan gelir. 3B görünüm üzerindeki panelde:
@@ -708,6 +735,20 @@ Sunucu API'si `POST /api/import/pcb` (`{files: [{name, content_base64}], options
 - **İmzasız Windows yükleyicisi.** macOS uygulaması imzalı ve Apple tarafından doğrulanmıştır, çift tıklamayla açılır. Windows yükleyicisinde kod imzası yoktur: SmartScreen ilk çalıştırmada uyarır (Daha fazla bilgi › Yine de çalıştır; [DESKTOP.md](DESKTOP.md)).
 
 Katkıda bulunanların senaryo denetimleri [denetim kılavuzundadır](CHECKS.md#scenario-checks).
+
+## Standart simetri hücresi araştırması
+
+Araştırma iletişim kutusundaki **Standart openEMS · PEC/PMC hücresi**, kurulu CPU
+çalışma ortamını kullanır. Normal geliş ve Ey kutuplanmasıyla boş referansı numuneyle
+karşılaştırır. Ayna simetrili, eksenlere paralel PEC veya kayıpsız dielektrik kutular
+desteklenir. Hücre ayarları Design'ın simülasyon ayarlarının ve monitörlerinin yerini
+alır; kaynak Design korunur. Desteklenmeyen fizik reddedilir.
+
+Çıktılar eş kutuplu karmaşık S11/S21'i, ön numune yüzündeki yansıma fazını ve tek
+homojen tam kesitli dielektrik slab için isteğe bağlı NRW çıkarımını içerir. Tamamlanma,
+enerji sönümü, ağ yakınsaması ve malzeme doğruluğu ayrı değerlendirilir. Sınırlar,
+normalizasyon, güvenilirlik maskeleri ve saklanan kanıtlar için
+[Research solvers](https://github.com/ismailakdag/fairbeam/blob/main/docs/RESEARCH-SOLVERS.md#stock-openems-pecpmc-cell) kılavuzuna bakın.
 
 ## Geri bildirim
 

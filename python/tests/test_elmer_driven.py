@@ -1,9 +1,10 @@
 import copy
 import math
+import re
 import unittest
 import numpy as np
 from fairbeam.design import blank_design
-from fairbeam.elmer_driven import prepare, huygens_pattern, C0, MU0, EPS0
+from fairbeam.elmer_driven import prepare, sif, huygens_pattern, C0, MU0, EPS0
 
 
 class DrivenTests(unittest.TestCase):
@@ -57,6 +58,34 @@ class DrivenTests(unittest.TestCase):
             with self.assertRaises(ValueError):prepare(blank_design('p','Patch'),**kwargs)
         d=blank_design('p','Patch');d['ports'].append(copy.deepcopy(d['ports'][0]));d['ports'][1]['number']=2
         with self.assertRaises(ValueError):prepare(d)
+
+    def test_vector_helmholtz_material_uses_inverse_permeability(self):
+        # Check the emitted native contract, not just the internal material tuple.
+        # The historical nonmagnetic patch still has inverse permeability one.
+        for mu_r in (1., 2.5):
+            with self.subTest(mu_r=mu_r):
+                d=blank_design('p','Patch')
+                dielectric=next(m for m in d['materials'] if m['kind']=='dielectric')
+                dielectric['mu_r']=str(mu_r)
+                original=copy.deepcopy(d)
+                mesh=prepare(d,cell_mm=15,padding_mm=35,feed_width_mm=1)
+                text=sif(mesh,2.45e9)
+                blocks=re.findall(r'^Material \d+\n(.*?)^End$',text,re.M|re.S)
+                self.assertEqual(len(blocks),2)
+                materials=[dict((name.strip(),float(value)) for name,value in
+                    re.findall(r'^\s*(.+?)\s*=\s*Real\s+(\S+)\s*$',block,re.M)) for block in blocks]
+                self.assertEqual(materials[0],{'Relative Permittivity':1.,'Relative Reluctivity':1.,'Electric Conductivity':0.})
+                self.assertEqual(set(materials[1]),set(materials[0]))
+                self.assertEqual(materials[1]['Relative Reluctivity'],1/mu_r)
+                self.assertEqual(materials[1]['Relative Permittivity'],3.38)
+                self.assertAlmostEqual(materials[1]['Electric Conductivity'],2*math.pi*2.45e9*EPS0*3.38*.0027)
+                self.assertNotIn('Relative Permeability',text)
+                self.assertEqual(d,original)
+
+    def test_nonfinite_inverse_permeability_is_not_written_to_native_input(self):
+        mesh={'elements':[(1,())],'materials':[(1.,1e-320,0.)],'impedance':50.,'port_direction':3}
+        with self.assertRaisesRegex(ValueError,'finite reciprocal'):
+            sif(mesh,2.45e9)
 
     def test_huygens_matches_hertzian_dipole_power_and_pattern(self):
         frequency=2.45e9;k=2*math.pi*frequency/C0;eta=MU0*C0

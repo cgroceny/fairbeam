@@ -206,12 +206,25 @@ def newest_mtime(path: Path) -> float:
 
 
 def remove_inside(root: Path, target: Path, protect: tuple[Path, ...] = ()) -> int | None:
+    from .nf2ff_archive import raw_lock
+    with raw_lock():
+        return _remove_inside_unlocked(root, target, protect)
+
+
+def _remove_inside_unlocked(root: Path, target: Path, protect: tuple[Path, ...] = ()) -> int | None:
     """Remove the folder ``target`` if it lies strictly inside ``root`` (after resolving symlinks),
     is not itself a symlink and neither is nor contains a ``protect`` folder. Returns the bytes
     freed, or None when nothing was removed."""
     t = inside(root, target)
     if t is None or Path(target).is_symlink() or not t.is_dir():
         return None
+    if in_use(t, Path(root).resolve()):
+        return None
+    # A job directory can contain a raw model folder whose marker is below it.
+    for folder, dirs, names in os.walk(t, followlinks=False):
+        dirs[:] = [name for name in dirs if not (Path(folder) / name).is_symlink()]
+        if any(name.endswith(MARKER_SUFFIX) and _marker_live(Path(folder) / name) for name in names):
+            return None
     for p in protect:
         try:
             pr = Path(p).resolve()

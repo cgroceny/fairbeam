@@ -836,7 +836,7 @@ export function setUnsavedDesignCheck(check: (key: string) => boolean) { unsaved
 
 /** Submit a single run of the current model. `extra` adds per-run options (frequency points). Returns
  * the job, or null when it was not submitted (the reason is in submitError / fieldErrors). */
-export async function startRun(extra: { points?: number; cells?: number } = {}): Promise<Job | null> {
+export async function startRun(extra: { points?: number; cells?: number; retain_nf2ff?: boolean } = {}): Promise<Job | null> {
   if (submitting()) return null;
   setSubmitError(null);
   setSubmitErrorDetail("");

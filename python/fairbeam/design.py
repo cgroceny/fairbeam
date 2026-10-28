@@ -25,7 +25,7 @@ The geometry maps one to one onto CSXCAD primitives, the same ones Python models
       "resistors": [{"name": "r1", "R": "100", "start": [...], "stop": [...], "direction": "y"}],
       "mesh": {"mode": "auto", "cells_per_wavelength": 20, "refine_features": false},
       "far_field": {"enabled": true, "frequencies": ["f0"], "theta_step": 3, "phi_step": 5},
-      # angular steps are optional expressions in degrees (0.25..90); optional "circular": bool
+      # angular steps are optional expressions in degrees (0.25..90); optional "circular" / "complex_fields": bool
       # optional "faces": x- x+ y- y+ z- z+
       "monitors": {"currents": ["f0"],              # optional: surface-current maps (GHz)
                    "efficiency": {"points": 21},     # optional: radiation efficiency over the band
@@ -491,6 +491,11 @@ def check_design(d: dict) -> None:
         raise DesignError("a design is a JSON object")
     if not schema_is(d.get("schema"), DESIGN_SCHEMA):
         raise DesignError(f"schema must be {DESIGN_SCHEMA!r}", "schema")
+    if "requirements" in d:
+        from .requirements import validate_requirements
+        masks = validate_requirements(d["requirements"])
+        if not masks["ok"]:
+            raise DesignError(masks["reason"], "requirements")
     from .organization import organization_issues
     for path, detail in organization_issues(d):
         raise DesignError(detail, path)
@@ -654,11 +659,18 @@ def check_design(d: dict) -> None:
     ff = d.get("far_field", {})
     if not isinstance(ff, dict):
         raise DesignError("far_field must be an object", "far_field")
-    if "circular" in ff and not isinstance(ff["circular"], bool):
-        raise DesignError("circular must be true or false", "far_field.circular")
+    for flag in ("circular", "complex_fields"):
+        if flag in ff and not isinstance(ff[flag], bool):
+            raise DesignError(f"{flag} must be true or false", f"far_field.{flag}")
     mesh = d.get("mesh", {})
     if not isinstance(mesh, dict):
         raise DesignError("mesh must be an object", "mesh")
+    from .local_mesh import LocalMeshError, precision_marker, resolve_regions
+    try:
+        precision_marker(mesh)
+        resolve_regions(mesh.get("local_regions", []), active=False)
+    except LocalMeshError as exc:
+        raise DesignError(exc.detail, exc.where) from None
     if "refine_features" in mesh and not isinstance(mesh["refine_features"], bool):
         raise DesignError("refine features must be true or false", "mesh.refine_features")
     if mesh.get("mode", "auto") not in ("auto", "design", "manual"):
@@ -2818,11 +2830,18 @@ def metal_loss(mt: dict, num) -> tuple[float | None, float | None]:
 
 
 def _configure_far_field(sim, ff: dict, num, vec) -> None:
-    """Apply requested output settings; circular output never enables an absent NF2FF box."""
+    """Apply requested polarization outputs without enabling an absent NF2FF box."""
     sim.cp_outputs = ff.get("circular", False)
+    sim.complex_field_outputs = ff.get("complex_fields", False)
     if not ff.get("enabled", True):
         return
     sim.pattern_steps = design_pattern_steps(ff, num)
+    if sim.complex_field_outputs:
+        from .farfield_fields import field_budget_for_steps
+        try:
+            field_budget_for_steps(*sim.pattern_steps, len(ff.get("frequencies") or [None] * 4))
+        except ValueError as exc:
+            raise DesignError(str(exc), "far_field.complex_fields") from None
     faces = ff.get("faces")
     if faces is not None and (not isinstance(faces, list) or len(faces) != 6 or not any(faces)):
         raise DesignError("faces is 6 true/false flags (x-, x+, y-, y+, z-, z+), at least one true", "far_field.faces")
@@ -2845,6 +2864,13 @@ def build(d: dict, values: dict):
     names = resolve_names(d, values)
     require_safe_sheet_transforms(d, names)
     num, vec = _evaluator(names)
+    from .local_mesh import LocalMeshError, capture_design_regions, precision_marker, resolve_regions
+    mesh_source = d.get("mesh", {})
+    try:
+        local_regions = resolve_regions(mesh_source.get("local_regions", []), num,
+                                        active=mesh_source.get("mode", "auto") != "manual")
+    except LocalMeshError as exc:
+        raise DesignError(exc.detail, exc.where) from None
 
     s = d.get("simulation", {})
     f_min, f_max = num(s.get("f_min", 1), "simulation.f_min") * 1e9, num(s.get("f_max", 3), "simulation.f_max") * 1e9
@@ -3040,7 +3066,7 @@ def build(d: dict, values: dict):
         import numpy as np
         dt = sim.unit / (C0 * np.sqrt(sum(1 / x**2 for x in dmin)))
         # the exact lines (the bundle rounds its mesh arrays for size): a CST export can carry them
-        sim.mesh_report = {"settings": {"mode": "manual", "lines": {AXES[a]: [round(v, 6) for v in x] for a, x in enumerate(manual_lines)}},
+        sim.mesh_report = {"settings": {"mode": "manual", "lines": {AXES[a]: [v if precision_marker(m) else round(v, 6) for v in x] for a, x in enumerate(manual_lines)}},
                            "cells": cells,
                            "total_cells": int(np.prod(cells)), "min_cell": min(dmin),
                            "max_cell": max(max(x) for x in widths), "warnings": [],
@@ -3127,7 +3153,10 @@ def build(d: dict, values: dict):
                               "mesh.air_cells_per_wavelength")
     if mode != "manual":
         kw["refine_features"] = m.get("refine_features", False)
+        if local_regions:
+            kw["local_regions"] = local_regions
         sim.auto_mesh(**kw)
+    capture_design_regions(sim, m, d.get("params", []), names)
     if mode == "design":
         report = getattr(sim, "mesh_report", None)
         if report is not None:
@@ -3137,6 +3166,7 @@ def build(d: dict, values: dict):
     sim.finalize_planar_ports()
     if any(p.get("type") == "coaxial" for p in d.get("ports", [])):
         sim.finalize_coaxial_ports()
+    sim.finalize_local_regions()
     if s.get("max_timesteps") in (None, "auto"):
         # no limit was chosen: cover the excitation pulse and its decay (it was a fixed 60000, which a
         # mesh with tiny cells spent on the pulse alone)
@@ -3774,6 +3804,12 @@ def to_python(d: dict) -> str:
         out.append(f"    sim.lumped_element({(r.get('name') or f'R{i + 1}')!r}, {start}, "
                    f"{stop}, {r['direction']!r}{values}, topology={r.get('topology', 'parallel')!r}{lbl}{prio_arg})")
     mm = d.get("mesh", {})
+    local_arg = ""
+    if mm.get("local_regions") and mm.get("mode", "auto") != "manual":
+        local_arg = ", local_regions=[" + ", ".join(
+            "{'id': " + repr(r["id"]) + ", 'name': " + repr(r["name"]) + ", 'start': " + vec(r["start"])
+            + ", 'stop': " + vec(r["stop"]) + ", 'cell_size': " + e(r["cell_size"]) + "}"
+            for r in mm["local_regions"]) + "]"
     if mm.get("mode") == "manual":
         for ax in AXES:
             out.append(f"    sim.mesh.AddLine({ax!r}, [" + ", ".join(e(v) for v in mm["lines"][ax]) + "])" )
@@ -3799,7 +3835,7 @@ def to_python(d: dict) -> str:
                     "pad": e(ov["pad"]) if "pad" in ov else pad_expr}
         adaptive["refine_features"] = repr(mm.get("refine_features", False))
         args = ", ".join(f"{k}={v}" for k, v in adaptive.items())
-        out.append(f"    sim.auto_mesh({args})")
+        out.append(f"    sim.auto_mesh({args}{local_arg})")
         note_keys = list(adaptive)
         out.append("    sim.mesh_report['settings']['mode'] = 'design'")
         out.append("    sim.mesh_report['notes'] = " + repr({k: ("overridden" if k in ov else "selected from design geometry, materials, frequency band, and far-field setting") for k in note_keys}))
@@ -3809,14 +3845,27 @@ def to_python(d: dict) -> str:
         max_ratio = f", max_ratio={e(mm['max_ratio'])}" if "max_ratio" in mm else ""
         air_cpw = (f", air_cells_per_wavelength={e(mm['air_cells_per_wavelength'])}"
                    if mm.get("air_cells_per_wavelength") is not None else "")
-        out.append(f"    sim.auto_mesh(cells_per_wavelength={e(mm.get('cells_per_wavelength', 20))}{edge_rule}{max_ratio}{air_cpw}{pad}, refine_features={mm.get('refine_features', False)!r})")
+        out.append(f"    sim.auto_mesh(cells_per_wavelength={e(mm.get('cells_per_wavelength', 20))}{edge_rule}{max_ratio}{air_cpw}{pad}, refine_features={mm.get('refine_features', False)!r}{local_arg})")
+    if "local_regions" in mm or "axis_precision" in mm:
+        out.append("    from fairbeam.local_mesh import capture_design_regions")
+        out.append(f"    capture_design_regions(sim, {mm!r}, {d.get('params', [])!r}, resolve_names({{'params': {d.get('params', [])!r}}}, p))")
+        if mm.get("local_regions") or "axis_precision" in mm:
+            out += ["    sim.finalize_planar_ports()", "    sim.finalize_coaxial_ports()", "    sim.finalize_local_regions()"]
     if s.get("max_timesteps") in (None, "auto"):
         out.append(f"    apply_auto_timesteps(sim, ({e(s.get('f_max', 3))}) * 1e9)")
     ff = d.get("far_field", {"enabled": True})
     if "circular" in ff:
         out.append(f"    sim.cp_outputs = {ff['circular']!r}")
+    if "complex_fields" in ff:
+        out.append(f"    sim.complex_field_outputs = {ff['complex_fields']!r}")
     if ff.get("enabled", True):
-        design_pattern_steps(ff, _evaluator(resolve_names(d, {}))[0])
+        output_steps = design_pattern_steps(ff, _evaluator(resolve_names(d, {}))[0])
+        if ff.get("complex_fields"):
+            from .farfield_fields import field_budget_for_steps
+            try:
+                field_budget_for_steps(*output_steps, len(ff.get("frequencies") or [None] * 4))
+            except ValueError as exc:
+                raise DesignError(str(exc), "far_field.complex_fields") from None
         args = []
         if ff.get("phase_center") is not None:
             args.append("center=[" + ", ".join(e(v) for v in ff["phase_center"]) + "]")
@@ -3827,6 +3876,9 @@ def to_python(d: dict) -> str:
         out.append(f"    sim.pattern_steps = pattern_steps({e(ff.get('theta_step', 3))}, {e(ff.get('phi_step', 5))})")
         if ff.get("frequencies"):
             out.append("    sim.pattern_freqs = [" + ", ".join(f"({e(f)}) * 1e9" for f in ff["frequencies"]) + "]")
+        if ff.get("complex_fields"):
+            out.append("    from fairbeam.farfield_fields import field_budget_for_steps")
+            out.append("    field_budget_for_steps(*sim.pattern_steps, len(sim.pattern_freqs or [None] * 4))")
     cur = (d.get("monitors") or {}).get("currents") or []
     if cur:
         out.append("    sim.current_freqs = [" + ", ".join(f"({e(f)}) * 1e9" for f in cur) + "]  # surface-current maps")

@@ -10,7 +10,7 @@ import sys
 
 MAX_SNAPSHOT_BYTES = 1024 * 1024
 MAX_RESULT_BYTES = 4 * 1024 * 1024
-BACKENDS = ("periodic", "elmer")
+BACKENDS = ("periodic", "stock", "elmer")
 
 
 def encode(value):
@@ -37,7 +37,7 @@ def binary_pins(executables, extra=()):
 
 def backend_name(value):
     if value not in BACKENDS:
-        raise ValueError("backend must be periodic or elmer")
+        raise ValueError("backend must be periodic, stock or elmer")
     return value
 
 
@@ -69,6 +69,9 @@ def probe(body):
     if backend == "elmer":
         import fairbeam_elmer
         result = fairbeam_elmer.capabilities(elmer_root(path))
+    elif backend == "stock":
+        from . import stock_cell
+        result = stock_cell.probe(path)
     else:
         from . import periodic_cell
         result = periodic_cell.probe(path)
@@ -112,16 +115,19 @@ def prepare(body):
         pins = binary_pins((solver, grid), extra)
         normalized = settings
     else:
-        from . import periodic_cell
-        normalized = periodic_cell.validate_spec(settings, body.get("design"))
-        capability = periodic_cell.probe(path)
+        if backend == "stock":
+            from . import stock_cell as cell_backend
+        else:
+            from . import periodic_cell as cell_backend
+        normalized = cell_backend.validate_spec(settings, body.get("design"))
+        capability = cell_backend.probe(path)
         if not capability.get("available"):
-            raise FileNotFoundError(capability.get("reason", "periodic executable unavailable"))
+            raise FileNotFoundError(capability.get("reason", "cell executable unavailable"))
         selected = capability.get("path")
         if not isinstance(selected, str) or not Path(selected).is_file():
-            raise FileNotFoundError("periodic probe did not select a native executable")
+            raise FileNotFoundError("cell probe did not select a native executable")
         path = str(Path(selected).resolve())
-        pins = binary_pins((path,))
+        pins = binary_pins((path,), capability.get("sdk_files", ()))
     spec = {"schema": "fairbeam-research-input-1", "backend": backend, "path": path,
             "settings": settings, "design": body.get("design"), "normalized": normalized,
             "binary_sha256": pins,
@@ -174,6 +180,9 @@ def validate_result(value, backend):
     if backend == "elmer" and value.get("schema") == "fairbeam.elmer-driven-result/1":
         from .elmer_driven import validate_result as validate_driven_result
         return validate_driven_result(value)
+    if backend == "stock":
+        from .stock_cell import validate_result as validate_stock_result
+        return validate_stock_result(value)
     if backend == "periodic":
         if value.get("schema") != "fairbeam.periodic-result/1":
             raise ValueError("unsupported periodic research result schema")
@@ -245,6 +254,9 @@ def execute(snapshot, outdir, checksum):
             result = run(spec["design"], spec["settings"], outdir, spec["path"])
         else:
             result = fairbeam_elmer.run_cavity(outdir, root=spec["path"], mesh_size=spec["normalized"]["mesh_size"], experimental=True)
+    elif backend == "stock":
+        from . import stock_cell
+        result = stock_cell.run(spec["normalized"], outdir, executable=spec["path"])
     else:
         from . import periodic_cell
         result = periodic_cell.run(spec["normalized"], outdir, executable=spec["path"])
@@ -266,6 +278,8 @@ def execute(snapshot, outdir, checksum):
 
 def completed_result(value):
     # Exported Design eigenmodes carry only completion checks, never a validation claim.
+    if value.get("backend") == "stock":
+        return value.get("schema") == "fairbeam.stock-result/1" and value.get("status") == "results_exported"
     return value.get("status") == "results_validated" or (
         value.get("backend") == "elmer" and value.get("schema") in ("fairbeam.elmer-design-result/1", "fairbeam.elmer-driven-result/1")
         and value.get("status") == "results_exported")

@@ -1,6 +1,6 @@
 // Apply in the Python panel: a script becomes the design's content (parts, materials, ports,
 // resistors, parameters, mesh, simulation, far field) in one edit. The design's own identity (name,
-// id, description) and its opening view stay. Kept free of the store so a node check can drive it (check-python-apply.mjs).
+// id, description), opening view and requirement masks stay. Kept free of the store so a node check can drive it (check-python-apply.mjs).
 import type { Design } from "./types";
 
 export interface PythonApplyResponse { design: Design; python: string; normalized: boolean; output?: string }
@@ -9,9 +9,9 @@ export type PythonApplyOutcome =
   | { ok: true; python: string; normalized: boolean; output: string }
   | { ok: false; message: string; line?: number; timeout?: boolean; stale?: boolean };
 
-/** What Apply keeps of the open design: its schema, its identity and its opening view (a script has no camera). */
-const KEPT = new Set(["schema", "model", "view"]);
-/** Replace everything of `d` except its schema, model and opening view with the content of `next` (mutates `d`, for a produce). */
+/** The Design owns its identity, view and requirement masks; geometry scripts cannot replace them. */
+const KEPT = new Set(["schema", "model", "view", "requirements"]);
+/** Replace geometry content while retaining Design-owned metadata (mutates `d`, for a produce). */
 export function replaceDesignContent(d: Design, next: Design): void {
   const target = d as unknown as Record<string, unknown>;
   for (const key of Object.keys(target)) if (!KEPT.has(key)) delete target[key];

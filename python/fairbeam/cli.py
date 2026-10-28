@@ -176,13 +176,25 @@ def _default_folders(args, *, sim: bool = True):
               "with --server.", file=sys.stderr, flush=True)
 
 
+def cmd_farfield(args):
+    from .nf2ff_postprocess import process
+    path = process(Path(args.source), expected_sha256=args.manifest_sha256,
+                   frequencies=[float(f) for f in args.frequency.split(",")],
+                   theta_step=args.theta_step, phi_step=args.phi_step, output=Path(args.output))
+    rebuild_index(path.parent)
+    print(f"fairbeam: wrote {path}", flush=True)
+
+
 def cmd_run(args):
     from .simdata import mark_running
 
     if args.server is not None:
         return cmd_run_server(args)
     _default_folders(args)
+    args._saved_source = Path(args.model).read_bytes()
     module, sim, params, slug, label = _build(args)
+    if Path(args.model).read_bytes() != args._saved_source:
+        raise ValueError("model changed while building; run again from saved input")
     sim_path = str(Path(args.sim_root) / slug)
     with mark_running(sim_path):  # `fairbeam clean-sim` leaves the raw folder alone meanwhile
         _run(args, module, sim, params, slug, label, sim_path)
@@ -231,7 +243,8 @@ def _run(args, module, sim, params, slug, label, sim_path):
                     echo=not args.quiet, engine=args.engine, exact=not args.no_exact, end_db=args.end_db,
                     n_freq=args.points, pattern_freqs=freqs, before_run=before,
                     element_patterns=None if args.element_patterns is None else args.element_patterns == "on",
-                    efficiency_points=getattr(args, "efficiency", None))
+                    efficiency_points=getattr(args, "efficiency", None),
+                    retain_nf2ff=getattr(args, "retain_nf2ff", False))
     stats = sim.run_stats
     energy = (f"{stats['final_energy_db']}" if "final_energy_db" in stats
               else f"<= {stats['final_energy_bound_db']}" if "final_energy_bound_db" in stats else "?")
@@ -275,14 +288,24 @@ def _run(args, module, sim, params, slug, label, sim_path):
             print(f"  field planes: {len(maps)} map(s): " + ", ".join(
                 f"{m['quantity']} {m['normal']} = {m['position_mm']:g} mm @ {m['f'] / 1e9:.3f} GHz (max {m['max']:.3g} {m['unit']})"
                 for m in maps), flush=True)
+    saved = getattr(args, "_saved_source", None)
+    if saved is not None and Path(args.model).read_bytes() != saved:
+        raise ValueError("model changed during the run; result is not attached to changed input")
+    if saved is not None and str(args.model).endswith(".design.json"):
+        from .requirements import attach_requirements, requirement_source_id
+        bundle = attach_requirements(bundle, saved, source_id=requirement_source_id(saved, values), resolved_parameters=values)
     path = _write(bundle, Path(args.out), slug, keep_existing=_keeps_existing(args))
+    if getattr(args, "retain_nf2ff", False):
+        from .nf2ff_archive import retain, encode, digest
+        manifest = retain(Path(sim_path), path, saved, args.model, values, sim._retained_nf2ff_sources)
+        print("fairbeam: retained-nf2ff " + json.dumps({"root": str(Path(sim_path).resolve()), "sha256": digest(encode(manifest))}), flush=True)
     print(f"fairbeam: wrote {path}")
 
 
 # ------------------------------------------------------------------ fairbeam run --server
 
 # `fairbeam run` options the run server does not take (POST /api/runs): refused with --server
-_LOCAL_ONLY = (("--out", "out"), ("--sim-root", "sim_root"), ("--pattern", "pattern"), ("--excite", "excite"),
+_LOCAL_ONLY = (("--retain-nf2ff", "retain_nf2ff"), ("--out", "out"), ("--sim-root", "sim_root"), ("--pattern", "pattern"), ("--excite", "excite"),
                ("--element-patterns", "element_patterns"), ("--fields", "fields"), ("--field-plane", "field_plane"),
                ("--efficiency", "efficiency"), ("--mesh-density", "mesh_density"), ("--no-exact", "no_exact"))
 TERMINAL_STATUSES = ("done", "failed", "cancelled", "interrupted")
@@ -912,6 +935,7 @@ def main(argv=None):
     p.add_argument("--points", type=int, default=801, help="frequency points")
     p.add_argument("--pattern", help="far-field frequencies in GHz, comma separated (default: band centres)")
     p.add_argument("--quiet", action="store_true", help="do not echo openEMS output")
+    p.add_argument("--retain-nf2ff", action="store_true", help="retain hash-bound raw far-field data for later transforms without FDTD")
     p.add_argument("--engine", choices=["cpu", "gpu"], default=os.environ.get("FAIRBEAM_ENGINE", "cpu"),
                    help="FDTD engine; gpu needs the openEMS GPU build (scripts/install-openems-gpu-macos.sh)")
     p.add_argument("--end-db", type=float, help="energy end criterion in dB (default: the model's, -60 unless set)")
@@ -937,6 +961,15 @@ def main(argv=None):
                    help="radiation efficiency at N frequencies across the band (default 21, 3 to 201), "
                         "from the NF2FF data after the run; adds the far field if the model has none")
     p.set_defaults(func=cmd_run)
+
+    p = sub.add_parser("farfield", help="transform retained NF2FF data into a new immutable result (no FDTD)")
+    p.add_argument("source", help="original retained raw folder")
+    p.add_argument("--manifest-sha256", required=True, help="manifest hash printed by the original run")
+    p.add_argument("--frequency", required=True, help="frequencies in Hz, comma separated, inside the original band")
+    p.add_argument("--theta-step", type=float, default=3)
+    p.add_argument("--phi-step", type=float, default=5)
+    p.add_argument("--output", required=True, help="new result .json path; existing files are never replaced")
+    p.set_defaults(func=cmd_farfield)
 
     p = sub.add_parser("geometry", help="export geometry and mesh without simulating")
     model_args(p)

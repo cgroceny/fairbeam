@@ -75,8 +75,11 @@ try {
     await page.locator('.matching-enable input').click(); await s.wait('.matching-chart');
     assert.equal(await page.$$eval('.rdk-split > .chart path.c-line', es => es.filter(e => e.getAttribute('d')).length), 2, 'Smith contains original and ideal traces');
     const ownScroll = await page.$eval('.matching-panel', async panel => {
+      await document.fonts.ready;
       const side = panel.closest('.rdk-side'); side.scrollTop = side.scrollHeight;
-      await new Promise(resolve => requestAnimationFrame(resolve));
+      // ResizeObserver delivers after the first frame; useSize applies later sizes
+      // in the next frame. Inspect completed geometry, as Session.step does.
+      await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
       const bounds = side.getBoundingClientRect(), chart = panel.querySelector('.matching-chart').getBoundingClientRect();
       const note = panel.lastElementChild.getBoundingClientRect();
       return { scrollTop: side.scrollTop, scrollHeight: side.scrollHeight, clientHeight: side.clientHeight,
@@ -84,6 +87,7 @@ try {
         finalNoteVisible: note.top >= bounds.top - 1 && note.bottom <= bounds.bottom + 1,
         paths: [...panel.querySelectorAll('.matching-chart path.c-line')].map(p => ({ d: p.getAttribute('d'), width: p.getBoundingClientRect().width })) };
     });
+    await writeFile(join(out, `matching-scroll-${lang}.json`), JSON.stringify(ownScroll, null, 2));
     assert.ok(ownScroll.scrollTop > 0 && ownScroll.scrollHeight > ownScroll.clientHeight, 'matching panel scrolls inside its own result area');
     assert.ok(ownScroll.chartVisible && ownScroll.finalNoteVisible, 'entire matching chart and reference-plane note are reachable without dock overlap');
     assert.equal(ownScroll.paths.length, 2);

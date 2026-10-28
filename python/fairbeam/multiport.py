@@ -28,6 +28,8 @@ QA metrics (``results.sparams.qa``)
 
 from __future__ import annotations
 
+from .farfield_fields import encode_i16_scaled
+
 import base64
 import time
 from pathlib import Path
@@ -154,18 +156,6 @@ FIELD_KEYS = ("e_theta_re", "e_theta_im", "e_phi_re", "e_phi_im")
 I16_FULL = 32767
 
 
-def encode_i16_scaled(arrays) -> tuple[float, list[str]]:
-    """``(scale, [base64 ...])``: every array as round(v / scale * 32767), little-endian int16, with
-    scale = max |v| over all the arrays (a shared scale keeps E_theta and E_phi comparable)."""
-    arrs = [np.asarray(a, float) for a in arrays]
-    if not all(np.all(np.isfinite(a)) for a in arrs):
-        raise ValueError("non-finite values cannot be encoded as scaled int16")
-    scale = max((float(np.max(np.abs(a))) for a in arrs if a.size), default=0.0)
-    div = scale if scale > 0 else 1.0
-    return scale, [base64.b64encode(np.ascontiguousarray(np.round(a / div * I16_FULL).astype("<i2"))
-                                    .tobytes()).decode("ascii") for a in arrs]
-
-
 def decode_i16_scaled(text: str, shape, scale: float) -> np.ndarray:
     return np.frombuffer(base64.b64decode(text), "<i2").reshape(shape) * (float(scale) / I16_FULL)
 
@@ -238,7 +228,8 @@ def parse_excite(spec: str | None, port_numbers: list[int], excitable: list[int]
 def run_model(module, values: dict, *, excite: str | None = None, sim_path: str, threads: int = 0,
               echo: bool = False, engine: str = "cpu", exact: bool = True, end_db: float | None = None,
               n_freq: int = 801, pattern_freqs=None, element_patterns: bool | None = None,
-              before_run=None, log=print, efficiency_points: int | None = None, pattern_steps: tuple[float, float] | None = None):
+              before_run=None, log=print, efficiency_points: int | None = None, pattern_steps: tuple[float, float] | None = None,
+              retain_nf2ff: bool = False):
     """Build and run ``module`` once per excited port and merge the results.
 
     Returns the primary (first excited port) :class:`~fairbeam.simulation.Simulation`, whose
@@ -257,6 +248,9 @@ def run_model(module, values: dict, *, excite: str | None = None, sim_path: str,
         element_patterns = len(ports_to_run) > 1
     sims, t0 = [], time.time()
     with mark_running(sim_path):  # raw data in use until every evaluate() is done
+        from .nf2ff_archive import MANIFEST
+        if (Path(sim_path) / MANIFEST).exists():
+            raise ValueError("retained NF2FF source already exists; use a new run name")
         for k, pn in enumerate(ports_to_run):
             with excite_only(pn if len(numbers) > 1 or excite not in (None, "", "auto") else None):
                 sim = module.build(values)
@@ -281,6 +275,9 @@ def run_model(module, values: dict, *, excite: str | None = None, sim_path: str,
             if len(ports_to_run) > 1:
                 log(f"fairbeam: run {k + 1}/{len(ports_to_run)}: port {pn} excited, "
                     f"{len(numbers) - 1} terminated")
+            sim.retain_nf2ff = retain_nf2ff
+            if retain_nf2ff and sim.nf2ff is None:
+                raise ValueError("NF2FF retention needs the far-field monitor enabled before running")
             sim.run(path, threads=threads, echo=echo, engine=engine, exact=exact)
             sim.evaluate(n_freq=n_freq, pattern_freqs=pattern_freqs, **angular)
             if pattern_freqs is None and sim.results.get("farfield"):
@@ -290,6 +287,10 @@ def run_model(module, values: dict, *, excite: str | None = None, sim_path: str,
         # nothing was excited (no ports, or none marked as excited): say so instead of an IndexError
         raise ValueError("the model has no excited port: add a port (or mark one as excited) before running")
     primary = sims[0][1]
+    if retain_nf2ff:
+        primary._retained_nf2ff_sources = [
+            {"port": pn, "path": s.sim_path, "descriptor": s._retained_nf2ff}
+            for pn, s in sims if getattr(s, "_retained_nf2ff", None) is not None]
     merge(primary, sims, numbers, element_patterns)
     primary.run_stats["wall_time_total_s"] = round(time.time() - t0, 2)
     return primary

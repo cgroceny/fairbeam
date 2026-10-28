@@ -3,8 +3,9 @@ import { batch, createComputed, createMemo, createSignal, on, type Accessor } fr
 import type { Bundle } from "../types";
 import { arrayFarField, mainBeam, portCentre, steeringPhases, uniformWeights, type Weight } from "./array.ts";
 import { elementPatterns, elementPatternsAt } from "./sparams.ts";
+import { wrapScanPhi } from "./arrayAnalysis.ts";
 
-export type ScanPlane = 0 | 90;
+export type ScanPlane = number;
 export function arrayAxisPhi(b: Bundle | null, ports: number[]): ScanPlane {
   if (!b || ports.length < 2) return 0;
   const pts = ports.map(p => portCentre(b, p)).filter((p): p is NonNullable<typeof p> => !!p);
@@ -41,11 +42,12 @@ export function createArraySession(readSource: Accessor<Bundle | null>, readFreq
   const override = () => active() && !options.comparing?.() ? steered() : null;
   const steer = (theta0: number, phi0: ScanPlane) => {
     const b = source(), s = set();
-    if (!b || !s || !Number.isFinite(theta0)) return;
+    if (!b || !s || !Number.isFinite(theta0) || !Number.isFinite(phi0) || Math.abs(theta0) > 90) return;
+    phi0 = wrapScanPhi(phi0);
     const ports = s.elements.map(e => e.port);
     const phases = steeringPhases(b, ports, s.f, Math.abs(theta0), theta0 < 0 ? phi0 + 180 : phi0);
     const next = new Map(weights());
-    for (const p of ports) next.set(p, { ampDb: next.get(p)?.ampDb ?? 0, phaseDeg: Math.round(phases.get(p) ?? 0) });
+    for (const p of ports) next.set(p, { ampDb: next.get(p)?.ampDb ?? 0, phaseDeg: phases.get(p) ?? 0 });
     batch(() => { setScanTheta(theta0); setScanPhi(phi0); setWeights(next); setActive(true); });
   };
   return { source, sets, set, hasArray: () => !!set(), weights, setWeights, active, setActive,

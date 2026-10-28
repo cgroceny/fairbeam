@@ -8,7 +8,7 @@ This is an opt-in research integration, not a production Floquet port or general
 
 1. Installed desktop users should follow the [experimental solver guide](EXPERIMENTAL-SOLVERS.md); there is no source-build prerequisite. Contributors running this source revision should use the normal [source setup](FROM-SOURCE.md).
 2. In Design, open Simulation → Experimental solvers.
-3. Choose a backend and enter its local executable/package path. Check availability before submitting. A missing or incompatible backend prevents submission.
+3. Choose a backend and enter its local executable/package path. The stock PEC/PMC cell can use the installed openEMS runtime with a blank path. Check availability before submitting. A missing or incompatible backend prevents submission.
 4. Submit a bounded experiment. It waits behind any existing simulation; cancellation uses the same process-tree cleanup as the ordinary queue.
 5. Select the run in the research history to inspect its result. Closing the panel does not cancel an active run. Reopening history retrieves the saved result.
 
@@ -35,6 +35,62 @@ Choose cell periods, the front/back S-parameter reference planes, frequency band
 Each result comes from an empty-reference/sample pair. The panel plots S11 and S21 in dB and includes a numerical table and provenance. Full complex values, CSV, NPZ, generated XML, probes and logs are retained in the job directory. Numerical QA checks energy decay, empty-reference reflection and an upper bound on co-polar power. Reference fixtures also check an analytical response. Co-polar power alone cannot establish conservation when power is converted into another polarization.
 
 **A passed run is not a mesh-convergence certificate.** The result explicitly records `mesh_convergence_checked: false`. Compare complex responses across mesh levels for each new design, and establish an independent physical reference before using the result for engineering decisions. Failed numerical QA preserves outputs but marks the job failed.
+
+## Stock openEMS PEC/PMC cell
+
+Choose **Stock openEMS · PEC/PMC cell** for the installed CPU runtime, without the
+experimental periodic patch. This is a symmetry-boundary model: Ey excitation,
+normal propagation along +z, PMC on the two x faces, PEC on the two y faces and
+16-cell PML at both z ends. It has no Bloch phase, Floquet ports, oblique incidence,
+cross-polarized response or multimode scattering output. The boundary convention
+follows the upstream [parallel-plate tutorial](https://docs.openems.de/en/latest/python/openEMS/Tutorials/Parallel_Plate_Waveguide.html).
+
+The slab fixture or current Design must consist of constant, lossless isotropic
+dielectric boxes or PEC boxes/sheets. Every box must have an x- and y-reflected
+counterpart with the same material and priority; a centered box is its own
+counterpart. Admission compares the box multiset, not just its bounding envelope.
+Only 32 binary64 ULPs at the coordinate scale are allowed for expression roundoff;
+this is not a physical-distance or mesh tolerance. Ambiguous equal-priority
+material overlaps, including a PEC sheet with the same priority inside a dielectric,
+are refused. Geometry, material losses, material-level sheet-thickness metadata,
+dispersion, transforms, ports or other unsupported physics are never removed to
+make a Design fit. An unsupported Design must be changed explicitly by its author.
+
+The setup uses the same bounded uniform-mesh policy as the research box controls:
+20, 30 or 40 cells per wavelength, at most 64 boxes and 500,000 cells, 80,000 time
+steps and 180 seconds per native solve. Both runs use one explicit conservative
+vacuum-Courant time step (supported dielectrics have εr ≥ 1). The complete mesh,
+probe locations and measured probe time step must agree. Failure, cancellation,
+nonconvergence or an invalid empty reference prevents a sample solve. There is no
+automatic retry or time-limit extension. Raw probes, logs, XML, input and binary
+hashes, CSV and complex arrays remain in the research job directory.
+
+Results contain co-polar S11/S21 referred to the selected front/back sample faces.
+Wrapped reflection phase uses exp(+jωt) and the front face as its reference; it is
+unavailable where |S11| < 0.001 (−60 dB), where reflection phase is poorly defined.
+The phase floor is an interpretation bound, not measured instrument dynamic range.
+The CSV includes the actual frequency, complex S values, phase and any reliable
+material inversion. JSON export retains the result's complete recorded provenance.
+
+**Retrieve slab εr and μr (NRW)** is optional and is admitted only for one homogeneous
+dielectric slab filling the cross-section between the selected faces. Its thickness
+is exactly `back − front`; a patterned surface or a PEC reflector cannot be relabeled
+as an effective homogeneous material. The existing Nicolson–Ross–Weir inversion
+uses group delay with the explicit nonmagnetic material constraint to choose a
+branch. The half-wave reliability floor is 0.3 by default, with the stricter 0.5
+option; it cannot be reduced here. Opaque, ambiguous-branch and unreliable
+half-wave points stay unavailable in the table and CSV, while the raw inversion,
+branch segments and masks remain in JSON. Imaginary parts follow exp(+jωt), so a
+passive dielectric loss would have a negative imaginary part under this convention.
+
+Completion is **results_exported**, never a validated-material or mesh-convergence
+certificate. Required numerical gates cover energy decay, empty-reference
+reflection ≤ 0.001 and co-polar power ≤ 1.01, with an absolute complex-S error ≤ 0.02
+for a fixed analytical fixture. These gates do not establish general conservation
+or physical accuracy. Native stock-binary air, PEC-reflector and slab controls,
+independent phase checks and mesh refinement remain necessary for platform
+qualification. PMC wall discretization has its own uncertainty. This interface
+does not resolve the separate periodic/Floquet or seam-Q research questions.
 
 ## Elmer FEM cavity
 
@@ -71,6 +127,7 @@ Run the repository checks in `AGENTS.md`, plus:
 ```powershell
 python -m unittest discover -s python/tests -p test_periodic_cell.py -v
 python -m unittest discover -s python/tests -p test_research_jobs.py -v
+python -m unittest discover -s python/tests -p test_stock_cell.py -v
 npm run check:research
 ```
 
