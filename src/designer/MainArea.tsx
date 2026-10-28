@@ -28,7 +28,7 @@ import { transformRequest, setTransformRequest } from "./transforms";
 
 // the tab names in the UI language (MAIN_TAB_LABELS holds the English ones)
 const TAB_KEYS: Record<MainTabId, string> = {
-  array: "dock.results.array", "3d": "mainTabs.view3d", sparams: "mainTabs.sparams", impedance: "mainTabs.impedance", vswr: "mainTabs.vswr", smith: "mainTabs.smith",
+  diversity: "mimo.title", array: "dock.results.array", "3d": "mainTabs.view3d", sparams: "mainTabs.sparams", impedance: "mainTabs.impedance", vswr: "mainTabs.vswr", smith: "mainTabs.smith",
   efficiency: "mainTabs.efficiency", pattern: "mainTabs.pattern", table: "mainTabs.table", summary: "mainTabs.summary", fieldmap: "mainTabs.fieldmap",
 };
 const tabLabel = (id: MainTabId) => (TAB_KEYS[id] ? t(TAB_KEYS[id]) : MAIN_TAB_LABELS[id]);

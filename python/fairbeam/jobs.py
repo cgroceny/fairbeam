@@ -179,7 +179,8 @@ class Job:
     PUBLIC = ("id", "model", "model_id", "model_path", "params", "overrides", "threads", "name", "status",
               "phase", "created", "started", "finished", "exit_code", "bundle", "error", "end_criteria_db",
               "requested_end_criteria_db", "engine", "label", "sweep", "kind", "optimize", "last_progress",
-              "stats", "info", "pid", "proc_start", "command", "sim_dir", "points", "mesh_density", "excite", "input_snapshot", "research", "result")
+              "stats", "info", "pid", "proc_start", "command", "sim_dir", "points", "mesh_density", "excite", "input_snapshot", "research", "result",
+              "retain_nf2ff", "retained_nf2ff", "postprocess")
     MEMORY_EVENTS = 500  # events a finished job keeps in memory (the file keeps all of them)
     TRIMMED_TYPES = ("log", "progress")  # the bulky kinds; every other event is always kept
 
@@ -192,6 +193,9 @@ class Job:
         self.input_snapshot: dict | None = kw.get("input_snapshot")
         self.research: dict | None = kw.get("research")
         self.result: dict | None = kw.get("result")
+        self.retain_nf2ff: bool = kw.get("retain_nf2ff") is True
+        self.retained_nf2ff: dict | None = kw.get("retained_nf2ff")
+        self.postprocess: dict | None = kw.get("postprocess")
         self.params: dict = kw.get("params") or {}
         self.overrides: dict = kw.get("overrides") or {}
         self.threads: int = int(kw.get("threads") or 1)
@@ -607,6 +611,9 @@ class JobManager:
         return str(snapshot)
 
     def default_command(self, job: Job) -> list[str]:
+        if job.kind == "postprocess":
+            return [self.python, "-m", "fairbeam.nf2ff_postprocess", "--request", str(job.dir / "nf2ff-request.json"),
+                    "--sha256", job.postprocess["request_sha256"]]
         if job.kind == "research":
             return [self.python, "-m", "fairbeam.research", "--snapshot", self.input_path(job),
                     "--sha256", job.research["snapshot_sha256"], "--outdir", str(job.dir / "research")]
@@ -614,6 +621,8 @@ class JobManager:
             return self.optimize_command(job)
         cmd = [self.python, "-m", "fairbeam", "run", self.input_path(job), "--threads", str(job.threads),
                "--out", str(self.projects_dir)]
+        if job.retain_nf2ff:
+            cmd.append("--retain-nf2ff")
         if job.sim_dir:
             cmd += ["--sim-root", job.sim_dir]
         for k, v in job.overrides.items():
@@ -673,7 +682,9 @@ class JobManager:
                sweep: dict | None = None, kind: str = "run", optimize: dict | None = None,
                points: int | None = None, mesh_density: float | None = None, design_input: str | None = None,
                excite: str | None = None,
-               research_input: dict | None = None) -> Job:
+               research_input: dict | None = None, retain_nf2ff: bool = False) -> Job:
+        if type(retain_nf2ff) is not bool or retain_nf2ff and kind != "run":
+            raise ValueError("NF2FF retention is available on ordinary runs only")
         research_bytes = None
         if kind == "research":
             from .research import encode
@@ -706,7 +717,7 @@ class JobManager:
                   params=params or {}, overrides={k: str(v) for k, v in (overrides or {}).items()},
                   threads=threads, name=name, requested_end_criteria_db=end_criteria_db, engine=engine,
                   label=label, sweep=sweep, kind=kind, optimize=optimize, points=points, mesh_density=mesh_density, excite=excite,
-                  sim_dir=str(self.sim_root / "runs" / job_id) if self.sim_root else None)
+                  sim_dir=str(self.sim_root / "runs" / job_id) if self.sim_root else None, retain_nf2ff=retain_nf2ff)
         job.dir.mkdir(parents=True, exist_ok=True)
         if snapshot_bytes is not None:
             # A fixed relative filename avoids trusting paths loaded from persisted job JSON.
@@ -732,6 +743,131 @@ class JobManager:
         self.queue.put(job.id)
         self._changed()
         return job
+
+    def retained_source(self, job_id: str) -> tuple[Job, dict, Path]:
+        """Resolve a known local run receipt, never an uploaded/imported manifest."""
+        from .nf2ff_archive import MANIFEST, safe_root, safe_file, file_digest, validate_descriptor
+        job = self.jobs.get(job_id)
+        if job is None:
+            raise KeyError(job_id)
+        if job.status != "done" or job.kind != "run" or not job.retained_nf2ff or not job.sim_dir or not self.sim_root:
+            raise ValueError("this run has no retained NF2FF data; run again with retention enabled")
+        raw = safe_root(job.retained_nf2ff["root"])
+        sim_dir = Path(job.sim_dir).resolve()
+        if self.sim_root.resolve() not in sim_dir.parents or raw.parent != sim_dir:
+            raise ValueError("retained source is outside the original job's raw folder")
+        path = safe_file(raw, MANIFEST)
+        if path.stat().st_size > 32 * 1024 * 1024 or file_digest(path) != job.retained_nf2ff["sha256"]:
+            raise ValueError("retained source manifest differs from its run receipt")
+        m = json.loads(path.read_bytes())
+        if m.get("root") != str(raw) or m.get("schema") != "fairbeam.nf2ff-retained/1":
+            raise ValueError("invalid retained source ownership")
+        if not job.bundle or Path(job.bundle).name != job.bundle:
+            raise ValueError("original result is unavailable")
+        parent = self.projects_dir / job.bundle
+        if parent.is_symlink() or file_digest(parent) != m["parent"]["sha256"]:
+            raise ValueError("original result changed since retention")
+        for port in m["ports"]:
+            validate_descriptor(port["descriptor"])
+            for f in port["files"]:
+                if safe_file(raw, f["path"]).stat().st_size != f["bytes"]:
+                    raise ValueError("retained raw file is missing or changed")
+        return job, m, raw
+
+    def submit_postprocess(self, job_id: str, body: dict) -> Job:
+        from .nf2ff_archive import raw_lock
+        # Admission and queue ownership are one operation with source deletion.
+        with raw_lock():
+            return self._submit_postprocess_locked(job_id, body)
+
+    def _submit_postprocess_locked(self, job_id: str, body: dict) -> Job:
+        from .nf2ff_archive import admit_request, encode, digest, write_new
+        if not isinstance(body, dict) or set(body) - {"frequencies_hz", "theta_step", "phi_step"}:
+            raise ValueError("request only frequencies and angular steps for the original run")
+        source, manifest, raw = self.retained_source(job_id)
+        request = admit_request(manifest, body.get("frequencies_hz"), body.get("theta_step", 3), body.get("phi_step", 5))
+        snapshot_bytes = None
+        if source.input_snapshot:
+            snapshot_bytes = Path(self.input_path(source)).read_bytes()
+            if digest(snapshot_bytes) != manifest["source"]["sha256"]:
+                raise ValueError("original admitted Design differs from retained simulation input")
+        new_id = time.strftime("%Y%m%d-%H%M%S") + "-" + secrets.token_hex(3)
+        filename = f"farfield-{new_id}.json"
+        spec = {"schema": "fairbeam.nf2ff-request/1", "source": str(raw), "manifest_sha256": source.retained_nf2ff["sha256"],
+                "parent": str(self.projects_dir / source.bundle), "output": str(self.root / new_id / "nf2ff-result.json"), **request}
+        data = encode(spec)
+        job = Job(self.root, id=new_id, model=source.model, model_id=source.model_id,
+                  model_path="", kind="postprocess", name=filename[:-5], threads=1,
+                  params=dict(source.params), overrides=dict(source.overrides),
+                  postprocess={"source_job_id": job_id, "parent_sha256": manifest["parent"]["sha256"],
+                               "request_sha256": digest(data), "output_filename": filename, **request})
+        job.dir.mkdir(parents=True, exist_ok=False)
+        if snapshot_bytes is not None:
+            # Portable document completion must bind the derivative to the same
+            # admitted saved Design, even after the original job is removed.
+            job.input_snapshot = dict(source.input_snapshot)
+            snapshot = job.dir / "input" / job.input_snapshot["source_name"]
+            snapshot.parent.mkdir()
+            write_new(snapshot, snapshot_bytes)
+        write_new(job.dir / "nf2ff-request.json", data)
+        job.save()
+        job.publish({"type": "status", "status": "queued"})
+        job.publish({"type": "phase", "phase": "queued"})
+        with self.lock:
+            self.jobs[job.id] = job
+        self.queue.put(job.id)
+        self._changed()
+        return job
+
+    def _finish_postprocess(self, job: Job, code: int, stderr_tail: list[str]):
+        """Commit a staged derivative only after successful, uncancelled completion.
+
+        Holding the same job lock as cancel() makes publication and terminal
+        success indivisible. Failed/cancelled staging remains private evidence.
+        """
+        from .nf2ff_archive import raw_lock, safe_root, safe_file, digest, write_new
+        with raw_lock(), job.lock:
+            if job.cancel_requested:
+                self._finish(job, "interrupted" if self._stopping else "cancelled",
+                             error=job.error if self._stopping else None)
+                return
+            if code != 0:
+                self._finish(job, "failed", error=stderr_tail[-1] if stderr_tail else f"exit code {code}", stderr_tail=stderr_tail[-20:])
+                return
+            try:
+                request_bytes = safe_file(job.dir, "nf2ff-request.json").read_bytes()
+                if digest(request_bytes) != job.postprocess["request_sha256"]:
+                    raise ValueError("postprocessing request changed before publication")
+                spec = json.loads(request_bytes)
+                source, manifest, raw = self.retained_source(job.postprocess["source_job_id"])
+                if (spec.get("output") != str(job.dir / "nf2ff-result.json")
+                        or spec.get("source") != str(raw)
+                        or spec.get("manifest_sha256") != source.retained_nf2ff["sha256"]):
+                    raise ValueError("postprocessing staging or source identity changed")
+                data = safe_file(job.dir, "nf2ff-result.json").read_bytes()
+                result = json.loads(data)
+                receipt = result.get("postprocess", {})
+                expected_request = {k: spec[k] for k in ("frequencies_hz", "theta_step", "phi_step")}
+                if (receipt.get("schema") != "fairbeam.nf2ff-postprocess/1"
+                        or receipt.get("method") != "NF2FF-only" or receipt.get("fdtd_rerun") is not False
+                        or receipt.get("parent_sha256") != job.postprocess["parent_sha256"]
+                        or receipt.get("parent_sha256") != manifest["parent"]["sha256"]
+                        or receipt.get("manifest_sha256") != spec["manifest_sha256"]
+                        or receipt.get("source_identity") != manifest["source"]["identity"]
+                        or receipt.get("request") != expected_request
+                        or result.get("model", {}).get("id") != manifest["model_id"]):
+                    raise ValueError("postprocessing result differs from its admitted source or request")
+                filename = job.postprocess["output_filename"]
+                if filename != f"farfield-{job.id}.json":
+                    raise ValueError("invalid postprocessing output filename")
+                safe_root(self.projects_dir)
+                write_new(self.projects_dir / filename, data)
+                job.bundle = filename
+                job.postprocess["result_sha256"] = digest(data)
+                job.publish({"type": "result", "bundle": filename})
+                self._finish(job, "done", error=None)
+            except (OSError, ValueError, TypeError, KeyError, AttributeError) as exc:
+                self._finish(job, "failed", error=str(exc), stderr_tail=stderr_tail[-20:])
 
     def submit_research(self, body: dict, *, admitted_source: dict | None = None) -> Job:
         from .research import prepare
@@ -804,6 +940,13 @@ class JobManager:
         return jobs
 
     def delete(self, job_id: str, delete_bundle: bool = False) -> dict:
+        from .nf2ff_archive import raw_lock
+        with raw_lock():
+            if any(not j.terminal and j.postprocess and j.postprocess.get("source_job_id") == job_id for j in self.jobs.values()):
+                raise ValueError("this source has a queued or running far-field transform")
+            return self._delete_unlocked(job_id, delete_bundle)
+
+    def _delete_unlocked(self, job_id: str, delete_bundle: bool = False) -> dict:
         """Remove a finished job from the history (its folder under ``root``) and its raw openEMS
         output (``sim_dir``, only when it lies inside ``sim_root``). With ``delete_bundle`` the
         bundle it wrote is removed too, but only a ``*.json`` file directly inside the projects
@@ -936,7 +1079,7 @@ class JobManager:
                 job.proc = popen_group(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
                                        stdin=subprocess.DEVNULL, env=child_env(), cwd=str(PACKAGE_ROOT.parent),
                                        **({"creationflags": subprocess.CREATE_NO_WINDOW}
-                                          if WINDOWS and job.kind == "research" else {}))
+                                          if WINDOWS and job.kind in ("research", "postprocess") else {}))
             except OSError as e:
                 log.close()
                 self._finish(job, "failed", error=f"could not start: {e}")
@@ -976,6 +1119,10 @@ class JobManager:
         if not drained and not job.cancel_requested:
             self._finish(job, "failed", error="run output capture was incomplete after the process exited",
                          stderr_tail=stderr_tail[-20:])
+            return
+
+        if job.kind == "postprocess":
+            self._finish_postprocess(job, code, stderr_tail)
             return
 
         if job.kind == "research" and not job.cancel_requested:
@@ -1025,6 +1172,16 @@ class JobManager:
 
     def _handle(self, job: Job, parser: ProgressParser, line: str, stream: str):
         job.publish({"type": "log", "stream": stream, "line": line})
+        if job.kind == "run" and job.retain_nf2ff and line.startswith("fairbeam: retained-nf2ff "):
+            try:
+                receipt = json.loads(line[len("fairbeam: retained-nf2ff "):])
+                if (set(receipt) != {"root", "sha256"} or not re.fullmatch(r"[a-f0-9]{64}", receipt["sha256"])
+                        or not job.sim_dir or Path(receipt["root"]).resolve().parent != Path(job.sim_dir).resolve()):
+                    raise ValueError("invalid retained NF2FF receipt")
+                job.retained_nf2ff = receipt
+                job.save()
+            except (ValueError, TypeError, KeyError):
+                job.retained_nf2ff = None
         if job.kind == "research":
             if line.startswith("fairbeam-research: "):
                 try:
@@ -1053,6 +1210,8 @@ class JobManager:
                 else:
                     job.stats = solver_stats
             elif kind == "result":
+                if job.kind == "postprocess":
+                    continue  # staging is private until _finish_postprocess commits it
                 job.bundle = ev["bundle"]
             elif kind == "opt_start":
                 job.stats.update(evaluations=0, max_evals=ev.get("max_evals"),

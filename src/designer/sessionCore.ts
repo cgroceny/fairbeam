@@ -13,9 +13,9 @@ export interface HistoryStep { index: number; label: string; at: number; target:
 export interface HistoryMark { text: string; undo: string[]; redo: string[]; history: HistoryEntry[]; position: number; file: string | undefined; metadataRevision: number; sessionId: string; documentRevision: number }
 
 export interface DesignerSessionEffects { edited?: (previewChanged: boolean) => void; restored?: (previewChanged: boolean) => void; disposed?: () => void }
-/** Sweep plans and symbol choices are saved and undoable without rebuilding geometry. */
+/** Sweep plans, requirement masks and symbol choices are saved and undoable without rebuilding geometry. */
 function previewContent(text: string): string {
-  const { parameter_sweep: _sweep, ...content } = JSON.parse(text);
+  const { parameter_sweep: _sweep, requirements: _requirements, ...content } = JSON.parse(text);
   for (const r of content.resistors ?? []) delete r.symbol;
   return JSON.stringify(content);
 }
@@ -96,6 +96,7 @@ export function createDesignerSession(effects: DesignerSessionEffects = {}) {
       delete copy.python_source_model;
       delete copy.python_source_hash;
       delete copy.parameter_sweep;
+      delete copy.requirements;
       for (const r of (copy.resistors ?? []) as Design["resistors"]) delete r.symbol;
       delete copy.wcs; // the drawing frame is UI state saved with the design, not geometry
       return JSON.stringify(copy);
@@ -225,7 +226,7 @@ export function createDesignerSession(effects: DesignerSessionEffects = {}) {
       batch(() => {
         setDraft(produce((d) => {
           fn(d);
-          // Parameter sweeps are designer metadata and do not change what the source script builds.
+          // Parameter sweeps and requirements are metadata and do not change what the source script builds.
           // Any other content edit detaches the imported script so reopening Python shows this Design.
           if (linkedPythonBase !== null && pythonSourceBase(d) !== linkedPythonBase) {
             delete d.python_source_model;

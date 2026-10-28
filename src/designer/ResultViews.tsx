@@ -1,9 +1,14 @@
+import LudwigPolarisationPanel from "../components/LudwigPolarisationPanel";
+import { isLudwigQuantity } from "../lib/ludwig";
+import RetainedFarfieldPanel from "../components/RetainedFarfieldPanel";
 import ResultArray from "./ResultArray";
+import ResultDiversity from "./ResultDiversity";
 import { designerArray } from "./arraySession";
 import { arrayOverrideFor } from "../lib/currentArray";
 import { appModeRevision } from "../workspace";
 import { openUserProject } from "../runner/openProject";
 import { powerWaveReflection } from "../lib/powerWaves";
+import { requirementPlotSegments } from "../lib/requirementsSnapshot";
 // The result views of the designer's main-area tabs (MainArea.tsx): S-parameters, impedance, VSWR,
 // Smith chart, pattern cuts and a table of the shown run (designRun.ts designResult), and the toolbar
 // over them (the shown run, Compare, the data format, Copy data, CSV, Touchstone). Several runs
@@ -31,7 +36,7 @@ import { nearestIndex, sweep } from "../lib/rf";
 import { hasSParameterPhase, mappedPairLabel, pairLabel, sMatrix } from "../lib/sparams";
 import { efficiencyIssue, efficiencyWarningUi } from "../lib/runText";
 import { efficiencyData, effectiveQuantity, farfieldSummary, toDb, type PortEfficiency } from "../lib/farfieldQuantity";
-import { efficiencyQuantity, radiationQuantity, efficiencyUnit, patternQuantity, setEfficiencyUnit } from "../lib/patternQuantityStore";
+import { ludwigReferenceDeg, efficiencyQuantity, radiationQuantity, efficiencyUnit, patternQuantity, setEfficiencyUnit } from "../lib/patternQuantityStore";
 import { CircularReadouts, lobeText, PatternQuantitySelect, quantityFallbackNote, totalEffText } from "../components/FarfieldCard";
 import type { DownloadResult } from "../lib/download";
 import { downloadToast } from "../lib/toast";
@@ -133,13 +138,24 @@ function ResultSParams(props: { b: Bundle; format: ResultDataFormat }) {
     return [{ label: "Zin", value: `${num(s.zRe[k], 1)} ${s.zIm[k] >= 0 ? "+" : "−"} j${num(Math.abs(s.zIm[k]), 1)} Ω` }];
   };
   const what = () => t(mp() ? (cmp() ? "results.aria.pickedSParamsCompared" : "results.aria.pickedSParams") : (cmp() ? "results.aria.inputReflectionCompared" : "results.aria.inputReflection"));
+  const requirementMasks = createMemo(() => {
+    if (cmp()) return [];
+    const m = S();
+    if (!m || m.physicalPorts === null || m.modalChannels) return [];
+    const physical = m.physicalPorts ?? m.ports;
+    const pairs = designSParams.selectedPairs().flatMap(([i, j]) => {
+      const a = physical[m.ports.indexOf(i)], b = physical[m.ports.indexOf(j)];
+      return a !== undefined && b !== undefined ? [[a, b] as [number, number]] : [];
+    });
+    return requirementPlotSegments(props.b, pairs);
+  });
   return (
     <div class="rdk-split">
       <Show when={groups().some((g) => g.series.length)} fallback={<div class="panel-empty">{t("sparams.chooseOne")}</div>}>
         {/* one pane per quantity of the data format; the panes share the Markers button and the markers */}
         <StackedCharts groups={groups()} inspectionChart={`designer:${designResult()?.file ?? ""}:reflection`}
           ariaLabel={(g) => t("results.aria.vsFrequency", { title: g.title, what: what() })}
-          pane={(g) => (g.key === "db" ? { bands: cmp() ? [] : bands().map((b) => ({ x0: b.f_lo / 1e9, x1: b.f_hi / 1e9 })), extra } : {})} />
+          pane={(g) => (g.key === "db" ? { bands: cmp() ? [] : bands().map((b) => ({ x0: b.f_lo / 1e9, x1: b.f_hi / 1e9 })), limitSegments: requirementMasks(), extra } : {})} />
       </Show>
       <Show when={!cmp()} fallback={<div class="rdk-side"><SpTools show={mp()} format={props.format} /></div>}>
         <div class="rdk-side"><SpTools show={mp()} format={props.format} /><dl class="kv">
@@ -463,6 +479,8 @@ function ResultPattern(props: { b: Bundle }) {
             <Show when={new Set(ffs().map((f) => f.port)).size > 1}><dt>{t("farfield.drivenPort")}</dt><dd class="mono">P{summary()?.port ?? "?"}</dd></Show>
             <dt>θ = 0°</dt><dd>+z</dd>
           </dl>
+          <Show when={!override() && ff()?.fields}><LudwigPolarisationPanel field={ff()!} halfSpace={!!props.b.half_space} showLimits={!isLudwigQuantity(shownQuantity())} /></Show>
+          <Show when={!cmp() && !override()}><RetainedFarfieldPanel file={designResult()?.file} frequency={ff()?.f} /></Show>
       </PatternCutPanel>
     </Show>
   );
@@ -517,6 +535,7 @@ function ResultBodyContent(props: { view: MainResultView; b: Bundle; format: Res
   return (
     <Switch>
       <Match when={props.view === "array"}><ResultArray /></Match>
+      <Match when={props.view === "diversity"}><p class="note">{t("mimo.singleRun")}</p><ResultDiversity b={props.b} /></Match>
       <Match when={props.view === "sparams"}><ResultSParams b={props.b} format={props.format} /></Match>
       <Match when={props.view === "impedance"}><ResultImpedance b={props.b} /></Match>
       <Match when={props.view === "vswr"}><ResultVswr b={props.b} /></Match>
@@ -605,7 +624,7 @@ export function ResultToolbar(props: { view: MainResultView }) {
       && (props.view === "array" ? designerArray.steered() : designerArray.override())
       ? { patternEntries: [{ label: t("farfield.arrayTag"), field: (props.view === "array" ? designerArray.steered() : designerArray.override())! }] } : {}),
     radiationQuantity: props.view === "efficiency" && efficiencyQuantity() !== "efficiency" ? radiationQuantity() : undefined,
-    patternCut: patternCutChoice(),
+    ludwigReferenceDeg: ludwigReferenceDeg(), patternCut: patternCutChoice(),
     patternPrincipalAvailable: !comparedRuns().length,
     patternFallbackPhi: cutPhi(),
     fieldPlane: resultFocus()?.map,
@@ -628,7 +647,7 @@ export function ResultToolbar(props: { view: MainResultView }) {
   const exportFrequency = () => props.view === "array" ? designerArray.set()?.f : props.view === "pattern" ? resultFocus()?.f ?? designResult()?.bundle.results?.farfield[0]?.f : undefined;
   const exportBase = (b: Bundle) => resultExportStem(b, props.view, exportFrequency()) + (portProcessingInfo(b) ? "_postprocessed" : "");
   const plot = () => bar.closest(".dw-result")?.querySelector<HTMLElement>(".dw-result-plot") ?? null;
-  const ready = () => (props.view !== "array" || !!designerArray.steered() && !resultFocus()?.compare?.length)
+  const ready = () => props.view !== "diversity" && (props.view !== "array" || !!designerArray.steered() && !resultFocus()?.compare?.length)
     && (!["impedance", "summary"].includes(props.view) || designerSmallAntenna.source() === designResult()?.bundle)
     && !!designResult()?.bundle.results && (!resultFocus() || resultFocus()?.file === designResult()?.file);
   const figureReady = () => ready() && comparisonReady() && !["table", "summary", "fieldmap"].includes(props.view);
@@ -674,7 +693,7 @@ export function ResultToolbar(props: { view: MainResultView }) {
   };
   const exportTouchstone = async () => {
     const run = designResult();
-    if (!run?.bundle.results) return;
+    if (!run?.bundle.results || props.view === "diversity") return;
     try {
       const runs = await comparedBundles(run);
       saved(await exportResultTouchstone(run.bundle, resultExportStem(run.bundle, "sparams") + (portProcessingInfo(run.bundle) ? "_postprocessed" : ""), runs));
@@ -683,7 +702,7 @@ export function ResultToolbar(props: { view: MainResultView }) {
   onMount(()=> {
     const chart=()=>ready() && comparisonReady() && visibleFigureSvgs(plot()).length>0;
     const figure = exportFigure;
-    onCleanup(registerSurfaceExports("design-result",{ready:chart,screenshot:()=>figure("png"),actions:()=>[
+    onCleanup(registerSurfaceExports("design-result",{ready:chart,screenshot:()=>figure("png"),actions:()=>props.view === "diversity" ? [] : [
       {id:"result-csv",label:t("contextExport.resultCsv"),disabled:!ready()||!resultDataTable(designResult()?.bundle,dataView(),resultFocus()?.f,dataOptions()).rows.length,reason:t("contextExport.noData"),run:exportData},
       ...(props.view === "array" ? [] : [{id:"result-touchstone",label:t("contextExport.touchstone"),disabled:!ready()||!sMatrix(designResult()!.bundle)?.pairs.length,reason:t("contextExport.noSParameters"),run:exportTouchstone}]),
       ...(["svg","png"] as const).map(format=>({id:`figure-${format}`,label:t("contextExport.figureFormat",{format:format.toUpperCase()}),disabled:!chart(),reason:t("contextExport.noChart"),run:()=>figure(format)})),
@@ -693,7 +712,7 @@ export function ResultToolbar(props: { view: MainResultView }) {
   onMount(() => {
     const panel = bar.closest<HTMLElement>(".dw-result");
     const onKey = (e: KeyboardEvent) => {
-      if (!(e.ctrlKey || e.metaKey) || e.key.toLowerCase() !== "c" || !designResult()) return;
+      if (props.view === "diversity" || !(e.ctrlKey || e.metaKey) || e.key.toLowerCase() !== "c" || !designResult()) return;
       if ((e.target as HTMLElement).closest("input, textarea, select, [contenteditable='true']") || window.getSelection()?.toString()) return;
       e.preventDefault();
       void copyData();
@@ -705,7 +724,7 @@ export function ResultToolbar(props: { view: MainResultView }) {
   const shown = () => {
     const r = designResult();
     if (!r) return "";
-    const others = resultFocus()?.compare?.length ?? 0;
+    const others = props.view === "diversity" ? 0 : resultFocus()?.compare?.length ?? 0;
     const name = `${runShortLabel(r.file)} · ${runLabel(r.file)}`;
     return others ? `${name} +${others}` : name;
   };
@@ -717,7 +736,7 @@ export function ResultToolbar(props: { view: MainResultView }) {
       <span class="dock-hint rdk-shown" title={designResult()?.file}>{shown()}</span>
       <Show when={[designResult(), ...comparedRuns()].some(run => run && portProcessingInfo(run.bundle))}><span class="chip" title={t("portProcessing.originalContext")}>{t("portProcessing.badge")}</span></Show>
       {/* a field map belongs to one run: no comparison, and no S-parameter data format */}
-      <Show when={props.view !== "fieldmap" && props.view !== "array"}>
+      <Show when={props.view !== "fieldmap" && props.view !== "array" && props.view !== "diversity"}>
       <div class="rdk-compare-control">
         <button ref={compareTrigger} class="btn btn-ghost btn-sm" aria-haspopup="dialog" aria-expanded={compareOpen()} aria-controls="rdk-compare-popover" aria-label={t("results.toolbar.compare")} onClick={toggleComparePicker}>
           <GitCompareArrows size={14} aria-hidden="true" /> <span class="btn-label">{t("results.toolbar.compare")}</span>
@@ -775,12 +794,13 @@ export function ResultToolbar(props: { view: MainResultView }) {
           <Globe size={14} aria-hidden="true" /> {t("results.toolbar.show3d")}
         </button>
       </Show>
-      <Show when={props.view !== "summary" && props.view !== "fieldmap" && props.view !== "array"}>
+      <Show when={props.view !== "summary" && props.view !== "fieldmap" && props.view !== "array" && props.view !== "diversity"}>
       <select class="btn btn-ghost btn-sm result-format" aria-label={t("results.toolbar.formatAria")} value={formatForView(resultDataFormat(), props.view === "sparams")} onChange={(event) => writeResultDataFormat(event.currentTarget.value as ResultDataFormat)}>
         <option value="plot">{t("results.format.plot")}</option><option value="db">dB</option><option value="db_phase">{t("results.format.dbPhase")}</option><option value="re_im">Re/Im</option><option value="mag_phase">{t("results.format.magPhase")}</option><option value="all">{t("results.format.all")}</option>
         <Show when={props.view === "sparams"}><option value="phase_unwrapped">{t("chart.q.unwrappedPhase")}</option><option value="gd">{t("chart.q.groupDelay")}</option></Show>
       </select>
       </Show>
+      <Show when={props.view !== "diversity"}>
       <button class="btn btn-ghost btn-sm rdk-copy" disabled={!ready()} classList={{ copied: copied() }} onClick={() => void copyData()} title={t("results.toolbar.copyDataTitle")} aria-live="polite">
         <Show when={copied()} fallback={<><Copy size={14} aria-hidden="true" /> {t("results.toolbar.copyData")}</>}><Check size={14} aria-hidden="true" /> {t("results.toolbar.copied")}</Show>
       </button>
@@ -791,6 +811,7 @@ export function ResultToolbar(props: { view: MainResultView }) {
         <button class="btn btn-ghost btn-sm" onClick={exportTouchstone} title={t("results.toolbar.touchstoneTitle")} aria-label={t("results.toolbar.touchstoneTitle")}>
           <FileChartLine size={14} aria-hidden="true" /> <span class="btn-short">{touchstoneExt()}</span>
         </button>
+      </Show>
       </Show>
       <Show when={!running()}>
         <button class="icon-btn icon-btn-sm dw-result-close" onClick={clearDesignResult} aria-label={t("results.toolbar.closeRun")} title={t("results.toolbar.closeRunTitle")}><X size={13} /></button>

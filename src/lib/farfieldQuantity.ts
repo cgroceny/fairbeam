@@ -1,5 +1,5 @@
 // Far-field quantities beside the stored directivity (docs/BUNDLE.md FarField): the gain and the
-// realized-gain patterns, the circular-polarisation partial directivities, and the efficiencies
+// realized-gain patterns, circular/Ludwig-3 partial directivities and ratios, and the efficiencies
 // (radiation, mismatch 1 − |S11|², total). The same formulas as the exporter (python/fairbeam
 // simulation.py): gain = D + 10·log10(η_rad), realized gain = D + 10·log10(η_rad·(1 − |S11(f)|²)) with
 // |S11|² of the driven port interpolated linearly at the far-field frequency. Pure (no Solid, no DOM),
@@ -9,13 +9,14 @@ import { mainBeam } from "./array.ts";
 import { efficiencyWarningUi } from "./runText.ts";
 import { t } from "../i18n/index.ts";
 import { axialRatioGrid, AXIAL_RATIO_MAX_DB } from "./circular.ts";
+import { complexFieldPort, isLudwigQuantity, ludwigGrids, XPD_MAX_DB } from "./ludwig.ts";
 
 import { originalPortResult } from "./portProcessingMetadata.ts";
 
-export type PatternQuantity = "directivity" | "gain" | "realized" | "rhcp" | "lhcp" | "axial_ratio";
-export const PATTERN_QUANTITIES: readonly PatternQuantity[] = ["directivity", "gain", "realized", "rhcp", "lhcp", "axial_ratio"];
-export const quantityUnit = (q: PatternQuantity) => q === "axial_ratio" ? "dB" : "dBi";
-export const quantityRange = (q: PatternQuantity) => q === "axial_ratio" ? AXIAL_RATIO_MAX_DB : 30;
+export type PatternQuantity = "directivity" | "gain" | "realized" | "rhcp" | "lhcp" | "axial_ratio" | "co" | "cross" | "xpd";
+export const PATTERN_QUANTITIES: readonly PatternQuantity[] = ["directivity", "gain", "realized", "rhcp", "lhcp", "axial_ratio", "co", "cross", "xpd"];
+export const quantityUnit = (q: PatternQuantity) => q === "axial_ratio" || q === "xpd" ? "dB" : "dBi";
+export const quantityRange = (q: PatternQuantity) => q === "axial_ratio" ? AXIAL_RATIO_MAX_DB : q === "xpd" ? 2 * XPD_MAX_DB : 30;
 /** The quantity's name in the UI language, read at render time (exported data use the English
  * name, tEn(`farfield.quantity.${q}`)). */
 export const QUANTITY_LABEL: Record<PatternQuantity, string> = {
@@ -25,6 +26,9 @@ export const QUANTITY_LABEL: Record<PatternQuantity, string> = {
   get rhcp() { return t("farfield.quantity.rhcp"); },
   get lhcp() { return t("farfield.quantity.lhcp"); },
   get axial_ratio() { return t("farfield.quantity.axial_ratio"); },
+  get co() { return t("farfield.quantity.co"); },
+  get cross() { return t("farfield.quantity.cross"); },
+  get xpd() { return t("farfield.quantity.xpd"); },
 };
 export const isPatternQuantity = (v: unknown): v is PatternQuantity => (PATTERN_QUANTITIES as readonly unknown[]).includes(v);
 
@@ -98,6 +102,8 @@ export function quantityAvailability(b: Bundle, ff: FarField, q: PatternQuantity
     ? { ok: true, reason: t(`farfield.reason.${q}`) } : { ok: false, reason: t("farfield.reason.noCp") };
   if (q === "axial_ratio") return axialRatioGrid(ff).some(row => row.some(Number.isFinite))
     ? { ok: true, reason: t("farfield.reason.axial_ratio") } : { ok: false, reason: t("farfield.reason.noAr") };
+  if (isLudwigQuantity(q)) return complexFieldPort(originalPortResult(b), ff) !== null && ludwigGrids(ff)[q].some(row => row.some(Number.isFinite))
+    ? { ok: true, reason: t(`farfield.reason.${q}`) } : { ok: false, reason: t("farfield.reason.noComplexFields") };
   if (radEfficiency(ff) === null) {
     return { ok: false, reason: ff.rad_efficiency === null ? t("farfield.reason.noRadEff") : t("farfield.reason.radEffNotPositive") };
   }
@@ -114,8 +120,8 @@ export const effectiveQuantity = (b: Bundle, ff: FarField, q: PatternQuantity): 
 
 /** The dB offset of the gain patterns from the directivity (0 for the others; null when unavailable). */
 export function quantityOffsetDb(b: Bundle, ff: FarField, q: PatternQuantity): number | null {
-  if (q === "directivity" || q === "rhcp" || q === "lhcp") return 0;
-  if (q === "axial_ratio") return null; // a ratio, never a directivity/gain offset
+  if (q === "directivity" || q === "rhcp" || q === "lhcp" || q === "co" || q === "cross") return 0;
+  if (q === "axial_ratio" || q === "xpd") return null; // a ratio, never a directivity/gain offset
   const eff = radEfficiency(ff);
   if (eff === null) return null;
   if (q === "gain") return toDb(eff);
@@ -123,9 +129,10 @@ export function quantityOffsetDb(b: Bundle, ff: FarField, q: PatternQuantity): n
   return mis !== null && mis > 0 ? toDb(eff * mis) : null;
 }
 
-/** The [theta][phi] grid in quantityUnit(q). AR always keeps missing data as gaps;
+/** The [theta][phi] grid in quantityUnit(q). AR and Ludwig-3 keep missing data as gaps;
  * callers choose effectiveQuantity for a single-field fallback, never mix dBi into an AR comparison. */
-export function quantityGrid(b: Bundle, ff: FarField, q: PatternQuantity): number[][] {
+export function quantityGrid(b: Bundle, ff: FarField, q: PatternQuantity, referenceDeg = 0): number[][] {
+  if (isLudwigQuantity(q)) return complexFieldPort(originalPortResult(b), ff) === null ? ff.theta.map(() => ff.phi.map(() => NaN)) : ludwigGrids(ff, referenceDeg)[q];
   if (q === "axial_ratio") return axialRatioGrid(ff);
   if (q === "rhcp" || q === "lhcp") return ff.cp?.[q === "rhcp" ? "rhcp_dbi" : "lhcp_dbi"]
     ?? ff.theta.map(() => ff.phi.map(() => NaN));
@@ -134,10 +141,11 @@ export function quantityGrid(b: Bundle, ff: FarField, q: PatternQuantity): numbe
   return off === 0 ? ff.directivity_dbi : ff.directivity_dbi.map((row) => row.map((v) => v + off));
 }
 
-/** The scale top: AR is 60 dB; other quantities are Dmax plus the gain offset in dBi.
- * Circular parts share Dmax as their top, so RHCP and LHCP compare on one scale. */
+/** The scale top: AR and XPD are 60 dB (XPD spans down to -60); other quantities use Dmax plus the gain offset in dBi.
+ * Circular and linear parts share Dmax as their top, so polarization components compare on one scale. */
 export function quantityMax(b: Bundle, ff: FarField, q: PatternQuantity): number {
   if (q === "axial_ratio") return AXIAL_RATIO_MAX_DB;
+  if (q === "xpd") return XPD_MAX_DB;
   return ff.dmax_dbi + (quantityOffsetDb(b, ff, effectiveQuantity(b, ff, q)) ?? Number.NaN);
 }
 

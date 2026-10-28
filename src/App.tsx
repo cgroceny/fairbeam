@@ -3,6 +3,7 @@ import PanelResizeHandles from "./components/PanelResizeHandles";
 import ToastHost from "./components/ToastHost";
 import { dismissToast, downloadToast, showToast } from "./lib/toast";
 import { createEffect, createSignal, For, lazy, on, onCleanup, onMount, Show } from "solid-js";
+import { instanceLazy } from "./lib/instanceLazy";
 import { ChevronsLeft, ChevronsRight, PanelLeft, PanelRight, TriangleAlert } from "lucide-solid";
 import Header from "./components/Header";
 import ModelPanel from "./components/ModelPanel";
@@ -27,7 +28,7 @@ import { SHORTCUTS } from "./designer/shortcuts";
 
 // Loaded on first use, not with the app: the 3D viewport, drawing code (+ jsPDF), export dialogs
 // (+ CST macro, zip, report), and the run/editor drawer.
-const Viewport = lazy(() => import("./scene/Viewport"));
+const Viewport = instanceLazy(() => import("./scene/Viewport"));
 const DrawingView = lazy(() => import("./components/DrawingView"));
 const ExportDialog = lazy(() => import("./components/ExportDialog"));
 const PackageDialog = lazy(() => import("./components/PackageDialog"));

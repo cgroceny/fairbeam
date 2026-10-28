@@ -9,6 +9,7 @@ import { ENC_F32, ENC_I16 } from "./sparams.ts";
 import { currentSchema, schemaFamily } from "./legacy.ts";
 import { portGroupProblem } from "./portGroups.ts";
 import { validRadiationSweep } from "./radiationFrequency.ts";
+import { complexFieldPort, readComplexFarField, COMPLEX_FIELD_FREQS_MAX, COMPLEX_FIELD_TOTAL_CELLS_MAX } from "./ludwig.ts";
 // messages shown in the UI (load errors and warnings), in the language of the moment
 import { t as msg } from "../i18n/index.ts";
 
@@ -218,6 +219,11 @@ export function validateBundle(raw: unknown): Validation {
     return true;
   });
   b.parts = keptParts;
+  // New quantitative complex fields cannot borrow an identity created by legacy port repair.
+  const originalComplexPortCount = Array.isArray(b.ports) ? b.ports.length : 0;
+  const complexPortsHadIdentity = Array.isArray(b.ports) && b.ports.length > 0
+    && b.ports.every(p => isObj(p) && Number.isSafeInteger(p.number) && (p.number as number) > 0)
+    && new Set(b.ports.map(p => (p as Obj).number)).size === b.ports.length;
   if (!Array.isArray(b.ports)) {
     if (b.ports !== undefined) warnings.push(msg("validate.portsNotList"));
     b.ports = [];
@@ -335,6 +341,7 @@ export function validateBundle(raw: unknown): Validation {
         if (!Array.isArray(r.bands)) r.bands = [];
         r.bands = (r.bands as unknown[]).filter((x) => isObj(x) && isNum(x.f_center) && isNum(x.f_lo) && isNum(x.f_hi));
         if (!Array.isArray(r.farfield)) r.farfield = [];
+        const complexBudgets = new Map<number, { count: number; cells: number }>();
         r.farfield = (r.farfield as unknown[]).filter((ff, i) => {
           const ok =
             isObj(ff) && isNum(ff.f) && Array.isArray(ff.theta) && Array.isArray(ff.phi) && Array.isArray(ff.directivity_dbi) &&
@@ -349,6 +356,15 @@ export function validateBundle(raw: unknown): Validation {
           if (!isNum(ff.dmax_dbi)) ff.dmax_dbi = Math.max(...(ff.directivity_dbi as number[][]).flat().filter(Number.isFinite), -100);
           if (ff.rad_efficiency !== null && !isNum(ff.rad_efficiency)) ff.rad_efficiency = null;
           if (ff.qa_warnings !== undefined && !(Array.isArray(ff.qa_warnings) && ff.qa_warnings.every((w) => typeof w === "string"))) delete ff.qa_warnings;
+          if (ff.fields !== undefined) {
+            const port = complexPortsHadIdentity && (b.ports as unknown[]).length === originalComplexPortCount ? complexFieldPort(b, ff) : null;
+            const used = port === null ? { count: 0, cells: 0 } : complexBudgets.get(port) ?? { count: 0, cells: 0 };
+            const cells = (ff.theta as number[]).length * (ff.phi as number[]).length;
+            if (port === null || used.count >= COMPLEX_FIELD_FREQS_MAX || used.cells + cells > COMPLEX_FIELD_TOTAL_CELLS_MAX || !readComplexFarField(ff)) {
+              warnings.push(msg("validate.ffComplexFields", { n: i + 1 }));
+              delete ff.fields;
+            } else complexBudgets.set(port, { count: used.count + 1, cells: used.cells + cells });
+          }
           if (ff.cp !== undefined) {
             const cp = ff.cp;
             const grid = (g: unknown) => Array.isArray(g) && g.length === (ff.theta as unknown[]).length &&

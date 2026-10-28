@@ -8,14 +8,15 @@ import { t } from "../i18n/index.ts";
 
 /** The result views that open as a main-area tab (the surface currents are drawn in the 3D view
  * itself, the log stays in the dock). */
-export type MainResultView = Extract<ResultView, "array" | "sparams" | "impedance" | "vswr" | "smith" | "efficiency" | "pattern" | "table" | "fieldmap" | "summary">;
+export type MainResultView = Extract<ResultView, "diversity" | "array" | "sparams" | "impedance" | "vswr" | "smith" | "efficiency" | "pattern" | "table" | "fieldmap" | "summary">;
 export type MainTabId = "3d" | MainResultView;
 
-export const MAIN_RESULT_VIEWS: readonly MainResultView[] = ["array", "sparams", "impedance", "vswr", "smith", "efficiency", "pattern", "table", "summary", "fieldmap"];
+export const MAIN_RESULT_VIEWS: readonly MainResultView[] = ["diversity", "array", "sparams", "impedance", "vswr", "smith", "efficiency", "pattern", "table", "summary", "fieldmap"];
 
 /** Tab names in the UI language (getters: read at render time, so the strip follows a language change). */
 export const MAIN_TAB_LABELS: Record<MainTabId, string> = {
   get "3d"() { return t("results.tab.3d"); },
+  get diversity() { return t("mimo.title"); },
   get array() { return t("dock.results.array"); },
   get sparams() { return t("results.tab.sparams"); },
   get impedance() { return t("results.tab.impedance"); },

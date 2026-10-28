@@ -1,19 +1,21 @@
 // Targeted UI contract regression using explicitly synthetic API responses, never solver evidence.
 import assert from "node:assert/strict";
 import { mkdir } from "node:fs/promises";
+import { join, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 import { createServer } from "vite";
 import puppeteer from "puppeteer-core";
 import { chromePath } from "./scenarios/stack.mjs";
 
 const server = await createServer({ server: { host: "127.0.0.1", port: 0 }, optimizeDeps: { entries: ["index.html"] }, logLevel: "error" });
 let browser;
-const evidence = new URL("../.impeccable/review/", import.meta.url);
+const evidence = resolve(process.env.FAIRBEAM_TEST_ARTIFACTS || fileURLToPath(new URL("../.impeccable/review/", import.meta.url)));
 const screenshots = !process.argv.includes("--no-screenshots");
 await mkdir(evidence, { recursive: true });
 try {
   await server.listen();
   const url = server.resolvedUrls.local[0];
-  browser = await puppeteer.launch({ executablePath: await chromePath(), headless: true, args: ["--no-sandbox", "--enable-unsafe-swiftshader"] });
+  browser = await puppeteer.launch({ executablePath: await chromePath(), headless: true, args: ["--no-sandbox", "--mute-audio", "--enable-unsafe-swiftshader"] });
   for (const language of ["en", "tr"]) {
     const context = await browser.createBrowserContext();
     const page = await context.newPage();
@@ -31,7 +33,7 @@ try {
       if (pathname.startsWith("/api/research/")) {
         requests.push(pathname);
         if (unavailable) return void respond({ error: "Synthetic server unavailable" }, 503);
-        if (pathname.endsWith("/probe")) return void respond({ backend: "periodic", available, reason: available ? undefined : "Synthetic capability unavailable" });
+        if (pathname.endsWith("/probe")) return void respond({ backend: JSON.parse(request.postData()).backend, available, reason: available ? undefined : "Synthetic capability unavailable" });
         if (request.method() === "POST" && pathname.endsWith("/cancel")) { jobs[0].status = "cancelled"; return void respond(jobs[0]); }
         if (request.method() === "POST") {
           submitted = JSON.parse(request.postData());
@@ -166,7 +168,7 @@ try {
     }), { observed: { url: "/api/runs?summary=1", method: "GET", body: null }, rejected: true, name: "AbortError", originalReason: true },
     "ordinary summary polling forwards the caller's AbortSignal and preserves its abort reason");
     assert.ok(await page.$(".research-chart svg"), "cancelled ordinary API request leaves the selected full result visible");
-    if (screenshots) await page.screenshot({ path: new URL(`research-${language}-desktop.png`, evidence).pathname.replace(/^\/(\w:)/, "$1") });
+    if (screenshots) await page.screenshot({ path: join(evidence, `research-${language}-desktop.png`) });
     await page.keyboard.press("Escape");
     await page.waitForSelector(".research-dialog", { hidden: true });
     const closedCount = requests.length;
@@ -181,6 +183,29 @@ try {
     detailConflict = false;
     await page.click(".research-results > .cluster button");
     await page.waitForSelector(".research-chart svg");
+    await page.select(".research-options select", "stock");
+    assert.equal(await page.$eval(start, e => e.disabled), true, "stock selection requires its own capability check");
+    assert.match(await page.$eval('.research-guide', e => e.textContent), /PEC\/PMC/);
+    await page.click(".research-options > button");
+    await page.waitForSelector(".research-options .status-good");
+    await page.click('[data-stock-nrw]');
+    await page.click(start);
+    await page.waitForFunction(() => document.querySelector(".research-results .cluster[aria-live] button"));
+    assert.equal(submitted.backend, "stock");
+    assert.equal(submitted.settings.nrw, true);
+    assert.equal(submitted.settings.nrw_sin_floor, .3);
+    assert.equal(submitted.settings.fixture, "slab");
+    jobs[0] = { ...jobs[0], status: "done", phase: "done", result: { backend: "stock", schema: "fairbeam.stock-result/1", status: "results_exported",
+      frequency_hz: [1e9, 2e9, 3e9], s11_real: [-1, 0, .5], s11_imag: [0, 0, 0], s21_real: [0, 1, .5], s21_imag: [0, 0, 0],
+      reflection_phase_deg: [180, null, 0], material: { requested: true, available: true, qualified: false, thickness_mm: 10,
+        reliable: [true, false, true], eps_real: [4, null, 4], eps_imag: [0, null, 0], mu_real: [1, null, 1], mu_imag: [0, null, 0] },
+      provenance: { synthetic: true, phasor_convention: "exp(+j omega t)", reflection_phase_reference: "front sample face" } } };
+    await page.click(".research-results > .cluster button");
+    await page.waitForSelector('[data-stock-results]');
+    assert.ok(await page.$('.research-results .status-warn'), "stock completion is not a validated/mesh-converged badge");
+    await page.click('[data-stock-results] details summary');
+    assert.equal(await page.$$eval('[data-stock-results] tbody tr:nth-child(2) td', cells => cells.slice(1, 5).map(e => e.textContent).join('')), '————', "unreliable NRW values remain unavailable");
+    assert.equal(await page.evaluate(async () => JSON.stringify((await import("/src/designer/store.ts")).draft)), before, "stock research does not replace Design data");
     await page.select(".research-options select", "elmer");
     assert.match(await page.$eval('.research-guide', e => e.textContent), /cavity|kavite/);
     assert.equal(await page.$eval(start, e => e.disabled), true, "backend change invalidates capability");
@@ -195,7 +220,7 @@ try {
     await page.waitForFunction(() => document.querySelector(".research-results")?.textContent.includes("TE101"));
     await page.setViewport({ width: 390, height: 844 });
     assert.equal(await page.$eval(".research-dialog", e => e.scrollWidth <= e.clientWidth), true, "mobile dialog has no horizontal overflow");
-    if (screenshots) await page.screenshot({ path: new URL(`research-${language}-mobile.png`, evidence).pathname.replace(/^\/(\w:)/, "$1") });
+    if (screenshots) await page.screenshot({ path: join(evidence, `research-${language}-mobile.png`) });
     jobs = [{ ...jobs[0], id: `replacement-${language}` }];
     await page.click(".research-results > .cluster button");
     await page.waitForFunction(id => document.querySelector(".research-results select")?.value === id, {}, jobs[0].id);

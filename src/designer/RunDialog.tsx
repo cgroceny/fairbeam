@@ -50,6 +50,7 @@ export default function RunDialog() {
   const [err, setErr] = createSignal<string | null>(null);
   const [busy, setBusy] = createSignal(false);
   const [solver, setSolver] = createSignal("openems");
+  const [retainFarfield, setRetainFarfield] = createSignal(false);
 
   onMount(() => {
     if (serverState() !== "online") probeServer();
@@ -92,7 +93,7 @@ export default function RunDialog() {
       if (prepared.error) { setErr(prepared.error); return; }
       if (!prepared.target?.isCurrent()) { setErr(t("run.err.notSaved")); return; }
       if (errorCount() > 0) return; // the list below says what to fix
-      const job = await startDesignRun({ engine: eng(), threads: eng() === "gpu" ? 1 : thr(), points: points(), name: name().trim() });
+      const job = await startDesignRun({ engine: eng(), threads: eng() === "gpu" ? 1 : thr(), points: points(), name: name().trim(), retain_nf2ff: retainFarfield() && draft.far_field.enabled });
       if (job) close();
       else setErr(submitError() ?? t("run.err.notStarted"));
     } catch (error) {
@@ -193,6 +194,9 @@ export default function RunDialog() {
             <p class="note">{t("run.estimateNote", { basis: est()?.basis ?? t("run.estimate.noMesh") })}{otherThreads() ? ` ${t("run.estimate.autoThreads", { n: autoCount() })}` : ""}</p>
           </Show>
           <PreflightNote cells={cells()} engine={eng()} />
+          <label class="gs-check"><input name="retain-nf2ff" type="checkbox" checked={retainFarfield() && draft.far_field.enabled} disabled={busy() || !draft.far_field.enabled}
+            aria-describedby="rd-retain-nf2ff-hint" onChange={e => setRetainFarfield(e.currentTarget.checked)} />{t("nf2ff.retain")}</label>
+          <p id="rd-retain-nf2ff-hint" class="note">{t(draft.far_field.enabled ? "nf2ff.retainHint" : "nf2ff.enableMonitor")}</p>
           <Show when={err()}>
             <div class="status-block status-critical" role="alert">
               <CircleAlert size={14} aria-hidden="true" />

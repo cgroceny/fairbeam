@@ -1,9 +1,13 @@
-"""Patch admission controls using disposable Git repositories; no native runs."""
+"""Patch admission and opt-in native argument checks; no field propagation."""
 import importlib.util
+import json
+import os
 from pathlib import Path
 import shutil
 import subprocess
+import sys
 import tempfile
+import textwrap
 import unittest
 from unittest.mock import patch
 
@@ -98,6 +102,81 @@ class PatchAdmission(unittest.TestCase):
         self.assertEqual(self.target.read_bytes(), b'before\n')
         with self.assertRaisesRegex(ValueError, 'regular openems.cpp'):
             applier.apply(self.base)
+
+
+@unittest.skipUnless(os.name == 'nt' and os.environ.get('FAIRBEAM_TEST_PML_GRADING_SDK'),
+                     'Native argument checks require an explicitly supplied private Windows '
+                     'PML SDK (FAIRBEAM_TEST_PML_GRADING_SDK); no installed runtime is patched')
+class NativeArgumentAdmission(unittest.TestCase):
+    """Exercise the real native parser without creating an operator or propagating fields.
+
+    The candidate must already have been built separately. This test never builds,
+    installs, patches or changes the default runtime. A fresh process checks the DLL
+    actually loaded before trusting the option probes; the ordinary suite skips it.
+    Empty arguments and recovery are parser checks, not proof of the operator profile.
+    """
+
+    def test_bounds_wraparound_overflow_and_error_recovery(self):
+        sdk = Path(os.environ['FAIRBEAM_TEST_PML_GRADING_SDK']).resolve(strict=True)
+        self.assertTrue(sdk.is_dir(), 'The private SDK must be a directory')
+        script = textwrap.dedent(r'''
+            import ctypes
+            from ctypes import wintypes
+            import json
+            import os
+            from pathlib import Path
+            from openEMS import openEMS
+
+            kernel = ctypes.WinDLL('kernel32', use_last_error=True)
+            kernel.GetModuleHandleW.argtypes = [wintypes.LPCWSTR]
+            kernel.GetModuleHandleW.restype = wintypes.HMODULE
+            kernel.GetModuleFileNameW.argtypes = [wintypes.HMODULE, wintypes.LPWSTR, wintypes.DWORD]
+            kernel.GetModuleFileNameW.restype = wintypes.DWORD
+            handle = kernel.GetModuleHandleW('openEMS.dll')
+            if not handle:
+                raise RuntimeError('The imported native openEMS DLL was not found')
+            path = ctypes.create_unicode_buffer(32768)
+            length = kernel.GetModuleFileNameW(handle, path, len(path))
+            if not 0 < length < len(path):
+                raise RuntimeError('The loaded openEMS DLL path could not be verified')
+            loaded = Path(path.value).resolve(strict=True)
+            sdk = Path(os.environ['FAIRBEAM_TEST_PML_GRADING_SDK']).resolve(strict=True)
+            if not loaded.is_relative_to(sdk):
+                raise RuntimeError(f'Loaded DLL is outside the supplied private SDK: {loaded}')
+
+            simulation = openEMS()
+            accepted, rejected = [], []
+            for value in ('1', '8', '64'):
+                simulation._SetLibraryArguments({'pml_grading_cells': value})
+                accepted.append(value)
+            # Unsigned lexical conversion used to turn these negatives into 1/8/64.
+            invalid = ('0', '65', '-1', '-4294967295', '-4294967288', '-4294967232',
+                       '2147483648', '4294967295', '4294967296', '-2147483649',
+                       '999999999999999999999999', '', 'invalid', '8.5')
+            for value in invalid:
+                try:
+                    simulation._SetLibraryArguments({'pml_grading_cells': value})
+                except Exception as error:
+                    rejected.append({'value': value, 'type': type(error).__name__})
+                else:
+                    raise AssertionError(f'Invalid PML reference was accepted: {value!r}')
+                # No failed parse may poison the next accepted parse in this process.
+                simulation._SetLibraryArguments({'pml_grading_cells': '8'})
+                simulation._SetLibraryArguments({})
+            print('PML_ARGUMENT_REPORT=' + json.dumps({
+                'loaded_dll': str(loaded), 'accepted': accepted, 'rejected': rejected,
+                'operator_setups': 0, 'field_steps': 0}))
+        ''')
+        env = dict(os.environ, OPENEMS_INSTALL_PATH=str(sdk), CSXCAD_INSTALL_PATH=str(sdk))
+        result = subprocess.run([sys.executable, '-c', script], capture_output=True,
+                                text=True, encoding='utf-8', env=env, timeout=30)
+        self.assertEqual(result.returncode, 0, result.stdout + '\n' + result.stderr)
+        report_line = next(line for line in result.stdout.splitlines()
+                           if line.startswith('PML_ARGUMENT_REPORT='))
+        report = json.loads(report_line.partition('=')[2])
+        self.assertEqual(report['accepted'], ['1', '8', '64'])
+        self.assertEqual(len(report['rejected']), 14)
+        self.assertEqual((report['operator_setups'], report['field_steps']), (0, 0))
 
 
 if __name__ == '__main__':

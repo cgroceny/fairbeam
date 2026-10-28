@@ -1,0 +1,10 @@
+.ludwig-panel { min-width: 0; border-top: 1px solid var(--al-border); padding-top: var(--al-space-2); }
+.ludwig-panel h4 { margin: 0; font: inherit; font-weight: 600; }
+.ludwig-panel .rdk-field { display: flex; align-items: center; justify-content: space-between; gap: var(--al-gap-cluster); }
+.ludwig-panel input { width: 8ch; }
+.ludwig-panel table { table-layout: fixed; width: 100%; }
+.ludwig-panel caption { text-align: left; color: var(--al-text-2); padding-block: var(--al-space-1); }
+.ludwig-panel th, .ludwig-panel td { padding-inline: var(--al-space-1); }
+.ludwig-panel th:first-child { width: 28%; white-space: normal; overflow-wrap: anywhere; }
+.ludwig-panel th small { display: block; font-weight: normal; font-variant-numeric: tabular-nums; }
+.ludwig-panel td { font-variant-numeric: tabular-nums; white-space: nowrap; }

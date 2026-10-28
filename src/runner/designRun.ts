@@ -98,7 +98,7 @@ export function storedPoints(): number {
 }
 
 /** Submit the saved design (the caller has saved and checked it) with these settings. */
-export async function startDesignRun(opts: { engine: string; threads: number; points: number; name: string }): Promise<Job | null> {
+export async function startDesignRun(opts: { engine: string; threads: number; points: number; name: string; retain_nf2ff?: boolean }): Promise<Job | null> {
   setEngine(opts.engine);
   // GPU uses one solver thread; it must not replace the user's remembered CPU choice.
   if (opts.engine !== "gpu") setThreads(opts.threads);
@@ -114,7 +114,8 @@ export async function startDesignRun(opts: { engine: string; threads: number; po
   setRunName(opts.name);
   let job: Job | null;
   try {
-    job = await startRun({ ...(opts.points !== 801 ? { points: opts.points } : {}), ...(nodes ? { cells: nodes } : {}) });
+    job = await startRun({ ...(opts.points !== 801 ? { points: opts.points } : {}), ...(nodes ? { cells: nodes } : {}),
+      ...(opts.retain_nf2ff ? { retain_nf2ff: true } : {}) });
   } finally {
     setRunName(before);
   }

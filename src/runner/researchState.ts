@@ -1,10 +1,11 @@
 import { createSignal } from "solid-js";
+import type { ResearchBackend } from "./api";
 
 export const [researchOpen, setResearchOpen] = createSignal(false);
 export const [researchSelectedId, setResearchSelectedId] = createSignal<string | null>(null);
-export const [researchInitialBackend, setResearchInitialBackend] = createSignal<"periodic" | "elmer">("periodic");
+export const [researchInitialBackend, setResearchInitialBackend] = createSignal<ResearchBackend>("periodic");
 export const [researchResultsOnly, setResearchResultsOnly] = createSignal(false);
-export function openResearch(id?: string, backend: "periodic" | "elmer" = "periodic", resultsOnly = false) {
+export function openResearch(id?: string, backend: ResearchBackend = "periodic", resultsOnly = false) {
   setResearchResultsOnly(resultsOnly);
   setResearchInitialBackend(backend);
   setResearchSelectedId(id ?? null);

@@ -414,6 +414,15 @@ kutularını kullanır; taslak düzenlemesi eski çizgilere yeni kutular eklemez
 hücre oranı ve raporlama kuralları için [yerel bölgeler](MESHING.md#explicit-local-refinement-regions)
 bölümüne bakın. İnceltme tek başına elektromanyetik yakınsama kanıtı değildir.
 
+### Kaydedilmiş gereksinimler
+Simülasyon ayarları → Gereksinimler bölümünü açın. Bir sınır ekleyin, büyüklüğü seçin ve sayısal hedefi girin. Frekans GHz, bant genişliği MHz, verim yüzde, S-parametresi sınırları dB kullanır. Sij sınırında alıcı ve uyarılan fiziksel port numaralarını seçin. Bant yalnızca alt ve üst frekans arasında geçerlidir. Etiket değiştiğinde kimlik korunur.
+
+Uygula listeyi Tasarım ve geri alma geçmişine yazar. Gereksinim düzenleyicisindeki Geri al yerel değişikliği; ayarlar penceresindeki Vazgeç pencere açılırken geçerli olan tüm ayarları geri yükler. Tamam'dan önce uygulanmamış gereksinim değişikliklerini uygulayın veya geri alın. Değişiklikler kaydedilmelidir; geometriyi yeniden oluşturmaz ve içe aktarılmış Python modelini ayırmaz. Kaydet/aç işlemi tam sayısal listeyi korur.
+
+Optimizer hedefleri olarak kullan Tasarımı kaydeder/doğrular ve optimizer formunu hazırlar; simülasyon başlatmaz. Mevcut dört hedef sınırı korunur. Daha uzun liste kesilmez; dönüşüm açıklamayla reddedilir. f0 toleransı %0,25 olarak kalır. Optimizer başarısı gereksinim doğrulaması değildir; gereksinim değerlendirmesi daha sıkı veri kabulü kullanır.
+
+Mevcut dokuz hedef türü desteklenir: rezonans frekansı, örneklenmiş -10 dB bant genişliği, S11 üst sınırı, Sij üst/alt sınırı, tüm portların uyumu, direktivite alt sınırı, gerçekleşen kazanç alt sınırı ve ışıma verimi alt sınırı. S-parametreleri nokta veya bant olabilir. Işıma büyüklükleri aynı frekansta kayıtlı alan gerektirir. Eksenel oran maskeleri ve ışıma bantları gibi desteklenmeyen istekler reddedilir.
+
 ## Mesh görünümü
 
 Şeritte Simülasyon › **Mesh görünümü** (veya durum çubuğunda hücre sayısına tıklama), geçerli önizlemenin FDTD mesh çizgilerini tek düzlemde gösterir; çizgiler görünsün diye katıları soluklaştırır. Mesh, çalıştırmayla aynı oluşturucudan gelir. 3B görünüm üzerindeki panelde:
@@ -726,6 +735,20 @@ Sunucu API'si `POST /api/import/pcb` (`{files: [{name, content_base64}], options
 - **İmzasız Windows yükleyicisi.** macOS uygulaması imzalı ve Apple tarafından doğrulanmıştır, çift tıklamayla açılır. Windows yükleyicisinde kod imzası yoktur: SmartScreen ilk çalıştırmada uyarır (Daha fazla bilgi › Yine de çalıştır; [DESKTOP.md](DESKTOP.md)).
 
 Katkıda bulunanların senaryo denetimleri [denetim kılavuzundadır](CHECKS.md#scenario-checks).
+
+## Standart simetri hücresi araştırması
+
+Araştırma iletişim kutusundaki **Standart openEMS · PEC/PMC hücresi**, kurulu CPU
+çalışma ortamını kullanır. Normal geliş ve Ey kutuplanmasıyla boş referansı numuneyle
+karşılaştırır. Ayna simetrili, eksenlere paralel PEC veya kayıpsız dielektrik kutular
+desteklenir. Hücre ayarları Design'ın simülasyon ayarlarının ve monitörlerinin yerini
+alır; kaynak Design korunur. Desteklenmeyen fizik reddedilir.
+
+Çıktılar eş kutuplu karmaşık S11/S21'i, ön numune yüzündeki yansıma fazını ve tek
+homojen tam kesitli dielektrik slab için isteğe bağlı NRW çıkarımını içerir. Tamamlanma,
+enerji sönümü, ağ yakınsaması ve malzeme doğruluğu ayrı değerlendirilir. Sınırlar,
+normalizasyon, güvenilirlik maskeleri ve saklanan kanıtlar için
+[Research solvers](https://github.com/ismailakdag/fairbeam/blob/main/docs/RESEARCH-SOLVERS.md#stock-openems-pecpmc-cell) kılavuzuna bakın.
 
 ## Geri bildirim
 

@@ -23,7 +23,7 @@ const compile = (source, deps, expression) => new Function(...Object.keys(deps),
 const deferred = () => { let resolve, reject; const promise = new Promise((a, b) => { resolve = a; reject = b; }); return {promise, resolve, reject}; };
 const design = id => ({schema: 'fairbeam.design/1', model: {id, name: id}, params: [{key: 'W', default: 32}], materials: [], parts: [], ports: [], resistors: [], simulation: {}, mesh: {}, parameter_sweep: {schema: 'fairbeam.parameter-sweep/1', sequences: []}});
 const file = (id, hash = 'base', scope = id) => ({id, hash, backup_scope: scope, file: `${id}.design.json`, readonly: false, design: design(id)});
-function fixture({dirty = true, native = true, waitRefresh = false, waitResearch = null, networkRequest = undefined} = {}) {
+function fixture({dirty = true, native = true, waitRefresh = false, waitResearch = null, networkRequest = undefined, retainFarfield = false, farfieldEnabled = true} = {}) {
   const core = createDesignerSession(), external = deferred(), refreshed = deferred();
   const researchBoundary = deferred();
   const writes = [], selected = [], submitted = [], errors = [];
@@ -33,7 +33,9 @@ function fixture({dirty = true, native = true, waitRefresh = false, waitResearch
     researchCalled = phase;
     if (waitResearch === phase) await researchBoundary.promise;
   };
-  const original = file('legacy'), originalBytes = JSON.stringify(original.design);
+  const original = file('legacy');
+  original.design.far_field = {enabled: farfieldEnabled};
+  const originalBytes = JSON.stringify(original.design);
   const io = createDesignerIO(core, {
     transport: {design: async id => file(id), saveDesign: async (f, d) => { writes.push([f.id, structuredClone(d)]); return {hash: 'saved', validation: {valid: true, checks: []}}; }},
     persistUnsavedDesign: async (_f, d) => {
@@ -60,6 +62,7 @@ function fixture({dirty = true, native = true, waitRefresh = false, waitResearch
     setSubmitError() {}, setSubmitting: v => { busy = v; }, submitting: () => busy, setInfo() {},
     errorCount: () => 0, serverState: () => 'online', probeServer: async () => true,
     pointsBad: () => false, threadsBad: () => false, eng: () => 'cpu', thr: () => 2, points: () => 801, name: () => '',
+    retainFarfield: () => retainFarfield,
     startDesignRun: async opts => { submitted.push({kind: 'run', model: selected.at(-1), opts}); return null; }, close() {}, submitError: () => null,
     api: {submitSweep: async request => { submitted.push({kind: 'sweep', ...request}); return {sweep: {id: 'sw'}, runs: []}; },
       submitConvergence: async request => { submitted.push({kind: 'convergence', ...request}); return {study: {id: 'study'}, runs: []}; },
@@ -164,9 +167,22 @@ if (baseline) {
     const p = action === 'optimize' ? x.prepare.prepareDesignOptimize(x.live) : x.handler(action).invoke({preventDefault() {}});
     x.external.resolve('save'); await p;
     assert.equal(x.core.file().id, 'fb_new'); assert.equal(x.selected.at(-1), 'fb_new', action);
-    if (action !== 'optimize') assert.equal(x.submitted[0].model, 'fb_new', action);
+    if (action !== 'optimize') {
+      assert.equal(x.submitted.length, 1, `${action}: ${x.errors.join('; ')}`);
+      assert.equal(x.submitted[0].model, 'fb_new', action);
+    }
     if (action === 'convergence') assert.ok(!('network_criteria' in x.submitted[0]), 'opt-out remains absent');
     assert.equal(x.writes.length, 0, 'first native Save does not overwrite the legacy JSON'); x.sourceUnchanged(); x.dispose(); cases++;
+  }
+  for (const retainFarfield of [false, true]) for (const farfieldEnabled of [false, true]) {
+    const x = fixture({retainFarfield, farfieldEnabled});
+    const p = x.handler('run').invoke({preventDefault() {}});
+    x.external.resolve('save'); await p;
+    assert.equal(x.submitted.length, 1, x.errors.join('; '));
+    assert.equal(x.submitted[0].model, 'fb_new');
+    assert.equal(x.submitted[0].opts.retain_nf2ff, retainFarfield && farfieldEnabled,
+      'Retained dumps require both explicit opt-in and enabled far field on the saved design');
+    x.sourceUnchanged(); x.dispose(); cases++;
   }
   // Opt-in criteria are captured at the initiating click and stay attached to its saved target.
   // Changing form criteria while native Save waits must not substitute another request.

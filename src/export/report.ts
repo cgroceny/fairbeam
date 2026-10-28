@@ -1,6 +1,9 @@
 // README.md report for the export package: a readable summary of model, setup, run and results.
 
 import { withoutVoids } from "../lib/voidParts.ts";
+import { ludwigExportNote, readComplexFarField } from "../lib/ludwig.ts";
+import { bundleDiversityReport, DIVERSITY_REPORT_HEADERS } from "./diversityReport.ts";
+import { bundleRequirementsReport, REQUIREMENTS_REPORT_HEADERS } from "./requirementsReport.ts";
 import type { Bundle } from "../types";
 import { efficiencyWarning, energyText, finalEnergy } from "../lib/run.ts";
 import { APP_VERSION } from "../lib/appVersion.ts";
@@ -90,6 +93,8 @@ export function meshText(b: Bundle): { cells: string; size: string; domain: stri
 }
 
 export interface ReportOptions {
+  /** Captured fixed xy polarization reference, degrees. */
+  ludwigReferenceDeg?: number;
   exported: string;
   files: { path: string; description: string }[];
   /** the workspace file the bundle was run from (the reproduce command runs it) */
@@ -203,6 +208,27 @@ export function readmeReport(bundle: Bundle, opt: ReportOptions): string {
     }
     push("Gain = efficiency · Dmax; realized gain = gain · (1 − |S11|²); radiation efficiency = P_rad / P_acc.", "");
   } else push("No results: not simulated.", "");
+
+  if (b.results?.farfield.some(ff => readComplexFarField(ff))) push("### Ludwig-3 polarization", "", ludwigExportNote(opt.ludwigReferenceDeg ?? 0), "");
+
+  const diversity = bundleDiversityReport(bundle);
+  if (diversity) {
+    push("## MIMO diversity", "", diversity.scope, "", diversity.assumptions, "");
+    if (diversity.frequencyHz) push(`Stored frequency range: ${diversity.frequencyHz.join(" to ")} Hz.`, "");
+    if (diversity.rows.length) push(table(DIVERSITY_REPORT_HEADERS, diversity.rows), "");
+    if (diversity.omittedGroups) push(`${diversity.omittedGroups} additional metric/port groups are omitted from this bounded report; the CSV contains all groups.`, "");
+    if (diversity.reasons.length) push("Unavailable samples:", ...diversity.reasons.map(s => `- ${s}`), "");
+    if (diversity.warnings.length) push("Warnings:", ...diversity.warnings.map(s => `- ${s}`), "");
+  }
+
+  if (bundle.requirements_snapshot !== undefined) {
+    const requirements = bundleRequirementsReport(bundle);
+    push("## Saved requirements", "", requirements.scope, "",
+      `Source ID: ${requirements.sourceId ?? "unavailable"}.`, "",
+      `Numeric limits: ${requirements.metric}. Energy: ${requirements.energy}. Mesh: ${requirements.mesh}. Qualified verdict: ${requirements.status}.`, "");
+    if (requirements.reason) push(requirements.reason, "");
+    if (requirements.rows.length) push(table(REQUIREMENTS_REPORT_HEADERS, requirements.rows), "");
+  }
 
   // the files of this package, from its own entries
   push("## Files", "");

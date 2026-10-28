@@ -33,6 +33,7 @@ from .design import (AXES, DT_SAFETY, auto_timesteps, ringdown_steps, EFFICIENCY
                      port_feeds, resolve_primitive, sheet_transform_issues, thin_metal_limit, thin_sheets, transform_maps, wg_cutoff_ghz,
                      wg_mode)
 from .pattern_grid import PATTERN_STEP_MIN, PATTERN_STEP_MAX
+from .farfield_fields import field_budget_for_steps
 from .local_mesh import LocalMeshError, precision_marker, region_checks
 
 EPS = 1e-9
@@ -51,6 +52,7 @@ END_DB_MAX = -10
 
 # checks that src/designer/checks.ts also runs; the rest need the resolved geometry or the bundle
 CHEAP = frozenset({
+    "requirements",
     "mesh-local-region",
     "coax-port", "coax-mesh", "planar-port",
     "expr", "param-range", "part-name-duplicate", "part-empty", "brick-flat", "brick-inverted", "radius",
@@ -59,12 +61,14 @@ CHEAP = frozenset({
     "cells-per-wavelength", "end-criterion", "port-length", "port-volume", "port-r", "port-reference", "port-overlap", "no-port",
     "no-metal", "resistor-r", "resistor-length", "component-path", "cone-radii", "cone-length", "torus-radii",
     "wire-points", "wg-mode", "wg-size", "wg-cutoff", "wg-aperture", "cut-sheet", "boolean-transform-angle", "sheet-transform-angle", "scale", "mesh-lines",
-    "monitor-efficiency", "field-plane", "conductivity", "metal-thickness", "tan-d-band", "ff-step", "dispersion", "dispersion-band",
+    "monitor-efficiency", "field-plane", "conductivity", "metal-thickness", "tan-d-band", "ff-step", "ff-field-budget", "dispersion", "dispersion-band",
 })
 
 
 # Plain-language guidance shared by server checks and the live CHEAP checks.
 EXPLANATIONS = {
+    "requirements": "Use a versioned requirement list with unique IDs, finite targets, ordered GHz bands and explicit physical ports for Sij limits. Missing data and unverified convergence remain unknown; optimizer goals alone do not certify a requirement.",
+    "ff-field-budget": "Complex fields preserve phase for Ludwig-3 polarization. Use at most 65,536 angular cells per frequency, 16 frequencies and 262,144 angular-frequency cells per driven port; increase angular steps or reduce frequencies. The automatic frequency list reserves four frequencies.",
     "mesh-local-region": "Use up to 32 named boxes with unique IDs, finite coordinates, increasing bounds, and a positive cell size inside the mesh domain. Coordinates use the model length unit; manual mesh keeps these settings inactive.",
     "mesh-local-limit": "Reduce the requested local refinement or model extent. Explicit regions cannot be discarded to fit the configured hard cell budget.",
     "mesh-local-grid": "The actual final grid must retain protected planes and satisfy every positive-overlap region cap with finite increasing lines. Change the request or coordinates; no cap is silently enlarged.",
@@ -681,14 +685,22 @@ class _Lint:
                 self.error("mesh.air_cells_per_wavelength", "cells-per-wavelength",
                            "air cells per wavelength must be > 0 and no greater than the metal and dielectric setting")
         ff = self.d.get("far_field", {})
-        if "circular" in ff and not isinstance(ff["circular"], bool):
-            self.error("far_field.circular", "expr", "circular must be true or false")
+        for flag in ("circular", "complex_fields"):
+            if flag in ff and not isinstance(ff[flag], bool):
+                self.error(f"far_field.{flag}", "expr", f"{flag} must be true or false")
         if ff.get("enabled", True):
+            resolved_steps = []
             for axis, default in (("theta", 3), ("phi", 5)):
                 path = f"far_field.{axis}_step"
                 step = self.ev(path, ff.get(f"{axis}_step", default))
+                resolved_steps.append(step)
                 if step is not None and not PATTERN_STEP_MIN <= step <= PATTERN_STEP_MAX:
                     self.error(path, "ff-step", f"angular step must be from {PATTERN_STEP_MIN:g} to {PATTERN_STEP_MAX:g} degrees")
+            if ff.get("complex_fields") is True and all(v is not None and PATTERN_STEP_MIN <= v <= PATTERN_STEP_MAX for v in resolved_steps):
+                try:
+                    field_budget_for_steps(*resolved_steps, len(ff.get("frequencies") or [None] * 4))
+                except ValueError as exc:
+                    self.error("far_field.complex_fields", "ff-field-budget", str(exc))
             if ff.get("phase_center") is not None:
                 center = self.vec("far_field.phase_center", ff["phase_center"])
                 if center is not None and not all(math.isfinite(v) for v in center):
@@ -1850,7 +1862,7 @@ class _Lint:
                 structure = dict(d, mesh={k: v for k, v in d["mesh"].items() if k not in ("local_regions", "axis_precision")})
             check_design(structure)
         except DesignError as e:
-            code = "expr" if ".group" in (e.where or "") or e.where in ("mesh.refine_features", "far_field.circular") else "structure"
+            code = "requirements" if e.where == "requirements" else "expr" if ".group" in (e.where or "") or e.where in ("mesh.refine_features", "far_field.circular", "far_field.complex_fields") else "structure"
             if match := re.fullmatch(r"materials\[(\d+)\]\.dispersion", e.where or ""):
                 self.error(f"materials.{d['materials'][int(match[1])]['name']}.dispersion", "dispersion", e.detail)
                 return self.out

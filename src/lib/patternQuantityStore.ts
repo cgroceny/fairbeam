@@ -1,7 +1,8 @@
 // The far-field quantity shown by the 3D pattern, the pattern cuts and the far-field card (Directivity,
-// Gain, Realized gain, RHCP/LHCP), and the Efficiency view's unit: one choice for the whole app,
+// Gain, Realized gain, circular/Ludwig-3 parts and ratios), and the Efficiency view's unit: one choice for the whole app,
 // remembered for the browser session (sessionStorage; the choice still works when storage is blocked).
 import { createSignal } from "solid-js";
+import { normalizeLudwigReference } from "./ludwig.ts";
 import { isPatternQuantity, type PatternQuantity } from "./farfieldQuantity.ts";
 import { isRadiationQuantity, type RadiationQuantity } from "./radiationFrequency.ts";
 
@@ -47,4 +48,21 @@ export const radiationQuantity = (): RadiationQuantity => isRadiationQuantity(ef
 export function setEfficiencyQuantity(q: EfficiencyQuantity) {
   if (!isEfficiencyQuantity(q)) return;
   changeEffQuantity(q); write(efficiencyKey, q);
+}
+
+/** Fixed Ludwig-3 reference in the global xy plane, +x toward +y; not fitted to an antenna's beam. */
+export const LUDWIG_REFERENCE_KEY = "fairbeam:ludwig-reference-deg";
+function readReference(): number {
+  try {
+    const raw = sessionStorage.getItem(LUDWIG_REFERENCE_KEY);
+    if (raw !== null && raw.trim() !== "" && Number.isFinite(Number(raw))) return normalizeLudwigReference(Number(raw));
+  } catch { /* storage unavailable */ }
+  return 0;
+}
+const [reference, changeReference] = createSignal(readReference());
+export const ludwigReferenceDeg = reference;
+export function setLudwigReferenceDeg(value: number) {
+  if (!Number.isFinite(value)) return;
+  const next = normalizeLudwigReference(value);
+  changeReference(next); write(LUDWIG_REFERENCE_KEY, String(next));
 }

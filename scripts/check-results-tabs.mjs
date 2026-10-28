@@ -31,9 +31,9 @@ const eq = (got, want, what) => check(JSON.stringify(got) === JSON.stringify(wan
 eq(ONLY_3D, { open: [], active: "3d" }, "a design starts with the 3D tab only");
 eq(mainTabIds(ONLY_3D), ["3d"], "the 3D tab is always in the strip");
 eq(MAIN_TAB_LABELS["3d"], "3D", "the first tab reads 3D");
-for (const v of ["array", "sparams", "impedance", "vswr", "smith", "efficiency", "pattern", "table", "summary", "fieldmap"]) check(isMainResultView(v), `${v} opens as a main-area tab`);
+for (const v of ["diversity", "array", "sparams", "impedance", "vswr", "smith", "efficiency", "pattern", "table", "summary", "fieldmap"]) check(isMainResultView(v), `${v} opens as a main-area tab`);
 for (const v of ["currents", "pattern3d", "log", "3d", "checks"]) check(!isMainResultView(v), `${v} does not open as a result tab`);
-eq(MAIN_RESULT_VIEWS.map((v) => MAIN_TAB_LABELS[v]), ["Array", "S-parameters", "Impedance", "VSWR", "Smith", "Efficiency", "Pattern", "Table", "Summary", "Field map"], "result tab labels");
+eq(MAIN_RESULT_VIEWS.map((v) => MAIN_TAB_LABELS[v]), ["MIMO diversity", "Array", "S-parameters", "Impedance", "VSWR", "Smith", "Efficiency", "Pattern", "Table", "Summary", "Field map"], "result tab labels");
 
 // ---- open and focus
 let s = openResultTab(ONLY_3D, "sparams");
@@ -166,12 +166,12 @@ const patternPanel = read("src/components/PatternCutPanel.tsx");
 check(/const q = shownQuantity\(\)/.test(views)
   && /bundle: props\.b, field: f, quantity: q/.test(views)
   && /<PatternCutPanel entries=\{patternEntries\(\)\}/.test(views)
-  && /quantityGrid\(entry\.bundle, entry\.field, entry\.quantity\)/.test(patternPanel)
+  && /quantityGrid\(entry\.bundle, entry\.field, entry\.quantity, ludwigReferenceDeg\(\)\)/.test(patternPanel)
   && /analyzeCut\(entry\.field\.theta, entry\.field\.phi, grid, spec/.test(patternPanel)
   && /PatternQuantitySelect bundle=\{props\.b\}/.test(views),
   "the Pattern tab passes its chosen quantity through the shared cut panel, with its picker beside it");
 const viewport = read("src/scene/Viewport.tsx");
-check(/quantityGrid\(b, f, q\), max: quantityMax\(b, f, q\)/.test(viewport) && /patternQuantity\], buildPattern/.test(viewport), "the 3D pattern redraws with the quantity");
+check(/quantityGrid\(b, f, q, ludwigReferenceDeg\(\)\), max: quantityMax\(b, f, q\)/.test(viewport) && /patternQuantity, ludwigReferenceDeg\], buildPattern/.test(viewport), "the 3D pattern redraws with the quantity and polarization reference");
 check(/<FarfieldCard bundle=\{bundle\(\)!\}/.test(viewport) && /showPattern3dEntry\(i\)/.test(viewport), "the 3D view's far-field card, its chips focusing the entry in Design");
 const card = read("src/components/FarfieldCard.tsx");
 check(/aria-expanded=\{!collapsed\(\)\}/.test(card) && /role="radiogroup" aria-label=\{t\("farfield\.frequency"\)\} onKeyDown=\{radioGroupKeys\}/.test(card) && en["farfield.frequency"] === "Far-field frequency", "the card collapses (aria-expanded) and its chips are a radio group");

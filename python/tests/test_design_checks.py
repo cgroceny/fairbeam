@@ -131,6 +131,29 @@ class SharedFixture(unittest.TestCase):
                                  ("error", code, problem.where))
                 self.assertEqual(emitted["explain"], EXPLANATIONS[code])
                 codes.add(emitted["code"])
+        # Requirements admission selects its code from a DesignError path,
+        # so it is not a literal emitter argument for the AST scan above.
+        # Exercise malformed shared-schema cases through both lint and the
+        # real preview request, and collect only the codes actually emitted.
+        requirement_cases = [case for case in designer_fixture.load()["cases"]
+                             if "requirements" in case.get("set", {}) and case["expect"]]
+        self.assertTrue(requirement_cases, "malformed requirement route controls are required")
+        for case in requirement_cases:
+            with self.subTest(requirement_route=case["name"]):
+                malformed = designer_fixture.case_design(case)
+                emitted_checks = lint(malformed)
+                self.assertEqual(keys(emitted_checks), sorted(case["expect"]))
+                self.assertEqual([(c["severity"], c["code"], c["path"]) for c in emitted_checks],
+                                 [("error", "requirements", "requirements")])
+                emitted = emitted_checks[0]
+                self.assertEqual(emitted["explain"], EXPLANATIONS[emitted["code"]])
+                response = preview_request({"op": "preview_design", "design": malformed})
+                self.assertFalse(response["ok"], response)
+                self.assertEqual(response["kind"], "validation", response)
+                self.assertEqual(response["location"], {"path": "requirements"})
+                self.assertEqual(response["detail"], emitted["message"])
+                self.assertEqual(response["checks"], emitted_checks)
+                codes.update(c["code"] for c in response["checks"])
         self.assertEqual(codes, set(EXPLANATIONS), "every emitted code needs guidance; remove obsolete guidance too")
         self.assertLessEqual(CHEAP, codes)
         checker = _Lint({}, None, None)

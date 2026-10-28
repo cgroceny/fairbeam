@@ -1,3 +1,8 @@
+import LudwigPolarisationPanel from "./LudwigPolarisationPanel";
+import { isLudwigQuantity } from "../lib/ludwig";
+import RetainedFarfieldPanel from "./RetainedFarfieldPanel";
+import { retainedViewerFile } from "../lib/retainedFarfield";
+import ResultDiversity from "../designer/ResultDiversity";
 import DockResizeHandle from "./DockResizeHandle";
 import { createEffect, createMemo, createSignal, For, type JSX, lazy, Match, on, onCleanup, onMount, Show, Switch } from "solid-js";
 import { Check, Copy, FileChartLine, FileSpreadsheet, Table2, TriangleAlert } from "lucide-solid";
@@ -12,13 +17,13 @@ import { nearestFarfield } from '../compare/series';
 import SmithChart from "../charts/SmithChart";
 import FigureMenu from "./FigureMenu";
 import { radioGroupKeys } from "../lib/a11y";
-import { bundle, dockTab, farfieldIndex, setDockTab, setFarfieldIndex, setLayers, source, type DockTab } from "../state";
+import { bundle, dockTab, farfieldIndex, setDockTab, setFarfieldIndex, setLayers, source, sourceOrigin, type DockTab } from "../state";
 import { hasSParameterPhase, mappedPairLabel, sMatrix } from "../lib/sparams";
 import { nearestIndex, sweep } from "../lib/rf";
 import { freqText, ghzText, num, withUnit } from "../lib/format";
 import { efficiencyIssue, efficiencyWarningUi } from "../lib/runText";
 import { effectiveQuantity, farfieldSummary, quantityGrid, quantityUnit } from "../lib/farfieldQuantity";
-import { radiationQuantity, patternQuantity } from "../lib/patternQuantityStore";
+import { ludwigReferenceDeg, radiationQuantity, patternQuantity } from "../lib/patternQuantityStore";
 import { CircularReadouts, PatternQuantitySelect, totalEffText } from "./FarfieldCard";
 import type { Signals } from "../types";
 import ComparePicker from "../compare/ComparePicker";
@@ -51,6 +56,7 @@ const ALL_TABS: { id: DockTab; label: string }[] = [
   { id: "pattern", label: "dock.results.pattern" },
   { id: "radiation", label: "radiation.tab" },
   { id: "array", label: "dock.results.array" },
+  { id: "diversity", label: "mimo.title" },
   { id: "signals", label: "dock.results.signals" },
 ];
 
@@ -133,7 +139,7 @@ export default function Dock() {
   const dataOptions = (): ResultDataOptions => ({ format: tableFormat(dataFormat()), aperturePoints: groupDelayAperture(),
     patternQuantity: shownQuantity(), patternPort: storedFF()?.port,
     radiationQuantity: dockTab() === "radiation" ? radiationQuantity() : undefined,
-    patternCut: patternCutChoice(), patternPrincipalAvailable: !comparing() && !arrayMode(), patternFallbackPhi: cutPhi(),
+    ludwigReferenceDeg: ludwigReferenceDeg(), patternCut: patternCutChoice(), patternPrincipalAvailable: !comparing() && !arrayMode(), patternFallbackPhi: cutPhi(),
     // The Pattern plot overlays both grids. The Array/Element toggle selects only the 3D
     // view; copying the plot must retain its array trace as well as the picked element.
     patternEntries: arrayMode() && steeredFarField() && storedFF() ? [
@@ -165,17 +171,17 @@ export default function Dock() {
   };
   const exportTouchstone = async () => {
     const b = bundle();
-    if (!b?.results) return;
+    if (!b?.results || dockTab() === "diversity") return;
     const base = (source().replace(/\\/g, "/").split("/").pop() || b.name || "result").replace(/\.json$/i, "");
     try {
       reportSaved(await exportResultTouchstone(b, base, selectedDataRuns()));
     } catch (error) { reportProblem(t("results.toolbar.touchstoneFailed", { error: String(error) })); }
   };
   onMount(()=> {
-    const ready=()=>!!bundle()?.results;
+    const ready=()=>dockTab() !== "diversity" && !!bundle()?.results;
     const chart=()=>ready() && visibleFigureSvgs(dockEl??null).length>0;
     const figure=(format:"png"|"svg")=>saveVisibleFigure(dockEl??null,`${bundle()?.model.id??"result"}-${dockTab()}`,format);
-    onCleanup(registerSurfaceExports("examples-result",{ready:chart,screenshot:()=>figure("png"),actions:()=>[
+    onCleanup(registerSurfaceExports("examples-result",{ready:chart,screenshot:()=>figure("png"),actions:()=>dockTab() === "diversity" ? [] : [
       {id:"result-csv",label:t("contextExport.resultCsv"),disabled:!ready()||!resultView()||!resultDataTable(bundle(),resultView()??"sparams",storedFF()?.f,dataOptions()).rows.length,reason:t("contextExport.noData"),run:exportData},
       {id:"result-touchstone",label:t("contextExport.touchstone"),disabled:!ready()||!sMatrix(bundle())?.pairs.length,reason:t("contextExport.noSParameters"),run:exportTouchstone},
       ...(["svg","png"] as const).map(format=>({id:`figure-${format}`,label:t("contextExport.figureFormat",{format:format.toUpperCase()}),disabled:!chart(),reason:t("contextExport.noChart"),run:()=>figure(format)})),
@@ -194,10 +200,11 @@ export default function Dock() {
   // comparing a multi-port project: the picked S_ij of every compared project (run colour, pair dash)
   const spCompare = () => multiPort() && comparing();
   const TABS_ = createMemo(() =>
-    ALL_TABS.filter((tab) => tab.id !== "array" || hasArray()).map((tab) => (tab.id === "reflection" && multiPort() ? { ...tab, label: "dock.results.sparams" } : tab)),
+    ALL_TABS.filter((tab) => (tab.id !== "array" || hasArray()) && (tab.id !== "diversity" || (bundle()?.ports.length ?? 0) >= 2)).map((tab) => (tab.id === "reflection" && multiPort() ? { ...tab, label: "dock.results.sparams" } : tab)),
   );
   createEffect(() => {
     if (dockTab() === "array" && !hasArray()) setDockTab("reflection");
+    if (dockTab() === "diversity" && (bundle()?.ports.length ?? 0) < 2) setDockTab("reflection");
   });
   const sw = createMemo(() => (bundle() ? sweep(bundle()!) : null));
   const fGHz = createMemo(() => sw()?.f.map((f) => f / 1e9) ?? []);
@@ -247,7 +254,7 @@ export default function Dock() {
   const shownQuantity = () => (arrayMode() && steeredFarField() && storedFF()) || !bundle() || !ff() ? "directivity" : effectiveQuantity(bundle()!, ff()!, patternQuantity());
   const cmpCuts = createMemo(() => {
     const q = shownQuantity();
-    return cmp() && ff() ? compareCuts(cmp()!, ff()!.f, cutSpecs(patternCutChoice(), false, cutPhi())[0], ff(), (b, x) => quantityGrid(b, x, q)) : null;
+    return cmp() && ff() ? compareCuts(cmp()!, ff()!.f, cutSpecs(patternCutChoice(), false, cutPhi())[0], ff(), (b, x) => quantityGrid(b, x, q, ludwigReferenceDeg())) : null;
   });
   const ffSummary = createMemo(() => (bundle() && ff() ? farfieldSummary(bundle()!, ff()!) : null));
   const cmpSpData = createMemo(() => (spCompare() && cmp() ? compareSParams(cmp()!, examplesSParams.selectedPairs(), examplesSParams.mode()) : null));
@@ -322,7 +329,7 @@ export default function Dock() {
     return [{ id: 'current', label: '', color: '--al-series-1', bundle: b, field: f, quantity: shownQuantity() }];
   };
   const cuts = () => patternEntries().flatMap(entry => cutSpecs(patternCutChoice(), !comparing() && !arrayMode(), cutPhi()).map(spec => {
-    const cut = analyzeCut(entry.field.theta, entry.field.phi, quantityGrid(entry.bundle, entry.field, entry.quantity), spec, !!entry.bundle.half_space);
+    const cut = analyzeCut(entry.field.theta, entry.field.phi, quantityGrid(entry.bundle, entry.field, entry.quantity, ludwigReferenceDeg()), spec, !!entry.bundle.half_space);
     return { ...cut, id: entry.id, color: entry.color, label: `${entry.label} ${cutLabel(spec)}`.trim() };
   }));
 
@@ -484,6 +491,7 @@ export default function Dock() {
           <Show when={dockTab() === "pattern" && bundle() && storedFF() && !(arrayMode() && farfieldOverride())}>
             <PatternQuantitySelect bundle={bundle()!} ff={storedFF()!} class="btn btn-ghost btn-sm" />
           </Show>
+          <Show when={dockTab() !== "diversity"}>
           <ComparePicker />
           <FigureMenu />
           <Show when={bundle()?.results && resultView()}>
@@ -506,18 +514,22 @@ export default function Dock() {
           <button class="btn btn-ghost btn-sm" aria-pressed={showTable()} onClick={() => setShowTable(!showTable())} title={showTable() ? t("dock.results.backToChart") : t("dock.results.showData")}>
             <Table2 size={14} aria-hidden="true" /> {t("results.tab.table")}
           </button>
+          </Show>
         </div>
       </div>
 
       <div class="dock-body">
-        <Show when={compareBundles().some(b => !hasSParameterPhase(b))}>
+        <Show when={dockTab() !== "diversity" && compareBundles().some(b => !hasSParameterPhase(b))}>
           <p class="note" role="status">{t("compare.phaseUnavailable")}</p>
         </Show>
         <Show when={bundle()?.results} fallback={bundle() && <div class="panel-empty">{(bundle() as { preview?: boolean } | null)?.preview
           ? <>{t("dock.results.previewOnly")}</>
           : <>{t("dock.results.geometryOnlyBefore")}<span class="mono">fairbeam run</span>{t("dock.results.geometryOnlyAfter")}</>}</div>}>
-          <Show when={!showTable()} fallback={<Show when={table()} fallback={<div class="panel-empty">{t("dock.results.noData")}</div>}>{(t) => <DataTable data={t()} />}</Show>}>
+          <Show when={dockTab() === "diversity" || !showTable()} fallback={<Show when={table()} fallback={<div class="panel-empty">{t("dock.results.noData")}</div>}>{(t) => <DataTable data={t()} />}</Show>}>
             <Switch>
+              <Match when={dockTab() === "diversity" && bundle()}>
+                <p class="note">{t("mimo.singleRun")}</p><ResultDiversity b={bundle()!} />
+              </Match>
               <Match when={dockTab() === "reflection" && cmpSp()}>
                 {(groups) => <Show when={groups().some((g) => g.series.length)} fallback={<div class="panel-empty">{t("sparams.chooseOneAbove")}</div>}>
                   <StackedCharts groups={groups()} inspectionChart={`examples:${source()}:reflection`}
@@ -628,6 +640,9 @@ export default function Dock() {
                       </Show>
                       <dt>θ = 0°</dt><dd>{t("dock.results.zenith")}</dd>
                     </dl>
+                    <Show when={!arrayMode() && ff()?.fields}><LudwigPolarisationPanel field={ff()!} halfSpace={!!bundle()?.half_space} showLimits={!isLudwigQuantity(shownQuantity())} /></Show>
+                    <Show when={!comparing() && !arrayMode()}><RetainedFarfieldPanel surface="viewer"
+                      file={retainedViewerFile(source(), sourceOrigin())} frequency={ff()?.f} /></Show>
                   </PatternCutPanel>
                 </Show>
               </Match>

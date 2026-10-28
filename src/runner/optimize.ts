@@ -7,6 +7,7 @@ import { OPTIMIZE_SPAN, pickVaryParam, rangeAround } from "../lib/rangeDefaults"
 import { bundle } from "../state";
 import { meshStats } from "../designer/meshStats";
 import { t, tEn } from "../i18n";
+import { requirementGoalDrafts } from "../lib/requirementGoals";
 import { api, ApiError, type GoalKind, type OptDone, type OptEval, type OptGoal, type ParamSpec } from "./api";
 import {
   attach,
@@ -236,6 +237,18 @@ export function ensureOptimizeForm() {
   if (!goals.length) addGoal(firstGoal());
   const engines = health()?.engines ?? ["cpu"];
   if (!optEngine() || !engines.includes(optEngine())) setOptEngine(engines.includes("gpu") ? "gpu" : "cpu");
+}
+
+/** Prepare a lossless requirement conversion after the saved Designer model is ready. No run starts.
+ * The existing server admits at most four goals; refuse a larger list without dropping any mask.
+ */
+export function prepareRequirementGoals(input: OptGoal[]): void {
+  const prepared = requirementGoalDrafts(input);
+  if (!prepared) throw new Error(t("requirements.optimizerLimit"));
+  if (!specs().length) throw new Error(t("runner.optimize.notSaved"));
+  ensureOptimizeForm();
+  setGoals(reconcile(prepared));
+  setOptErrors({});
 }
 
 /** Client-side check (the server validates again). */

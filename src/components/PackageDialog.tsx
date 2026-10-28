@@ -1,3 +1,4 @@
+import { ludwigReferenceDeg } from "../lib/patternQuantityStore";
 import { createMemo, createSignal, For, Show } from "solid-js";
 import { createStore } from "solid-js/store";
 import { Download, FileText, TriangleAlert, X } from "lucide-solid";
@@ -58,7 +59,7 @@ export default function PackageDialog() {
     if (!b) return [];
     const ph = new Uint8Array(0);
     const feed = arrayFeedFor(b);
-    return packageFiles(b, effective(), { isoPng: ph, drawingPdf: ph, reportPdf: ph, arrayWeights: feed?.weights, arrayFrequencyHz: feed?.frequencyHz, reference: reference() }).map((f) => f.path);
+    return packageFiles(b, effective(), { ludwigReferenceDeg: ludwigReferenceDeg(), isoPng: ph, drawingPdf: ph, reportPdf: ph, arrayWeights: feed?.weights, arrayFrequencyHz: feed?.frequencyHz, reference: reference() }).map((f) => f.path);
   });
   // the time in the file name: when the dialog opened, then the moment of the last export (the name shown is the name saved)
   const [stampAt, setStampAt] = createSignal(new Date());
@@ -70,6 +71,7 @@ export default function PackageDialog() {
     const now = new Date();
     setStampAt(now);
     const want = effective();
+    const referenceDeg = ludwigReferenceDeg();
     const feed = arrayFeedFor(b);
     const weights = feed?.weights, arrayFrequencyHz = feed?.frequencyHz;
     const problems: string[] = [];
@@ -101,7 +103,7 @@ export default function PackageDialog() {
         try {
           // the report lists the files of this package: the ones captured and rendered so far, the report itself
           const ph = new Uint8Array(1);
-          const paths = packageFiles(b, want, { isoPng, drawingPdf, reportPdf: ph, arrayWeights: weights, arrayFrequencyHz, reference: reference(), model }, now).map((f) => f.path);
+          const paths = packageFiles(b, want, { ludwigReferenceDeg: referenceDeg, isoPng, drawingPdf, reportPdf: ph, arrayWeights: weights, arrayFrequencyHz, reference: reference(), model }, now).map((f) => f.path);
           reportPdf = await reportPdfFor(b, now, weights, reference(), { files: paths, model, arrayFrequencyHz });
         } catch (e) {
           console.error(e);
@@ -110,7 +112,7 @@ export default function PackageDialog() {
       }
       setBusy(t("package.busy.zip"));
       await new Promise((r) => setTimeout(r, 0));
-      const files = packageFiles(b, want, { isoPng, drawingPdf, reportPdf, arrayWeights: weights, arrayFrequencyHz, reference: reference(), model }, now);
+      const files = packageFiles(b, want, { ludwigReferenceDeg: referenceDeg, isoPng, drawingPdf, reportPdf, arrayWeights: weights, arrayFrequencyHz, reference: reference(), model }, now);
       const r = await saveDownload(file, zipPackage(files, file.replace(/\.zip$/, ""), now), "application/zip");
       setNote(problems.length
         ? { text: downloadMessage(r, t("package.filesWithout", { count: files.length, missing: problems.join(", ") })), warn: true, path: r.status === "saved" ? r.path : undefined }

@@ -649,6 +649,34 @@
     {"name": "reference shape null", "set": {"ports[0].reference_impedance": null}, "expect": ["error|port-reference|ports[0].reference_impedance"]},
     {"name": "reference shape array", "set": {"ports[0].reference_impedance": [20, -150]}, "expect": ["error|port-reference|ports[0].reference_impedance"]},
     {"name": "waveguide complex reference unsupported", "set": {"ports[0].type": "waveguide", "ports[0].reference_impedance": {"real": 20, "imag": -150}}, "expect": ["error|port-reference|ports[0].reference_impedance"]},
-    {"name": "coax native square current loop crosses shield", "set": {"ports": [{"number": 1, "type": "coaxial", "mode": "TEM", "direction": "z", "start": [0,0,-20], "stop": [0,0,20], "r_i": 2.5, "r_o": 3, "r_os": 3.5, "conductor": "copper", "measurement_shift": 20, "feed_shift": 10}]}, "expect": ["error|coax-port|ports[0]", "warning|coax-mesh|ports[0]"]}
+    {"name": "coax native square current loop crosses shield", "set": {"ports": [{"number": 1, "type": "coaxial", "mode": "TEM", "direction": "z", "start": [0,0,-20], "stop": [0,0,20], "r_i": 2.5, "r_o": 3, "r_os": 3.5, "conductor": "copper", "measurement_shift": 20, "feed_shift": 10}]}, "expect": ["error|coax-port|ports[0]", "warning|coax-mesh|ports[0]"]},
+    {"name": "complex fields invalid flag None enabled True", "set": {"far_field.complex_fields": null, "far_field.enabled": true}, "expect": ["error|expr|far_field.complex_fields"]},
+    {"name": "complex fields invalid flag None enabled False", "set": {"far_field.complex_fields": null, "far_field.enabled": false}, "expect": ["error|expr|far_field.complex_fields"]},
+    {"name": "complex fields invalid flag 0 enabled True", "set": {"far_field.complex_fields": 0, "far_field.enabled": true}, "expect": ["error|expr|far_field.complex_fields"]},
+    {"name": "complex fields invalid flag 0 enabled False", "set": {"far_field.complex_fields": 0, "far_field.enabled": false}, "expect": ["error|expr|far_field.complex_fields"]},
+    {"name": "complex fields invalid flag 1 enabled True", "set": {"far_field.complex_fields": 1, "far_field.enabled": true}, "expect": ["error|expr|far_field.complex_fields"]},
+    {"name": "complex fields invalid flag 1 enabled False", "set": {"far_field.complex_fields": 1, "far_field.enabled": false}, "expect": ["error|expr|far_field.complex_fields"]},
+    {"name": "complex fields invalid flag true enabled True", "set": {"far_field.complex_fields": "true", "far_field.enabled": true}, "expect": ["error|expr|far_field.complex_fields"]},
+    {"name": "complex fields invalid flag true enabled False", "set": {"far_field.complex_fields": "true", "far_field.enabled": false}, "expect": ["error|expr|far_field.complex_fields"]},
+    {"name": "complex fields default", "set": {"far_field.complex_fields": true}, "expect": []},
+    {"name": "complex fields grid cap", "set": {"far_field.complex_fields": true, "far_field.theta_step": 0.25, "far_field.phi_step": 0.25}, "expect": ["error|ff-field-budget|far_field.complex_fields"]},
+    {"name": "complex fields frequency cap", "set": {"far_field.complex_fields": true, "far_field.frequencies": [2.4, 2.4, 2.4, 2.4, 2.4, 2.4, 2.4, 2.4, 2.4, 2.4, 2.4, 2.4, 2.4, 2.4, 2.4, 2.4, 2.4]}, "expect": ["error|ff-field-budget|far_field.complex_fields"]},
+    {"name": "complex fields total cap", "set": {"far_field.complex_fields": true, "far_field.theta_step": 1, "far_field.phi_step": 1, "far_field.frequencies": [2.4, 2.4, 2.4, 2.4, 2.4]}, "expect": ["error|ff-field-budget|far_field.complex_fields"]},
+    {"name": "complex fields disabled cap", "set": {"far_field.complex_fields": true, "far_field.enabled": false, "far_field.theta_step": 0.25, "far_field.phi_step": 0.25}, "expect": []},
+    {"name": "requirements empty", "set": {"requirements": {"schema": "fairbeam.requirements/1", "items": []}}, "expect": []},
+    {"name": "requirements all optimizer quantities", "set": {"requirements": {"schema": "fairbeam.requirements/1", "items": [
+      {"id": "f0", "goal": {"kind": "f0", "target": 2.45}}, {"id": "bw", "goal": {"kind": "bw_min", "target": 100}},
+      {"id": "s11", "goal": {"kind": "s11_max", "target": -10, "at": 2.4, "at_hi": 2.5}}, {"id": "d", "goal": {"kind": "dmax_min", "target": 3, "at": 2.45}},
+      {"id": "gain", "goal": {"kind": "realized_gain_min", "target": 2, "at": 2.45}}, {"id": "eff", "goal": {"kind": "efficiency_min", "target": 80, "at": 2.45}},
+      {"id": "all", "goal": {"kind": "match_all", "target": -10, "at": 2.45}}, {"id": "isolation", "goal": {"kind": "sij_max", "target": -20, "at": 2.45, "ports": [2, 1]}},
+      {"id": "through", "goal": {"kind": "sij_min", "target": -3, "at": 2.45, "ports": [2, 1]}}
+    ]}}, "expect": []},
+    {"name": "requirements unknown schema", "set": {"requirements": {"schema": "future/2", "items": []}}, "expect": ["error|requirements|requirements"]},
+    {"name": "requirements null", "set": {"requirements": null}, "expect": ["error|requirements|requirements"]},
+    {"name": "requirements boolean target", "set": {"requirements": {"schema": "fairbeam.requirements/1", "items": [{"id": "r", "goal": {"kind": "f0", "target": true}}]}}, "expect": ["error|requirements|requirements"]},
+    {"name": "requirements duplicate ID", "set": {"requirements": {"schema": "fairbeam.requirements/1", "items": [{"id": "r", "goal": {"kind": "f0", "target": 2.4}}, {"id": "r", "goal": {"kind": "f0", "target": 2.5}}]}}, "expect": ["error|requirements|requirements"]},
+    {"name": "requirements reversed band", "set": {"requirements": {"schema": "fairbeam.requirements/1", "items": [{"id": "r", "goal": {"kind": "s11_max", "target": -10, "at": 2.5, "at_hi": 2.4}}]}}, "expect": ["error|requirements|requirements"]},
+    {"name": "requirements missing physical ports", "set": {"requirements": {"schema": "fairbeam.requirements/1", "items": [{"id": "r", "goal": {"kind": "sij_min", "target": -3, "at": 2.5}}]}}, "expect": ["error|requirements|requirements"]},
+    {"name": "requirements unsupported AR", "set": {"requirements": {"schema": "fairbeam.requirements/1", "items": [{"id": "r", "goal": {"kind": "ar_max", "target": 3, "at": 2.5}}]}}, "expect": ["error|requirements|requirements"]}
   ]
 }

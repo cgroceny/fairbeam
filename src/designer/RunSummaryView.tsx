@@ -27,6 +27,8 @@ import { chooseSummaryReference, summaryMode, summaryReference, writeSummaryMode
 import "../styles/run-summary.css";
 import SmallAntennaPanel, { SmallAntennaComparison } from "../components/SmallAntennaPanel";
 import { designerSmallAntenna } from "./smallAntennaSession";
+import { RequirementsSummary } from "../components/RequirementsPanel";
+import { savedRequirements } from "../lib/requirementsSnapshot";
 
 // a minus sign, not a hyphen, on negative dB values
 const signed = (v: number | null | undefined, digits: number) => num(v, digits).replace(/^-/, "−");
@@ -49,12 +51,14 @@ function Tile(props: { label: string; value: string; unit?: string; caption?: st
 /** The card of one run. */
 function RunCard(props: { b: Bundle }) {
   const m = createMemo(() => bundleRunMetrics(props.b));
+  const requirements = createMemo(() => savedRequirements(props.b));
   const run = () => props.b.run;
   const farfields = createMemo(() => (props.b.results?.farfield ?? []).map((ff) => ({ ff, s: farfieldSummary(props.b, ff) })));
   const ports = () => new Set(farfields().map((x) => x.s.port)).size > 1;
   return (
     <Show when={m()} fallback={<div class="panel-empty">{t("summary.noResults")}</div>}>{(metrics) => (
       <div class="rs-card">
+        <RequirementsSummary evaluation={requirements()} />
         <Show when={metrics().quality?.verdict === "converged" && run()}>{(r) => (
           <p class="status-block status-good">
             <CircleCheck size={14} aria-hidden="true" />
@@ -179,7 +183,7 @@ function MetricCell(props: { value: string; k: DeltaKey; delta: MetricDelta | nu
 
 /** Several runs: one row each, oldest letter first as the plots list them, with the parameters that differ. */
 function RunsCompare(props: { runs: { file: string; bundle: Bundle }[] }) {
-  const rows = createMemo(() => props.runs.map((r) => ({ ...r, letter: runShortLabel(r.file), name: runLabel(r.file), m: bundleRunMetrics(r.bundle) })));
+  const rows = createMemo(() => props.runs.map((r) => ({ ...r, letter: runShortLabel(r.file), name: runLabel(r.file), m: bundleRunMetrics(r.bundle), requirements: savedRequirements(r.bundle) })));
   const columns = createMemo(() => differingParams(rows().map((r) => r.bundle.model)));
   const any = (pick: (m: RunMetrics) => unknown) => rows().some((r) => r.m && pick(r.m) != null);
   // the reference run: the chosen one while it is compared, else the oldest (not the first row, which
@@ -229,6 +233,7 @@ function RunsCompare(props: { runs: { file: string; bundle: Bundle }[] }) {
           <thead><tr>
             <th scope="col">{t("runDock.runs.col.run")}</th>
             <th scope="col">{t("runDock.runs.col.name")}</th>
+            <th scope="col">{t("requirements.title")}</th>
             <For each={columns()}>{(p) => <th scope="col" class="num">{p.key}{p.unit ? <span class="th-unit">{p.unit}</span> : ""}</th>}</For>
             <th scope="col" class="num" title={t("summary.f0.title")}>{t("summary.f0")}<span class="th-unit">GHz</span></th>
             <th scope="col" class="num">{rows().some(r => hasMixedPortCoordinates(r.bundle)) ? t("portProcessing.primaryReflection") : "|S11| min"}<span class="th-unit">dB</span></th>
@@ -247,6 +252,7 @@ function RunsCompare(props: { runs: { file: string; bundle: Bundle }[] }) {
                   <RunQualityBadge compact q={bundleQuality(row.bundle)} />
                 </div>
               </td>
+              <td>{t("requirements.tree", { metric: t(`requirements.verdict.${row.requirements.metric}`), status: t(`requirements.verdict.${row.requirements.status}`) })}</td>
               <For each={columns()}>{(p) => <td class="num">{paramText(row.bundle, p.key)}</td>}</For>
               <MetricCell k="f0" value={row.m?.noResonance ? t("summary.noResonanceShort") : ghz(row.m?.f0)} title={row.m?.noResonance ? t("summary.noResonance") : undefined} delta={deltas()[i()]?.f0} mode={summaryMode()} />
               <MetricCell k="s11" title={primaryPortLabel(row.bundle)} value={signed(row.m?.s11MinDb, 1)} delta={deltas()[i()]?.s11} mode={summaryMode()} />

@@ -513,6 +513,8 @@ def _read_design(module, values: dict, source_path: Path):
         # Preserve the request even when NF2FF is disabled; omitted remains the
         # historical false default, so ordinary example copies stay unchanged.
         far_field["circular"] = True
+    if getattr(sim, "complex_field_outputs", False):
+        far_field["complex_fields"] = True
     if nf2ff and not far_field["enabled"]:
         raise ExampleConversionError("NF2FF geometry was found but the Simulation has no NF2FF monitor")
 

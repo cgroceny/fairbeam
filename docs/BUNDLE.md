@@ -412,6 +412,50 @@ The JSON band fields retain their original meanings. In the [CSV export](EXPORTS
 | `mirror_planes` | number | Number of PEC/PMC boundaries used for the correction. See above |
 | `port` | number? | Port that was driven for this entry (bundles since multi-port support). Multi-port runs have one entry per excited port and pattern frequency, all at the same frequencies |
 | `cp` | object? | Circular polarization, for models that set `sim.cp_outputs = True` or Designer projects with `far_field.circular: true`. See below |
+| `fields` | object? | Opt-in complex theta/phi samples for fixed-reference Ludwig-3 co/cross/XPD. See [Complex far-field samples](#complex-far-field-samples) |
+
+### Complex far-field samples
+
+`sim.complex_field_outputs = True` (Designer `far_field.complex_fields: true`) preserves the
+relative phase of one driven port's NF2FF result. The default is false; old scalar bundles
+cannot reconstruct polarization and keep the existing quantities. This section is independent
+of `cp` and of the incident-wave-normalized multi-port `element_patterns` section.
+
+| Field | Contract |
+| --- | --- |
+| `schema`, `encoding` | `fairbeam.farfield-fields/1`, `i16le-base64-scaled` |
+| `basis`, `normalization` | `theta-phi`, `native-E-theta-phi` |
+| `f`, `shape` | Parent frequency in Hz and exactly `[theta.length, phi.length]` |
+| `scale` | Maximum absolute real component across all four arrays; nonnegative |
+| `power_peak` | Native maximum total field power divided by `scale²`, **before quantization**. In [1,4] for nonzero fields; zero for all-zero fields |
+| `radius_m`, `phase_center_m` | Actual native positive radius and three finite phase-center coordinates in metres |
+| `mirror_planes` | Same integer 0–3 as the parent entry |
+| `e_theta_re`, `e_theta_im`, `e_phi_re`, `e_phi_im` | Canonical base64 little-endian signed int16, row-major. Decode each value as `q * scale / 32767`; −32768 is invalid |
+
+One common scale retains relative phase to int16 quantization precision. For nonzero fields at
+least one absolute quantized component is 32767. The decoded maximum total power must agree
+with `power_peak` within `4/32767 + 1/32767²`, the four-component worst-case power error.
+Retaining this normalization prevents a cropped grid from being rescaled to the parent Dmax;
+a crop that loses the normalization peak is rejected.
+
+Storage admission is **per driven port**: at most 65,536 angular cells per frequency, 16
+frequencies and 262,144 angular-frequency cells. The writer checks before NF2FF calculation,
+without decimation; automatic Designer frequency selection reserves four frequencies. The
+default 61×72 grid needs 46,848 base64 bytes per frequency for the four arrays, plus metadata.
+
+Readers require positive unique original model-port identities, with no port discarded by
+legacy repair. Explicit `farfield[].port` must identify an excited physical port. S-parameter
+matrix indices map through `port_numbers` when provided; without this metadata exactly one
+original model port must have `excite: true`. An omitted field port is accepted only when a
+single driven port is identifiable. Explicit and inferred entries share that port's budget.
+Invalid optional fields are removed with a warning while scalar results are retained.
+
+For the complex rotation, fixed-angle convention, units and displayed bounds, see
+[Ludwig-3 polarization](RESULTS.md#ludwig-3-polarization). `power_peak` and the already corrected
+parent Dmax are used exactly once; the reader does not add another mirror multiplier. This
+storage format does not itself establish numerical convergence or antenna performance.
+
+### Circular polarization samples
 
 **cp.** With the IEEE convention and openEMS' e^{jωt} phasors, the right- and left-hand circular
 components of the far field are E_R = (E_θ + jE_φ)/√2 and E_L = (E_θ − jE_φ)/√2 (for a wave along +z,

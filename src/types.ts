@@ -211,6 +211,24 @@ export interface Param {
   maximum: number | null;
 }
 
+/** Optional native spherical fields, common-scale int16 (relative phase retained to quantization precision).
+ * Axes and the mirror-corrected Dmax belong to the containing FarField; no port-wave normalization. */
+export interface FarFieldComplexFields {
+  schema: "fairbeam.farfield-fields/1";
+  encoding: "i16le-base64-scaled";
+  basis: "theta-phi";
+  normalization: "native-E-theta-phi";
+  f: number;
+  shape: [number, number];
+  scale: number;
+  /** Native peak total field power divided by scale², before int16 quantization. */
+  power_peak: number;
+  radius_m: number;
+  phase_center_m: Vec3;
+  mirror_planes: number;
+  e_theta_re: string; e_theta_im: string; e_phi_re: string; e_phi_im: string;
+}
+
 export interface FarField {
   /** Requested theta/phi steps (degrees); coordinate arrays preserve the evaluated grid. */
   requested_steps?: [number, number];
@@ -236,6 +254,8 @@ export interface FarField {
   port?: number;
   /** circular polarisation (models that set cp_outputs); IEEE convention, see docs/BUNDLE.md */
   cp?: CircularPolarisation;
+  /** Opt-in bounded complex components for Ludwig-3 co/cross/XPD, not inferred from scalar D. */
+  fields?: FarFieldComplexFields;
 }
 
 /** Radiation efficiency Prad / Pacc at N frequencies from f_min to f_max (results.efficiency). Total
@@ -369,6 +389,9 @@ export interface LocalMeshRefinementReport {
 }
 
 export interface Bundle {
+  /** Immutable masks and independent input identity recorded by the original Designer producer. */
+  requirements_source?: import('./lib/requirementsSnapshot').RequirementsSource;
+  requirements_snapshot?: import('./lib/requirementsSnapshot').RequirementsSnapshot;
   /** "fairbeam.project/1"; a bundle with the older id is read as that (src/lib/legacy.ts) */
   schema: string;
   /** set on geometry-only bundles returned by the run server's live preview */

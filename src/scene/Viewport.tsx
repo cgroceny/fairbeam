@@ -30,7 +30,7 @@ import type { PortGlyph } from "./portGlyphs";
 import { patternMesh } from "./pattern";
 import FarfieldCard from "../components/FarfieldCard";
 import { effectiveQuantity, quantityGrid, quantityMax, quantityRange } from "../lib/farfieldQuantity";
-import { patternQuantity } from "../lib/patternQuantityStore";
+import { ludwigReferenceDeg, patternQuantity } from "../lib/patternQuantityStore";
 import { showPattern3dEntry } from "../designer/runResults";
 import { currentArray, arrayOverrideFor, arraySourceMatches } from "../lib/currentArray";
 import { currentLayer, fieldExcitation, shownFieldFrequency, hasCurrentPhase, updateCurrentPhase } from "./fields";
@@ -913,10 +913,10 @@ export default function Viewport() {
       const ctr = new THREE.Vector3(c0[0], c0[1], b.half_space ? b.half_space.position : c0[2]);
       // the chosen quantity (gain, realized gain, a circular part; directivity when the entry lacks it)
       const q = farfieldOverride() ? "directivity" : effectiveQuantity(b, f, patternQuantity());
-      patternRoot.add(patternMesh(f, ctr, radius * 1.15, fieldStops(), !!b.half_space, { values: quantityGrid(b, f, q), max: quantityMax(b, f, q), range: quantityRange(q), maskMissing: q === "axial_ratio" }));
+      patternRoot.add(patternMesh(f, ctr, radius * 1.15, fieldStops(), !!b.half_space, { values: quantityGrid(b, f, q, ludwigReferenceDeg()), max: quantityMax(b, f, q), range: quantityRange(q), maskMissing: q === "axial_ratio" || q === "co" || q === "cross" || q === "xpd" }));
       requestRender();
     }
-    createEffect(on([() => layers.pattern, farfieldIndex, farfieldOverride, patternQuantity], buildPattern, { defer: true }));
+    createEffect(on([() => layers.pattern, farfieldIndex, farfieldOverride, patternQuantity, ludwigReferenceDeg], buildPattern, { defer: true }));
 
     // array feed on the port labels while the array pattern is shown: "P2 · 0 dB ∠ −90°"
     function writePortFeeds() {

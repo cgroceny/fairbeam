@@ -1,0 +1,9 @@
+.retained-farfield { border-top: 1px solid var(--al-border); padding-top: var(--al-space-2); min-width: 0; }
+.retained-farfield summary { cursor: pointer; font-weight: 600; padding-block: var(--al-space-1); }
+.retained-farfield fieldset { border: 0; padding: 0; margin: 0; display: grid; gap: var(--al-space-2); min-width: 0; }
+.retained-farfield input { width: 100%; min-width: 0; box-sizing: border-box; }
+.retained-farfield .nf2ff-steps { display: flex; flex-wrap: wrap; gap: var(--al-gap-cluster); }
+.retained-farfield .nf2ff-steps label { display: grid; gap: var(--al-space-1); flex: 1 1 8rem; min-width: 0; }
+.retained-farfield .nf2ff-bands { padding-inline-start: 1.25em; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.retained-farfield .note { overflow-wrap: anywhere; }
+.retained-farfield button { justify-self: start; white-space: normal; }

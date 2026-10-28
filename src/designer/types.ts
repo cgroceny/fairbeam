@@ -187,6 +187,7 @@ export interface LocalMeshRegion {
 }
 
 export interface Design {
+  requirements?: import('../lib/requirements').RequirementSet;
   /** Explicit component folders, including empty folders; geometry remains on parts. */
   components?: string[];
   schema: "fairbeam.design/1";
@@ -218,7 +219,7 @@ export interface Design {
     /** "sheet" (default): metal bricks much thinner than the mesh are built as zero-thickness sheets */
     thin_metal?: "sheet" | "volume";
   };
-  far_field: { enabled: boolean; circular?: boolean; frequencies?: Expr[]; /** Angular steps in degrees; defaults 3 and 5. */ theta_step?: Expr; phi_step?: Expr; phase_center?: [Expr, Expr, Expr]; /** which NF2FF box faces record (x-, x+, y-, y+, z-, z+); omitted: all */ faces?: boolean[] };
+  far_field: { enabled: boolean; circular?: boolean; complex_fields?: boolean; frequencies?: Expr[]; /** Angular steps in degrees; defaults 3 and 5. */ theta_step?: Expr; phi_step?: Expr; phase_center?: [Expr, Expr, Expr]; /** which NF2FF box faces record (x-, x+, y-, y+, z-, z+); omitted: all */ faces?: boolean[] };
   parameter_sweep?: ParameterSweepDefinition;
   /** The opening view: where the 3D view's camera is and the point it looks at when the design opens (mm).
    * Drawing only; absent: the isometric view fitted to the model. */

@@ -179,10 +179,7 @@ The exact layout is in [BUNDLE.md](BUNDLE.md#element-pattern-encodings).
   whole band, but uses frequency-independent weights.
 - **Element positions** for steering are the port centers, which is fine for identical elements
   fed at the same relative point. For other layouts, pass explicit weights.
-- **Grating lobes** are computed by `array.grating_lobes` (uniform linear arrays; element positions
-  are port centers) but not yet flagged automatically in the viewer. There are no warnings for scan
-  blindness or truncated patterns near the grid edge. Nor are there beam-pointing optimizers or Taylor or
-  Chebyshev tapers; weights are whatever you pass.
+- **Grating lobes** are flagged geometrically for uniform linear arrays. The viewer also offers Taylor, Chebyshev and Binomial amplitude tapers. These predictions do not qualify scan blindness, coupling or mesh convergence; beam-pointing optimization is not provided.
 - **Directivity** is integrated on the stored grid (3° × 5° by default). Very narrow beams from
   large arrays need finer angular steps. In a Design, use **Simulation settings → Monitors →
   θ angular step / φ angular step** (`far_field.theta_step` / `phi_step`). Python models can set
@@ -202,3 +199,13 @@ The exact layout is in [BUNDLE.md](BUNDLE.md#element-pattern-encodings).
   Γ_active.
 - **Half-space models** (PEC ground boundary): `combine` handles the image correction through
   `mirror_planes`, but this path has not been validated on a simulated array yet.
+
+## Viewer array analysis
+
+Array analysis adds Uniform, Dolph–Chebyshev, Taylor and Binomial amplitude tapers to the stored embedded element patterns. Automatic tapers require 2–64 distinct, uniformly spaced collinear port centers. The elements are ordered geometrically; planar or irregular layouts are refused. The peak sampled amplitude is normalized to 0 dB and existing phases remain unchanged. Chebyshev/Taylor accept 20–60 dB ideal broadside sidelobe suppression; Taylor uses up to four near sidelobes. This target is not a guarantee for embedded patterns with coupling. Any azimuth scan plane can be entered; xz/yz shortcuts remain.
+
+Peak realized gain uses the original matched-incident-wave fields and their peak-phasor power/radius convention. Total efficiency is radiated over incident power, not radiation efficiency. When complete compatible S data exist, radiated power is also checked against accepted power. Nonfinite/nonpositive or inconsistent power is unavailable; the existing 5% numerical power-balance tolerance is not a mesh-convergence certificate. Half-space/mirrored-field gain remains unqualified. Legacy fields can still display directivity. Scan loss compares the current peak gain with the same amplitudes at zero phases and can be negative.
+
+SLL is a sampled estimate in the selected elevation plane. Unresolved/ambiguous/floor-limited cuts show an explanation; coarse angular grids may miss narrow/low sidelobes. A separate uniform-linear geometry check lists possible visible grating-lobe orders, including the horizon; it predicts geometry, not lobe amplitude.
+
+Expand Scan-angle table to re-steer the same amplitude weights in the selected plane. The table is limited to 37 rows and a bounded sample budget; increase the step for larger requests. Active reflection needs a complete correctly mapped S-matrix. CSV preserves exact frequency, plane, physical port IDs, amplitude weights, zero-phase baseline and unavailable-power reasons. Changing the source result, stored frequency, weights or plane invalidates the table. No new openEMS run is launched.

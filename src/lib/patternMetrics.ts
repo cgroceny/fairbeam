@@ -61,7 +61,7 @@ export function cutLabel(spec: PatternCutSpec): string {
 }
 export type MetricReason = 'empty' | 'ambiguous' | 'gap' | 'coverage' | 'crossings' | 'sidelobe' | 'floor' | 'halfSpace' | 'antipode' | 'quantity';
 /** Ratio/quality quantities (for example axial ratio) do not describe radiation maxima. */
-export const supportsPatternMetrics = (quantity: string) => ['directivity', 'gain', 'realized', 'rhcp', 'lhcp'].includes(quantity);
+export const supportsPatternMetrics = (quantity: string) => ['directivity', 'gain', 'realized', 'rhcp', 'lhcp', 'co', 'cross'].includes(quantity);
 export interface CutMetric { value: number | null; reason?: MetricReason }
 export interface PatternMetrics {
   peak: { angle: number; theta: number; phi: number; dbi: number } | null;

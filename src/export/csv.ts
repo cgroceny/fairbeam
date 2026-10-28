@@ -6,6 +6,8 @@ import { sweep } from "../lib/rf.ts";
 import { magDb, mappedPairLabel, phaseDeg, sMatrix } from "../lib/sparams.ts";
 import { activeReflection, gammaDb, type Weight } from "../lib/array.ts";
 import { radiationTable } from "../lib/radiationFrequency.ts";
+import { complexFieldPort, LUDWIG_EXPORT_HEADERS, ludwigExportMetadata, ludwigGrids, ludwigReadouts, readComplexFarField } from "../lib/ludwig.ts";
+import { originalPortResult } from "../lib/portProcessingMetadata.ts";
 
 export function radiationFrequencyCsv(b: Bundle): string | null {
   const table = radiationTable(b);
@@ -34,13 +36,18 @@ export function sweepCsv(b: Bundle): string | null {
 
 /** Long format: one row per (θ, φ) sample; with circular-polarisation data also the RHCP / LHCP
  * partial directivities and the axial ratio (IEEE convention, as in a "circular" far-field output). */
-export function patternCsv(ff: FarField): string {
-  const rows: number[][] = [];
+export function patternCsv(ff: FarField, referenceDeg = 0): string {
+  const rows: (string | number | null)[][] = [];
   const cp = ff.cp;
-  ff.theta.forEach((t, i) => ff.phi.forEach((p, j) => rows.push(cp
-    ? [t, p, ff.directivity_dbi[i][j], cp.rhcp_dbi[i][j], cp.lhcp_dbi[i][j], cp.axial_ratio_db[i][j]]
-    : [t, p, ff.directivity_dbi[i][j]])));
-  const header = ["theta_deg", "phi_deg", "directivity_dBi", ...(cp ? ["rhcp_dBi", "lhcp_dBi", "axial_ratio_dB"] : [])];
+  const fields = readComplexFarField(ff) ? ludwigGrids(ff, referenceDeg) : null;
+  const valid = (v: number) => Number.isFinite(v) ? v : null;
+  const metadata = fields ? ludwigExportMetadata(referenceDeg) : [];
+  ff.theta.forEach((t, i) => ff.phi.forEach((p, j) => rows.push([
+    t, p, ff.directivity_dbi[i][j], ...(cp ? [cp.rhcp_dbi[i][j], cp.lhcp_dbi[i][j], cp.axial_ratio_db[i][j]] : []),
+    ...(fields ? [valid(fields.co[i][j]), valid(fields.cross[i][j]), valid(fields.xpd[i][j]), ...metadata] : []),
+  ])));
+  const header = ["theta_deg", "phi_deg", "directivity_dBi", ...(cp ? ["rhcp_dBi", "lhcp_dBi", "axial_ratio_dB"] : []),
+    ...(fields ? ["ludwig_co_dBi", "ludwig_cross_dBi", "xpd_dB", ...LUDWIG_EXPORT_HEADERS] : [])];
   return toCsv(header, rows);
 }
 
@@ -51,15 +58,20 @@ export function bandsCsv(b: Bundle): string {
   );
 }
 
-export function farfieldCsv(b: Bundle): string {
+export function farfieldCsv(b: Bundle, referenceDeg = 0): string {
   const ffs = b.results?.farfield ?? [];
   const cp = ffs.some((f) => f.cp);
   const ports = ffs.some((f) => f.port != null);
+  const points = ffs.map(f => complexFieldPort(originalPortResult(b), f) !== null && readComplexFarField(f) ? ludwigReadouts(f, referenceDeg, !!b.half_space) : null);
+  const fields = points.some(Boolean);
   return toCsv(
     [...(ports ? ["port"] : []), "f_GHz", "dmax_dBi", "gain_dBi", "realized_gain_dBi", "rad_efficiency", "prad_W", "pacc_W", "mirror_planes",
-      ...(cp ? ["rhcp_boresight_dBi", "lhcp_boresight_dBi", "axial_ratio_boresight_dB", "axial_ratio_peak_dB"] : [])],
-    ffs.map((f) => [...(ports ? [f.port ?? null] : []), f.f / 1e9, f.dmax_dbi, f.gain_dbi ?? null, f.realized_gain_dbi ?? null, f.rad_efficiency, f.prad_w, f.pacc_w, f.mirror_planes ?? null,
-      ...(cp ? [f.cp?.boresight.rhcp_dbi ?? null, f.cp?.boresight.lhcp_dbi ?? null, f.cp?.boresight.axial_ratio_db ?? null, f.cp?.peak.axial_ratio_db ?? null] : [])]),
+      ...(cp ? ["rhcp_boresight_dBi", "lhcp_boresight_dBi", "axial_ratio_boresight_dB", "axial_ratio_peak_dB"] : []),
+      ...(fields ? ["ludwig_peak_theta_deg", "ludwig_peak_phi_deg", "ludwig_peak_co_dBi", "ludwig_peak_cross_dBi", "ludwig_peak_xpd_dB", "ludwig_boresight_co_dBi", "ludwig_boresight_cross_dBi", "ludwig_boresight_xpd_dB", ...LUDWIG_EXPORT_HEADERS] : [])],
+    ffs.map((f, i) => [...(ports ? [f.port ?? null] : []), f.f / 1e9, f.dmax_dbi, f.gain_dbi ?? null, f.realized_gain_dbi ?? null, f.rad_efficiency, f.prad_w, f.pacc_w, f.mirror_planes ?? null,
+      ...(cp ? [f.cp?.boresight.rhcp_dbi ?? null, f.cp?.boresight.lhcp_dbi ?? null, f.cp?.boresight.axial_ratio_db ?? null, f.cp?.peak.axial_ratio_db ?? null] : []),
+      ...(fields ? [points[i]?.peak?.theta ?? null, points[i]?.peak?.phi ?? null, points[i]?.peak?.co ?? null, points[i]?.peak?.cross ?? null, points[i]?.peak?.xpd ?? null,
+        points[i]?.boresight?.co ?? null, points[i]?.boresight?.cross ?? null, points[i]?.boresight?.xpd ?? null, ...ludwigExportMetadata(referenceDeg)] : [])]),
   );
 }
 

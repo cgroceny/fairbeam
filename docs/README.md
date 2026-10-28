@@ -55,6 +55,7 @@ the separately opted-in Elmer integration.
 | Document | What it covers |
 | --- | --- |
 | [How results are computed](RESULTS.md) | Excitation, end criterion, S11/Zin, bands, far field, efficiency, gain; accuracy notes |
+| [Retained far-field postprocessing](NF2FF-POSTPROCESS.md) | Additional frequencies from owned raw recordings, immutable provenance, CLI and run-server API |
 | [Validation](VALIDATION.md) | Comparison with closed-form theory; mesh convergence; recommended settings |
 | [Experimental periodic CPU study](../scripts/experimental-periodic/README.md) | Opt-in native source patch and reproducible zero-phase unit-cell research gates; not production Floquet support |
 | [Lumped resistor in openEMS](openems-lumped-resistor.md) | How the lumped resistor behaves, and why the Wilkinson residual is not a resistor error |

@@ -1,0 +1,14 @@
+.requirements-panel { min-width: 0; padding: var(--al-pad-panel); }
+.requirements-panel summary { cursor: pointer; }
+.requirements-panel h3 { margin-top: 0; }
+.requirements-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); align-items: end; gap: var(--al-space-3); margin: var(--al-space-3) 0; padding: var(--al-space-3); border: 1px solid var(--al-border); min-width: 0; }
+.requirements-row .rdk-field, .requirements-row input, .requirements-row select { min-width: 0; max-width: 100%; }
+.requirements-row legend { max-width: 100%; overflow-wrap: anywhere; }
+.requirements-check { display: flex; align-items: center; gap: var(--al-space-2); }
+.requirements-actions { display: flex; flex-wrap: wrap; gap: var(--al-space-2); }
+.requirements-description { grid-column: 1 / -1; overflow-wrap: anywhere; }
+.requirements-table { max-width: 100%; overflow-x: auto; }
+.requirements-table:focus-visible { outline: 2px solid var(--al-focus); outline-offset: -2px; }
+.requirements-table .table { width: 100%; }
+.requirements-table th, .requirements-table td { vertical-align: top; }
+.requirements-reason { display: block; max-width: 50ch; white-space: normal; }

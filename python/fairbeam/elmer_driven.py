@@ -200,6 +200,12 @@ End
     used = sorted({r for r, _ in mesh['elements']})
     for index, rid in enumerate(used,1):
         eps,mu,sigma=mesh['materials'][rid-1]
+        # Elmer model 20 / VectorHelmholtz reads inverse relative permeability.
+        # "Relative Permeability" belongs to other modules and is ignored here.
+        # https://www.nic.funet.fi/pub/org/net/CSC/software/elmer/doc/ElmerModelsManual.pdf
+        reluctivity = 1 / mu
+        if not math.isfinite(reluctivity):
+            raise ValueError('Relative permeability has no finite reciprocal for Elmer')
         text += f'''Body {index}
  Target Bodies(1) = {rid}
  Equation = 1
@@ -207,7 +213,7 @@ End
 End
 Material {index}
  Relative Permittivity = Real {eps:.17g}
- Relative Permeability = Real {mu:.17g}
+ Relative Reluctivity = Real {reluctivity:.17g}
  Electric Conductivity = Real {sigma:.17g}
 End
 '''

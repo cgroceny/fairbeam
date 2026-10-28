@@ -3,6 +3,9 @@
 // the browser adds the PNG capture and the PDF (see src/components/PackageDialog.tsx).
 
 import { strToU8, zipSync } from "fflate";
+import { mimoAnalysis } from "../lib/mimo.ts";
+import { diversityCsv } from "./diversity.ts";
+import { requirementsCsv } from "./requirementsReport.ts";
 import type { Bundle } from "../types";
 import { cstMacro, DEFAULT_CST_OPTIONS } from "./cst.ts";
 import { arrayWeightsCsv, bandsCsv, radiationFrequencyCsv, farfieldCsv, patternCsv, signalsCsv, sparamsCsv, sweepCsv } from "./csv.ts";
@@ -75,6 +78,8 @@ export function fabUnavailable(b: Bundle): string | null {
 }
 
 export interface PackageExtras {
+  /** Captured fixed xy polarization reference for Ludwig-3 data exports. */
+  ludwigReferenceDeg?: number;
   /** PNG of the 3D view */
   isoPng?: Uint8Array | null;
   /** PDF of the A3 drawing */
@@ -120,14 +125,23 @@ export function packageFiles(b: Bundle, include: Record<PackageGroup, boolean>, 
   const date = `${now.getFullYear()}-${p2(now.getMonth() + 1)}-${p2(now.getDate())}`;
   if (include.project) add("project.json", `Fairbeam bundle (${b.schema})`, JSON.stringify(b));
   if (include.report) add("report.pdf", "PDF report: summary, technical drawing, setup, |S11|, Zin, Smith chart and patterns (A4)", extras.reportPdf);
+  if (include.data) {
+    if (b.requirements_snapshot !== undefined)
+      add("data/requirements-snapshot.json", "Original saved requirement snapshot; never current-editor masks or a qualification certificate", JSON.stringify(b.requirements_snapshot, null, 2) + "\n");
+    if (b.requirements_source !== undefined)
+      add("data/requirements-source.json", "Recorded original input SHA256, resolved parameters and immutable source link; not a digital signature", JSON.stringify(b.requirements_source, null, 2) + "\n");
+  }
   if (include.data && b.results) {
     add("data/s11.s1p", `S11 of the excited port, Touchstone v1 (GHz, RI, R ${Number((sweep(b)?.zRef ?? 50).toFixed(2))})`, touchstoneS1p(b, localTime(now)));
     add("data/sweep.csv", "f, |S11| dB, S11 re/im, VSWR, Zin re/im per frequency point", sweepCsv(b));
     add("data/bands.csv", "Matched bands (|S11| < −10 dB)", bandsCsv(b));
     add("data/radiation_frequency.csv", "Stored radiation scalars per physical port/frequency; coarse-pass and detailed-pattern sources separate, reliability-gated values beside raw audit values", radiationFrequencyCsv(b));
-    add("data/farfield.csv", "Dmax, gain, realized gain, efficiency per pattern frequency", farfieldCsv(b));
-    b.results.farfield.forEach((ff, i, ffs) => add(`data/pattern_${ffTag(ffs, i)}.csv`, `Directivity (dBi) over θ, φ at ${patternTag(ff.f).replace("GHz", " GHz")}${ff.port != null ? `, port ${ff.port} driven` : ""} (long format)`, patternCsv(ff)));
+    add("data/farfield.csv", "Dmax, gain, realized gain, efficiency per pattern frequency", farfieldCsv(b, extras.ludwigReferenceDeg ?? 0));
+    b.results.farfield.forEach((ff, i, ffs) => add(`data/pattern_${ffTag(ffs, i)}.csv`, `Directivity (dBi) over θ, φ at ${patternTag(ff.f).replace("GHz", " GHz")}${ff.port != null ? `, port ${ff.port} driven` : ""} (long format)`, patternCsv(ff, extras.ludwigReferenceDeg ?? 0)));
     add("data/port_signals.csv", "Port time signals: incident, reflected, total voltage, scaled current", signalsCsv(b));
+    if (b.ports.length >= 2) add("data/diversity.csv", "Stored-run MIMO metrics, physical IDs, reasons and assumptions; no session weights, so TARC is unavailable", diversityCsv(mimoAnalysis(b)));
+    if (b.requirements_snapshot !== undefined)
+      add("data/requirements.csv", "Saved requirement limits and sampled verdicts, immutable source identity, separate energy/mesh qualification", requirementsCsv(b));
     const S = sMatrix(b);
     if (S && S.ports.length > 1) {
       add(`data/sparams.s${S.ports.length}p`, `${S.ports.length}-port S-matrix, Touchstone`, touchstoneNPort(b, localTime(now)));
@@ -193,7 +207,7 @@ export function packageFiles(b: Bundle, include: Record<PackageGroup, boolean>, 
   if (include.image) add("images/view_iso.png", "3D view as shown in the viewer", extras.isoPng);
   if (include.readme) {
     const index = [{ path: "README.md", description: "This report" }, ...files.map(({ path, description }) => ({ path, description }))];
-    files.unshift({ path: "README.md", description: "This report", data: readmeReport(b, { exported: localTime(now), files: index, model: extras.model }) });
+    files.unshift({ path: "README.md", description: "This report", data: readmeReport(b, { exported: localTime(now), files: index, model: extras.model, ludwigReferenceDeg: extras.ludwigReferenceDeg }) });
   }
   return files;
 }

@@ -23,6 +23,51 @@ Directivity, gain, realized gain and available RHCP/LHCP partial directivities u
 
 The Examples publication-figure menu uses the selected cut, quantity and projection for the active stored run. Its SVG/PDF source includes visible estimate readouts and qualifications, with detailed numerical metrics in SVG description metadata. On-screen figure export preserves the visible chart. Standard generated report packages retain their explicit principal-plane defaults; they do not silently inherit interactive UI state. All cut controls are verified against deterministic synthetic analytic fields, not a new solver or measurement result.
 
+## Ludwig-3 polarization
+
+With optional complex far-field storage enabled before a run, the Pattern panel offers
+**Ludwig-3 co-polar**, **Ludwig-3 cross-polar** and **Cross-polar discrimination (XPD)**.
+The fixed linear reference angle α is measured in the global xy plane from +x toward +y:
+0° means x and 90° means y, periodic modulo 180°. The same session preference drives the
+3D pattern, cut analyzer, sampled peak/+z readouts and explicit-angle exports. It does not
+follow the beam or force cross polarization to zero at beam center. Circular polarization,
+for example, has equal co/cross powers for every linear reference.
+
+Writing δ = φ − α, the [Ludwig third definition](https://orbit.dtu.dk/en/publications/the-definition-of-cross-polarization/)
+(IEEE TAP 21(1), 116–119, 1973, DOI 10.1109/TAP.1973.1140406) is:
+
+```
+Eco    = Etheta cos(delta) - Ephi sin(delta)
+Ecross = Etheta sin(delta) + Ephi cos(delta)
+```
+
+The full complex fields are rotated before taking squared magnitudes. Co/cross partial
+directivity is `Dmax_dBi + 10 log10(Pcomponent / power_peak)`, using the retained native
+normalization in common-scale units. Dmax already contains the physical-space mirror
+correction; it is not applied again. The common int16 codec preserves relative phase to
+quantization precision. These values are partial **directivity (dBi)**, not realized gain.
+
+XPD is `10 log10(Pco/Pcross)` in **dB**, displayed on a signed −60…+60 scale. It is missing
+where total field power is below the retained peak minus 20 dB. Values at ±60 dB are bounds,
+shown as ≥60/≤−60 in readouts. Co/cross are floored at Dmax−60 dB; that floor does not mean
+finite power was measured at an exact null. Zero stored fields (including values quantized
+to zero) and θ=180° are missing: the fixed transverse reference is singular at the −z pole.
+The +z readout uses the stored θ=0 sample; it is unavailable if that sample is absent.
+
+Co/cross use the cut analyzer's existing grid-limited lobe estimates. XPD is a power ratio:
+polar radius is not radiation strength, and HPBW, SLL and front/back metrics do not apply.
+Unsampled cuts interpolate adjacent finite values in dB and preserve gaps. CSV/copy and
+selected-cut SVG/PDF exports record the actual normalized reference angle, units, mask,
+floor, saturation and normalization convention; missing derived CSV values are empty.
+Package pattern/far-field CSVs also carry these derived values when fields are present,
+using the angle explicitly supplied by the export action (pure APIs default to 0°).
+Standard report figures retain their explicit directivity/principal-plane defaults.
+
+Old bundles without valid complex samples retain scalar quantities and show why Ludwig-3
+choices are unavailable. The tests for rotation, phase, quantization, port identity and
+exports are synthetic controls; they do not establish mesh/time convergence or measured
+cross-polarization accuracy for an antenna.
+
 ## Designer array synthesis
 
 For a run with at least two stored element-port patterns, the Designer's **Array**
@@ -251,3 +296,34 @@ The equations follow [Yaghjian and Best (2005)](https://doi.org/10.1109/TAP.2005
 the [versioned bandwidth derivation](https://arxiv.org/html/2501.03146v5), and
 [McLean (1996)](https://doi.org/10.1109/8.496253). Independent analytic circuit and geometry
 controls verify the software calculation; numerical antenna qualification remains separate.
+
+## MIMO diversity from stored results
+
+Open **MIMO diversity** for a complete run with 2–64 physical ports. Every S-matrix column, explicit positive real power-wave reference, and physical port identity must be present. Partial runs, magnitude-only imports and transformed port-coordinate views are unavailable. Choose a physical port pair; enter the real and imaginary incident power-wave weight for each port to inspect a specified simultaneous excitation. All weights initially equal 1+j0. This view and its CSV do not modify the run or start simulations.
+
+For a passive complete matrix, let R = I − SᴴS. The S-parameter envelope-correlation estimate is ECC_S(i,j) = |Rᵢⱼ|²/(RᵢᵢRⱼⱼ). A full Hermitian positive-semidefinite check is used; checking each column's power alone is insufficient. A singular or numerically unresolved determinant makes CCL unavailable; a zero normalization makes ECC unavailable. The 1e−10 algebra tolerance is for floating-point roundoff, not a physical accuracy target.
+
+ECC_field is the squared magnitude of the full-sphere complex-vector inner product of the two matched embedded patterns, divided by their separate power integrals. Both Eθ and Eφ contribute, using angular-cell solid-angle weights. Only exact stored frequencies appear as points. Missing samples, incompatible basis, corrupt payloads and mirrored/half-space patterns are not interpolated or guessed. The phase center and power-wave basis must be common to both fields. Angular discretization and quantization remain limitations; the calculation does not establish pattern convergence.
+
+S-based radiation/receive estimates assume a reciprocal antenna with negligible dissipative loss, matched unused ports, and isotropic unpolarized multipath. Known radiation efficiency below 0.9 raises a loss warning; unknown exact-sample efficiency is also identified. An absolute S/field ECC difference above 0.05 raises a comparison warning. These are interpretation hints, not design acceptance or mesh-convergence thresholds.
+
+The separately labeled DG proxy uses the explicit convention 10√(1−ECC²) dB for either correlation method; it is not measured outage diversity gain. TARC = ‖S a‖/‖a‖ is a linear reflected-wave ratio for the recorded physical-port excitation. It excludes dissipative loss and is not a worst-case or random-phase result. CCL = −log₂ det(R), in bits/s/Hz, is a high-SNR antenna-only approximation, not measured channel capacity. MEG_S = Rᵢᵢ/2 is a linear isotropic equally polarized lossless reciprocal estimate.
+
+Exported CSV records physical ports, exact frequencies, actual complex excitation, metric units, unavailable reasons, warnings, and assumptions. Numerical estimates alone do not establish EM accuracy, field convergence or communication-channel performance.
+
+Primary definitions: [Blanch, Romeu and Corbella, *Exact representation of antenna system diversity performance from input parameter description* (2003)](https://upcommons.upc.edu/handle/2117/10272), [complex field/S-parameter ECC and explicitly chosen DG convention](https://www.nature.com/articles/s41598-023-41302-2), and [Lynch, *A Modal Description of Multiport Antennas* (2011)](https://onlinelibrary.wiley.com/doi/10.1155/2011/438437). These references motivate the stated idealized definitions; the implementation's synthetic tests are not independent antenna measurements.
+
+Bundle ZIP/README/PDF reports summarize the selected run without session excitation weights, so TARC stays unavailable there. The MIMO view’s CSV preserves the explicitly entered excitation. Missing or malformed weights are exported as an empty snapshot with an unavailable reason, never fabricated numeric values.
+
+## Requirements belong to the saved run
+The Summary, result-tree subtitle and exported report/package evaluate the list captured with the original run's saved input. Editing the current Design does not relabel historical results. Results without a snapshot remain unknown. Each new Designer result records a SHA256 identity derived from the exact saved input bytes and resolved parameters; the separate snapshot/source links must agree. This is recorded provenance, not a digital signature.
+
+Numeric limits, energy convergence, mesh qualification and the overall qualified verdict are separate. Missing/invalid samples, unresolved source identity, a missing matching field and an unverified mesh study stay unknown. Mesh convergence is never inferred from energy decay, a filename, or a stored pass flag. Existing saved mesh-study records lack the immutable input membership needed here, so they are not automatically treated as mesh qualification. A failed numeric limit remains visible even when the qualified verdict is unknown.
+
+S-parameter bands include both edges and all stored interior samples. S11 interpolates dB; Sij/all-port match interpolate magnitude then convert to dB, following optimizer conventions. No extrapolation or gaps are filled. Bandwidth is based on contiguous stored samples below -10 dB; an open edge gives a lower bound. These checks do not prove continuous-band behavior or physical accuracy between samples.
+
+The original single-run dB chart draws a dashed segment only within a requested band and a point for a single-frequency limit. Masks are matched to physical ports, not matrix ordinals. They do not participate in data extrema or marker searches. Comparison views and session port projections do not inherit these original driven-wave masks. Report and package exports retain exact target values, source IDs, reasons and separate qualifications; data/requirements.csv uses the package's LF CSV convention.
+
+## Additional far-field frequencies
+
+A completed local run can retain its raw E/H recording and calculate additional far-field frequencies as a separate result. Enable retention in the Run dialog before the original run. The Pattern panel checks the source job and workspace; an imported file alone cannot grant access to raw data. See [retained far-field postprocessing](NF2FF-POSTPROCESS.md) for storage, frequency, runtime and provenance constraints.

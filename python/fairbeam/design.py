@@ -25,7 +25,7 @@ The geometry maps one to one onto CSXCAD primitives, the same ones Python models
       "resistors": [{"name": "r1", "R": "100", "start": [...], "stop": [...], "direction": "y"}],
       "mesh": {"mode": "auto", "cells_per_wavelength": 20, "refine_features": false},
       "far_field": {"enabled": true, "frequencies": ["f0"], "theta_step": 3, "phi_step": 5},
-      # angular steps are optional expressions in degrees (0.25..90); optional "circular": bool
+      # angular steps are optional expressions in degrees (0.25..90); optional "circular" / "complex_fields": bool
       # optional "faces": x- x+ y- y+ z- z+
       "monitors": {"currents": ["f0"],              # optional: surface-current maps (GHz)
                    "efficiency": {"points": 21},     # optional: radiation efficiency over the band
@@ -491,6 +491,11 @@ def check_design(d: dict) -> None:
         raise DesignError("a design is a JSON object")
     if not schema_is(d.get("schema"), DESIGN_SCHEMA):
         raise DesignError(f"schema must be {DESIGN_SCHEMA!r}", "schema")
+    if "requirements" in d:
+        from .requirements import validate_requirements
+        masks = validate_requirements(d["requirements"])
+        if not masks["ok"]:
+            raise DesignError(masks["reason"], "requirements")
     from .organization import organization_issues
     for path, detail in organization_issues(d):
         raise DesignError(detail, path)
@@ -654,8 +659,9 @@ def check_design(d: dict) -> None:
     ff = d.get("far_field", {})
     if not isinstance(ff, dict):
         raise DesignError("far_field must be an object", "far_field")
-    if "circular" in ff and not isinstance(ff["circular"], bool):
-        raise DesignError("circular must be true or false", "far_field.circular")
+    for flag in ("circular", "complex_fields"):
+        if flag in ff and not isinstance(ff[flag], bool):
+            raise DesignError(f"{flag} must be true or false", f"far_field.{flag}")
     mesh = d.get("mesh", {})
     if not isinstance(mesh, dict):
         raise DesignError("mesh must be an object", "mesh")
@@ -2824,11 +2830,18 @@ def metal_loss(mt: dict, num) -> tuple[float | None, float | None]:
 
 
 def _configure_far_field(sim, ff: dict, num, vec) -> None:
-    """Apply requested output settings; circular output never enables an absent NF2FF box."""
+    """Apply requested polarization outputs without enabling an absent NF2FF box."""
     sim.cp_outputs = ff.get("circular", False)
+    sim.complex_field_outputs = ff.get("complex_fields", False)
     if not ff.get("enabled", True):
         return
     sim.pattern_steps = design_pattern_steps(ff, num)
+    if sim.complex_field_outputs:
+        from .farfield_fields import field_budget_for_steps
+        try:
+            field_budget_for_steps(*sim.pattern_steps, len(ff.get("frequencies") or [None] * 4))
+        except ValueError as exc:
+            raise DesignError(str(exc), "far_field.complex_fields") from None
     faces = ff.get("faces")
     if faces is not None and (not isinstance(faces, list) or len(faces) != 6 or not any(faces)):
         raise DesignError("faces is 6 true/false flags (x-, x+, y-, y+, z-, z+), at least one true", "far_field.faces")
@@ -3843,8 +3856,16 @@ def to_python(d: dict) -> str:
     ff = d.get("far_field", {"enabled": True})
     if "circular" in ff:
         out.append(f"    sim.cp_outputs = {ff['circular']!r}")
+    if "complex_fields" in ff:
+        out.append(f"    sim.complex_field_outputs = {ff['complex_fields']!r}")
     if ff.get("enabled", True):
-        design_pattern_steps(ff, _evaluator(resolve_names(d, {}))[0])
+        output_steps = design_pattern_steps(ff, _evaluator(resolve_names(d, {}))[0])
+        if ff.get("complex_fields"):
+            from .farfield_fields import field_budget_for_steps
+            try:
+                field_budget_for_steps(*output_steps, len(ff.get("frequencies") or [None] * 4))
+            except ValueError as exc:
+                raise DesignError(str(exc), "far_field.complex_fields") from None
         args = []
         if ff.get("phase_center") is not None:
             args.append("center=[" + ", ".join(e(v) for v in ff["phase_center"]) + "]")
@@ -3855,6 +3876,9 @@ def to_python(d: dict) -> str:
         out.append(f"    sim.pattern_steps = pattern_steps({e(ff.get('theta_step', 3))}, {e(ff.get('phi_step', 5))})")
         if ff.get("frequencies"):
             out.append("    sim.pattern_freqs = [" + ", ".join(f"({e(f)}) * 1e9" for f in ff["frequencies"]) + "]")
+        if ff.get("complex_fields"):
+            out.append("    from fairbeam.farfield_fields import field_budget_for_steps")
+            out.append("    field_budget_for_steps(*sim.pattern_steps, len(sim.pattern_freqs or [None] * 4))")
     cur = (d.get("monitors") or {}).get("currents") or []
     if cur:
         out.append("    sim.current_freqs = [" + ", ".join(f"({e(f)}) * 1e9" for f in cur) + "]  # surface-current maps")

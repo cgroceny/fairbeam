@@ -31,7 +31,13 @@
 .array-phasor line { stroke: var(--al-accent-text); stroke-width: 2; stroke-linecap: round; }
 .array-phasor .array-phasor-tip { fill: var(--al-accent-text); stroke: none; }
 .array-block .note { margin-top: 0; }
+.array-analysis-block { grid-column: 1 / -1; border-top: 1px solid var(--al-border); padding-top: var(--al-space-3); }
+.array-analysis-grid { display: grid; grid-template-columns: minmax(180px, 1fr) minmax(240px, 1.4fr) minmax(180px, 1fr); gap: var(--al-space-4); }
+.array-scan-details > summary { cursor: pointer; padding-block: var(--al-space-2); }
+.array-scan-details .array-table-wrap { max-height: 280px; }
+.array-analysis-block .array-table-wrap:focus-visible { outline: 2px solid var(--al-focus); outline-offset: -2px; }
 
 @container array (max-width: 800px) {
   .array-panel { grid-template-columns: minmax(0, 1fr); }
+  .array-analysis-grid { grid-template-columns: minmax(0, 1fr); }
 }

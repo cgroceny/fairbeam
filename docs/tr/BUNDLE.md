@@ -354,6 +354,51 @@ JSON bant alanları özgün anlamlarını korur. [CSV dışa aktarımında](EXPO
 | `mirror_planes` | number | Düzeltmede kullanılan PEC/PMC sınır sayısı. Yukarıya bakın |
 | `port` | number? | Bu kayıt için uyarılan port (çok port desteğinden sonraki paketler). Çok portlu çalıştırmalarda her uyarılan port/örüntü frekansı için kayıt, hepsi aynı frekanslarda |
 | `cp` | object? | `sim.cp_outputs = True` modellerinde veya `far_field.circular: true` Tasarımcı projelerinde dairesel polarizasyon. Aşağıya bakın |
+| `fields` | object? | Sabit referanslı Ludwig-3 eş/çapraz/XPD için isteğe bağlı karmaşık theta/phi örnekleri. Bkz. [Karmaşık uzak alan örnekleri](#complex-far-field-samples) |
+
+### Karmaşık uzak alan örnekleri
+
+`sim.complex_field_outputs = True` (Tasarımcıda `far_field.complex_fields: true`),
+bir uyarılmış portun NF2FF sonucundaki bağıl fazı korur. Varsayılan false'tur; eski
+skaler paketler kutuplanmayı yeniden oluşturamaz ve mevcut nicelikleri korur.
+Bu bölüm `cp` ve gelen dalgaya normalize çok portlu `element_patterns` bölümünden bağımsızdır.
+
+| Alan | Sözleşme |
+| --- | --- |
+| `schema`, `encoding` | `fairbeam.farfield-fields/1`, `i16le-base64-scaled` |
+| `basis`, `normalization` | `theta-phi`, `native-E-theta-phi` |
+| `f`, `shape` | Üst kaydın Hz cinsinden frekansı ve tam olarak `[theta.length, phi.length]` |
+| `scale` | Dört dizideki gerçek bileşenlerin en büyük mutlak değeri; negatif olamaz |
+| `power_peak` | Yerel toplam alan gücünün maksimumu bölü `scale²`, **nicemlemeden önce**. Sıfır olmayan alanlarda [1,4], tümü sıfır alanlarda sıfır |
+| `radius_m`, `phase_center_m` | Gerçek pozitif yerel yarıçap ve metre cinsinden üç sonlu faz merkezi koordinatı |
+| `mirror_planes` | Üst kayıtla aynı, 0–3 arasında tamsayı |
+| `e_theta_re`, `e_theta_im`, `e_phi_re`, `e_phi_im` | Kanonik base64 little-endian işaretli int16, satır öncelikli. Her değer `q * scale / 32767` olarak çözülür; −32768 geçersizdir |
+
+Ortak ölçek bağıl fazı int16 nicemleme duyarlılığı içinde korur. Sıfır olmayan
+alanlarda en az bir nicemlenmiş bileşenin mutlak değeri 32767'dir. Çözümlenmiş
+maksimum toplam güç, dört bileşenin en kötü güç hatası olan `4/32767 + 1/32767²`
+içinde `power_peak` ile uyuşmalıdır. Bu normalizasyon, kırpılmış ızgaranın üst kaydın
+Dmax değerine yeniden ölçeklenmesini önler; normalizasyon tepesini kaybeden kırpma reddedilir.
+
+Depolama kabulü **uyarılmış port başınadır**: frekans başına en fazla 65.536 açısal
+hücre, 16 frekans ve 262.144 açısal-frekans hücresi. Yazıcı NF2FF hesabından önce
+seyreltme yapmadan kontrol eder; otomatik Tasarımcı frekans seçimi dört frekans ayırır.
+Varsayılan 61×72 ızgara, dört dizi için frekans başına 46.848 base64 baytı ve üst veri gerektirir.
+
+Okuyucular pozitif ve benzersiz özgün model port kimlikleri ister; eski veri onarımıyla
+port atılamaz. Açık `farfield[].port`, uyarılmış fiziksel bir portu göstermelidir.
+S-parametresi matris indisleri varsa `port_numbers` üzerinden eşlenir; bu üst veri
+yoksa tam olarak bir özgün model portunda `excite: true` olmalıdır. Alan portunun
+atlanması yalnızca tek uyarılmış port belirlenebiliyorsa kabul edilir. Açık ve çıkarılmış
+kayıtlar aynı port bütçesini paylaşır. Geçersiz isteğe bağlı alanlar uyarıyla kaldırılır;
+skaler sonuçlar korunur.
+
+Karmaşık döndürme, sabit açı kuralı, birimler ve görüntülenen sınırlar için
+[Ludwig-3 kutuplanmasına](RESULTS.md#ludwig-3-polarization) bakın. `power_peak` ve zaten
+düzeltilmiş üst Dmax tam olarak bir kez kullanılır; okuyucu bir ayna çarpanı daha
+uygulamaz. Bu depolama biçimi tek başına sayısal yakınsamayı veya anten performansını kanıtlamaz.
+
+### Dairesel kutuplanma örnekleri
 
 **cp.** IEEE düzeni ve openEMS'in e^{jωt} fazörleriyle, uzak alanın sağ/sol dairesel bileşenleri E_R = (E_θ + jE_φ)/√2 ve E_L = (E_θ − jE_φ)/√2'dir (+z yönlü dalgada RHCP, x'ten y'ye döner). Izgaralar `directivity_dbi` gibi `[theta][phi]` indislenir.
 

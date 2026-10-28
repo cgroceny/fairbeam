@@ -8,6 +8,9 @@ const progId = "Fairbeam document";
 const ownClass = `Software\\Classes\\${progId}`;
 const command = `${ownClass}\\shell\\open\\command`;
 const openWith = `${ext}\\OpenWithProgids`;
+const application = "Software\\Classes\\Applications\\fairbeam.exe";
+const appCommand = `${application}\\shell\\open\\command`;
+const supportedTypes = `${application}\\SupportedTypes`;
 const pathA = "C:\\Program Files\\Fairbeam A";
 const pathB = "C:\\Test Space\\Türkçe 文档\\Fairbeam B";
 const quotedCommand = (path) => `"${path}\\fairbeam.exe" "%1"`;
@@ -97,11 +100,15 @@ function execute(instructions, state, path) {
     } else if (op === "ReadRegStr") {
       assert.equal(args[1], "SHCTX"); variables[raw[0]] = state.user.get(key(args[2], args[3])) ?? "";
     } else {
+      const emptyOnly = op === "DeleteRegKey" && args[0] === "/ifempty";
+      if (emptyOnly) args.shift();
       assert.equal(args[0], "SHCTX", "All mutations use the guarded current-user context");
-      state.writes.push([op, ...args.slice(1)]);
+      state.writes.push([op, ...(emptyOnly ? ["/ifempty"] : []), ...args.slice(1)]);
       if (op === "WriteRegStr") state.user.set(key(args[1], args[2]), args[3]);
       else if (op === "DeleteRegValue") state.user.delete(key(args[1], args[2]));
       else if (op === "DeleteRegKey") {
+        if (emptyOnly && [...state.user.keys()].some((candidate) =>
+          candidate.startsWith(`${lower(args[1])}\0`) || candidate.startsWith(`${lower(args[1])}\\`))) continue;
         for (const candidate of state.user.keys()) {
           if (candidate.startsWith(`${lower(args[1])}\0`) || candidate.startsWith(`${lower(args[1])}\\`)) state.user.delete(candidate);
         }
@@ -123,17 +130,27 @@ export function checkInstallerAssociations(source, identifier, installMode) {
       if (before !== undefined) assert.equal(state.user.get(key(ext)), before, "Keep any existing default, including empty");
       assert.equal(state.user.get(key(command)), quotedCommand(path));
       assert.equal(state.user.get(key(openWith, progId)), "");
+      assert.equal(state.user.get(key(application, "FriendlyAppName")), "Fairbeam");
+      assert.equal(state.user.get(key(supportedTypes, ".fb")), "");
+      assert.equal(state.user.get(key(appCommand)), quotedCommand(path));
       assert.equal(state.notifications, notices + 1);
     };
     const uninstall = (path = pathA) => {
       const before = state.user.get(key(ext)), notices = state.notifications, count = state.writes.length;
       const owned = lower(state.user.get(key(command)) ?? "") === lower(quotedCommand(path));
+      const appOwned = lower(state.user.get(key(appCommand)) ?? "") === lower(quotedCommand(path));
+      const appNameOwned = lower(state.user.get(key(application, "FriendlyAppName")) ?? "") === "fairbeam";
       execute(uninstallCode, state, path);
       assert.equal(state.user.get(key(ext)), before, "Never change the extension default on uninstall");
-      assert.equal(state.notifications, notices + Number(owned));
-      assert.deepEqual(state.writes.slice(count), owned ? [
+      assert.equal(state.notifications, notices + Number(owned) + Number(appOwned));
+      assert.deepEqual(state.writes.slice(count), [...(owned ? [
         ["DeleteRegValue", openWith, progId], ["DeleteRegKey", ownClass],
-      ] : []);
+      ] : []), ...(appOwned ? [
+        ["DeleteRegValue", appCommand, ""], ["DeleteRegValue", supportedTypes, ".fb"],
+        ...(appNameOwned ? [["DeleteRegValue", application, "FriendlyAppName"]] : []),
+        ...[appCommand, `${application}\\shell\\open`, `${application}\\shell`, supportedTypes, application]
+          .map((path) => ["DeleteRegKey", "/ifempty", path]),
+      ] : [])]);
     };
     body(state, install, uninstall); cases += 1;
   }
@@ -149,17 +166,62 @@ export function checkInstallerAssociations(source, identifier, installMode) {
     run((s, install, uninstall) => {
       install(); if (value === undefined) s.user.delete(key(ext)); else s.user.set(key(ext), value);
       install(pathB); assert.equal(s.user.get(key(ext)), value); uninstall(pathA);
-      assert.equal(s.user.get(key(command)), quotedCommand(pathB)); uninstall(pathB);
+      assert.equal(s.user.get(key(command)), quotedCommand(pathB));
+      assert.equal(s.user.get(key(appCommand)), quotedCommand(pathB)); uninstall(pathB);
     });
   }
   // Accepted no-history boundary: uninstall-first reinstall after both values vanished.
   run((s, install, uninstall) => { install(); s.user.delete(key(ext)); uninstall(); install(pathB); assert.equal(s.user.get(key(ext)), progId); });
   for (const foreign of ['"C:\\Other\\other.exe" "%1"', `${pathA}\\fairbeam.exe "%1"`, `${quotedCommand(pathA)} --different`]) {
-    run((s, install, uninstall) => { install(); s.user.set(key(command), foreign); const before = new Map(s.user); uninstall(); assert.deepEqual(s.user, before); });
+    run((s, install, uninstall) => {
+      install(); s.user.set(key(command), foreign); s.user.set(key(appCommand), foreign);
+      const before = new Map(s.user); uninstall(); assert.deepEqual(s.user, before);
+    });
+  }
+  // The document class and Applications entry have independent lifecycles.
+  // Cover absent, current, newer and foreign commands on both; preserve every
+  // registry value outside the exact command-owned key(s).
+  for (const classValue of [undefined, quotedCommand(pathA), quotedCommand(pathB), '"C:\\Other\\other.exe" "%1"']) {
+    for (const appValue of [undefined, quotedCommand(pathA), quotedCommand(pathB), '"C:\\Other\\other.exe" "%1"']) {
+      run((s, install, uninstall) => {
+        install();
+        if (classValue === undefined) s.user.delete(key(command)); else s.user.set(key(command), classValue);
+        if (appValue === undefined) s.user.delete(key(appCommand)); else s.user.set(key(appCommand), appValue);
+        const preserved = [...s.user].filter(([name]) =>
+          !(classValue === quotedCommand(pathA) && (name.startsWith(`${lower(ownClass)}\\`) || name.startsWith(`${lower(ownClass)}\0`) || name === key(openWith, progId))) &&
+          !(appValue === quotedCommand(pathA) && (name.startsWith(`${lower(application)}\\`) || name.startsWith(`${lower(application)}\0`))));
+        uninstall();
+        assert.deepEqual(s.user, new Map(preserved));
+        const once = new Map(s.user); uninstall(); assert.deepEqual(s.user, once, "Uninstall is idempotent");
+      });
+    }
+  }
+  run((s, _install, uninstall) => {
+    // Explicit executable choice can leave only an Applications registration.
+    s.user.set(key(application, "FriendlyAppName"), "Fairbeam");
+    s.user.set(key(appCommand), quotedCommand(pathA).toUpperCase());
+    s.user.set(key(supportedTypes, ".fb"), "");
+    uninstall(); assert.equal(s.user.size, 0);
+  });
+  for (const customName of [undefined, "My document app"]) {
+    run((s, install, uninstall) => {
+      install();
+      const additions = [[key(supportedTypes, ".other"), ""], [key(appCommand, "OtherMetadata"), "keep"],
+        [key(`${application}\\shell\\inspect\\command`), '"C:\\Other\\inspect.exe" "%1"'],
+        [key(application, "CustomMetadata"), "keep"]];
+      if (customName === undefined) s.user.delete(key(application, "FriendlyAppName"));
+      else additions.push([key(application, "FriendlyAppName"), customName]);
+      for (const [name, value] of additions) s.user.set(name, value);
+      uninstall();
+      for (const [name, value] of additions) assert.equal(s.user.get(name), value, "Preserve independent application metadata");
+      assert.ok(!s.user.has(key(appCommand))); assert.ok(!s.user.has(key(supportedTypes, ".fb")));
+    });
   }
   run((s, install, uninstall) => {
     const foreign = [[key(ext, "Content Type"), "application/other"], [key(openWith, "Other.Handler"), ""],
       [key(ext, "Fairbeam document_backup"), "Old.Handler"], [key("Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\FileExts\\.fb\\UserChoice", "ProgId"), "User.Handler"]];
+    foreign.push([key("Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\FileExts\\.fb\\UserChoiceLatest", "ProgId"), "Applications\\fairbeam.exe"],
+      [key("Software\\Classes\\Applications\\other.exe\\shell\\open\\command"), '"C:\\Other\\other.exe" "%1"']);
     for (const [name, value] of foreign) s.user.set(name, value);
     install(); uninstall(); for (const [name, value] of foreign) assert.equal(s.user.get(name), value);
   });

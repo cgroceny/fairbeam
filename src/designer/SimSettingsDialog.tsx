@@ -22,6 +22,9 @@ import { tryEvaluate } from "./expr";
 import type { Design, Expr } from "./types";
 import { fmt, t } from "../i18n";
 import NumberField from "../components/NumberField";
+import { RequirementsEditor } from "../components/RequirementsPanel";
+import { editRequirements } from "./store";
+import { openDesignerOptimize } from "./OptimizeDialog";
 import { applyRunProfile, RUN_PROFILES, runProfileSupported, type RunProfile } from "./runProfiles";
 
 /** monitors is optional in the design format (python/fairbeam/design.py): surface-current maps and
@@ -63,6 +66,7 @@ const SECTIONS = [
   { id: "bounds", label: "sim.section.bounds", icon: Box, paths: ["simulation.boundaries"] },
   { id: "mesh", label: "sim.section.mesh", icon: Grid3x3, paths: ["mesh"] },
   { id: "monitors", label: "sim.section.monitors", icon: Radio, paths: ["far_field", "monitors"] },
+  { id: "requirements", label: "requirements.title", icon: Activity, paths: ["requirements"] },
   { id: "solver", label: "sim.section.solver", icon: Timer, paths: ["simulation.end_criteria_db", "simulation.max_timesteps"] },
 ] as const;
 
@@ -118,8 +122,9 @@ export default function SimSettingsDialog() {
   // opened (nothing is left in the undo list); OK keeps the edits.
   const opened = historyMark();
   const changed = () => changedSince(opened);
-  const close = () => setSimSettingsOpen(false);
-  const cancel = () => { rollbackTo(opened); close(); };
+  const [requirementsDirty, setRequirementsDirty] = createSignal(false);
+  const close = () => { if (!requirementsDirty()) setSimSettingsOpen(false); };
+  const cancel = () => { rollbackTo(opened); setSimSettingsOpen(false); };
   useModal(() => box, cancel);
   // Enter in a field commits it and closes the dialog, like OK (the Brick and Run dialogs confirm on
   // Enter too); not in a select, a text area, a button or a check box, nor when the field used the key
@@ -127,7 +132,7 @@ export default function SimSettingsDialog() {
   const onEnter = (e: KeyboardEvent) => {
     if (e.key !== "Enter" || e.defaultPrevented || e.isComposing || e.shiftKey || e.altKey || e.ctrlKey || e.metaKey) return;
     const el = e.target;
-    if (!(el instanceof HTMLInputElement) || ["checkbox", "radio", "button", "submit", "reset", "range", "file", "color"].includes(el.type)) return;
+    if (!(el instanceof HTMLInputElement) || el.closest('[data-requirements-editor]') || ["checkbox", "radio", "button", "submit", "reset", "range", "file", "color"].includes(el.type)) return;
     e.preventDefault();
     el.blur(); // a field that commits on change or blur does so now
     close();
@@ -236,7 +241,7 @@ export default function SimSettingsDialog() {
       if (boundary && Number(boundary[1]) < FACES.length) setFace(Number(boundary[1]));
       const field = fieldInDialog(request.path);
       const sectionId = field?.closest("section")?.id.replace(/^ss-/, "")
-        ?? (request.path.startsWith("mesh") ? "mesh" : /^(far_field|monitors)/.test(request.path) ? "monitors" : request.path.startsWith("simulation.boundaries") ? "bounds" : /simulation\.(end_criteria_db|max_timesteps)/.test(request.path) ? "solver" : "freq");
+        ?? (request.path.startsWith("requirements") ? "requirements" : request.path.startsWith("mesh") ? "mesh" : /^(far_field|monitors)/.test(request.path) ? "monitors" : request.path.startsWith("simulation.boundaries") ? "bounds" : /simulation\.(end_criteria_db|max_timesteps)/.test(request.path) ? "solver" : "freq");
       go(sectionId);
       const target = field ?? box.querySelector<HTMLElement>(`#ss-tab-${sectionId}`);
       if (target) {
@@ -609,6 +614,11 @@ export default function SimSettingsDialog() {
                   onChange={(e) => { const c = e.currentTarget.checked; edit((x) => { x.far_field.circular = c; }, "ff-circular"); }} /> {t("sim.mon.circular")}</label>
                 <p class="note" id={`${fieldId("far_field.circular")}-note`}>{t("sim.mon.circularNote")}</p>
                 <Show when={issues()["far_field.circular"]}><span class="dz-value dz-bad">{issues()["far_field.circular"]!.message}</span></Show>
+                <label class="dz-check"><input id={fieldId("far_field.complex_fields")} type="checkbox" checked={d().far_field.complex_fields === true}
+                  aria-describedby={`${fieldId("far_field.complex_fields")}-note`}
+                  onChange={(e) => { const checked = e.currentTarget.checked; edit((x) => { x.far_field.complex_fields = checked; }, "ff-complex-fields"); }} /> {t("sim.mon.complexFields")}</label>
+                <p class="note" id={`${fieldId("far_field.complex_fields")}-note`}>{t("sim.mon.complexFieldsNote")}</p>
+                <Show when={issues()["far_field.complex_fields"]}><span class="dz-value dz-bad">{issues()["far_field.complex_fields"]!.message}</span></Show>
                 <FreqList label={t("sim.mon.ffFreqs")} path="far_field.frequencies" value={d().far_field.frequencies ?? []} placeholder={t("sim.mon.ffFreqsEmpty")}
                   onChange={(v) => edit((x) => { x.far_field.frequencies = v; }, "fff")} />
                 <div class="dz-vec-row">
@@ -665,6 +675,10 @@ export default function SimSettingsDialog() {
               <FieldPlanesEditor />
             </section>
 
+            <section id="ss-requirements" class="stack">
+              <RequirementsEditor value={d().requirements} onChange={editRequirements} onDirtyChange={setRequirementsDirty}
+                onUseGoals={goals => { setSimSettingsOpen(false); void openDesignerOptimize(goals); }} />
+            </section>
             <section id="ss-solver" class="stack">
               <h3>{t("sim.section.solver")}</h3>
               <div class="ss-row">
@@ -697,10 +711,10 @@ export default function SimSettingsDialog() {
           </div>
         </div>
         <div class="dialog-foot">
-          <span class="muted">{t("sim.footNote")}</span>
+          <span class="muted">{t(requirementsDirty() ? "requirements.applyBeforeClose" : "sim.footNote")}</span>
           <div class="dialog-actions">
             <button class="btn btn-ghost" onClick={cancel} title={changed() ? t("sim.discardTitle") : undefined}>{changed() ? t("sim.discard") : t("common.cancel")}</button>
-            <button class="btn btn-primary" onClick={close}>{t("common.ok")}</button>
+            <button class="btn btn-primary" disabled={requirementsDirty()} onClick={close}>{t("common.ok")}</button>
           </div>
         </div>
       </div>

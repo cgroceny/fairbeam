@@ -7,6 +7,7 @@ import { magDb, pairLabel, sMatrix } from "../lib/sparams.ts";
 import { patternCut, sweep } from "../lib/rf.ts";
 import { analyzeCut, cutLabel, cutSpecs, patternMetrics, type PatternCutChoice } from '../lib/patternMetrics.ts';
 import { effectiveQuantity, quantityGrid, quantityUnit, type PatternQuantity } from '../lib/farfieldQuantity.ts';
+import { isLudwigQuantity, ludwigExportNote } from '../lib/ludwig.ts';
 import { textWidth } from "./metrics.ts";
 import { circle, group, line, n, polygon, polyline, rect, svgDoc, text, type Pt } from "./svg.ts";
 
@@ -392,19 +393,21 @@ export function patternFigureFor(b: Bundle, ff: FarField, opt: FigureOptions & {
 /** Current selected cut for publication SVG/PDF. Standard report figures keep their explicit
  * principal-plane default; callers must pass selection instead of reading UI state here. */
 export function selectedPatternFigure(b: Bundle, ff: FarField, choice: PatternCutChoice, quantity: PatternQuantity,
-  projection: 'polar' | 'cartesian', opt: FigureOptions & { principalAvailable?: boolean; fallbackPhi?: number } = {}): string | null {
-  const q = effectiveQuantity(b, ff, quantity), grid = quantityGrid(b, ff, q);
+  projection: 'polar' | 'cartesian', opt: FigureOptions & { principalAvailable?: boolean; fallbackPhi?: number; ludwigReferenceDeg?: number } = {}): string | null {
+  const q = effectiveQuantity(b, ff, quantity), reference = opt.ludwigReferenceDeg ?? 0, grid = quantityGrid(b, ff, q, reference);
   const cuts = cutSpecs(choice, opt.principalAvailable ?? true, opt.fallbackPhi ?? 0).map(spec => ({
     ...analyzeCut(ff.theta, ff.phi, grid, spec, !!b.half_space), label: cutLabel(spec),
   }));
   const values = cuts.flatMap(c => c.value.filter(Number.isFinite));
   if (!values.length) return null;
   const metrics = cuts.map(c => ({ cut: c.label, ...patternMetrics(c, ff.theta, ff.phi, grid, !!b.half_space, q) }));
-  const quantityName = { directivity: 'Directivity', gain: 'Gain', realized: 'Realized gain', rhcp: 'RHCP directivity', lhcp: 'LHCP directivity', axial_ratio: 'Axial ratio' }[q];
-  const ar = q === "axial_ratio", unit = quantityUnit(q);
+  const quantityName = { directivity: 'Directivity', gain: 'Gain', realized: 'Realized gain', rhcp: 'RHCP directivity', lhcp: 'LHCP directivity', axial_ratio: 'Axial ratio', co: 'Ludwig-3 co-polar directivity', cross: 'Ludwig-3 cross-polar directivity', xpd: 'Cross-polar discrimination (XPD)' }[q];
+  const ar = q === "axial_ratio", xpd = q === "xpd", unit = quantityUnit(q);
   const title = `${quantityName} (${unit}), ${ghz(ff.f)} GHz · ${cuts.map(c => c.label).join(' / ')}`;
   const arNote = "Axial ratio: 0–60 dB; lower values are more circular, radius is not radiation strength. Values at the 60 dB cap are saturated. Only D >= stored Dmax -20 dB is displayed; missing samples remain gaps. HPBW/SLL/F/B do not apply to this ratio.";
-  const description = ar ? arNote : `Grid-limited estimates, not exact lobes. HPBW: adjacent -3 dB crossings; SLL: resolved peaks outside the main lobe with a peak -40 dB detection floor. F/B: cut peak versus its 3D antipode (180-theta, phi+180); no half-space mirroring. ${cuts.some(c => c.interpolated) ? 'Adjacent dB interpolation; source angular resolution unchanged.' : 'Stored samples.'} ${JSON.stringify(metrics)}`;
+  const ludwigNote = isLudwigQuantity(q) ? ludwigExportNote(reference) : '';
+  const ratioNote = xpd ? 'XPD: signed co/cross power ratio; polar radius is not radiation strength. HPBW/SLL/F/B do not apply to this ratio.' : arNote;
+  const description = `${ludwigNote} ${ar || xpd ? ratioNote : `Grid-limited estimates, not exact lobes. HPBW: adjacent -3 dB crossings; SLL: resolved peaks outside the main lobe with a peak -40 dB detection floor. F/B: cut peak versus its 3D antipode (180-theta, phi+180); no half-space mirroring. ${JSON.stringify(metrics)}`} ${cuts.some(c => c.interpolated) ? 'Adjacent dB interpolation; source angular resolution unchanged.' : 'Stored samples.'}`.trim();
   const withReadouts = (svg: string) => {
     const width = opt.widthMm ?? 88;
     const height = Number(svg.match(/height="([\d.]+)mm"/)?.[1]);
@@ -413,8 +416,9 @@ export function selectedPatternFigure(b: Bundle, ff: FarField, choice: PatternCu
       `${m.cut}: HPBW ${value(m.hpbw, 'deg')}; SLL ${value(m.sll, 'dB')}`,
       `F/B ${value(m.frontBack, 'dB')}; step ${m.spacing?.map(v => v.toFixed(3)).join('–') ?? 'N/A'} deg`,
     ]);
-    if (ar) rows.push(arNote);
+    if (ar || xpd) rows.push(ratioNote);
     else rows.push('Grid-limited estimates; SLL detection floor: peak -40 dB.', 'F/B: cut peak versus its 3D antipode; no half-space mirroring.');
+    if (ludwigNote) rows.push(ludwigNote);
     const wrapped = rows.flatMap(row => {
       const lines: string[] = []; let current = '';
       for (const word of row.split(' ')) {
@@ -434,13 +438,13 @@ export function selectedPatternFigure(b: Bundle, ff: FarField, choice: PatternCu
   };
   if (projection === 'cartesian') {
     const svg = lineChartSvg({ width: opt.widthMm ?? 88, height: opt.heightMm ?? 65, title,
-      xLabel: `${cuts[0].spec.kind === 'conical' ? 'φ' : 'θ'} (deg)`, yLabel: `${quantityName} (${unit})`, yDomain: ar ? [0, 60] : undefined,
+      xLabel: `${cuts[0].spec.kind === 'conical' ? 'φ' : 'θ'} (deg)`, yLabel: `${quantityName} (${unit})`, yDomain: ar ? [0, 60] : xpd ? [-60, 60] : undefined,
       series: cuts.map((c, i) => ({ label: c.label, x: c.angle, y: c.value, dash: i ? '2 1' : undefined })) });
     // svgDoc performs XML escaping for the numerical/provenance description.
     const desc = svgDoc(1, 1, '', '', description).match(/<desc>[\s\S]*?<\/desc>/)?.[0] ?? '';
     return withReadouts(svg.replace('</svg>', `${desc}</svg>`));
   }
-  const svg = patternFigureFor(b, ff, { ...opt, title, cuts, range: ar ? 60 : 40, topDb: ar ? 60 : Math.max(...values), peakLabel: '', description,
+  const svg = patternFigureFor(b, ff, { ...opt, title, cuts, range: ar ? 60 : xpd ? 120 : 40, topDb: ar || xpd ? 60 : Math.max(...values), peakLabel: '', description,
     half: cuts[0].spec.kind === 'elevation' && !!b.half_space });
   return svg ? withReadouts(svg) : null;
 }

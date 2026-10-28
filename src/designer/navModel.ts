@@ -240,7 +240,7 @@ export function runRows(entries: readonly ProjectIndexEntry[], model: string, fi
 
 /** What a run's bundle holds beyond the S-parameters: far-field and surface-current frequencies (Hz)
  * and its field-plane maps (index into the bundle's field_planes, with the tree's label). */
-export interface RunContent { array?: number[]; farfield: number[]; currents: number[]; fieldPlanes?: { map: number; f: number; label: string }[] }
+export interface RunContent { diversity?: boolean; array?: number[]; farfield: number[]; currents: number[]; fieldPlanes?: { map: number; f: number; label: string }[] }
 
 /** A field-plane map's name in the tree and on the colour bar: "E-field (z = 1.5 mm, 2.45 GHz)",
  * "Ex (z = 1.5 mm, 2.45 GHz)" for one component. */
@@ -254,12 +254,13 @@ export function fieldPlaneLabel(m: { quantity?: unknown; component?: unknown; no
 
 /** Read from a bundle (or its raw JSON): tolerant, it only lists what is there. */
 export function runContent(b: unknown): RunContent {
-  const o = (b ?? {}) as { units?: { length_m?: number }; results?: { farfield?: { f?: unknown }[] } | null; fields?: { planes?: { frequencies?: { f_target?: unknown; f?: unknown }[] }[] }; field_planes?: unknown };
+  const o = (b ?? {}) as { units?: { length_m?: number }; ports?: { number?: unknown }[]; results?: { farfield?: { f?: unknown }[] } | null; fields?: { planes?: { frequencies?: { f_target?: unknown; f?: unknown }[] }[] }; field_planes?: unknown };
   const uniq = (xs: unknown[]) => [...new Set(xs.filter((x): x is number => typeof x === "number" && Number.isFinite(x)))];
   const fieldPlanes = (Array.isArray(o.field_planes) ? o.field_planes as Record<string, unknown>[] : [])
     .flatMap((m, map) => (m && typeof m.f === "number" && Number.isFinite(m.f) ? [{ map, f: m.f, label: fieldPlaneLabel(m, (o.units?.length_m ?? 1e-3) * 1000) }] : []));
   const array = elementPatterns(b as Bundle).filter(set => set.elements.length >= 2).map(set => set.f);
   return {
+    ...(Array.isArray(o.ports) && o.ports.length >= 2 ? { diversity: true } : {}),
     ...(array.length ? { array } : {}),
     farfield: uniq((o.results?.farfield ?? []).map((f) => f.f)),
     currents: uniq((o.fields?.planes?.[0]?.frequencies ?? []).map((f) => f.f_target ?? f.f)),
@@ -290,6 +291,7 @@ export function runChildren(file: string, content: RunContent | null): NavNode[]
   if (content?.farfield.length) out.push(group("farfield", t("tree.result.farfields"), content.farfield.flatMap((f) => [
     leaf("pattern", t("tree.result.farfield", { f: ghz(f) }), "farfield", f), leaf("pattern3d", t("tree.result.pattern3d", { f: ghz(f) }), "farfield", f),
   ])));
+  if (content?.diversity) out.push(leaf("diversity", t("mimo.title"), "curve"));
   if (content?.array?.length) out.push(leaf("array", t("dock.results.array"), "farfield", content.array[0]));
   // the surface currents (drawn in the 3D view) and the E/H field planes (a 2D map and a 3D plane)
   const maps = [

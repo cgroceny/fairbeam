@@ -37,6 +37,7 @@ import { archiveNativeProject, pickNativeDocument, persistNativeDocument, rememb
 import { createDocumentResultAutosave } from "../lib/documentResultAutosave";
 import { showToast } from "../lib/toast";
 import { focusSimSettings } from "./simSettingsState";
+import { validateRequirements } from "../lib/requirements";
 
 export const defaultDesignerSession = createDesignerSession({
   edited: (previewChanged) => { if (previewChanged) { quickPreview(); schedulePreview(); } },
@@ -167,6 +168,14 @@ export function editParameterSweep(value: Design["parameter_sweep"]) {
   // (the Parameter sweep dialog writes through here; opening or re-entering it must not touch the draft)
   if (JSON.stringify(unwrap(draft.parameter_sweep) ?? null) === JSON.stringify(value ?? null)) return;
   edit((d) => { d.parameter_sweep = value; }, "parameter_sweep", t("history.editSweep"));
+}
+
+/** Requirement edits use the ordinary saved Design and undo history; results keep their snapshots. */
+export function editRequirements(value: NonNullable<Design["requirements"]>) {
+  const parsed = validateRequirements(value);
+  if (!parsed.ok) throw new Error(parsed.reason);
+  if (JSON.stringify(unwrap(draft.requirements) ?? null) === JSON.stringify(parsed.value)) return;
+  edit(d => { d.requirements = parsed.value; }, "requirements", t("requirements.history"));
 }
 
 // ------------------------------------------------------------------ instant preview (browser-built)
@@ -928,7 +937,7 @@ export function componentFolders(): string[] {
 export function focusPath(path: string, options: { frame?: boolean; focus?: boolean } = {}) {
   if (/^params\[\d+\]\.(min|max)$/.test(path)) setParameterRanges(true);
   if (/^params(?:\[|$)/.test(path)) openParametersTab();
-  const s = selectionForPath(path);
+  const s = /^requirements(?:\.|\[|$)/.test(path) ? { type: "simulation" as const } : selectionForPath(path);
   setSelection(s);
   if (options.frame) {
     setCenterView("3d");

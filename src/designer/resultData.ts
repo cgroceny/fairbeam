@@ -14,6 +14,7 @@ import { summaryTable } from "./runSummary.ts";
 import { radiationTable, type RadiationQuantity } from "../lib/radiationFrequency.ts";
 import { smallAntennaResultColumns, type SmallAntennaSnapshot } from "../lib/smallAntennaResult.ts";
 import { analyzeCut, cutLabel, cutSpecs, patternMetrics, type PatternCutChoice } from '../lib/patternMetrics.ts';
+import { isLudwigQuantity, LUDWIG_EXPORT_HEADERS, ludwigExportMetadata } from "../lib/ludwig.ts";
 
 export interface ResultDataTable {
   header: string[];
@@ -43,6 +44,8 @@ export interface ResultDataOptions {
   runNames?: (string | undefined)[];
   /** the far-field quantity shown (the pattern data add its column beside the directivity) */
   patternQuantity?: PatternQuantity;
+  /** Fixed global xy reference, in degrees, shared with the selected plots. */
+  ludwigReferenceDeg?: number;
   /** Internal comparison contract: the base already resolved its quantity; references keep missing data. */
   patternQuantityFixed?: boolean;
   /** Driven port of the selected pattern; compared runs without that port have no samples. */
@@ -214,27 +217,30 @@ function baseResultDataTable(bundle: Bundle | null | undefined, view: ResultView
     const withPort = ffs.some((x) => x.port != null);
     // the shown quantity (gain, realized gain, a circular part) beside the directivity
     const q = options.patternQuantity ? (options.patternQuantityFixed ? options.patternQuantity : effectiveQuantity(bundle, ff, options.patternQuantity)) : "directivity";
+    const reference = options.ludwigReferenceDeg ?? 0;
+    const metadata = isLudwigQuantity(q) ? ludwigExportMetadata(reference) : [];
+    const metadataHeaders = isLudwigQuantity(q) ? LUDWIG_EXPORT_HEADERS : [];
     if (options.patternCut) {
-      const grid = quantityGrid(bundle, ff, q);
+      const grid = quantityGrid(bundle, ff, q, reference);
       return {
         header: [...(withPort ? ['Port'] : []), 'f (GHz)', 'Cut', 'Cut angle (deg)', 'theta (deg)', 'phi (deg)', `${tEn(`farfield.quantity.${q}`)} (${quantityUnit(q)})`,
-          'HPBW estimate (deg)', 'HPBW status', 'SLL estimate (dB; floor -40 dB)', 'SLL status', 'Peak / 3D antipode (dB)', 'F/B status', 'Adjacent dB interpolation', 'Cut min spacing (deg)', 'Cut max spacing (deg)'],
+          'HPBW estimate (deg)', 'HPBW status', 'SLL estimate (dB; floor -40 dB)', 'SLL status', 'Peak / 3D antipode (dB)', 'F/B status', 'Adjacent dB interpolation', 'Cut min spacing (deg)', 'Cut max spacing (deg)', ...metadataHeaders],
         rows: cutSpecs(options.patternCut, options.patternPrincipalAvailable ?? true, options.patternFallbackPhi ?? 0).flatMap(spec => {
           const cut = analyzeCut(ff.theta, ff.phi, grid, spec, !!bundle.half_space);
           const metrics = patternMetrics(cut, ff.theta, ff.phi, grid, !!bundle.half_space, q);
           return cut.angle.map((a, i) => [...(withPort ? [ff.port ?? null] : []), ff.f / 1e9, cutLabel(spec), a, cut.theta[i], cut.phi[i], finiteCell(cut.value[i]),
             metrics.hpbw.value, metrics.hpbw.reason ?? 'sampled estimate', metrics.sll.value, metrics.sll.reason ?? 'sampled estimate',
-            metrics.frontBack.value, metrics.frontBack.reason ?? 'sampled estimate', cut.interpolated ? 'yes' : 'no', ...(metrics.spacing ?? [null, null])]);
+            metrics.frontBack.value, metrics.frontBack.reason ?? 'sampled estimate', cut.interpolated ? 'yes' : 'no', ...(metrics.spacing ?? [null, null]), ...metadata]);
         }),
       };
     }
-    const extra = q === "directivity" ? null : quantityGrid(bundle, ff, q);
+    const extra = q === "directivity" ? null : quantityGrid(bundle, ff, q, reference);
     const rows: (string | number | null)[][] = [];
     ff.theta.forEach((theta, i) => ff.phi.forEach((phi, j) => {
       const value = ff.directivity_dbi?.[i]?.[j];
-      rows.push([...(withPort ? [ff.port ?? null] : []), ff.f / 1e9, theta, phi, finiteCell(value), ...(extra ? [finiteCell(extra[i]?.[j])] : [])]);
+      rows.push([...(withPort ? [ff.port ?? null] : []), ff.f / 1e9, theta, phi, finiteCell(value), ...(extra ? [finiteCell(extra[i]?.[j])] : []), ...metadata]);
     }));
-    return { header: [...(withPort ? ["Port"] : []), "f (GHz)", "theta (deg)", "phi (deg)", "Directivity (dBi)", ...(extra ? [`${tEn(`farfield.quantity.${q}`)} (${quantityUnit(q)})`] : [])], rows };
+    return { header: [...(withPort ? ["Port"] : []), "f (GHz)", "theta (deg)", "phi (deg)", "Directivity (dBi)", ...(extra ? [`${tEn(`farfield.quantity.${q}`)} (${quantityUnit(q)})`] : []), ...metadataHeaders], rows };
   }
   if (view === "efficiency") {
     if (options.radiationQuantity) return radiationTable(bundle, [options.radiationQuantity]);

@@ -13,7 +13,8 @@ import {
   effectiveQuantity, farfieldSummary, PATTERN_QUANTITIES, QUANTITY_LABEL, quantityAvailability, quantityMax, quantityRange, quantityUnit, toDb, type PatternQuantity,
 } from "../lib/farfieldQuantity";
 import { axialRatioReadouts, AXIAL_RATIO_MASK_DB, AXIAL_RATIO_MAX_DB } from "../lib/circular";
-import { patternQuantity, setPatternQuantity } from "../lib/patternQuantityStore";
+import { ludwigReferenceDeg, patternQuantity, setPatternQuantity } from "../lib/patternQuantityStore";
+import { isLudwigQuantity } from "../lib/ludwig";
 import type { Bundle, FarField } from "../types";
 import { t } from "../i18n";
 import "../styles/farfield-card.css";
@@ -75,7 +76,7 @@ export default function FarfieldCard(props: { bundle: Bundle; ff: FarField; entr
   const q = () => (props.arrayPattern ? "directivity" : effectiveQuantity(props.bundle, props.ff, patternQuantity()));
   const top = () => (props.arrayPattern ? props.ff.dmax_dbi : quantityMax(props.bundle, props.ff, q()));
   const range = () => quantityRange(q());
-  const scaleNote = () => q() === "axial_ratio" ? t("farfield.arScale") : t("farfield.scaleUnit", { range: range() });
+  const scaleNote = () => q() === "axial_ratio" ? t("farfield.arScale") : q() === "xpd" ? t("ludwig.xpdScale") : t("farfield.scaleUnit", { range: range() });
   const s = createMemo(() => farfieldSummary(props.bundle, props.ff));
   const multiPort = () => props.entries.some((f) => f.port != null) && new Set(props.entries.map((f) => f.port)).size > 1;
   const samePorts = (f: FarField, i: number) => props.entries.some((g, j) => j !== i && g.f === f.f);
@@ -88,7 +89,7 @@ export default function FarfieldCard(props: { bundle: Bundle; ff: FarField; entr
   const roundTicks = () => {
     const hi = top(), lo = hi - range();
     const out: { v: number; f: number }[] = [];
-    const step = q() === "axial_ratio" ? 30 : 10; // keep the short card's labels separated
+    const step = q() === "axial_ratio" ? 30 : q() === "xpd" ? 60 : 10; // keep the short card's labels separated
     for (let v = Math.ceil(lo / step) * step; v <= hi + 1e-9; v += step) out.push({ v, f: (v - lo) / range() });
     return out;
   };
@@ -119,10 +120,11 @@ export default function FarfieldCard(props: { bundle: Bundle; ff: FarField; entr
           </Show>
           <Show when={fallback()}><p class="ff-card-note" role="note">{fallback()}</p></Show>
           <Show when={q() === "axial_ratio"}><p class="ff-card-note" role="note">{axialRatioNote()}</p></Show>
+          <Show when={isLudwigQuantity(q())}><p class="ff-card-note" role="note">α {num(ludwigReferenceDeg(), 2)}° · {t("ludwig.limits")}</p></Show>
         </div>
       </Show>
       {/* a short view folds the scale: the caption goes into the ramp's tooltip and the unit onto the top tick */}
-      <div class="colorbar-body" title={`${scaleNote()}${q() === "rhcp" || q() === "lhcp" ? ` · ${t("farfield.topIsDmax")}` : ""}`}>
+      <div class="colorbar-body" title={`${scaleNote()}${["rhcp", "lhcp", "co", "cross"].includes(q()) ? ` · ${t("farfield.topIsDmax")}` : ""}`}>
         <div class="colorbar-ramp" aria-hidden="true" />
         <div class="colorbar-ticks colorbar-ticks-round">
           <For each={roundTicks()}>{(k, i) => <span style={{ "--f": k.f }}>{minus(num(k.v, 0))}<Show when={i() === roundTicks().length - 1}><span class="ff-tick-unit"> {quantityUnit(q())}</span></Show></span>}</For>

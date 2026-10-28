@@ -62,6 +62,8 @@ export interface LineChartProps {
   xFormat?: (v: number) => string;
   yFormat?: (v: number) => string;
   hlines?: { y: number; label: string }[];
+  /** Bounded specification annotations; excluded from sampled traces, markers and axis domains. */
+  limitSegments?: { x0: number; x1: number; y: number; label: string }[];
   bands?: { x0: number; x1: number }[];
   markers?: Marker[];
   /** symbols at single x values (no line), after the series */
@@ -493,6 +495,19 @@ export default function LineChart(props: LineChartProps) {
               <line x1={M.l} x2={M.l + W()} y1={sy(h.y)} y2={sy(h.y)} class="c-ref" />
             </g>
           )}
+        </For>
+
+        <For each={(props.limitSegments ?? []).filter(segment => [segment.x0, segment.x1, segment.y].every(Number.isFinite) && segment.x0 <= segment.x1)}>
+          {segment => <Show when={segment.x1 >= xDom()[0] && segment.x0 <= xDom()[1] && segment.y >= yDom()[0] && segment.y <= yDom()[1]}>
+            <g class="c-limit-segment" role="img" aria-label={segment.label}>
+              <title>{segment.label}</title>
+              <Show when={segment.x0 === segment.x1} fallback={<line
+                x1={sx(Math.max(segment.x0, xDom()[0]))} x2={sx(Math.min(segment.x1, xDom()[1]))}
+                y1={sy(segment.y)} y2={sy(segment.y)} stroke="var(--al-text-2)" stroke-width="1.5" stroke-dasharray="4 3" />}>
+                <circle cx={sx(segment.x0)} cy={sy(segment.y)} r="4" fill="var(--al-surface)" stroke="var(--al-text-2)" stroke-width="1.5" />
+              </Show>
+            </g>
+          </Show>}
         </For>
 
         <For each={props.series}>

@@ -1,0 +1,21 @@
+.mimo-panel { padding: var(--al-pad-panel); min-width: 0; }
+.mimo-chart { min-height: 260px; height: 32vh; position: relative; }
+.mimo-chart > .chart { height: 100%; }
+.mimo-excitation { margin: 0; padding: var(--al-space-3); border: 1px solid var(--al-border); }
+.mimo-excitation input { width: 7em; }
+.mimo-table { max-width: 100%; overflow-x: auto; }
+.mimo-table:focus-visible { outline: 2px solid var(--al-focus); outline-offset: -2px; }
+.mimo-table .table { width: 100%; }
+.mimo-table th, .mimo-table td { white-space: nowrap; }
+.mimo-panel summary { cursor: pointer; }
+.mimo-panel p { margin: 0; }
+/* Compact Designer side handles float over the result area. Keep labels and
+   editable excitation controls clear of their hit targets. */
+@media (max-width: 1040px) {
+  .workspace.design-mode:has(> .dw-strip-left) .dw-result .mimo-panel {
+    margin-inline-start: calc(var(--dw-strip-w, 26px) + var(--al-space-1));
+  }
+  .workspace.design-mode:has(> .dw-strip-right) .dw-result .mimo-panel {
+    margin-inline-end: calc(var(--dw-strip-w, 26px) + var(--al-space-1));
+  }
+}
