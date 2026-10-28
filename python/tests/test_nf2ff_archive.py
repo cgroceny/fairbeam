@@ -1,10 +1,12 @@
 """Synthetic HDF5 metadata/ownership controls; no solver and no field propagation."""
 import copy
 import json
+import os
 import tempfile
 import threading
 import types
 import unittest
+from contextlib import chdir
 from pathlib import Path
 from unittest.mock import patch
 
@@ -121,6 +123,48 @@ class ArchiveTests(unittest.TestCase):
         with self.assertRaises(FileExistsError):
             a.write_new(dest, b"second")
         self.assertEqual(dest.read_bytes(), b"first")
+
+    def test_safe_file_accepts_owned_noncanonical_roots(self):
+        existing = self.raw / "input.json"
+        existing.write_bytes(b"owned input")
+        with chdir(self.base):
+            for root in (self.raw / ".." / "raw", Path("raw")):
+                with self.subTest(root=root):
+                    self.assertEqual(a.safe_file(root, "input.json"), existing.resolve())
+                    self.assertEqual(a.safe_file(root, "future.json", exists=False),
+                                     self.raw.resolve() / "future.json")
+
+    @unittest.skipUnless(os.name == "nt", "Windows short-path alias control")
+    def test_safe_file_accepts_windows_short_path_alias(self):
+        import ctypes
+        from ctypes import wintypes
+        get_short = ctypes.WinDLL("kernel32", use_last_error=True).GetShortPathNameW
+        get_short.argtypes = [wintypes.LPCWSTR, wintypes.LPWSTR, wintypes.DWORD]
+        get_short.restype = wintypes.DWORD
+        folder = self.base / "owned long NF2FF folder"
+        folder.mkdir()
+        size = get_short(str(folder), None, 0)
+        self.assertGreater(size, 0)
+        buffer = ctypes.create_unicode_buffer(size)
+        written = get_short(str(folder), buffer, size)
+        self.assertGreater(written, 0)
+        self.assertLess(written, size)
+        alias = Path(buffer.value)
+        if alias == folder.resolve():
+            self.skipTest("this volume does not provide a distinct short-path alias")
+        (folder / "input.json").write_bytes(b"owned input")
+        self.assertEqual(alias.resolve(), folder.resolve())
+        self.assertEqual(a.safe_file(alias, "input.json"), folder.resolve() / "input.json")
+
+    def test_safe_file_refuses_root_ancestor_and_child_reparse_points(self):
+        existing = self.raw / "input.json"
+        existing.write_bytes(b"owned input")
+        original = a._linked
+        for linked in (self.base, self.raw, existing):
+            with self.subTest(linked=linked), patch.object(
+                    a, "_linked", side_effect=lambda path: path == linked or original(path)):
+                with self.assertRaisesRegex(ValueError, "link|reparse"):
+                    a.safe_file(self.raw, "input.json")
 
     def test_hdf5_external_link_refused(self):
         path = self.raw / "external.h5"
@@ -305,13 +349,13 @@ class ArchiveTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "snapshot changed"):
                 main(["--request", str(request), "--sha256", "0"*64])
 
-    def queued_transform(self, design_snapshot=False):
+    def queued_transform(self, design_snapshot=False, job_root=None):
         from fairbeam.jobs import JobManager, Job
         self.raw = self.base / "sim/runs/source/model"
         self.raw.mkdir(parents=True)
         source_bytes = a.encode({"model": {"id": "sample"}, "schema": "fairbeam.design/1"}) if design_snapshot else b"saved input"
         self.retain(source_bytes=source_bytes)
-        manager = JobManager(self.base / "jobs", self.base, sim_root=self.base / "sim", autostart=False)
+        manager = JobManager(job_root or self.base / "jobs", self.base, sim_root=self.base / "sim", autostart=False)
         source = Job(manager.root, id="source", model="sample", model_id="sample", status="done", kind="run", bundle=self.parent.name,
             sim_dir=str(self.raw.parent), retain_nf2ff=True, retained_nf2ff={"root": str(self.raw), "sha256": self.sha},
             params={"x": 2}, overrides={"length": "3"})
@@ -330,6 +374,16 @@ class ArchiveTests(unittest.TestCase):
             parent_path=self.parent, _runtime_identity=self.runtime,
             _transform=lambda root, port, request, out: [{"f": 2e9, "port": 3}])
         return manager, source, job, self.base / job.postprocess["output_filename"]
+
+    def test_postprocess_completion_accepts_owned_noncanonical_job_root(self):
+        jobs = self.base / "jobs"
+        jobs.mkdir()
+        manager, source, job, output = self.queued_transform(job_root=jobs / ".." / "jobs")
+        self.assertNotEqual(job.dir, job.dir.resolve())
+        manager._finish_postprocess(job, 0, [])
+        self.assertEqual(job.status, "done", job.error)
+        self.assertEqual(output.read_bytes(), (job.dir / "nf2ff-result.json").read_bytes())
+        self.assertEqual(job.postprocess["result_sha256"], a.file_digest(output))
 
     def test_derivative_retains_independent_admitted_design_snapshot(self):
         manager, source, job, output = self.queued_transform(design_snapshot=True)

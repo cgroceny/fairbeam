@@ -68,6 +68,9 @@ def safe_file(root: Path, relative: str, *, exists=True) -> Path:
     if (not isinstance(relative, str) or not relative or part.is_absolute() or part.drive
             or "\\" in relative or any(v in ("", ".", "..") for v in relative.split("/"))):
         raise ValueError("invalid retained NF2FF relative path")
+    # Validate original ancestors before resolving aliases (including Windows
+    # short paths), then compare the child against the same canonical root.
+    root = safe_root(root)
     path = root / part
     for ancestor in [*reversed(path.parents), path]:
         if ancestor == root or root in ancestor.parents:
