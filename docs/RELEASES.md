@@ -190,7 +190,17 @@ editing them, or the prefill stops working.
 One entry per release, newest first. The installers are on the
 [release page](https://github.com/ismailakdag/fairbeam-releases/releases) of each version.
 
-### Unreleased
+### 0.8.5 (release preparation)
+
+- Add qualified antenna/network analysis, sweep trends, band objectives, MIMO and array
+  diagnostics, local mesh boxes, saved requirement masks and retained NF2FF postprocessing.
+- Fix Windows managed Python installation under MSIX paths and allow system aliases above
+  retained NF2FF roots on macOS, while rejecting links at or below the owned root.
+- Update dependencies for the reported npm advisories and retain explicit limits on research
+  PML and resonator qualification. Cylindrical PML PR #353 is excluded.
+- See the [full 0.8.5 release notes](release-notes/0.8.5.md) for changes since v0.8.4,
+  provenance and remaining limitations. Windows publication stays non-Latest until Mac completes
+  the macOS build and both-platform verification; 0.8.4 remains Windows-only and non-Latest.
 
 - Include running and queued Blender renders in the desktop Quit and Close Window questions,
   with separate simulation/render counts. A final check catches work started while an unsaved-work
