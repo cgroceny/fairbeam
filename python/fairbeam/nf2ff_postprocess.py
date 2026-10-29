@@ -91,8 +91,8 @@ def process(raw_root: Path, *, expected_sha256: str, frequencies, output: Path,
     root = archive.safe_root(raw_root)
     output = Path(output).absolute()
     output.parent.mkdir(parents=True, exist_ok=True)
-    archive.safe_root(output.parent)
-    if output.suffix != ".json" or output.name == "index.json" or root in output.parents or output.exists() or output.is_symlink():
+    canonical_output = archive.safe_file(output.parent, output.name, exists=False)
+    if output.suffix != ".json" or output.name == "index.json" or root in canonical_output.parents or output.exists():
         raise ValueError("postprocessing needs a new .json result outside the original raw folder")
     with archive.raw_lock(), mark_running(root):
         identity = _runtime_identity if _runtime_identity is not None else _runtime()
