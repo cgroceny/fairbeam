@@ -190,7 +190,7 @@ editing them, or the prefill stops working.
 One entry per release, newest first. The installers are on the
 [release page](https://github.com/ismailakdag/fairbeam-releases/releases) of each version.
 
-### 0.8.5 (release preparation)
+### 0.8.5, 2026-10-29
 
 - Add qualified antenna/network analysis, sweep trends, band objectives, MIMO and array
   diagnostics, local mesh boxes, saved requirement masks and retained NF2FF postprocessing.
@@ -199,8 +199,7 @@ One entry per release, newest first. The installers are on the
 - Update dependencies for the reported npm advisories and retain explicit limits on research
   PML and resonator qualification. Cylindrical PML PR #353 is excluded.
 - See the [full 0.8.5 release notes](release-notes/0.8.5.md) for changes since v0.8.4,
-  provenance and remaining limitations. Windows publication stays non-Latest until Mac completes
-  the macOS build and both-platform verification; 0.8.4 remains Windows-only and non-Latest.
+  provenance and remaining limitations. 0.8.4 was released for Windows only.
 
 - Include running and queued Blender renders in the desktop Quit and Close Window questions,
   with separate simulation/render counts. A final check catches work started while an unsaved-work
@@ -208,7 +207,7 @@ One entry per release, newest first. The installers are on the
   the application and jobs running. This fixes [#314](https://github.com/ismailakdag/fairbeam/issues/314)
   in source after the published 0.8.4 tag; existing 0.8.4 downloads are unchanged.
 
-### 0.8.4 (release preparation)
+### 0.8.4, 2026-10-23 (Windows only)
 
 - Close and Quit ask before canceling running or queued simulations, including other models,
   sweeps, optimization and research runs. An unavailable run server also prompts. In 0.8.3,
