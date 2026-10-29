@@ -729,13 +729,13 @@ class Simulation:
         try:
             with _capture_output(echo) as log:
                 try:
-                    self.fdtd.Run(sim_path, cleanup=True, numThreads=threads, verbose=0, **openems_kw)
+                    setup_code = self.fdtd.Run(sim_path, cleanup=True, numThreads=threads, verbose=0, **openems_kw)
                 except RuntimeError as e:
                     # builds without --exact-endcriteria (e.g. the GPU fork, which evaluates the
                     # energy on the device at a fine cadence anyway): retry without it
                     if "exact-endcriteria" not in str(e) or not openems_kw.pop("exact_endcriteria", False):
                         raise
-                    self.fdtd.Run(sim_path, cleanup=True, numThreads=threads, verbose=0, **openems_kw)
+                    setup_code = self.fdtd.Run(sim_path, cleanup=True, numThreads=threads, verbose=0, **openems_kw)
         finally:
             os.chdir(cwd)
         text = b"".join(log).decode(errors="replace")
@@ -744,6 +744,14 @@ class Simulation:
             # cancels a job) and stopped early: the fields are not converged, so nothing may be
             # post-processed or exported as if they were
             raise KeyboardInterrupt("openEMS run aborted by Ctrl+C / Ctrl+Break")
+        # The native binding returns a nonzero setup code without raising.
+        # A successful field run returns None, and setup-only success returns 0.
+        if isinstance(setup_code, (int, np.integer)) and setup_code != 0:
+            self.run_stats = {}
+            self.sim_path = None
+            detail = "\n".join(text.strip().splitlines()[-10:])[-2000:]
+            raise RuntimeError(f"openEMS setup failed with error code {setup_code}."
+                               + ("\n" + detail if detail else ""))
         if bad_energy := _nonfinite_energy(text):
             self.run_stats = {}
             raise RuntimeError("openEMS reported non-finite linear energy; numerical run failed.\n"
