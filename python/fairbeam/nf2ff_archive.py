@@ -53,9 +53,10 @@ def _linked(path: Path) -> bool:
 
 def safe_root(path: str | Path) -> Path:
     p = Path(path).absolute()
-    for ancestor in [*reversed(p.parents), p]:
-        if ancestor.exists() and _linked(ancestor):
-            raise ValueError("retained NF2FF paths cannot traverse links or reparse points")
+    # Ownership starts here. System/user aliases above this folder (for example
+    # macOS /var and /tmp) are allowed, but the owned root itself must be real.
+    if os.path.lexists(p) and _linked(p):
+        raise ValueError("retained NF2FF paths cannot traverse links or reparse points")
     if not p.is_dir():
         raise ValueError("retained NF2FF folder is missing; run again with retention enabled")
     return p.resolve()
@@ -68,13 +69,13 @@ def safe_file(root: Path, relative: str, *, exists=True) -> Path:
     if (not isinstance(relative, str) or not relative or part.is_absolute() or part.drive
             or "\\" in relative or any(v in ("", ".", "..") for v in relative.split("/"))):
         raise ValueError("invalid retained NF2FF relative path")
-    # Validate original ancestors before resolving aliases (including Windows
-    # short paths), then compare the child against the same canonical root.
+    # Validate the original root before resolving aliases (including Windows
+    # short paths), then check every component inside that canonical root.
     root = safe_root(root)
     path = root / part
     for ancestor in [*reversed(path.parents), path]:
         if ancestor == root or root in ancestor.parents:
-            if ancestor.exists() and _linked(ancestor):
+            if os.path.lexists(ancestor) and _linked(ancestor):
                 raise ValueError("retained NF2FF file traverses a link or reparse point")
     if root not in path.resolve().parents:
         raise ValueError("retained NF2FF file escapes its owned folder")
@@ -300,8 +301,13 @@ def retain(raw_root: Path, parent_path: Path, source_bytes: bytes, source_name: 
         descriptor = source["descriptor"]
         validate_descriptor(descriptor)
         recording = descriptor["recording"]
-        directory = Path(source["path"]).resolve()
-        relative_dir = directory.relative_to(root).as_posix()
+        # Keep the spelling below the owned root until safe_file has checked it:
+        # resolving a per-port directory here would hide an internal link.
+        directory = Path(source["path"]).absolute()
+        try:
+            relative_dir = directory.relative_to(Path(raw_root).absolute()).as_posix()
+        except ValueError:
+            relative_dir = directory.relative_to(root).as_posix()
         relative_dir = "" if relative_dir == "." else relative_dir + "/"
         actual = []
         for n, enabled in enumerate(recording["directions"]):

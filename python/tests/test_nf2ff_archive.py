@@ -1,12 +1,13 @@
 """Synthetic HDF5 metadata/ownership controls; no solver and no field propagation."""
 import copy
+import io
 import json
 import os
 import tempfile
 import threading
 import types
 import unittest
-from contextlib import chdir
+from contextlib import chdir, redirect_stderr
 from pathlib import Path
 from unittest.mock import patch
 
@@ -54,6 +55,7 @@ class ArchiveTests(unittest.TestCase):
         self.runtime = {"fixture": "synthetic-no-native"}
 
     def tearDown(self):
+        self.doCleanups()
         self.temp.cleanup()
 
     def retain(self, fd=False, source_bytes=b"saved input"):
@@ -156,16 +158,160 @@ class ArchiveTests(unittest.TestCase):
         self.assertEqual(alias.resolve(), folder.resolve())
         self.assertEqual(a.safe_file(alias, "input.json"), folder.resolve() / "input.json")
 
-    def test_safe_file_refuses_root_ancestor_and_child_reparse_points(self):
+    def test_safe_file_refuses_root_and_child_reparse_points(self):
         existing = self.raw / "input.json"
         existing.write_bytes(b"owned input")
         original = a._linked
-        for linked in (self.base, self.raw, existing):
+        for linked in (self.raw, existing):
             canonical_link = linked.resolve()
             with self.subTest(linked=linked), patch.object(
                     a, "_linked", side_effect=lambda path: path.resolve() == canonical_link or original(path)):
                 with self.assertRaisesRegex(ValueError, "link|reparse"):
                     a.safe_file(self.raw, "input.json")
+
+    def directory_link(self, link, target, *, junction=False):
+        """Real filesystem alias; Windows junctions need no symlink privilege."""
+        if not junction:
+            try:
+                link.symlink_to(target, target_is_directory=True)
+                self.addCleanup(link.unlink)
+                return
+            except OSError as exc:
+                if os.name != "nt" or exc.winerror != 1314:
+                    raise
+        import subprocess
+        subprocess.run(["cmd", "/c", "mklink", "/J", str(link), str(target)],
+                       check=True, capture_output=True)
+        self.addCleanup(link.rmdir)
+
+    def aliased_workspace(self, *, junction=False):
+        alias_temp = tempfile.TemporaryDirectory()
+        self.addCleanup(alias_temp.cleanup)
+        alias = Path(alias_temp.name) / "ancestor"
+        self.directory_link(alias, self.base.parent, junction=junction)
+        self.base = alias / self.base.name
+        self.raw = self.base / "raw"
+        self.parent = self.base / "parent.json"
+
+    def test_linked_ancestor_allows_retention_and_verification(self):
+        self.aliased_workspace()
+        self.retain()
+        self.assertEqual(a.safe_root(self.raw), self.raw.resolve())
+        self.assertEqual(self.load()[2], self.sha)
+        self.assertEqual(a.safe_file(self.raw, a.MANIFEST), self.raw.resolve() / a.MANIFEST)
+
+    @unittest.skipUnless(os.name == "nt", "Windows junction control")
+    def test_junction_ancestor_allows_retention_and_verification(self):
+        self.aliased_workspace(junction=True)
+        self.retain()
+        self.assertEqual(self.load()[2], self.sha)
+
+    def test_actual_link_at_root_or_below_is_rejected(self):
+        self.retain()
+        root_link = self.base / "root-link"
+        self.directory_link(root_link, self.raw)
+        with self.assertRaisesRegex(ValueError, "link|reparse"):
+            a.safe_root(root_link)
+        child = self.raw / "child-link"
+        self.directory_link(child, self.base)
+        with self.assertRaisesRegex(ValueError, "link|reparse"):
+            a.safe_file(self.raw, "child-link/parent.json")
+
+    @unittest.skipUnless(os.name == "nt", "Windows junction control")
+    def test_actual_junction_at_root_or_below_is_rejected(self):
+        root_link = self.base / "root-junction"
+        self.directory_link(root_link, self.raw, junction=True)
+        with self.assertRaisesRegex(ValueError, "link|reparse"):
+            a.safe_root(root_link)
+        child = self.raw / "child-junction"
+        self.directory_link(child, self.base, junction=True)
+        with self.assertRaisesRegex(ValueError, "link|reparse"):
+            a.safe_file(self.raw, "child-junction/parent.json")
+
+    def test_postprocess_rejects_aliased_output_inside_raw(self):
+        self.aliased_workspace()
+        self.retain()
+        nested = self.raw / "nested"
+        nested.mkdir()
+        with patch("fairbeam.nf2ff_postprocess._runtime", side_effect=AssertionError("native imported")):
+            with self.assertRaisesRegex(ValueError, "outside"):
+                process(self.raw, expected_sha256=self.sha, frequencies=[2e9], output=nested / "new.json")
+        self.assertFalse((nested / "new.json").exists())
+
+    def test_cli_farfield_accepts_linked_ancestor_and_rejects_linked_root(self):
+        from fairbeam.cli import main
+        self.aliased_workspace()
+        self.retain()
+        out = self.base / "derived.json"
+        args = ["farfield", str(self.raw), "--manifest-sha256", self.sha,
+                "--frequency", "2000000000", "--output", str(out)]
+        with patch("fairbeam.nf2ff_postprocess._runtime", return_value=self.runtime), patch(
+                "fairbeam.nf2ff_postprocess.native_transform", return_value=[{"f": 2e9, "port": 3}]) as native:
+            self.assertEqual(main(args), 0)
+            self.assertEqual(native.call_count, 1)
+            self.assertFalse(json.loads(out.read_bytes())["postprocess"]["fdtd_rerun"])
+            linked = self.base / "linked-raw"
+            self.directory_link(linked, self.raw.resolve())
+            args[1] = str(linked)
+            args[-1] = str(self.base / "refused.json")
+            error = io.StringIO()
+            with redirect_stderr(error):
+                self.assertEqual(main(args), 2)
+            self.assertRegex(error.getvalue(), "link|reparse")
+            self.assertEqual(native.call_count, 1)
+        self.assertFalse((self.base / "refused.json").exists())
+
+    def test_retention_rejects_internal_port_directory_link(self):
+        port = self.raw / "port"
+        port.mkdir()
+        for part, kind in (("E", 0), ("H", 1)):
+            dump(port / f"nf2ff_{part}_0.h5", kind)
+        linked = self.raw / "linked-port"
+        self.directory_link(linked, port)
+        with self.assertRaisesRegex(ValueError, "link|reparse"):
+            a.retain(self.raw, self.parent, b"input", "sample.py", {},
+                     [{"port": 3, "path": linked, "descriptor": self.d}], runtime=self.runtime)
+        self.assertFalse((self.raw / a.MANIFEST).exists())
+
+    def test_dangling_links_are_rejected_even_for_optional_files(self):
+        linked = self.raw / "dangling"
+        try:
+            linked.symlink_to(self.raw / "missing")
+        except OSError as exc:
+            if os.name == "nt" and exc.winerror == 1314:
+                self.skipTest("file symlink creation needs Windows developer mode or privilege")
+            raise
+        self.addCleanup(linked.unlink)
+        with self.assertRaisesRegex(ValueError, "link|reparse"):
+            a.safe_file(self.raw, "dangling", exists=False)
+
+    def test_jobs_refuse_linked_retained_root_and_manifest(self):
+        manager, source, job, output = self.queued_transform()
+        linked = self.base / "linked-source"
+        self.directory_link(linked, self.raw)
+        source.retained_nf2ff["root"] = str(linked)
+        with self.assertRaisesRegex(ValueError, "link|reparse"):
+            manager.retained_source(source.id)
+        source.retained_nf2ff["root"] = str(self.raw)
+        original = a._linked
+        with patch.object(a, "_linked", side_effect=lambda p: p.name == a.MANIFEST or original(p)):
+            with self.assertRaisesRegex(ValueError, "link|reparse"):
+                manager.retained_source(source.id)
+
+    def test_jobs_complete_through_linked_ancestor_and_refuse_linked_staging(self):
+        self.aliased_workspace()
+        manager, source, job, output = self.queued_transform()
+        manager._finish_postprocess(job, 0, [])
+        self.assertEqual(job.status, "done", job.error)
+        self.assertTrue(output.is_file())
+        other = manager.submit_postprocess(source.id, {"frequencies_hz": [2e9]})
+        real_dir = other.dir.with_name(other.id + "-real")
+        other.dir.rename(real_dir)
+        self.directory_link(other.dir, real_dir.resolve())
+        manager._finish_postprocess(other, 0, [])
+        self.assertEqual(other.status, "failed")
+        self.assertRegex(other.error, "link|reparse")
+        self.assertFalse((self.base / other.postprocess["output_filename"]).exists())
 
     def test_hdf5_external_link_refused(self):
         path = self.raw / "external.h5"
