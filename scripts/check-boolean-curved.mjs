@@ -26,6 +26,28 @@ const volumeBox = (p) => p.start.reduce((v, x, i) => v * Math.abs(p.stop[i] - x)
 const cellVolume = (p) => Math.PI * (p.radius ** 2 - (p.inner_radius ?? 0) ** 2) * Math.abs(p.range[1] - p.range[0]);
 const base = () => part('A', [box([0, 0, 0], [10, 10, 4])]);
 
+// #360: materialising named tubes must not replace their labels with type/index fallbacks.
+{
+  const A = part('sleeve', [cyl('z', [0, 0], 'r', [0, 3], { inner_radius: 0.5, label: 'slv_body', priority: 7 })]);
+  const B = part('disc', [cyl('z', [0, 0], 2, [3, 4], { inner_radius: 0.5, label: 'sleevedisc_body', priority: 7 })],
+    { transforms: [{ type: 'mirror', plane: 'x', keep: true }] });
+  const original = structuredClone([A, B]);
+  const result = booleanResult(design(A, B), { r: 1 }, 0, 1, 'add').parts[0];
+  assert.equal(result.name, 'sleeve');
+  for (const r of [1, 1.5, 1]) {
+    const ps = livePrimitives(JSON.parse(JSON.stringify(result)), { r });
+    assert.deepEqual(ps.map(p => p.label), ['slv_body', 'sleevedisc_body', 'sleevedisc_body']);
+    assert.equal(ps[0].radius, r);
+    assert.ok(ps.every(p => p.priority === 7 && !p.void));
+  }
+  assert.deepEqual([A, B], original, 'source operands remain intact for Restore operands');
+  const nested = booleanResult(design(result, part('extra', [{ ...KINDS.sphere, priority: 7 }])), { r: 1 }, 0, 1, 'add').parts[0];
+  assert.deepEqual(livePrimitives(nested, { r: 2 }).map(p => p.label), ['slv_body', 'sleevedisc_body', 'sleevedisc_body', 'extra']);
+  const mixed = part('source', [box([0, 0, 0], [1, 1, 1]), KINDS.sphere], { label: 'Named source' });
+  assert.deepEqual(materialiseBoolean({ operation: 'add', A: mixed, B: part('other', [KINDS.torus]) }, {}).map(p => p.label),
+    ['Named source 1', 'Named source 2', 'other']);
+}
+
 // ---------------------------------------------------------------- Add: every kind, every mix
 for (const [name, shape] of Object.entries(KINDS)) {
   const r = booleanResult(design(base(), part('B', [shape])), {}, 0, 1, 'add');

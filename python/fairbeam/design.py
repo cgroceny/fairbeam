@@ -2298,16 +2298,18 @@ def _boolean_shapes(pt: dict, prims: list, names: dict, w: str) -> list:
     for j, p in enumerate(prims):
         r = resolve_primitive(p, names, f"{w}.primitives[{j}]", 0)
         if is_void(p):
-            base.append((True, r))
+            base.append((True, r, p.get("label")))
         else:
-            base += [(False, s) for s in apply_cuts([r], cuts)]
+            base += [(False, s, p.get("label")) for s in apply_cuts([r], cuts)]
     out = []
     for s_, t_ in transform_maps(pt.get("transforms", []), names, w):
-        for hole, r in base:
+        for hole, r, label in base:
             q = map_primitive(r, s_, t_)
             if "_matrix" in q:
                 raise DesignError("live Boolean operands must stay axis-aligned; arbitrary-angle rotations are not supported", w)
             d = unresolve(q)
+            if label is not None:
+                d["label"] = label
             if hole:
                 d["void"] = True
             out.append(d)
@@ -2484,6 +2486,12 @@ def _carvers(a: dict, b: dict, WA: list, WB: list, w: str) -> list:
 def _curved_boolean(a: dict, b: dict, pa: list, pb: list, names: dict, w: str, op: str) -> list:
     """booleanParts.ts curvedBoolean: Add concatenates the shapes (bricks and polygons united), Insert
     keeps A whole, Subtract keeps A and adds B as a cut-out, Intersect is exact where it can be."""
+    if op == "add":
+        def named(pt, prims):
+            name = pt.get("label") or pt["name"]
+            return [p if p.get("label") else {**p, "label": name if len(prims) == 1 else f"{name} {i + 1}"}
+                    for i, p in enumerate(prims)]
+        pa, pb = named(a, pa), named(b, pb)
     SA, SB = [p for p in pa if not is_void(p)], [p for p in pb if not is_void(p)]
     VA, VB = [p for p in pa if is_void(p)], [p for p in pb if is_void(p)]
     priority = SA[0].get("priority")

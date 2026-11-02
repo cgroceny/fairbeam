@@ -27,9 +27,9 @@ INTERSECT_MESSAGE = ("Intersect of {a} ({ka}) and {b} ({kb}) is not supported: {
 INTERSECT_WHY = {"axes": "the cylinders do not share one axis (crossing or offset cylinders)",
                  "curved": "intersecting curved shapes needs a general solid intersection",
                  "partial": "the shapes do not line up along one axis, or the curved shape is only partly inside the brick"}
-HAS_CUT = ("{name} has a cut-out from an earlier Subtract: {op} needs a part without one. Subtract from the result instead, "
+HAS_CUT = ("{name} has a cut-out from an earlier Subtract: {op} needs a solid without one. Subtract from the result instead, "
            "or restore the operands from the Boolean history.")
-B_HAS_CUT = ("{name} has a cut-out of its own (from an earlier Subtract) and cannot be the part that is subtracted. "
+B_HAS_CUT = ("{name} has a cut-out of its own (from an earlier Subtract) and cannot be the solid that is subtracted. "
              "Restore its operands from the Boolean history first.")
 SHEET_VOLUME = ("{op} cannot combine a sheet with a volume: a sheet has zero thickness. "
                 "Make both operands sheets or both solids.")

@@ -484,6 +484,14 @@ function intersectCurved(a: DesignPart, b: DesignPart, WA: DesignPrimitive[], WB
 }
 
 function curvedBoolean(a: DesignPart, b: DesignPart, pa: DesignPrimitive[], pb: DesignPrimitive[], values: Record<string, number>, operation: BooleanOperation): DesignPrimitive[] {
+  // Name source shapes before filtering and transforming them. New union topology is not
+  // paired with input indices; only shapes retained by worldShapes carry these labels.
+  if (operation === "add") {
+    const named = (p: DesignPart, ps: DesignPrimitive[]) => ps.map((s, i) => s.label ? s : {
+      ...s, label: ps.length === 1 ? (p.label || p.name) : `${p.label || p.name} ${i + 1}`,
+    });
+    pa = named(a, pa); pb = named(b, pb);
+  }
   const SA = solidsOf(pa), SB = solidsOf(pb), VA = pa.filter(isVoid), VB = pb.filter(isVoid);
   const priority = SA[0].priority;
   if (operation === "subtract" && VB.length) throw Error(t("booleanParts.error.bHasCut", { name: b.name }));

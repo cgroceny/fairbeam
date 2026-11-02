@@ -60,7 +60,7 @@ const fixture = JSON.parse(readFileSync(new URL('../python/tests/fixtures/boolea
 assert.deepEqual(JSON.parse(JSON.stringify(computed)), fixture, 'boolean_parity.json is stale: node --experimental-strip-types scripts/boolean-parity-cases.mjs --write');
 const [first] = fixture;
 assert.notDeepEqual(first.expected[0], first.expected[1]);
-const nested = fixture[3].history.A;
+const nested = fixture.find(c => c.name === 'nested live result with a priority, inserted').history.A;
 assert.deepEqual(livePrimitives(nested, { W: 5, H: 1.5 }), materialiseBoolean(nested.booleanHistory, { W: 5, H: 1.5 }));
 assert.deepEqual(livePrimitives({ ...nested, booleanHistory: { ...nested.booleanHistory, live: false } }, { W: 5, H: 1.5 }), nested.primitives);
 console.log('boolean transformed operands, parity fixture and live recomputation passed');

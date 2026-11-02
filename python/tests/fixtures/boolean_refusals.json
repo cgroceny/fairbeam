@@ -268,7 +268,7 @@
    }
   },
   "values": {},
-  "message": "A has a cut-out from an earlier Subtract: Add needs a part without one. Subtract from the result instead, or restore the operands from the Boolean history."
+  "message": "A has a cut-out from an earlier Subtract: Add needs a solid without one. Subtract from the result instead, or restore the operands from the Boolean history."
  },
  {
   "name": "subtracting a part with a cut-out",
@@ -328,7 +328,7 @@
    }
   },
   "values": {},
-  "message": "B has a cut-out of its own (from an earlier Subtract) and cannot be the part that is subtracted. Restore its operands from the Boolean history first."
+  "message": "B has a cut-out of its own (from an earlier Subtract) and cannot be the solid that is subtracted. Restore its operands from the Boolean history first."
  },
  {
   "name": "add of a sheet and a volume",
