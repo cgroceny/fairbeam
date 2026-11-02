@@ -1054,6 +1054,8 @@ def main(argv=None):
     add_material_cell_command(sub, {"sim": folders["sim"]})
     from .debye_fit import add_command as add_debye_fit_command  # debye-fit
     add_debye_fit_command(sub)
+    from .nec import add_commands as add_nec_commands
+    add_nec_commands(sub)
 
     args = ap.parse_args(argv)
     try:
