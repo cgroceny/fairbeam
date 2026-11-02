@@ -56,8 +56,9 @@ try {
     await page.waitForSelector('[data-id="sec:results"]', { visible: true });
     if (!await page.$('[data-id="sweep:synthetic-trend"]')) await page.click('[data-id="sec:results"]');
     await page.waitForSelector('[data-id="sweep:synthetic-trend"]');
-    await page.click('[data-id="sweep:synthetic-trend"]');
-    await page.click('[data-id="sweep:synthetic-trend"]');
+    // One native mouse sequence keeps the two clicks inside the tree's
+    // double-click window even when separate browser round trips are slow.
+    await page.click('[data-id="sweep:synthetic-trend"]', { count: 2 });
     await page.waitForSelector('[data-trend-table]');
     assert.equal(await page.$$eval('[data-trend-table] tbody tr', rows => rows.length), 8);
     assert.equal(await page.$eval('[data-trend-reference]', el => el.value), '2.1');
