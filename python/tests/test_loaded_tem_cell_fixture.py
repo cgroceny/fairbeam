@@ -59,13 +59,11 @@ def preflight(out,rate,element=False):
     return record
 
 
-def acquire_serial(out,n,count,kind,control,rate,*,deadline_seconds=1800,element_scale=1):
-    if isinstance(deadline_seconds,bool) or deadline_seconds not in (1800,2700):
-        raise ValueError('explicit 30 or 45 minute deadline required')
+def acquire_serial(out,n,count,kind,control,rate,*,element_scale=1):
     out=Path(out).resolve()
     if out.exists():raise ValueError('use a fresh cohort directory')
     sim,meta=f.build(n,count,1,kind,control,element_scale=element_scale);estimate=forecast(meta,rate);del sim
-    if estimate>deadline_seconds:raise ValueError(f'forecast {estimate/60:.2f} minutes exceeds {deadline_seconds/60:g}; defer this case')
+    if estimate>1800:raise ValueError(f'forecast {estimate/60:.2f} minutes exceeds 30; defer this case')
     out.mkdir(parents=True,exist_ok=False)
     progress=dict(status='running',n=n,count=count,kind=kind,control=control,
         estimated_seconds_per_source=estimate,rate_mcps=rate,source=f.identity(),runtime=f.runtime_identity(),ports=[],qualified=False)
@@ -80,14 +78,14 @@ def acquire_serial(out,n,count,kind,control,rate,*,deadline_seconds=1800,element
                 proc=popen_group(command,cwd=f.ROOT/'python',stdout=log,stderr=subprocess.STDOUT,
                     env={**os.environ,'OPENBLAS_NUM_THREADS':'1','OMP_NUM_THREADS':'1'})
                 progress.update(active_port=port,active_launcher_pid=proc.pid);f.save(out/'progress.json',progress)
-                try:code=wait_owned(proc,seconds=deadline_seconds)
+                try:code=wait_owned(proc,seconds=1800.)
                 except Exception as error:failure=repr(error);raise
                 finally:
                     if proc.poll() is None:terminate_group(proc.pid,grace=0,job=proc.win_job);proc.wait(timeout=15)
                     release_group(proc)
                     f.save(out/f'port{port}.worker.json',dict(command=command,pid=proc.pid,exit_code=code,
                         failure=failure,wall_seconds=time.time()-wall,monotonic_seconds=time.monotonic()-started,
-                        deadline_seconds=deadline_seconds,estimated_seconds=estimate))
+                        deadline_seconds=1800.,estimated_seconds=estimate))
             if code:raise RuntimeError(f'native worker exit {code}; retain {log_path}')
             folder=out/f'port{port}';report=json.loads((folder/'report.json').read_text())
             report['native_header']=audit_header(log_path.read_text(),report);f.save(folder/'report.json',report)
@@ -169,14 +167,12 @@ def synthetic(s,n=4):
 
 
 class LoadedTEMReferenceTests(unittest.TestCase):
-    def test_timing_budget_refuses_before_launch_and_45_minute_source_is_opt_in(self):
+    def test_timing_budget_refuses_before_launch_and_refined_worker_is_forwarded(self):
         with tempfile.TemporaryDirectory() as tmp,patch(__name__+'.popen_group') as launch:
             root=Path(tmp)/'absent'
             with self.assertRaisesRegex(ValueError,'defer'):
                 timing_serial(root,4,'element',.0001,8)
             self.assertFalse(root.exists())
-            for seconds in (True,0,1801,2701):
-                with self.assertRaises(ValueError):acquire_serial(root,4,1,'loaded','element',1000.,deadline_seconds=seconds)
             launch.assert_not_called()
         proc=Mock(pid=1234,win_job=object());proc.poll.return_value=1
         with tempfile.TemporaryDirectory() as tmp,patch(__name__+'.popen_group',return_value=proc) as launch,\
@@ -184,11 +180,11 @@ class LoadedTEMReferenceTests(unittest.TestCase):
              patch(__name__+'.release_group'),patch.object(f,'runtime_identity',return_value={}):
             root=Path(tmp)/'failed'
             with self.assertRaises(TimeoutError):
-                acquire_serial(root,4,1,'loaded','element',1000.,element_scale=8,deadline_seconds=2700)
-            wait.assert_called_once_with(proc,seconds=2700)
+                acquire_serial(root,4,1,'loaded','element',1000.,element_scale=8)
+            wait.assert_called_once_with(proc,seconds=1800.)
             command=launch.call_args.args[0]
             self.assertEqual(command[command.index('--element-scale')+1],'8')
-            self.assertEqual(json.loads((root/'port1.worker.json').read_text())['deadline_seconds'],2700)
+            self.assertEqual(json.loads((root/'port1.worker.json').read_text())['deadline_seconds'],1800.)
             self.assertFalse((root/'matrix.npz').exists())
 
     def test_separate_spread_reference_matches_independent_nodal_shunts(self):
@@ -604,7 +600,6 @@ def main():
     parser.add_argument('--control',choices=f.CONTROLS,default='ordinary')
     parser.add_argument('--port',type=int,choices=(1,2),default=1)
     parser.add_argument('--rate-mcps',type=float,default=20.)
-    parser.add_argument('--deadline-min',type=int,choices=(30,45),default=30)
     parser.add_argument('--element-scale',type=int,choices=f.ELEMENT_SCALES,default=1)
     parser.add_argument('--out',type=Path,required=True)
     args=parser.parse_args()
@@ -614,7 +609,7 @@ def main():
     elif args.timing:result=timing_serial(args.out,args.mesh,args.control,args.rate_mcps,args.element_scale)
     elif args.worker_case:result=f.acquire(args.out,args.mesh,args.count,args.port,args.kind,args.control,element_scale=args.element_scale)
     elif args.fdtd:result=acquire_serial(args.out,args.mesh,args.count,args.kind,args.control,args.rate_mcps,
-                                      deadline_seconds=args.deadline_min*60,element_scale=args.element_scale)
+                                      element_scale=args.element_scale)
     elif args.analyse:_,result=f.matrix(args.out)
     elif args.element_study:result=f.element_study(args.out)
     else:
