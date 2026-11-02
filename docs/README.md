@@ -26,6 +26,7 @@ the separately opted-in Elmer integration.
 | Guide | What it covers |
 | --- | --- |
 | [Getting started](GETTING-STARTED.md) | Installing the desktop app (macOS signed with a Developer ID and notarized by Apple, Windows), a walkthrough from the patch starter to results, the other starters, mesh convergence, field planes, sweeps and the optimizer, importing a VBA macro, where files live, reporting a problem |
+| [Antenna starting dimensions](ANTENNA-CALCULATOR.md) | Offline dipole, monopole and patch estimates, assumptions and JSON export |
 | [Running from source](FROM-SOURCE.md) | Requirements, building openEMS and installing Fairbeam from the repository, first run, the test suite, platform notes |
 | [The designer](DESIGNER.md) | The visual workspace: start screen and starters, the one-row ribbon (Home, Modeling, Transform, View, Simulation, Optimize, Post-processing), navigation tree and components, modeling, checks, simulation settings, mesh view and mesh convergence, running and results (efficiency, gain patterns, field planes), project files, views and renders, VBA macro import, known limitations and feedback |
 | [Example designs](../examples/designs/README.md) | Five 867 MHz antennas as designer files (wideband, meander and sleeve dipoles, collinear, Yagi), with parameters, results and how to scale them |
@@ -43,7 +44,7 @@ the separately opted-in Elmer integration.
 | [Optimizer](OPTIMIZE.md) | Goals, driven ports, algorithms, output and simulated examples |
 | [Studies](STUDIES.md) | `sweep`, `converge`, `touchstone` and the study file format |
 | [Multi-port structures and arrays](MULTIPORT.md) | One run per driven port, S-matrices, the S-parameters and Array tabs |
-| [Arrays](ARRAYS.md) | Embedded element patterns, normalization, beam steering, the 2×1 and 4×1 arrays |
+| [Arrays](ARRAYS.md) | Embedded element patterns, normalization, beam steering, the 2Ã—1 and 4Ã—1 arrays |
 | [Drawings, figures, package, fabrication](EXPORTS.md) | Technical drawings, publication figures, the export package, the PDF report, Gerber/Excellon/DXF |
 | [GPU engine](GPU.md) | The optional GPU build of openEMS (Metal on Apple silicon, CUDA on Windows) and measured timings |
 | [Desktop app](DESKTOP.md) | The Tauri app: managed runtime (uv, CPython, openEMS), workspace, shell, packaging |
