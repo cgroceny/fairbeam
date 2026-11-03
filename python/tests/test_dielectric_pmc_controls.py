@@ -47,9 +47,11 @@ def control_context(control):
     def source():
         return {**identity(), 'tests/test_dielectric_pmc_controls.py': f.opened.sha(__file__)}
     def route(command, **kwargs):
-        command = list(command)
+        # The owned runner records this same list after launch. Keep its
+        # receipt equal to the actual subprocess argv, including the control.
         command[command.index('tests.dielectric_pmc_fixture')] = 'tests.test_dielectric_pmc_controls'
-        return launch([*command, '--control', control], **kwargs)
+        command.extend(('--control', control))
+        return launch(command, **kwargs)
     try:
         f.opened.build = opened_model; f.build = model; f.identity = source; f.popen_group = route
         f.DT_S = dt*(TIME_FACTOR if control in ('time', 'angle') else 1.)
@@ -239,11 +241,13 @@ class Controls(unittest.TestCase):
     def test_worker_routing_preserves_owned_arguments_and_adds_control(self):
         command = ['python','-m','tests.dielectric_pmc_fixture','--worker','field',
             '--mesh','12','--cap-ns','1000','--out','fresh/field']
+        original = list(command)
         with patch.object(f, 'popen_group', return_value=Mock(pid=123)) as launch:
             with control_context('tail'): f.popen_group(command)
             actual = launch.call_args.args[0]
+            self.assertIs(actual, command)
             self.assertEqual(actual[2], 'tests.test_dielectric_pmc_controls')
-            self.assertEqual(actual[3:-2], command[3:])
+            self.assertEqual(actual[3:-2], original[3:])
             self.assertEqual(actual[-2:], ['--control','tail'])
 
     def test_overbudget_refuses_before_baseline_or_files(self):
