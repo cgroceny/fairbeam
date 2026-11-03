@@ -86,7 +86,10 @@ def prepare(out, baseline, n, rate, pilot=False):
     reference.fdtd.Write2XML(str(side/'reference.xml')); sim.fdtd.Write2XML(str(side/'control.xml'))
     if mesh_input(side/'reference.xml') != mesh_input(side/'control.xml'):
         raise ValueError('mesh changed source, physical geometry, material, clock or boundary')
-    for key in ('reference','magnetic_wall_radius_mm','declared_dt_s','angular','clearance_mm',
+    # The dual-plane sum at n16 differs from n12 by floating-point roundoff (mm).
+    if abs(meta['magnetic_wall_radius_mm']-ref['magnetic_wall_radius_mm']) > 1e-12:
+        raise ValueError('physical magnetic-wall radius changed')
+    for key in ('reference','declared_dt_s','angular','clearance_mm',
                 'axial_pml_cells','axial_pml_width_mm','source_duration_s','windows_s'):
         if meta[key] != ref[key]:
             raise ValueError('fine family physical parameters differ')
@@ -200,6 +203,19 @@ class FineFamily(unittest.TestCase):
             with controls.control_context('time'): sim,_=f.build(12);sim.fdtd.Write2XML(str(paths[0]))
             with fine_context(): sim,_=f.build(12);sim.fdtd.Write2XML(str(paths[1]))
             self.assertEqual(f.physics_sha(paths[0]),f.physics_sha(paths[1]))
+
+    def test_wall_roundoff_does_not_reject_the_same_physical_radius(self):
+        with tempfile.TemporaryDirectory() as temp:
+            baseline=Path(temp)/'baseline';(baseline/'field').mkdir(parents=True)
+            with controls.control_context('time'):
+                sim,_=f.build(12);sim.fdtd.Write2XML(str(baseline/'field/input.xml'))
+            f.save(baseline/'field/report.json',dict(physics_sha256=f.physics_sha(baseline/'field/input.xml')))
+            f.save(baseline/'admission.json',{})
+            with patch(__name__+'.read_baseline') as read,patch.object(f,'run_owned') as launch:
+                result=prepare(Path(temp)/'n16',baseline,16,100.)
+                read.assert_called_once_with(baseline);launch.assert_not_called()
+            self.assertEqual(result['declared_dt_s'],DT_S)
+            self.assertFalse(result['qualified'])
 
     def test_owned_command_records_the_actual_fine_module(self):
         command=['python','-m','tests.dielectric_pmc_fixture','--worker','field','--mesh','20']
