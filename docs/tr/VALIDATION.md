@@ -795,6 +795,14 @@ kuplaj boşlukları ve ölçülmemiş harici/radyasyon Q payları kapsam dışı
 Örnek 6.7/6.8 yalnız hesap içerir. Kayıt fikstür PR'larını ve çoğaltma
 komutlarını bağlar; galeri modeli, üretilmiş paket veya kitap içeriği eklemez.
 
+6.5 ile ilişkili ayrı radyal PMC kalibrasyonu, sabit zaman adımlı n12/16/20
+ailesini ve bağımsız zaman, azimut ve eksenel kuyruk kontrollerini artık
+[bölüm kaydında](benchmarks/pozar-chapter-06.md#separate-radial-pmc-calibration-for-65) içerir.
+İnce aile sabit sonlu mesh/referans sınırlarını sağlar; n20 hataları frekansta
+%0,04324452, Q'da %0,44823796'dır. Tanımlı manyetik duvar problemi, özgün
+radyasyonlu açık örneği ve eski başarısız n8 ailesini doğrulanmış saymaz.
+Kayıt, yalıtılmış yerel SDK'yı ve kaynak sürümlerini belirtir.
+
 6.2 için onaylanan üç uzun, kapalı mikroşerit inceltme çalıştırması tamamlandı.
 Durdurma, ardışık mesh ve hava açıklığı kontrolleri sağlanır; ancak ince mesh
 frekans hatası %1,017947 ile değişmeyen %1 hedefini aşar. Bu kapsam kabul

@@ -1,6 +1,6 @@
 # Chapter 6: qualified resonator comparison scopes
 
-This record identifies examples by number and page and reports our own models, equations and measured results. No textbook text, figures, tables, solution steps or PDF excerpts are included. Acquisitions used Fairbeam with unchanged bundled openEMS 0.37.0rc3 on Windows, run serially with each fixture's declared fixed thread count: four for 6.3; one for 6.1, 6.4 and 6.6. Frozen inputs, source snapshots and raw records remain outside Git.
+This record identifies examples by number and page and reports our own models, equations and measured results. No textbook text, figures, tables, solution steps or PDF excerpts are included. The accepted cohorts below used Fairbeam with unchanged bundled openEMS 0.37.0rc3 on Windows, run serially with each fixture's declared fixed thread count: four for 6.3; one for 6.1, 6.4 and 6.6. The separate radial-PMC calibration uses the isolated study SDK specified in its section. Frozen inputs, source snapshots and raw records remain outside Git.
 
 Qualification is limited to the quantities and physical assumptions below. Each accepted cohort passes its independent target, both successive mesh-change limits, independent controls, excitation completion, confirmed native stopping criterion, probe quality and source/runtime/input/data identities. These are finite sampled agreement scopes; no asymptotic order, complete practical design or unmeasured loss partition is asserted.
 
@@ -74,6 +74,45 @@ Both current contours and both independently de-embedded feed planes pass <=0.00
 
 Earlier -70 dB data fail a mesh-Gamma gate (0.005117706 > 0.005). Common time prefixes are diagnostics only. Every accepted record was reacquired with stricter stopping; the frozen gates were not relaxed. Original zero-source, enclosure and time-tail failures remain rejected.
 
+## Separate radial-PMC calibration for 6.5
+
+[PR #364](https://github.com/ismailakdag/fairbeam/pull/364), associated with Example 6.5 / p. 297, prescribes a radial magnetic wall at R=4.13 mm. This is a separate boundary problem from the original radiating open resonator: radiation and side fringing are excluded by construction. The measurements below establish finite mesh/reference agreement for that calibration only; they do not add the open example to the accepted scopes above.
+
+Our dielectric length is L=8.255 mm, epsilon_r=95 and constant sigma=0.016644528496575457 S/m. The physical PMC is the Yee H plane midway between the final two primary radial lines, rather than the last primary line. Four sectors close the full azimuth; axial vacuum clearance is 30 mm with 24 mm / 16-cell PMLs. The reference solves `beta*tan(beta*L/2)=alpha`, with `beta^2=(epsilon_r*omega^2-j*sigma*omega/epsilon0)/c^2-kr^2`, `alpha^2=kr^2-omega^2/c^2` and `kr=first_zero(J0)/R`. For `exp(+j*omega*t)`, positive Im(omega) decays and `Q=Re(omega)/(2*Im(omega))`. This gives **3.149337750796 GHz / Q=1000.599994699**, an analytical calculation without a fitted frequency correction.
+
+The prospective fine family fixes dt=0.285 ps, the source/material/probes, a 1 us cap and a -80 dB natural stop while refining both core and air grids. Each field runs serially with one native thread. The n12 point reuses the completed smaller-time-step control through its original reader and exact physical-input identity; it is not a new acquisition or a relabeled source epoch.
+
+| Fine family | Native cells | f (GHz) | Q | Absolute f error / % | Absolute Q error / % | Owned field wall / min |
+|---|---:|---:|---:|---:|---:|---:|
+| n12, reused time control | 8,970 | 3.145137235458 | 995.257848836 | 0.13337773 | 0.53389425 | 14.033 |
+| n16 | 12,954 | 3.147102736761 | 995.855985335 | 0.07096775 | 0.47411647 | 22.713 |
+| n20 | 17,514 | 3.147975834653 | 996.114925661 | 0.04324452 | 0.44823796 | 27.108 |
+
+Successive frequency changes are 0.06249334% / 0.02774291%; Q changes are 0.06009865% / 0.02600178%. Both shrink and pass the unchanged 0.2% frequency / 2% Q mesh limits. Each row also passes the unchanged 0.2% / 2% absolute-reference limits. This is finite sampled agreement; no asymptotic convergence order is claimed.
+
+Separate n12 independence controls retain the same physical wall, material, source and probes. Each passes the unchanged 0.1% frequency / 2% Q difference limits and its 0.2% / 2% absolute-reference limits:
+
+| Independent change | Comparison | Relative f change / % | Relative Q change / % |
+|---|---|---:|---:|
+| dt: 0.380 -> 0.285 ps | Smaller step vs original n12 | 0.00010253 | 0.52094036 |
+| Azimuth: 4 -> 8 sectors | Against the time control at the same 0.285 ps step | 0.00000023 | 0.00253036 |
+| Axial clearance: 30 -> 40 mm | Against original n12 at 0.380 ps | 0.00000019 | 0.00007257 |
+
+The tail control preserves dielectric and near-field air lines through abs(z)=33.221154756 mm and the PML width/cell count. Moving PML regrades the old terminal air interval; this is a tail-extent diagnostic, not full-domain mesh convergence. The original n8/12/16 family at 0.380 ps remains separate: its n8 absolute frequency error is 0.328051%, above 0.2%. That failed cohort and a refused zero-field angular CFL setup remain retained and excluded. The fine-family pass does not erase them. Research flags remain `qualified=false` and `open_example_qualified=false`.
+
+Acquisition sources are `4b67bbcd2233ead0c3db4d41f786e3345630a96e` (original cohort), `cffb5c0b65cb206197442902918c155ed5ece280` (independence controls) and `e818565a52cc1273900b0ff048858e9b88f0208e` (new fine fields), recorded in #364. The later Windows temporary-path assertion correction changes only a unittest; the recorded capture identities stay at those commits. Independent replay verifies raw/NPZ equality, input/source/runtime hashes, actual loaded DLL observations, actual grid/probe clocks, natural stopping, signed field-pole fits at two probes and three late windows, and owned closing receipts. The native energy check is a cache-based proxy, not a physical stored-energy volume integral.
+
+Runtime: Windows 11, Python 3.13.15, NumPy 2.5.3, openEMS 0.37.0rc3 and CSXCAD 0.7.0rc3. The isolated SDK is built from native source `67d378488ee40de815eed00f8aaa808f0a9e3c6d` with [#353](https://github.com/ismailakdag/fairbeam/pull/353)'s default-off cylindrical-metric patch composed; its metric option is omitted in every PMC capture. Actual loaded SHA256 values are `d1b5dfd9a2544dff6681b1b357136587868144abb1e494443df4cfa07c4e14ea` (openEMS.dll) and `9e2ed9ecae8f3de6e1a132cb403834096672abedc2b4de2c73a0f1392ce2abd1` (CSXCAD.dll). The installed application runtime was not changed. This protocol requires fixed-Nyquist `--exact-endcriteria` and time-domain sampling at Nyquist/4, confirmed by the native header and probe clock; a version label or passing unittest alone does not establish these capabilities.
+
+For read-only replay, use an isolated checkout at the recorded fine source `e818565` with its matching SDK and completed external cohorts. Its earlier fixture/reader files are byte-identical to the control source; replay does not rewrite or relabel data. From python/:
+
+```powershell
+python -m tests.test_dielectric_pmc_controls --compare --baseline C:/study/pmc/n12 --out C:/study/pmc-controls
+python -m tests.test_dielectric_pmc_fine --compare --baseline C:/study/pmc-controls/time --out C:/study/pmc-fine
+```
+
+Fresh acquisitions follow #364's explicit opt-in setup/pilot/full commands, with a new path for every epoch and host-specific conservative throughput forecasts. These PMC full fields enforce a 2700-second owned wall deadline including suspend, separately from the older 1800-second fixtures below. The completed fine fields took 22.713 / 27.108 minutes; no old deferred campaign was resumed to create this record. Parameters, reference values and gates were frozen before acquisition.
+
 ## Exclusions and deferred work
 
 - 6.2 / 283: open microstrip and boxed controls remain unqualified. The three approved long boxed refinements are now complete: all four boxed meshes/controls reach their -70 dB stop, and both successive mesh comparisons and the independent air-clearance control pass their frozen limits. The fine result is 4.949102662 GHz / Q=2837.276121; its 1.017947% frequency error exceeds the unchanged 1% target. Passing acquisition and mesh controls does not qualify target agreement. See [PR #81](https://github.com/ismailakdag/fairbeam/pull/81) for the complete before/after table, fixed extraction windows and separate late-window diagnostic.
@@ -84,7 +123,7 @@ Earlier -70 dB data fail a mesh-Gamma gate (0.005117706 > 0.005). Common time pr
 
 ## Reproduction and provenance
 
-Check out each linked fixture PR until merged. This documentation PR does not depend on unmerged code being present on main. From python/ use a Fairbeam environment with the bundled native bindings, fresh output directories outside Git and the linked PR's complete serial acquisition commands. The following analysis commands reread those completed cohorts without launching FDTD:
+Check out each linked fixture PR until merged. This documentation PR does not depend on unmerged code being present on main. For the accepted scopes, from python/ use a Fairbeam environment with the bundled native bindings, fresh output directories outside Git and the linked PR's complete serial acquisition commands. The separate PMC calibration instead requires the matching source/SDK specified above. The following analysis commands reread the accepted cohorts without launching FDTD:
 
 ```powershell
 python -m tests.test_coax_resonator --analyse --cases ptfe_dielectric --out C:\Temp\coax-dielectric
