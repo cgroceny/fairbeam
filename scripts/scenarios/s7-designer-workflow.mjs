@@ -673,8 +673,7 @@ export default {
       const beforeSnap = await s.ev((_, m) => m.d.snap(), null, { d: '/src/designer/draw.ts' });
       assert.equal(beforeSnap, 0.5, 'the WCS UI set a non-default grid snap');
 
-      const runRow = await s.wait(`.nt-row[data-id="run:${runFile}"]`);
-      await runRow.click();
+      await s.clickSel(`.nt-row[data-id="run:${runFile}"]`);
       await s.waitFor(async () => (await import('/src/designer/ribbonResults.ts')).ribbonPattern3d().ok,
         null, { what: 'the run 3D pattern to become available' });
       await s.click('ribbon.tab.post', { sel: '.rb-tab' });
@@ -713,8 +712,7 @@ export default {
       await s.wait('.rb');
       assert.equal(await s.ev((_, m) => m.state.layers.guideGrid, null, { state: '/src/state.ts' }), false,
         'the hidden guide-grid preference survives a full page reload');
-      await s.wait(`.nt-row[data-id="run:${runFile}"]`);
-      await (await s.wait(`.nt-row[data-id="run:${runFile}"]`)).click();
+      await s.clickSel(`.nt-row[data-id="run:${runFile}"]`);
       await s.waitFor(async () => (await import('/src/designer/ribbonResults.ts')).ribbonPattern3d().ok,
         null, { what: 'the 3D result to reload' });
       await s.click('ribbon.tab.post', { sel: '.rb-tab' });
