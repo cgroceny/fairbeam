@@ -26,7 +26,7 @@ from tests import dielectric_pmc_fixture as f
 
 CONTROLS = ('time', 'angle', 'tail')
 MESH = 12
-TIME_FACTOR = .8
+TIME_FACTOR = .75
 
 
 @contextmanager
