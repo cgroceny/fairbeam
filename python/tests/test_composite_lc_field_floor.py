@@ -43,8 +43,9 @@ def field_context(pilot=False):
             raise ValueError('nested diagnostic context')
         for name, box in PROBES.items():
             xyz = np.array(box['position_m'])/sim.unit
-            sim.csx.AddProbe(name, p_type=2 if box['kind']=='E' else 3,
-                over_sampling=OVERSAMPLING).AddBox(xyz, xyz)
+            probe=sim.csx.AddProbe(name,p_type=2 if box['kind']=='E' else 3,over_sampling=OVERSAMPLING)
+            probe.SetColor((128,128,128),alpha=255)
+            probe.AddBox(xyz,xyz)
         if pilot:
             steps = math.ceil(PILOT_S/meta['declared_dt_s'])
             sim.fdtd.SetNumberOfTimeSteps(steps); sim.max_timesteps = steps
@@ -264,6 +265,13 @@ class FieldFloorTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             with field_context():f.build(2,1)
         self.assertEqual((f.build,f.identity,f.identity()),before)
+
+    def test_rebuilt_probe_decorations_do_not_change_native_input_hash(self):
+        with tempfile.TemporaryDirectory() as tmp,field_context():
+            paths=[Path(tmp)/name for name in ('first','second')]
+            for path in paths:
+                sim,_=f.build(1,1);sim.fdtd.Write2XML(str(path))
+            self.assertEqual(paths[0].read_bytes(),paths[1].read_bytes())
 
     def test_pilot_changes_only_its_declared_window_and_extra_probes(self):
         with tempfile.TemporaryDirectory() as tmp:
