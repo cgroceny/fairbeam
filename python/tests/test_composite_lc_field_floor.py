@@ -19,7 +19,7 @@ import sys
 import tempfile
 import time
 import unittest
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 import xml.etree.ElementTree as ET
 
 import numpy as np
@@ -243,7 +243,7 @@ def run_prepared(out):
     meta=json.loads((out/'port1/report.json').read_text());text=(out/'port1.log').read_text()
     meta.update(native_header=f.audit_header(text,meta),native_log_sha256=f.sha(out/'port1.log'))
     f.save(out/'port1/report.json',meta)
-    result=dict(pilot_only=True,native=meta['native'],qualified=False) if pilot else analyse(out)
+    result=dict(pilot_only=True,native=meta['native'],qualified=False) if protocol['pilot_only'] else analyse(out)
     f.save(out/'field-floor.json',result)
     return result
 
@@ -342,6 +342,26 @@ class FieldFloorTests(unittest.TestCase):
             f.save(side/'protocol.json',dict(pilot_only=False,deadline_seconds=DEADLINE+1))
             with self.assertRaisesRegex(ValueError,'fixed owned deadline'):run_prepared(out)
             launch.assert_not_called();self.assertFalse(out.exists())
+
+    def test_prepared_pilot_returns_timing_without_calling_full_analysis(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            out=Path(tmp)/'pilot';side=out.with_name('pilot-protocol');side.mkdir()
+            baseline=Path(tmp)/'baseline';baseline.mkdir();f.save(baseline/'report.json',{})
+            with field_context(True):source=f.identity()
+            protocol=dict(pilot_only=True,deadline_seconds=120.,estimated_seconds=1.,
+                source=source,runtime=f.runtime_identity(),baseline=str(baseline),
+                baseline_report_sha256=f.sha(baseline/'report.json'))
+            f.save(side/'protocol.json',protocol)
+            proc=Mock(pid=17,win_job=None);proc.poll.return_value=0
+            def completed(*args,**kw):
+                (out/'port1').mkdir();f.save(out/'port1/report.json',dict(native={'cells':2079}))
+                return 0
+            with patch.object(t,'popen_group',return_value=proc),patch.object(t,'wait_owned',side_effect=completed), \
+                    patch.object(t,'release_group'),patch.object(f,'audit_header',return_value={}), \
+                    patch(__name__+'.analyse') as full:
+                result=run_prepared(out);full.assert_not_called()
+            self.assertTrue(result['pilot_only']);self.assertFalse(result['qualified'])
+            self.assertEqual(result['native'],{'cells':2079})
 
 
 def main():
