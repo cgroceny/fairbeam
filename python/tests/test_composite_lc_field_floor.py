@@ -23,6 +23,7 @@ from unittest.mock import Mock, patch
 import xml.etree.ElementTree as ET
 
 import numpy as np
+from fairbeam.simulation import _nonfinite_energy
 from tests import composite_lc_filter_fixture as f
 from tests import test_composite_lc_filter_fixture as t
 
@@ -163,7 +164,9 @@ def late_power(data, window_s=15e-6):
         raise ValueError('uniform field clock required')
     selected=data[data[:,0]>=data[-1,0]-window_s,1:]
     z=np.fft.rfft(selected*np.hanning(len(selected))[:,None],axis=0)
-    power=np.sum(abs(z)**2,axis=1);power[1:-1]*=2
+    power=np.sum(abs(z)**2,axis=1);power[1:]*=2
+    # Only an even-length real FFT has an unpaired Nyquist bin.
+    if len(selected)%2==0:power[-1]/=2
     frequency=np.fft.rfftfreq(len(selected),dt);total=float(power.sum())
     if total<=0:
         raise ValueError('unexcited late field probe')
@@ -209,6 +212,18 @@ def acquire(out, baseline, pilot=False, rate=85., io=40.):
     return run_prepared(out)
 
 
+def wait_capture(proc, log, seconds):
+    wait=proc.wait
+    def checked(*args,**kw):
+        try:return wait(*args,**kw)
+        finally:
+            if bad:=_nonfinite_energy(log.read_text(encoding='utf-8')):
+                raise RuntimeError('nonfinite native diagnostic energy: '+bad)
+    proc.wait=checked
+    try:return t.wait_owned(proc,seconds=seconds)
+    finally:proc.wait=wait
+
+
 def run_prepared(out):
     out=Path(out).resolve();side=out.with_name(out.name+'-protocol')
     protocol=json.loads((side/'protocol.json').read_text())
@@ -228,7 +243,7 @@ def run_prepared(out):
     with (out/'port1.log').open('w',encoding='utf-8') as log:
         proc=t.popen_group(command,cwd=f.ROOT/'python',stdout=log,stderr=t.subprocess.STDOUT)
         f.save(out/'progress.json',dict(active_launcher_pid=proc.pid,command=command,qualified=False))
-        try:code=t.wait_owned(proc,seconds=protocol['deadline_seconds'])
+        try:code=wait_capture(proc,out/'port1.log',protocol['deadline_seconds'])
         except BaseException as exc:failure=repr(exc);raise
         finally:
             if proc.poll() is None:
@@ -308,6 +323,31 @@ class FieldFloorTests(unittest.TestCase):
         data[:,1]=np.cos(2*np.pi*2e6*time)
         self.assertLess(late_power(data)['above_12mhz_fraction'],1e-12)
 
+    def test_odd_and_even_real_spectra_match_an_independent_two_sided_sum(self):
+        for n in (64,65):
+            with self.subTest(samples=n):
+                dt=1e-8;time=np.arange(n)*dt;data=np.zeros((n,4));data[:,0]=time
+                data[:,1]=np.cos(2*np.pi*np.arange(n)/n)+2*np.cos(2*np.pi*(n//2)*np.arange(n)/n)
+                result=late_power(data,time[-1])
+                ft=np.fft.fft(data[:,1:]*np.hanning(n)[:,None],axis=0)
+                power=(abs(ft)**2).sum(axis=1);frequency=abs(np.fft.fftfreq(n,dt))
+                self.assertAlmostEqual(result['above_12mhz_fraction'],
+                    float(power[frequency>12e6].sum()/power.sum()),places=13)
+                self.assertAlmostEqual(result['in_band_fraction'],
+                    float(power[frequency<=f.FREQUENCIES[-1]].sum()/power.sum()),places=13)
+
+    def test_live_energy_monitor_restores_wait_and_distinguishes_linear_nan_from_db(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            log=Path(tmp)/'worker.log';proc=Mock(pid=17,win_job=None)
+            original=proc.wait;original.return_value=0
+            log.write_text('[@ 4s] Timestep: 16 || Energy: ~0 (-inf dB)\n')
+            self.assertEqual(wait_capture(proc,log,1.),0);self.assertIs(proc.wait,original)
+            original.side_effect=t.subprocess.TimeoutExpired('worker',1.)
+            log.write_text('[@ 4s] Timestep: 16 || Energy: ~-nan(ind) (-0.00dB)\n')
+            with self.assertRaisesRegex(RuntimeError,'nonfinite native diagnostic energy'):
+                wait_capture(proc,log,1.)
+            self.assertIs(proc.wait,original)
+
     def test_unexcited_or_incomplete_late_window_is_not_a_spectrum(self):
         data=np.zeros((20001,4));data[:,0]=np.arange(len(data))*1e-9
         with self.assertRaisesRegex(ValueError,'unexcited'):late_power(data)
@@ -362,6 +402,26 @@ class FieldFloorTests(unittest.TestCase):
                 result=run_prepared(out);full.assert_not_called()
             self.assertTrue(result['pilot_only']);self.assertFalse(result['qualified'])
             self.assertEqual(result['native'],{'cells':2079})
+
+    def test_live_failure_closes_only_the_owned_group_and_retains_a_failed_receipt(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            out=Path(tmp)/'pilot';side=out.with_name('pilot-protocol');side.mkdir()
+            baseline=Path(tmp)/'baseline';baseline.mkdir();f.save(baseline/'report.json',{})
+            with field_context(True):source=f.identity()
+            f.save(side/'protocol.json',dict(pilot_only=True,deadline_seconds=120.,estimated_seconds=1.,
+                source=source,runtime=f.runtime_identity(),baseline=str(baseline),
+                baseline_report_sha256=f.sha(baseline/'report.json')))
+            proc=Mock(pid=17,win_job=Mock());proc.poll.return_value=None;proc.wait.return_value=1
+            with patch.object(t,'popen_group',return_value=proc),patch.object(t,'terminate_group') as stop, \
+                    patch.object(t,'release_group') as release, \
+                    patch(__name__+'.wait_capture',side_effect=RuntimeError('nonfinite native diagnostic energy')):
+                with self.assertRaisesRegex(RuntimeError,'nonfinite'):run_prepared(out)
+                stop.assert_called_once_with(proc.pid,grace=0,job=proc.win_job)
+                release.assert_called_once_with(proc)
+            receipt=json.loads((out/'port1.worker.json').read_text())
+            self.assertIn('nonfinite',receipt['failure']);self.assertEqual(receipt['pid'],17)
+            self.assertIsNone(json.loads((out/'progress.json').read_text())['active_launcher_pid'])
+            self.assertFalse((out/'field-floor.json').exists())
 
 
 def main():
