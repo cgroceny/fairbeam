@@ -4,11 +4,14 @@ From python/ with the same SDK as an already audited ordinary n1/port1:
 python -m unittest tests.test_composite_lc_field_floor -q
 python -m tests.test_composite_lc_field_floor --fdtd --pilot --baseline D:/study/baseline/port1 --out D:/study/floor-pilot
 python -m tests.test_composite_lc_field_floor --fdtd --rate-mcps 85 --baseline D:/study/baseline/port1 --out D:/study/floor-full
+python -m tests.test_composite_lc_field_floor --fdtd --probe-oversampling 2544 --rate-mcps 85 --baseline D:/study/baseline/port1 --out D:/study/floor-other-clock
 python -m tests.test_composite_lc_field_floor --analyse --out D:/study/floor-full
 
 Four additive field probes override only their sampling. Existing geometry,
 30 terminal probes, source, 65 us cap, clock and stopping gates stay fixed.
 Pilots are source-incomplete timing only; no S matrix or bundle is produced.
+Changing only the extra probes' clock can test for sampling aliases. A pair
+still cannot establish volume energy, mesh convergence or a physical cause.
 """
 import argparse
 from contextlib import contextmanager
@@ -33,18 +36,29 @@ PROBES = {f'floor_{kind}_{name}': dict(kind=kind, position_m=list(point))
     for name, point in POINTS.items() for kind in ('E', 'H')}
 
 
+def sampling_stride(dt, over_sampling):
+    if not np.isfinite(dt) or dt<=0:
+        raise ValueError('positive finite native clock required')
+    nyquist=int(1/(2*f.FREQUENCIES[-1]*dt))
+    if (isinstance(over_sampling,bool) or not isinstance(over_sampling,int)
+            or not f.OVERSAMPLING<=over_sampling<=nyquist):
+        raise ValueError('integer probe oversampling between the existing rate and native Nyquist required')
+    return nyquist//over_sampling
+
+
 @contextmanager
-def field_context(pilot=False):
+def field_context(pilot=False, probe_oversampling=OVERSAMPLING):
     build, identity = f.build, f.identity
     def model(n, port, kind='filter', control='ordinary', threads=1):
         if n != 1 or port != 1 or kind != 'filter' or control != 'ordinary' or threads != 1:
             raise ValueError('one-thread ordinary n1/port1 diagnostic required')
         sim, meta = build(n, port, kind, control, threads)
+        sampling_stride(meta['declared_dt_s'],probe_oversampling)
         if 'field_floor' in meta:
             raise ValueError('nested diagnostic context')
         for name, box in PROBES.items():
             xyz = np.array(box['position_m'])/sim.unit
-            probe=sim.csx.AddProbe(name,p_type=2 if box['kind']=='E' else 3,over_sampling=OVERSAMPLING)
+            probe=sim.csx.AddProbe(name,p_type=2 if box['kind']=='E' else 3,over_sampling=probe_oversampling)
             probe.SetColor((128,128,128),alpha=255)
             probe.AddBox(xyz,xyz)
         if pilot:
@@ -53,7 +67,7 @@ def field_context(pilot=False):
             meta.update(cap_s=PILOT_S, max_timesteps=steps)
         if sim.csx.Update():
             raise ValueError('diagnostic probe geometry failed')
-        meta['field_floor'] = dict(probes=PROBES, over_sampling=OVERSAMPLING,
+        meta['field_floor'] = dict(probes=PROBES, over_sampling=probe_oversampling,
             pilot_only=pilot, one_source_only=True)
         return sim, meta
     def source():
@@ -80,14 +94,16 @@ def preserved_input(path, pilot=False):
     return ET.tostring(root)
 
 
-def prepare(out, baseline, pilot=False, rate=85., io=40.):
+def prepare(out, baseline, pilot=False, rate=85., io=40., *, probe_oversampling=OVERSAMPLING):
     out, baseline = Path(out).resolve(), Path(baseline).resolve()
     side = out.with_name(out.name+'-protocol')
     if out.exists() or side.exists() or out.is_relative_to(f.ROOT):
         raise ValueError('fresh external capture and protocol required')
-    with field_context(pilot):
+    with field_context(pilot,probe_oversampling):
         _, meta = f.build(1,1); source = f.identity()
-    estimate = t.forecast(meta,rate,io); limit = 120. if pilot else DEADLINE
+    stride=sampling_stride(meta['declared_dt_s'],probe_oversampling)
+    density=max(1.,sampling_stride(meta['declared_dt_s'],OVERSAMPLING)/stride)
+    estimate = t.forecast(meta,rate,io*density); limit = 120. if pilot else DEADLINE
     if estimate > limit:
         raise ValueError('diagnostic budget exceeded; defer before launch')
     old, _, _, quality = f.read(baseline)
@@ -98,7 +114,7 @@ def prepare(out, baseline, pilot=False, rate=85., io=40.):
     sim, _ = f.build(1,1); sim.fdtd.Write2XML(str(side/'baseline.xml'))
     if f.sha(side/'baseline.xml') != old['input_sha256']:
         raise ValueError('baseline physical input changed')
-    with field_context(pilot):
+    with field_context(pilot,probe_oversampling):
         sim, _ = f.build(1,1); sim.fdtd.Write2XML(str(side/'field.xml'))
         if preserved_input(side/'field.xml',pilot) != preserved_input(side/'baseline.xml',pilot):
             raise ValueError('changed input beyond declared probes/pilot window')
@@ -106,6 +122,7 @@ def prepare(out, baseline, pilot=False, rate=85., io=40.):
         sim.fdtd.Write2XML(str(side/'operator.xml'))
     protocol = dict(baseline=str(baseline), baseline_report_sha256=f.sha(baseline/'report.json'),
         source=source,runtime=f.runtime_identity(),pilot_only=pilot,estimated_seconds=estimate,
+        probe_oversampling=probe_oversampling,
         deadline_seconds=limit,input_sha256=f.sha(side/'field.xml'),
         operator_input_sha256=f.sha(side/'operator.xml'),qualified=False)
     f.save(side/'protocol.json',protocol)
@@ -123,7 +140,7 @@ def worker(out, protocol):
         if f.sha(check)!=protocol[key]:
             raise ValueError('diagnostic native input changed before execution')
         return original(sim,path,*args,**kw)
-    with field_context(protocol['pilot_only']):
+    with field_context(protocol['pilot_only'],protocol.get('probe_oversampling',OVERSAMPLING)):
         try:
             f.CircuitSimulation.run = guarded
             if not protocol['pilot_only']:
@@ -143,8 +160,8 @@ def worker(out, protocol):
 
 
 def field_clock(data, meta, magnetic):
-    dt = meta['native']['dt_s']; nyquist=int(1/(2*f.FREQUENCIES[-1]*dt))
-    stride = nyquist//OVERSAMPLING
+    dt = meta['native']['dt_s']
+    stride=sampling_stride(dt,meta.get('field_floor',{}).get('over_sampling',OVERSAMPLING))
     if stride<1 or data.ndim!=2 or data.shape[1]!=4 or not np.isfinite(data).all():
         raise ValueError('finite vector-field samples required')
     expected=(np.arange(len(data))*stride+(.5 if magnetic else 0.))*dt
@@ -185,7 +202,7 @@ def analyse(out):
     if f.sha(baseline/'report.json')!=protocol['baseline_report_sha256']:
         raise ValueError('baseline report changed')
     old,_,_,oldq=f.read(baseline)
-    with field_context():
+    with field_context(probe_oversampling=protocol.get('probe_oversampling',OVERSAMPLING)):
         if f.identity()!=protocol['source'] or f.runtime_identity()!=protocol['runtime']:
             raise ValueError('diagnostic source/runtime changed')
         meta,_,_,quality=f.read(out/'port1')
@@ -207,8 +224,8 @@ def analyse(out):
         one_source_only=True,qualified=False,original_example_reclassified=False)
 
 
-def acquire(out, baseline, pilot=False, rate=85., io=40.):
-    prepare(out,baseline,pilot,rate,io)
+def acquire(out, baseline, pilot=False, rate=85., io=40., *, probe_oversampling=OVERSAMPLING):
+    prepare(out,baseline,pilot,rate,io,probe_oversampling=probe_oversampling)
     return run_prepared(out)
 
 
@@ -232,7 +249,7 @@ def run_prepared(out):
         raise ValueError('fresh external output and fixed owned deadline required')
     if protocol['estimated_seconds']>limit:
         raise ValueError('prepared forecast exceeds the owned budget')
-    with field_context(protocol['pilot_only']):
+    with field_context(protocol['pilot_only'],protocol.get('probe_oversampling',OVERSAMPLING)):
         if f.identity()!=protocol['source'] or f.runtime_identity()!=protocol['runtime']:
             raise ValueError('prepared source/runtime changed')
     if f.sha(Path(protocol['baseline'])/'report.json')!=protocol['baseline_report_sha256']:
@@ -264,6 +281,64 @@ def run_prepared(out):
 
 
 class FieldFloorTests(unittest.TestCase):
+    def test_opt_in_clock_changes_only_the_four_extra_sampling_attributes(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            paths=[Path(tmp)/str(value) for value in (OVERSAMPLING,2544)]
+            for value,path in zip((OVERSAMPLING,2544),paths):
+                with field_context(probe_oversampling=value):
+                    sim,meta=f.build(1,1);sim.fdtd.Write2XML(str(path))
+                    self.assertEqual(meta['field_floor']['over_sampling'],value)
+                    extra=[p for p in sim.csx.GetAllProperties() if p.GetName() in PROBES]
+                    self.assertEqual(len(extra),4)
+                    self.assertTrue(all(p.GetOverSampling()==value for p in extra))
+            self.assertEqual(preserved_input(paths[0]),preserved_input(paths[1]))
+            trees=[ET.parse(path) for path in paths]
+            for tree,value in zip(trees,(OVERSAMPLING,2544)):
+                for node in tree.iter('ProbeBox'):
+                    if node.get('Name') in PROBES:
+                        self.assertEqual(node.attrib.pop('OverSampling'),str(value))
+            self.assertEqual(ET.tostring(trees[0].getroot()),ET.tostring(trees[1].getroot()))
+
+    def test_recorded_sampling_selects_the_clock_and_retains_half_step_h(self):
+        dt=3.851666403092941e-12
+        meta=dict(native=dict(dt_s=dt,timesteps=68),field_floor=dict(over_sampling=2544))
+        for magnetic in (False,True):
+            data=np.zeros((5,4));data[:,0]=(np.arange(5)*17+(.5 if magnetic else 0))*dt
+            self.assertEqual(field_clock(data,meta,magnetic),17)
+            wrong={**meta,'field_floor':dict(over_sampling=OVERSAMPLING)}
+            with self.assertRaises(ValueError):field_clock(data,wrong,magnetic)
+
+    def test_invalid_sampling_refuses_before_baseline_io_or_output(self):
+        for value in (True,False,0,-1,15,43272,2544.,float('inf'),float('nan'),'2544'):
+            with self.subTest(value=value),tempfile.TemporaryDirectory() as tmp,patch.object(f,'read') as read:
+                out=Path(tmp)/'fresh'
+                with self.assertRaisesRegex(ValueError,'integer probe oversampling'):
+                    prepare(out,Path(tmp)/'missing',probe_oversampling=value)
+                read.assert_not_called();self.assertFalse(out.exists())
+                self.assertFalse(out.with_name('fresh-protocol').exists())
+
+    def test_denser_probe_output_scales_the_io_forecast_and_can_refuse(self):
+        with tempfile.TemporaryDirectory() as tmp,patch.object(f,'read') as read:
+            out=Path(tmp)/'fresh'
+            with self.assertRaisesRegex(ValueError,'budget'):
+                prepare(out,Path(tmp)/'missing',probe_oversampling=43271)
+            read.assert_not_called();self.assertFalse(out.exists())
+            self.assertFalse(out.with_name('fresh-protocol').exists())
+
+    def test_changed_sampling_protocol_refuses_the_original_native_input_before_execution(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            expected=Path(tmp)/'expected.xml'
+            with field_context(probe_oversampling=2544):
+                sim,_=f.build(1,1);sim.fdtd.Write2XML(str(expected));source=f.identity()
+            protocol=dict(pilot_only=False,source=source,runtime=f.runtime_identity(),
+                input_sha256=f.sha(expected),probe_oversampling=OVERSAMPLING)
+            def attempt(folder,*args):
+                folder.mkdir();sim,_=f.build(1,1);sim.run(str(folder/'raw'))
+            with patch.object(f,'acquire',side_effect=attempt),patch.object(f.CircuitSimulation,'run') as native:
+                with self.assertRaisesRegex(ValueError,'native input changed'):
+                    worker(Path(tmp)/'port1',protocol)
+                native.assert_not_called()
+
     def test_only_four_probes_change_the_full_native_input(self):
         with tempfile.TemporaryDirectory() as tmp:
             a,b=Path(tmp)/'a',Path(tmp)/'b';sim,old=f.build(1,1);sim.fdtd.Write2XML(str(a))
@@ -429,6 +504,8 @@ def main():
     for name in ('plan','fdtd','analyse','worker'):g.add_argument('--'+name,action='store_true')
     p.add_argument('--out',type=Path,required=True);p.add_argument('--baseline',type=Path)
     p.add_argument('--pilot',action='store_true');p.add_argument('--rate-mcps',type=float,default=85.)
+    p.add_argument('--probe-oversampling',type=int,default=OVERSAMPLING,
+        help='extra probes only; analyse/worker use the frozen recorded value; denser output scales the I/O forecast')
     p.add_argument('--io-s-per-mstep',type=float,default=40.);a=p.parse_args()
     if a.worker:
         side=a.out.with_name(a.out.name+'-protocol');worker(a.out/'port1',json.loads((side/'protocol.json').read_text()));return
@@ -436,7 +513,8 @@ def main():
     else:
         if a.baseline is None:p.error('--baseline required')
         action=prepare if a.plan else acquire
-        result=action(a.out,a.baseline,a.pilot,a.rate_mcps,a.io_s_per_mstep)
+        result=action(a.out,a.baseline,a.pilot,a.rate_mcps,a.io_s_per_mstep,
+            probe_oversampling=a.probe_oversampling)
     print(json.dumps(result,indent=2,allow_nan=False))
 
 
