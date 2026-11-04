@@ -204,7 +204,23 @@ def analyse(out):
 
 
 def acquire(out, baseline, pilot=False, rate=85., io=40.):
-    out=Path(out).resolve();protocol=prepare(out,baseline,pilot,rate,io)
+    prepare(out,baseline,pilot,rate,io)
+    return run_prepared(out)
+
+
+def run_prepared(out):
+    out=Path(out).resolve();side=out.with_name(out.name+'-protocol')
+    protocol=json.loads((side/'protocol.json').read_text())
+    limit=120. if protocol['pilot_only'] else DEADLINE
+    if out.exists() or out.is_relative_to(f.ROOT) or protocol['deadline_seconds']!=limit:
+        raise ValueError('fresh external output and fixed owned deadline required')
+    if protocol['estimated_seconds']>limit:
+        raise ValueError('prepared forecast exceeds the owned budget')
+    with field_context(protocol['pilot_only']):
+        if f.identity()!=protocol['source'] or f.runtime_identity()!=protocol['runtime']:
+            raise ValueError('prepared source/runtime changed')
+    if f.sha(Path(protocol['baseline'])/'report.json')!=protocol['baseline_report_sha256']:
+        raise ValueError('prepared baseline changed')
     out.mkdir();command=[sys.executable,'-m','tests.test_composite_lc_field_floor',
         '--worker','--out',str(out)]
     start,wall=time.monotonic(),time.time();code=None;failure=None
@@ -311,6 +327,13 @@ class FieldFloorTests(unittest.TestCase):
                 with self.assertRaisesRegex(ValueError,'source/runtime changed'):
                     worker(out,dict(pilot_only=False,source={},runtime={}))
                 native.assert_not_called()
+
+    def test_prepared_deadline_cannot_be_extended_before_launch(self):
+        with tempfile.TemporaryDirectory() as tmp,patch.object(t,'popen_group') as launch:
+            out=Path(tmp)/'fresh';side=out.with_name('fresh-protocol');side.mkdir()
+            f.save(side/'protocol.json',dict(pilot_only=False,deadline_seconds=DEADLINE+1))
+            with self.assertRaisesRegex(ValueError,'fixed owned deadline'):run_prepared(out)
+            launch.assert_not_called();self.assertFalse(out.exists())
 
 
 def main():
