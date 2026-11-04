@@ -308,6 +308,26 @@ class FieldFloorTests(unittest.TestCase):
             wrong={**meta,'field_floor':dict(over_sampling=OVERSAMPLING)}
             with self.assertRaises(ValueError):field_clock(data,wrong,magnetic)
 
+    def test_two_sampling_rates_distinguish_a_synthetic_folded_mode(self):
+        dt=3.851666403092941e-12;sample_rates=[1/(stride*dt) for stride in (16,17)]
+        observed=[]
+        for physical in (180e6,sample_rates[0]+180e6):
+            peaks=[]
+            for over_sampling,rate in zip((OVERSAMPLING,2544),sample_rates):
+                stride=sampling_stride(dt,over_sampling)
+                data=np.zeros((32769,4));data[:,0]=np.arange(len(data))*stride*dt
+                data[:,1]=np.cos(2*np.pi*physical*data[:,0])
+                meta=dict(native=dict(dt_s=dt,timesteps=(len(data)-1)*stride),
+                    field_floor=dict(over_sampling=over_sampling))
+                self.assertEqual(field_clock(data,meta,False),stride)
+                peak=late_power(data,1e-6)['peak_hz']
+                folded=abs((physical+rate/2)%rate-rate/2)
+                self.assertLess(abs(peak-folded),1e6);peaks.append(peak)
+            observed.append(peaks)
+        self.assertLess(abs(observed[0][0]-observed[0][1]),2e6)
+        self.assertLess(abs(observed[0][0]-observed[1][0]),2e6)
+        self.assertGreater(abs(observed[1][0]-observed[1][1]),500e6)
+
     def test_invalid_sampling_refuses_before_baseline_io_or_output(self):
         for value in (True,False,0,-1,15,43272,2544.,float('inf'),float('nan'),'2544'):
             with self.subTest(value=value),tempfile.TemporaryDirectory() as tmp,patch.object(f,'read') as read:
