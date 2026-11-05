@@ -131,4 +131,33 @@ uyar. **.fb dosyalarını açma.** Bazı kurulumlarda Fairbeam ilk **Birlikte a�
 - Resmi openEMS derlemesi yalnızca CPU kullanır. Fairbeam'in kurulum ekranı ve Genel ayarlar, isteğe bağlı NVIDIA derlemesini ayrı bir yönetilen `gpu-runtime` klasörüne kurabilir; CPU ortamı kullanılabilir kalır. Seçilen ortam sonraki uygulama açılışında devreye girer; ortam ikisini de bildiriyorsa Çalıştır iletişim kutusu CPU ve GPU seçeneklerini sunar. Ayrı bir Fairbeam yükleyicisi veya CUDA araç takımı gerekmez. Harici GPU kurulumları desteklenmeye devam eder. [GPU.md](GPU.md) belgesine bakın.
 - Sembolik bağlantılar geliştirici modu veya yönetici yetkisi gerektirir. Çalıştırma sunucusu bunlara bağımlı değildir (bağlantı oluşturacağı yerde model dosyasını kopyalar); `clean-sim` komutunun bağlantıları izlemediğini kontrol eden test, gerekli yetki yoksa bu kısmı atlar.
 - Konsolsuz başlatılan çalıştırma sunucusu (bağımsız bir GUI süreci), işlerine CTRL_BREAK gönderemez; bu durumda iptal işlemi bekleme süresinden (5 s) sonra iş nesnesini sonlandırır ve openEMS düzgün durdurma işlemini gerçekleştiremeden durur. Sonuç aynıdır: paket yazılmaz ve süreç kalmaz. (Denenmemiştir: doğrulanan tüm kurulumlarda sunucu konsoldan çalıştırılmıştır.)
-- Yükleyici kod imzalı değildir: indirilen `.exe` ilk çalıştırıldığında SmartScreen “Windows bilgisayarınızı korudu” uyarısını gösterebilir (Ek bilgi › Yine de çalıştır). macOS derlemesi Developer ID ile imzalanmış ve Apple tarafından doğrulanmıştır.
+- Windows yükleyicisi ve uygulaması şu anda Windows Authenticode yayıncı imzasına sahip değildir.
+  İndirilen yükleyici, SmartScreen itibar uyarısı gösterebilir. Windows Akıllı Uygulama Denetimi
+  (Smart App Control) ayrı bir ilkedir ve çalıştırmayı tamamen engelleyebilir; aşağıya bakın.
+  macOS derlemesi Developer ID ile imzalanmış ve Apple tarafından doğrulanmıştır.
+
+### Akıllı Uygulama Denetimi ve engellenen çalışma ortamı dosyaları
+
+Windows Akıllı Uygulama Denetimi, `fairbeam.exe`, yönetilen `python.exe` veya yüklenen
+`CSXCAD.cp313-win_amd64.pyd` gibi bir yerel uzantıyı engelleyebilir. Bir Uygulama Denetimi
+ilkesinin dosyayı engellediğini bildiriyorsa korumayı açık tutun. Fairbeam'i yeniden kurmak,
+çalışma ortamını onarmak veya başka bir Python seçmek, engellenen dosya ya da bağımlılıkları
+için güven oluşturmaz.
+
+Microsoft, [Akıllı Uygulama Denetimi'nde tek bir uygulamaya özel istisna bulunmadığını](https://support.microsoft.com/en-gb/windows/security/threat-malware-protection/smart-app-control-frequently-asked-questions)
+belirtir. SmartScreen'in **Ek bilgi** akışı böyle bir istisna sağlamaz. Akıllı Uygulama Denetimi
+uygulanmaya devam ederken Fairbeam'in bu engel için doğrulanmış, desteklenen bir çözümü yoktur.
+
+Sürüm hazırlığında uygulama ve etkilenen çalışma ortamı bileşenleri güvenilir bir Windows
+yayıncı imzasıyla imzalanmalı; ardından Akıllı Uygulama Denetimi açıkken kurulum ve modül
+yükleme denetimleri yapılmalıdır. Güncelleyicinin `.sig` dosyaları ve indirme sağlama toplamları,
+güncelleme ve indirme sözleşmesini doğrular; Windows Authenticode imzası değildir.
+[Microsoft'un imzalama kılavuzuna](https://learn.microsoft.com/en-us/windows/apps/develop/smart-app-control/code-signing-for-smart-app-control)
+ve [sürüm imzalama notlarına](RELEASES.md#windows-publisher-signing) bakın.
+
+Destek bildirimine Fairbeam sürümünü, engellenen dosyanın adını ve ilke iletisini ekleyin.
+CodeIntegrity olayları 3077 veya 3033, engellenen bileşeni belirlemeye yardımcı olabilir.
+Günlükleri paylaşmadan önce özel yolları ve hesap bilgilerini çıkarın. Windows doğrudan
+`fairbeam.exe` dosyasını engelliyorsa uygulama içindeki onarım veya yardım ekranı çalışamaz.
+İlerleme, [Windows Akıllı Uygulama Denetimi desteği](https://github.com/ismailakdag/fairbeam-releases/issues/5)
+başlığında izlenir.
