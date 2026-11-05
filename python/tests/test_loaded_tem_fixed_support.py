@@ -33,11 +33,14 @@ from tests import loaded_tem_fixed_support_fixture as m
 
 
 def save_once(path, value):
-    path = Path(path)
+    path = Path(path).resolve()
+    if path.is_relative_to(f.ROOT):
+        raise ValueError('study output outside the checkout required')
     if path.exists():
         if json.loads(path.read_text()) != value:
             raise ValueError('retain the prior result; use a fresh analysis epoch')
     else:
+        path.parent.mkdir(parents=True, exist_ok=True)
         f.save(path, value)
 
 
@@ -347,6 +350,30 @@ class FixedSupportTests(unittest.TestCase):
             result = m.study('absent')
             self.assertEqual(len(result['rejected']), 6)
             self.assertFalse(result['fixed_geometry_mesh_passes'])
+
+    def test_study_cli_creates_missing_external_parent_and_preserves_prior_result(self):
+        with tempfile.TemporaryDirectory() as tmp, patch.object(f.Simulation, 'run') as run, \
+                patch('builtins.print'):
+            out = Path(tmp)/'not-yet-created'
+            with patch.object(sys, 'argv', ['fixture', '--study', '--out', str(out)]):
+                main()
+                saved = out/'fixed-support-study.json'
+                result = json.loads(saved.read_text())
+                before = saved.read_bytes()
+                self.assertEqual(len(result['missing']), 6)
+                self.assertFalse(result['qualified'])
+                self.assertFalse(result['fixed_geometry_mesh_passes'])
+                main()
+                self.assertEqual(saved.read_bytes(), before)
+            with self.assertRaisesRegex(ValueError, 'retain the prior result'):
+                save_once(saved, {**result, 'qualified': True})
+            self.assertEqual(saved.read_bytes(), before)
+            forbidden = f.ROOT/'_fixed_support_forbidden_test_output'
+            self.assertFalse(forbidden.exists())
+            with self.assertRaisesRegex(ValueError, 'outside the checkout'):
+                save_once(forbidden/'fixed-support-study.json', result)
+            self.assertFalse(forbidden.exists())
+            run.assert_not_called()
 
     def test_complete_synthetic_mesh_family_is_still_not_whole_example_qualification(self):
         def matrix(folder):
