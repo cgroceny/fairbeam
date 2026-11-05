@@ -3,6 +3,7 @@ import type { BooleanOperation, Design, DesignPart, Selection } from "./types";
 export type { BooleanOperation } from "./types";
 import { draft, edit, message, names, selection, setSelection, registerPostEditObserver, registerDocumentChangeObserver, registerDeriveHook, revertObservedEdit, setMessage } from "./store";
 import { appliedText, BOOLEAN_SYMBOLS, booleanOverlap, booleanPreview, booleanResult, materialiseBoolean, removedMeasure } from "./booleanParts";
+import { primitiveGeometry, relabelBooleanSources } from "./booleanLabels";
 import { quickBundle } from "./geometry";
 import { flashRemoved, setBooleanPreviewGeometry } from "./booleanPreview";
 import { hoverPart } from "../state";
@@ -248,15 +249,34 @@ registerDeriveHook((d, values, before) => {
       const inserted = (d.parts ?? []).find((q) => q !== part && q.name === h.B.name);
       if (inserted && JSON.stringify(inserted) !== JSON.stringify(h.B)) h.B = JSON.parse(JSON.stringify(inserted));
     }
-    const key = JSON.stringify([h, values]), own = JSON.stringify(part.primitives);
+    let own = JSON.stringify(part.primitives);
     const prev = was.get(part.name);
     if (prev?.booleanHistory && JSON.stringify(prev.booleanHistory) === JSON.stringify(h) && JSON.stringify(prev.primitives) !== own) {
-      // its shapes were edited by hand in this edit: keep them, and stop recomputing over them
-      h.live = false;
-      liveKeys.delete(part.name);
-      setMessage({ tone: "warn", text: t("boolean.editedDirectly", { part: part.label || part.name }) });
-      continue;
+      if (primitiveGeometry(prev.primitives) === primitiveGeometry(part.primitives)) {
+        const renamed = relabelBooleanSources(h, prev.primitives, part.primitives, values);
+        if (renamed) {
+          Object.assign(h, renamed.history);
+          // The exact guard already proved these edited primitives equal the new result.
+          // Retain their identity so Properties does not remount after the first typed letter.
+        } else {
+          const cleared = part.primitives.some((primitive, index) => !primitive.label && !!prev.primitives[index].label);
+          part.primitives.forEach((primitive, index) => {
+            if (prev.primitives[index].label === undefined) delete primitive.label;
+            else primitive.label = prev.primitives[index].label;
+          });
+          setMessage({ tone: "warn", text: t(cleared ? "boolean.labelCannotClear" : "boolean.labelNeedsSource", { part: part.label || part.name }) });
+        }
+        own = JSON.stringify(part.primitives);
+        liveKeys.delete(part.name);
+      } else {
+        // its shapes were edited by hand in this edit: keep them, and stop recomputing over them
+        h.live = false;
+        liveKeys.delete(part.name);
+        setMessage({ tone: "warn", text: t("boolean.editedDirectly", { part: part.label || part.name }) });
+        continue;
+      }
     }
+    const key = JSON.stringify([h, values]);
     const last = liveKeys.get(part.name);
     if (last?.key === key && last.result === own) continue;
     try {

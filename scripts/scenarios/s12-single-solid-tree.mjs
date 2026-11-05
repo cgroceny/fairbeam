@@ -82,5 +82,75 @@ export default {
       const expected = structuredClone(before); delete expected[single].component;
       assert.deepEqual(after, expected);
     });
+    await s.step('tree and Properties shape renames retain live Boolean history with Undo', async () => {
+      await s.store((_, m) => m.s.edit(d => {
+        const material = d.materials.find(mt => mt.kind === 'metal').name;
+        d.materials = d.materials.filter(mt => mt.name === material);
+        d.params = [{ key: 'r', default: 1 }]; d.ports = []; d.resistors = []; d.components = [];
+        d.simulation = { f_min: 1, f_max: 2, boundaries: 'MUR' }; d.far_field = { enabled: false };
+        d.parts = [
+          { name: 'sleeve', material, primitives: [{ kind: 'cylinder', axis: 'z', center: [0, 0], radius: 'r', inner_radius: 0.5, range: [0, 3], label: 'slv_body' }] },
+          { name: 'disc', material, primitives: [{ kind: 'cylinder', axis: 'z', center: [0, 0], radius: 2, inner_radius: 0.5, range: [3, 4], label: 'disc_body' }] },
+        ];
+      }));
+      assert.equal(await s.ev((_, m) => m.b.runBoolean('add', 0, 1), null, { b: '/src/designer/booleanUi.ts' }), true);
+      await s.showDesignPanel();
+      const first = '.nt-row[data-id="prim:0:0"]';
+      await s.clickSel(first); await (await s.wait(first)).focus(); await s.press('F2');
+      await s.fill('.nt-rename', 'Tree sleeve', { blur: false }); await s.press('Enter');
+      const result = () => s.store((_, m) => JSON.parse(JSON.stringify(m.s.draft.parts[0])));
+      let renamed = await result();
+      assert.equal(renamed.primitives[0].label, 'Tree sleeve');
+      assert.equal(renamed.booleanHistory.A.primitives[0].label, 'Tree sleeve');
+      assert.equal(renamed.booleanHistory.A.primitives[0].radius, 'r');
+      assert.equal(renamed.booleanHistory.live, true);
+      await s.click('ribbon.tab.home', { sel: '.rb-tab' }); await s.click('ribbon.home.undo', { sel: '.rb-btn' });
+      assert.equal((await result()).primitives[0].label, 'slv_body');
+      await s.click('ribbon.home.redo', { sel: '.rb-btn' });
+      assert.deepEqual(await result(), renamed);
+
+      await s.showDesignPanel(); await s.clickSel('.nt-row[data-id="prim:0:1"]'); await s.showDesignPanel('side');
+      const labelId = await s.store((_, m) => m.s.fieldId('parts[0].primitives[1].label'));
+      await s.fill(`#${labelId}`, 'Properties disc');
+      renamed = await result();
+      assert.deepEqual(renamed.primitives.map(p => p.label), ['Tree sleeve', 'Properties disc']);
+      assert.equal(renamed.booleanHistory.B.primitives[0].label, 'Properties disc');
+      assert.equal(renamed.booleanHistory.live, true);
+      await s.fill(`#${labelId}`, '');
+      assert.deepEqual(await result(), renamed, 'an unsupported clear keeps the complete live result unchanged');
+      await s.wait('.dz-msg', await s.T('boolean.labelCannotClear', { part: 'sleeve' }));
+      assert.equal(await s.page.$eval(`#${labelId}`, e => e.value), 'Properties disc', 'Properties shows the retained label after refusal');
+    });
+    await s.step('renamed Boolean shapes survive changed parameters and a saved page reload', async () => {
+      await s.store((_, m) => m.s.edit(d => { d.params[0].default = 1.5; }));
+      const atNewValues = await s.store((_, m) => JSON.parse(JSON.stringify(m.s.draft.parts[0])));
+      assert.equal(atNewValues.primitives[0].radius, 1.5);
+      assert.deepEqual(atNewValues.primitives.map(p => p.label), ['Tree sleeve', 'Properties disc']);
+      assert.equal(atNewValues.booleanHistory.live, true);
+      await s.click('ribbon.tab.home', { sel: '.rb-tab' }); await s.click('common.save', { sel: '.rb-btn' });
+      await s.waitFor(async () => !(await import('/src/designer/store.ts')).dirty(), null, { what: 'the renamed live design to save' });
+      await s.page.reload({ waitUntil: 'domcontentloaded' }); await s.wait('.rb');
+      await s.waitFor(async () => (await import('/src/designer/store.ts')).draft.parts?.[0]?.primitives?.[0]?.label === 'Tree sleeve', null, { what: 'the saved renamed design to reopen' });
+      assert.deepEqual(await s.store((_, m) => JSON.parse(JSON.stringify(m.s.draft.parts[0]))), atNewValues);
+      await s.showDesignPanel(); await s.clickSel('.nt-row[data-id="part:0"]'); await s.showDesignPanel('side');
+      await s.click('boolean.restore', { sel: 'button' });
+      const restored = await s.store((_, m) => JSON.parse(JSON.stringify(m.s.draft.parts)));
+      assert.deepEqual(restored.map(p => p.primitives[0].label), ['Tree sleeve', 'Properties disc']);
+      assert.equal(restored[0].primitives[0].radius, 'r');
+      assert.ok(restored.every(p => !p.booleanHistory), 'Restore operands exposes the original parametric sources');
+    });
+    await s.step('a copied Boolean shape refuses ambiguous tree renaming with a visible explanation', async () => {
+      await s.store((_, m) => m.s.edit(d => { d.parts[0].transforms = [{ type: 'translate', copies: 1, step: [4, 0, 0] }]; }));
+      assert.equal(await s.ev((_, m) => m.b.runBoolean('add', 0, 1), null, { b: '/src/designer/booleanUi.ts' }), true);
+      const before = await s.store((_, m) => JSON.parse(JSON.stringify(m.s.draft.parts[0])));
+      await s.showDesignPanel();
+      const first = '.nt-row[data-id="prim:0:0"]';
+      await s.clickSel(first); await (await s.wait(first)).focus(); await s.press('F2');
+      await s.fill('.nt-rename', 'Only one copy', { blur: false }); await s.press('Enter');
+      assert.deepEqual(await s.store((_, m) => JSON.parse(JSON.stringify(m.s.draft.parts[0]))), before);
+      await s.showDesignPanel('side');
+      await s.wait('.dz-msg', await s.T('boolean.labelNeedsSource', { part: 'sleeve' }));
+      await s.showDesignPanel(); assert.ok((await s.text(first)).includes('Tree sleeve'));
+    });
   },
 };

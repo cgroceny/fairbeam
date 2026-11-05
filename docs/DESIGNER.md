@@ -766,6 +766,14 @@ on picked geometry:
   and the combinations marked refused, are refused with the reason. The Boolean menu's **History**
   lists the results.
 
+  Renaming a retained result shape also renames its unique source shape in the live history,
+  including nested results. Parameter changes, save/reopen, undo/redo and **Restore operands**
+  retain that name. A shape produced by merging or splitting geometry, or one of several copies
+  of the same source, may have no unique source for a rename. Fairbeam then keeps its current
+  label and history and explains how to restore and rename the operands. Clearing a label is
+  also refused if recomputation would replace it with a generated name. Editing actual shape
+  geometry still detaches the result from live recomputation.
+
   | Operation | Bricks, sheets, polygons | Cylinders, tubes, cones, spheres, tori, wires, polyhedra (alone or mixed with those) |
   | --- | --- | --- |
   | **Add** | exact union | exact: the shapes are kept together (A and B share material and priority, so overlap is a union); bricks and polygons are united |

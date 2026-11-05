@@ -260,6 +260,8 @@
   "boolean.differentB": "Choose a different solid for B.",
   "boolean.dismiss": "Dismiss",
   "boolean.editedDirectly": "{part} was edited directly, so its Boolean result is no longer recomputed from its operands (Restore operands in the Boolean history brings them back).",
+  "boolean.labelNeedsSource": "{part}: this shape has no single retained source for renaming. Its label and live Boolean history were kept. Use Restore operands to rename the source shape, then apply the Boolean again.",
+  "boolean.labelCannotClear": "{part}: this live Boolean result cannot retain an empty shape label. Its current label and history were kept. Enter a name, or use Restore operands to edit the source shape.",
   "boolean.emptyResult": "the result is empty",
   "boolean.history": "Boolean history",
   "boolean.nothingInCommon": "Nothing in common: applying removes {a} and {b}.",

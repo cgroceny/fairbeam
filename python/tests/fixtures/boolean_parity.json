@@ -1,5 +1,215 @@
 [
  {
+  "name": "manually renamed nested live source survives reopen and build values",
+  "history": {
+   "operation": "add",
+   "A": {
+    "name": "sleeve",
+    "material": "copper",
+    "primitives": [
+     {
+      "kind": "cylinder",
+      "axis": "z",
+      "center": [
+       0,
+       0
+      ],
+      "radius": 1,
+      "inner_radius": 0.5,
+      "range": [
+       0,
+       3
+      ],
+      "label": "Renamed sleeve",
+      "priority": 7
+     },
+     {
+      "kind": "cylinder",
+      "axis": "z",
+      "center": [
+       0,
+       0
+      ],
+      "radius": 2,
+      "inner_radius": 0.5,
+      "range": [
+       3,
+       4
+      ],
+      "label": "sleevedisc_body",
+      "priority": 7
+     }
+    ],
+    "booleanHistory": {
+     "operation": "add",
+     "A": {
+      "name": "sleeve",
+      "material": "copper",
+      "primitives": [
+       {
+        "kind": "cylinder",
+        "axis": "z",
+        "center": [
+         0,
+         0
+        ],
+        "radius": "r",
+        "range": [
+         0,
+         3
+        ],
+        "inner_radius": 0.5,
+        "label": "Renamed sleeve",
+        "priority": 7
+       }
+      ]
+     },
+     "B": {
+      "name": "disc",
+      "material": "copper",
+      "primitives": [
+       {
+        "kind": "cylinder",
+        "axis": "z",
+        "center": [
+         0,
+         0
+        ],
+        "radius": 2,
+        "range": [
+         3,
+         4
+        ],
+        "inner_radius": 0.5,
+        "label": "sleevedisc_body",
+        "priority": 7
+       }
+      ]
+     },
+     "live": true
+    }
+   },
+   "B": {
+    "name": "cap",
+    "material": "copper",
+    "primitives": [
+     {
+      "kind": "sphere",
+      "center": [
+       0,
+       0,
+       5
+      ],
+      "radius": 0.75,
+      "label": "cap_body",
+      "priority": 7
+     }
+    ]
+   },
+   "live": true
+  },
+  "values": [
+   {
+    "r": 1
+   },
+   {
+    "r": 1.5
+   }
+  ],
+  "expected": [
+   [
+    {
+     "kind": "cylinder",
+     "axis": "z",
+     "center": [
+      0,
+      0
+     ],
+     "radius": 1,
+     "inner_radius": 0.5,
+     "range": [
+      0,
+      3
+     ],
+     "label": "Renamed sleeve",
+     "priority": 7
+    },
+    {
+     "kind": "cylinder",
+     "axis": "z",
+     "center": [
+      0,
+      0
+     ],
+     "radius": 2,
+     "inner_radius": 0.5,
+     "range": [
+      3,
+      4
+     ],
+     "label": "sleevedisc_body",
+     "priority": 7
+    },
+    {
+     "kind": "sphere",
+     "center": [
+      0,
+      0,
+      5
+     ],
+     "radius": 0.75,
+     "label": "cap_body",
+     "priority": 7
+    }
+   ],
+   [
+    {
+     "kind": "cylinder",
+     "axis": "z",
+     "center": [
+      0,
+      0
+     ],
+     "radius": 1.5,
+     "inner_radius": 0.5,
+     "range": [
+      0,
+      3
+     ],
+     "label": "Renamed sleeve",
+     "priority": 7
+    },
+    {
+     "kind": "cylinder",
+     "axis": "z",
+     "center": [
+      0,
+      0
+     ],
+     "radius": 2,
+     "inner_radius": 0.5,
+     "range": [
+      3,
+      4
+     ],
+     "label": "sleevedisc_body",
+     "priority": 7
+    },
+    {
+     "kind": "sphere",
+     "center": [
+      0,
+      0,
+      5
+     ],
+     "radius": 0.75,
+     "label": "cap_body",
+     "priority": 7
+    }
+   ]
+  ]
+ },
+ {
   "name": "moved and quarter-turned brick minus a brick",
   "history": {
    "operation": "subtract",

@@ -4,6 +4,7 @@
 //   node --experimental-strip-types scripts/boolean-parity-cases.mjs --write   (regenerate the fixture)
 import { writeFileSync } from "node:fs";
 import { booleanResult, materialiseBoolean } from "../src/designer/booleanParts.ts";
+import { relabelBooleanSources } from "../src/designer/booleanLabels.ts";
 import { evaluate } from "../src/designer/expr.ts";
 
 const box = (start, stop, extra = {}) => ({ kind: "box", start, stop, ...extra });
@@ -15,7 +16,20 @@ const turned = part("A", [box([0, 0, 0], ["W", 2, "H"])], { transforms: [{ type:
 const slab = part("B", [box([-1, 0, 0], [0, 5, 1])]);
 const inner = booleanResult({ parts: [turned, slab] }, { W: 4, H: 3 }, 0, 1, "subtract").parts[0];
 
+// Saved history produced by a real output rename, shared with the Python build path.
+// Both levels remain live, and later parameter values must recompute the renamed source.
+const labelValues = { r: 1 };
+const sleeve = part("sleeve", [{ ...cyl("z", [0, 0], "r", [0, 3]), inner_radius: 0.5, label: "slv_body", priority: 7 }]);
+const disc = part("disc", [{ ...cyl("z", [0, 0], 2, [3, 4]), inner_radius: 0.5, label: "sleevedisc_body", priority: 7 }]);
+const cap = part("cap", [{ kind: "sphere", center: [0, 0, 5], radius: 0.75, label: "cap_body", priority: 7 }]);
+const sleeveAndDisc = booleanResult({ parts: [sleeve, disc] }, labelValues, 0, 1, "add").parts[0];
+const nestedLabels = booleanResult({ parts: [sleeveAndDisc, cap] }, labelValues, 0, 1, "add").parts[0];
+const requestedLabels = nestedLabels.primitives.map((p, i) => ({ ...p, label: i === 0 ? "Renamed sleeve" : p.label }));
+const renamedLabels = relabelBooleanSources(nestedLabels.booleanHistory, nestedLabels.primitives, requestedLabels, labelValues);
+if (!renamedLabels) throw Error("The nested source label must be editable before writing its parity fixture");
+
 export const cases = [
+  { name: "manually renamed nested live source survives reopen and build values", history: renamedLabels.history, values: [labelValues, { r: 1.5 }] },
   { name: "moved and quarter-turned brick minus a brick", history: { operation: "subtract", A: turned, B: slab }, values: [{ W: 4, H: 3 }, { W: 6, H: 2 }] },
   {
     name: "sheet copies united with a strip",

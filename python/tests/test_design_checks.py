@@ -235,8 +235,13 @@ class Checks(unittest.TestCase):
                                                                "stop": [2, 2, 0.2]}), [])
 
     def test_live_boolean_operand_requires_quarter_turn_rotation(self):
-        history = json.loads((Path(__file__).parent / "fixtures" / "boolean_parity.json").read_text())[0]["history"]
+        fixtures = json.loads((Path(__file__).parent / "fixtures" / "boolean_parity.json").read_text())
+        history = next(case["history"] for case in fixtures
+                       if case["name"] == "moved and quarter-turned brick minus a brick")
         history["live"] = True
+        self.assertEqual(history["A"]["transforms"][1]["angle"], 90)
+        self.assertEqual([c for c in self.lint(lambda d: d["parts"][2].update(booleanHistory=history))
+                          if c["code"] == "boolean-transform-angle"], [])
         history["A"]["transforms"][1]["angle"] = 45
         checks = [c for c in self.lint(lambda d: d["parts"][2].update(booleanHistory=history))
                   if c["code"] == "boolean-transform-angle"]
