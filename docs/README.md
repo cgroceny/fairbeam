@@ -41,6 +41,7 @@ the separately opted-in Elmer integration.
 | [Native planar ports](PLANAR-PORTS.md) | Experimental microstrip/CPW feeds, final-grid probes, physical termination, real references and bounded validation controls |
 | [Run server and Run panel](RUN-SERVER.md) | `fairbeam serve`, the Run panel, sweeps, comparison overlays, the optimizer in the UI |
 | [Optimizer](OPTIMIZE.md) | Goals, driven ports, algorithms, output and simulated examples |
+| [NEC thin-wire solver](NEC.md) | Explicit PEC wire export, optional NEC2++ execution and dipole matching optimization |
 | [Studies](STUDIES.md) | `sweep`, `converge`, `touchstone` and the study file format |
 | [Multi-port structures and arrays](MULTIPORT.md) | One run per driven port, S-matrices, the S-parameters and Array tabs |
 | [Arrays](ARRAYS.md) | Embedded element patterns, normalization, beam steering, the 2×1 and 4×1 arrays |
