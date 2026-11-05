@@ -351,6 +351,37 @@ class FixedSupportTests(unittest.TestCase):
             self.assertEqual(len(result['rejected']), 6)
             self.assertFalse(result['fixed_geometry_mesh_passes'])
 
+    def test_failed_closing_without_a_report_is_rejected_in_a_study(self):
+        failures = (dict(exit_code=1), dict(exit_code=None, failure='resource conflict'),
+                    dict(wall_seconds=m.DEADLINE+1), dict(monotonic_seconds=float('nan')))
+        with tempfile.TemporaryDirectory() as tmp, patch.object(f.Simulation, 'run') as run, \
+                patch.object(f, 'matrix') as matrix:
+            root = Path(tmp)
+            out = root/'n4_point'
+            prepare(out, 4, 'ordinary', 100.)
+            closing = dict(pid=17, exit_code=0, failure=None, deadline_seconds=m.DEADLINE,
+                           wall_seconds=2., monotonic_seconds=2.)
+            receipt = out/'port1.worker.json'
+            for changes in failures:
+                with self.subTest(changes=changes):
+                    # A failed worker may never write a report. Preserve even
+                    # malformed external JSON; ordinary writers reject NaN.
+                    receipt.write_text(json.dumps({**closing, **changes}), encoding='utf-8')
+                    before = receipt.read_bytes()
+                    result = m.study(root)
+                    self.assertEqual(len(result['missing']), 5)
+                    self.assertEqual(len(result['rejected']), 1)
+                    self.assertEqual(result['rejected'][0]['name'], 'n4_point')
+                    self.assertIn('closing admission failed', result['rejected'][0]['reason'])
+                    self.assertFalse(result['fixed_geometry_mesh_passes'])
+                    self.assertFalse(result['qualified'])
+                    self.assertEqual(receipt.read_bytes(), before)
+            f.save(receipt, closing)
+            # A successful receipt without its report remains incomplete.
+            self.assertEqual(len(m.study(root)['missing']), 6)
+            run.assert_not_called()
+            matrix.assert_not_called()
+
     def test_study_cli_creates_missing_external_parent_and_preserves_prior_result(self):
         with tempfile.TemporaryDirectory() as tmp, patch.object(f.Simulation, 'run') as run, \
                 patch('builtins.print'):
@@ -479,6 +510,10 @@ class FixedSupportTests(unittest.TestCase):
                 with self.assertRaisesRegex(ValueError, 'admission|ownership'):
                     m.admit_closing(out, 4, 'ordinary')
             f.save(out/'port1.worker.json', originals[0])
+            (out/'port2/report.json').unlink()
+            f.save(out/'port2.worker.json', {**originals[1], 'exit_code': None, 'failure': 'interrupted'})
+            with self.assertRaisesRegex(ValueError, 'closing admission failed'):
+                m.admit_closing(out, 4, 'ordinary')
             plan['pilot_only'] = True
             f.save(out/'protocol.json', plan)
             with self.assertRaisesRegex(ValueError, 'full fixed-support'):
