@@ -144,6 +144,7 @@ export default function ParametersDock() {
       <span class="note">{t("params.keys")}</span>
       <Show when={exportNote()}><span class="note" role="status" aria-live="polite">{exportNote()}</span></Show>
     </div>
+    <p class="note param-units-note" id="parameter-units-note">{t("params.unitsNote")}</p>
     <Show when={draft.params.length} fallback={<p class="panel-empty">{t("params.empty")}</p>}>
       <table class="table param-table" classList={{ "param-ranges": ranges() }} aria-label={t("params.table")}>
         <thead><tr><For each={["key", "expression", "evaluated", "unit", ...(ranges() ? ["min", "max"] : []), "description", "actions"]}>{(s) => <th scope="col" classList={{ num: s === "evaluated" }}>{t(`params.col.${s}`)}</th>}</For></tr></thead>
@@ -189,7 +190,7 @@ export default function ParametersDock() {
           const rowEdit = createRowEdit<DesignParam>();
           const snapshot = (): DesignParam => JSON.parse(JSON.stringify(p));
           const text = (key: "unit" | "description" | "label", label: string) => <input autocomplete="off" class="rp-input dz-input" id={fieldId(path(key))}
-            aria-label={`${p.key}: ${label}`} title={p[key] ?? ""}
+            aria-label={`${p.key}: ${label}`} title={p[key] ?? ""} aria-describedby={key === "unit" ? "parameter-units-note" : undefined}
             placeholder={key === "description" && !p.description ? paramLabelText(p.label) : undefined} value={p[key] ?? ""} onInput={(e) => { const v = e.currentTarget.value; set((q) => { q[key] = v; }, key); }} />;
           const keyInput = () => <input autocomplete="off" class="rp-input dz-input" id={fieldId(path("key"))}
             aria-label={`${p.key}: ${t("params.col.key")}`} aria-invalid={!!keyError()}
@@ -237,7 +238,7 @@ export default function ParametersDock() {
             <td><div class="param-expression">
               <span class="param-derived" title={t(p.expr !== undefined ? "params.derived" : "params.defaultValue")}>{p.expr !== undefined ? "=" : ""}</span>
               <ExprField inline label={t("params.expression", { key: p.key })} value={p.expr ?? p.default}
-                path={path(p.expr !== undefined ? "expr" : "default")} unit={p.unit} newParamAt={i()}
+                path={path(p.expr !== undefined ? "expr" : "default")} describedBy="parameter-units-note" newParamAt={i()}
                 onChange={(v) => {
                   // Numeric spelling changes (32 -> 32.0) stay in the input, not the
                   // design history or expensive native geometry-preview queue.

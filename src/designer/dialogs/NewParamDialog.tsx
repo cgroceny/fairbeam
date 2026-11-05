@@ -103,9 +103,9 @@ function NewParamDialog(props: { ask: ParamAsk; onDone: () => void }) {
             <span class="dz-value" classList={{ "dz-bad": !!keyError() }}>{keyError() || (key().trim() !== props.ask.key ? t("newParam.willUse", { key: key().trim() }) : "")}</span>
           </label>
           <label class="dz-field">
-            <span class="dz-label">{t("newParam.value")}{unit().trim() ? <span class="dz-unit"> {unit().trim()}</span> : null} <span class="dz-unit">{t("newParam.valueHint")}</span></span>
+            <span class="dz-label">{t("newParam.value")} <span class="dz-unit">{t("newParam.valueHint")}</span></span>
             <input autocomplete="off" ref={valueInput} class="rp-input dz-input mono" type="text" spellcheck={false} value={value()} placeholder={t("newParam.valuePlaceholder")}
-              aria-invalid={tried() && !!evaluated().error} onInput={(e) => setValue(e.currentTarget.value)} />
+              aria-describedby="new-parameter-units-note" aria-invalid={tried() && !!evaluated().error} onInput={(e) => setValue(e.currentTarget.value)} />
             <span class="dz-value" classList={{ "dz-bad": tried() && !!evaluated().error }}>
               {evaluated().error ? (tried() || value().trim() ? parameterErrorTitle(evaluated().error!) : "") : typeof toExpr(value()) === "number" ? "" : t("newParam.derived", { value: derivedValue(evaluated().value!) })}
             </span>
@@ -117,9 +117,10 @@ function NewParamDialog(props: { ask: ParamAsk; onDone: () => void }) {
             </label>
             <label class="dz-field">
               <span class="dz-label">{t("newParam.unit")} <span class="dz-unit">{t("newParam.optional")}</span></span>
-              <input autocomplete="off" class="rp-input dz-input" type="text" value={unit()} placeholder="mm, GHz, …" onInput={(e) => setUnit(e.currentTarget.value)} />
+              <input autocomplete="off" class="rp-input dz-input" type="text" value={unit()} placeholder="mm, GHz, …" aria-describedby="new-parameter-units-note" onInput={(e) => setUnit(e.currentTarget.value)} />
             </label>
           </div>
+          <p class="note" id="new-parameter-units-note">{t("params.unitsNote")}</p>
           <label class="dz-field">
             <span class="dz-label">{t("newParam.description")} <span class="dz-unit">{t("newParam.optional")}</span></span>
             <textarea class="rp-input dz-input" rows={2} value={description()} onInput={(e) => setDescription(e.currentTarget.value)} />

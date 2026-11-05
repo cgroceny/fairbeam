@@ -1,5 +1,6 @@
 .param-dock { min-width: 0; }
 .param-toolbar { padding: var(--al-space-1) var(--al-space-2); }
+.param-units-note { margin: var(--al-space-1) var(--al-space-2) var(--al-space-2); }
 .parameter-transfer-dialog { width: min(680px, calc(100vw - 32px)); height: auto; max-height: min(80vh, 720px); }
 .pt-body { padding: var(--al-space-2) var(--al-space-3); overflow: auto; }
 .pt-preview { max-height: 320px; overflow: auto; padding-left: 1.5rem; font-size: var(--al-text-sm); }

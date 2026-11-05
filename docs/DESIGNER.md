@@ -353,7 +353,7 @@ Every length (mm) and frequency (GHz) field takes a number or an expression over
 `W/2`, `h + 0.035`, `wavelength(f0) / 4`. The field shows the value as you type (`= 16`) and marks an
 expression that does not evaluate.
 
-- An **independent** parameter has a default value, a unit, an optional range and a label. Sweeps,
+- An **independent** parameter has a default value, an optional unit label, range and label. Sweeps,
   the optimizer and the Run panel's form change it.
 - A **derived** parameter has an expression over the parameters above it (for example
   `lam = wavelength(f0)`).
@@ -379,9 +379,20 @@ expression that does not evaluate.
   as you type. A design file that already has one does not load (the server's error names the key,
   as for any invalid design file) until the key is renamed in the file.
 
+**Unit labels are annotations, not conversions.** Every parameter value is used as written in
+expressions. Length fields use mm and frequency fields use GHz: for a 1 cm width, enter `w = 10`
+and label it `mm`; for 2 MHz, enter `0.002`. Changing a saved parameter's unit label from `mm`
+to `cm` does not rescale its value or the model. JSON and CSV retain these annotations.
+
+An **Empty design** has no preset minimum or maximum for `f0`. For a 2–50 MHz band, use
+`f0 = 0.026`, `bw = 0.048`, and set the simulation limits to `f0 - bw/2` and `f0 + bw/2`.
+The limits must still be positive and ordered. Existing designs keep their parameter limits;
+if an older Empty design has a `0.1` minimum for `f0`, open **Parameters → Ranges** and clear
+or lower that minimum. Antenna starters retain their model-specific limits. Accepting an HF
+band does not establish mesh convergence or antenna performance.
+
 Add a parameter with ribbon Modeling › Parameters › Parameter or **Add parameter** in the Parameters dock:
-it gets the first free key p1, p2, … and no unit (fill the unit cell for a length or a frequency; a ratio
-or εr stays a bare number). Every keystroke in the table applies at once (the 3D view follows), except
+it gets the first free key p1, p2, … and no unit label. Every keystroke in the table applies at once (the 3D view follows), except
 in the Key cell: a new key applies on **Enter** or when the cell is left, and renames the parameter
 everywhere it is used in one undo step (the shapes, transforms, cuts, ports, lumped elements, materials,
 mesh and simulation fields, the other parameters, the operands a Boolean result keeps and the parameter

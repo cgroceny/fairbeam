@@ -163,6 +163,7 @@
     {"expr": "degrees(atan2(h, W / 2))", "value": 5.441007991689662, "exact": true}
   ],
   "params": [
+    {"name": "unit annotations do not rescale canonical values", "params": [{"key": "w", "default": 1, "unit": "cm"}, {"key": "width_mm", "expr": "w * 10", "unit": "mm"}, {"key": "f0", "default": 0.026, "unit": "GHz"}, {"key": "bw", "default": 0.048, "unit": "GHz"}], "values": {"w": 1, "width_mm": 10, "f0": 0.026, "bw": 0.048}},
     {"name": "__proto__ as an independent and a derived key", "params": [{"key": "__proto__", "default": 1}, {"key": "derived", "expr": "__proto__ * 2"}], "values": {"__proto__": 1, "derived": 2}},
     {"name": "keys an object inherits are ordinary names", "params": [{"key": "toString", "default": 3}, {"key": "constructor", "expr": "toString + 1"}, {"key": "valueOf", "expr": "constructor * 2"}, {"key": "hasOwnProperty", "expr": "valueOf - toString"}], "values": {"toString": 3, "constructor": 4, "valueOf": 8, "hasOwnProperty": 5}},
     {"name": "an inherited name that is not a parameter is unknown", "params": [{"key": "x", "default": 1}, {"key": "y", "expr": "toString + x"}, {"key": "z", "expr": "__proto__"}, {"key": "v", "expr": "x + 1"}], "values": {"x": 1, "v": 2}, "errors": ["y", "z"]},
@@ -331,7 +332,11 @@
     {"name": "parallel grouped feeds retain expressions",
      "set": {"ports[0].group": {"connection":"parallel","priority":7,"members":[{"start":["feed+2",0,0],"stop":["feed+2",0,"h"],"direction":"z","polarity":1}]}}},
     {"name": "balanced series feeds retain polarity",
-     "set": {"ports[0].group": {"connection":"series","members":[{"start":["feed+2",0,0],"stop":["feed+2",0,"h"],"direction":"z","polarity":-1}]}}}
+     "set": {"ports[0].group": {"connection":"series","members":[{"start":["feed+2",0,0],"stop":["feed+2",0,"h"],"direction":"z","polarity":-1}]}}},
+    {"name": "HF empty design uses GHz and mm with annotation-only units", "template": "empty",
+     "set": {"params[0].default": 0.026, "simulation.f_min": "f0 - bw/2", "simulation.f_max": "f0 + bw/2"},
+     "append": {"params": {"key": "bw", "default": 0.048, "unit": "GHz"},
+       "parts": {"name": "brick", "material": "copper", "primitives": [{"kind": "box", "start": [-0.5, -10, -0.5], "stop": [0.5, 10, 0.5]}]}}}
   ],
   "cases": [
     {"name": "wideband input rejects unsupported model", "set": {"materials[1].dispersion": {"model": "drude"}}, "expect": ["error|dispersion|materials.substrate.dispersion"]},
