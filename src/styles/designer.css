@@ -159,6 +159,17 @@ textarea.dz-autogrow { resize: none; overflow-y: auto; min-height: 0; max-height
 .home-inner { max-width: 1100px; margin: 0 auto; padding: var(--al-space-6) var(--al-space-5); display: grid; gap: var(--al-space-5); }
 .home-head h1 { font-size: var(--al-text-xl); font-weight: 600; letter-spacing: -0.01em; }
 .home-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: var(--al-space-5); align-items: start; }
+.antenna-calculator { border-block: 1px solid var(--al-border); padding-block: var(--al-space-3); }
+.antenna-calculator > summary { cursor: pointer; font-weight: 600; }
+.antenna-calculator > summary:focus-visible { outline: 2px solid var(--al-focus); outline-offset: 4px; }
+.antenna-calculator > p, .antenna-calc-grid { margin-block: var(--al-space-3); }
+.antenna-calc-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: var(--al-space-5); }
+.antenna-calc-inputs { display: grid; gap: var(--al-space-3); align-content: start; }
+.antenna-calc-inputs label { display: grid; gap: var(--al-space-1); }
+.antenna-calc-inputs input, .antenna-calc-inputs select { width: 100%; min-width: 0; }
+.antenna-calc-results { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: var(--al-space-2); }
+.antenna-calc-results dd { margin: 0; font-variant-numeric: tabular-nums; text-align: right; }
+@media (max-width: 650px) { .antenna-calc-grid { grid-template-columns: minmax(0, 1fr); } }
 .home-card { display: grid; gap: var(--al-space-3); padding: var(--al-space-4); border: 1px solid var(--al-border); border-radius: var(--al-radius-lg); background: var(--al-surface); }
 .home-card h2 { display: flex; align-items: center; gap: var(--al-space-2); font-size: var(--al-text-ui); font-weight: 600; }
 .home-h2b { margin-top: var(--al-space-2); }

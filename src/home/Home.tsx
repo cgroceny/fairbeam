@@ -26,6 +26,7 @@ import { openPythonModelAsDesign } from "../designer/pythonModel";
 import { locale, t } from "../i18n";
 import { createDesignActions } from "./DesignActions";
 import { hasUndatedProjects, projectLocation, visibleProjects, type ProjectSort } from "./projectList";
+import AntennaCalculator from './AntennaCalculator';
 
 const focusAfterRender = (id: string) => requestAnimationFrame(() => {
   document.getElementById(id)?.focus();
@@ -230,6 +231,7 @@ export default function Home() {
           <p class="muted">{t("home.subtitle")}</p>
         </header>
         <Show when={!DEMO}><p class="home-quickstart">{t("home.quickStart")}</p></Show>
+        <AntennaCalculator />
 
         <Show when={!DEMO} fallback={<p class="note">{t("home.demoNote")}</p>}>
           <Show when={online()} fallback={
