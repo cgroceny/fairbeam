@@ -28,25 +28,48 @@ export default {
     await s.step('the existing Python row reopens its linked Design without creating another', async () => {
       await s.click('header.screen.start', { sel: '.mode-switch button' });
       await s.wait('.home');
-      // Model-list refreshes can overlap a Design save. Recreate the stale client snapshot that
-      // omits the link metadata while retaining the Design row, then verify routing consults the
-      // server's current model list instead of creating a second linked Design.
-      await s.store((id, m) => {
-        m.r.setModels(m.r.models().map((entry) => entry.python_source_model === id ? { ...entry, python_source_model: undefined } : entry));
-      }, sourceId, { r: '/src/runner/store.ts' });
-      assert.equal(await s.store((id, m) => m.r.models().filter((entry) => entry.python_source_model === id).length, sourceId, { r: '/src/runner/store.ts' }), 0,
-        'the client snapshot no longer advertises the linked Design');
       await s.ev((_, m) => m.layout.setSidePanelCollapsed(true), undefined, { layout: '/src/designer/layoutState.ts' });
-      await s.clickSel(`[data-python-model="${sourceId}"]`);
-      await s.wait('.rb');
-      await s.wait('.python-panel .python-panel-code', undefined, { timeout: 30000 });
-      const opened = await s.store((_, m) => ({ id: m.s.file()?.id, source: m.s.draft.python_source_model }));
-      assert.equal(opened.id, `${sourceId}_design`);
-      assert.equal(opened.source, sourceId);
-      assert.equal(await s.ev((_, m) => m.layout.sidePanelCollapsed(), undefined, { layout: '/src/designer/layoutState.ts' }), false,
-        'opening the Python source expands a previously collapsed properties panel');
-      const links = await s.page.evaluate(async (id) => (await (await fetch('/api/models')).json()).models.filter((m) => m.python_source_model === id).length, sourceId);
-      assert.equal(links, 1, 'reopening reuses the existing Design');
+      // Home refreshes the model list on mount. Stage the stale snapshot in the trusted click's
+      // capture phase, so a response between browser calls cannot undo the regression setup.
+      await s.store((id, m) => {
+        const state = { observed: null };
+        state.listener = (event) => {
+          const row = event.target instanceof Element ? event.target.closest('[data-python-model]') : null;
+          if (row?.getAttribute('data-python-model') !== id) return;
+          m.r.setModels(m.r.models().map((entry) => entry.python_source_model === id ? { ...entry, python_source_model: undefined } : entry));
+          state.observed = { links: m.r.models().filter((entry) => entry.python_source_model === id).length, trusted: event.isTrusted };
+          document.removeEventListener('click', state.listener, true);
+        };
+        window.__fairbeamS6StaleClick = state;
+        document.addEventListener('click', state.listener, true);
+      }, sourceId, { r: '/src/runner/store.ts' });
+      try {
+        // Force a real refresh after installing the fixture. The native click must still see
+        // stale link metadata, then reuse the single linked Design from the server.
+        const refreshed = await s.store(async (id, m) => {
+          await m.r.refreshModels();
+          return m.r.models().filter((entry) => entry.python_source_model === id).length;
+        }, sourceId, { r: '/src/runner/store.ts' });
+        assert.equal(refreshed, 1, 'the forced refresh restores the existing Design link');
+        await s.clickSel(`[data-python-model="${sourceId}"]`);
+        const observed = await s.page.evaluate(() => window.__fairbeamS6StaleClick?.observed);
+        assert.deepEqual(observed, { links: 0, trusted: true }, 'the native click sees the stale client snapshot');
+        await s.wait('.rb');
+        await s.wait('.python-panel .python-panel-code', undefined, { timeout: 30000 });
+        const opened = await s.store((_, m) => ({ id: m.s.file()?.id, source: m.s.draft.python_source_model }));
+        assert.equal(opened.id, `${sourceId}_design`);
+        assert.equal(opened.source, sourceId);
+        assert.equal(await s.ev((_, m) => m.layout.sidePanelCollapsed(), undefined, { layout: '/src/designer/layoutState.ts' }), false,
+          'opening the Python source expands a previously collapsed properties panel');
+        const links = await s.page.evaluate(async (id) => (await (await fetch('/api/models')).json()).models.filter((m) => m.python_source_model === id).length, sourceId);
+        assert.equal(links, 1, 'reopening reuses the existing Design');
+      } finally {
+        await s.page.evaluate(() => {
+          const state = window.__fairbeamS6StaleClick;
+          if (state) document.removeEventListener('click', state.listener, true);
+          delete window.__fairbeamS6StaleClick;
+        }).catch(() => {}); // A closed page must not replace the original failure.
+      }
     }, { settle: 500 });
 
     const runPanelSourceId = `rp_${ctx.stamp}_${s.lang}`;
