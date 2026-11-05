@@ -8,6 +8,7 @@ python -m tests.test_loaded_tem_cell_fixture --study --out C:/study/loaded-fresh
 import argparse
 from copy import deepcopy
 import json
+import math
 import os
 from pathlib import Path
 import re
@@ -41,11 +42,12 @@ def audit_header(text,meta):
     return dict(version=version[1],threads=4,nyquist_interval=int(interval[1]))
 
 
-def preflight(out,rate):
+def preflight(out,rate,element=False):
     out=Path(out);out.mkdir(parents=True,exist_ok=False);rows=[]
-    for name,n,count,kind,control in f.configurations():
+    configurations=f.element_configurations() if element else [(*row,1) for row in f.configurations()]
+    for name,n,count,kind,control,scale in configurations:
         for port in (1,2):
-            sim,meta=f.build(n,count,port,kind,control)
+            sim,meta=f.build(n,count,port,kind,control,element_scale=scale)
             path=out/f'{name}_p{port}.xml';sim.fdtd.Write2XML(str(path))
             sim.fdtd.SetTimeStep(0.);operator=out/f'{name}_p{port}_operator.xml'
             sim.fdtd.Write2XML(str(operator))
@@ -57,10 +59,10 @@ def preflight(out,rate):
     return record
 
 
-def acquire_serial(out,n,count,kind,control,rate):
+def acquire_serial(out,n,count,kind,control,rate,*,element_scale=1):
     out=Path(out).resolve()
     if out.exists():raise ValueError('use a fresh cohort directory')
-    sim,meta=f.build(n,count,1,kind,control);estimate=forecast(meta,rate);del sim
+    sim,meta=f.build(n,count,1,kind,control,element_scale=element_scale);estimate=forecast(meta,rate);del sim
     if estimate>1800:raise ValueError(f'forecast {estimate/60:.2f} minutes exceeds 30; defer this case')
     out.mkdir(parents=True,exist_ok=False)
     progress=dict(status='running',n=n,count=count,kind=kind,control=control,
@@ -69,7 +71,8 @@ def acquire_serial(out,n,count,kind,control,rate):
         for port in (1,2):
             log_path=out/f'port{port}.log'
             command=[sys.executable,'-m','tests.test_loaded_tem_cell_fixture','--worker-case','--mesh',str(n),
-                     '--count',str(count),'--port',str(port),'--kind',kind,'--control',control,'--out',str(out/f'port{port}')]
+                     '--count',str(count),'--port',str(port),'--kind',kind,'--control',control,
+                     '--element-scale',str(element_scale),'--out',str(out/f'port{port}')]
             code=None;failure=None;started,wall=time.monotonic(),time.time()
             with log_path.open('w',encoding='utf-8') as log:
                 proc=popen_group(command,cwd=f.ROOT/'python',stdout=log,stderr=subprocess.STDOUT,
@@ -95,6 +98,58 @@ def acquire_serial(out,n,count,kind,control,rate):
     return result
 
 
+def timing_worker(out,n,control,element_scale=1):
+    """A source-incomplete 0.25 ns throughput sample; never supplies S."""
+    out=Path(out);out.mkdir(parents=True,exist_ok=False)
+    sim,meta=f.build(n,1,1,'loaded',control,element_scale=element_scale)
+    source,runtime=f.identity(),f.runtime_identity()
+    operator=f.operator_preflight(out,n,1,1,'loaded',control,element_scale=element_scale)
+    steps=math.ceil(.25e-9/meta['declared_dt_s'])
+    sim.fdtd.SetNumberOfTimeSteps(steps);sim.max_timesteps=steps
+    meta.update(max_timesteps=steps,cap_s=.25e-9,pilot_only=True,source_sha256=source,runtime=runtime)
+    sim.fdtd.Write2XML(str(out/'timing-input.xml'))
+    print(f.PROPAGATION_MARKER,flush=True)
+    sim.run(str(out/'raw'),threads=f.THREADS,exact=True,echo=True,dump_statistics=True)
+    stats=np.loadtxt(out/'raw/openEMS_stats.txt',comments='%')
+    if (source!=f.identity() or runtime!=f.runtime_identity() or int(stats[0])!=meta['native_cells']
+            or abs(stats[1]/meta['declared_dt_s']-1)>1e-8 or int(stats[2])<.99*steps or stats[4]<=0):
+        raise ValueError('incomplete or changed timing sample')
+    meta.update(operator_preflight=operator,input_sha256=f.sha(out/'timing-input.xml'),
+        native=dict(cells=int(stats[0]),dt_s=float(stats[1]),timesteps=int(stats[2]),
+            numerical_time_s=float(stats[3]),iteration_wall_s=float(stats[4])),qualified=False)
+    f.save(out/'timing.json',meta)
+    return meta
+
+
+def timing_serial(out,n,control,rate,element_scale=1):
+    out=Path(out).resolve()
+    if out.exists():raise ValueError('retain timing epoch; use a fresh path')
+    _,meta=f.build(n,1,1,'loaded',control,element_scale=element_scale)
+    meta['max_timesteps']=math.ceil(.25e-9/meta['declared_dt_s'])
+    estimate=forecast(meta,rate)
+    if estimate>600:raise ValueError('timing forecast exceeds 10 minutes; defer before launch')
+    out.parent.mkdir(parents=True,exist_ok=True)
+    command=[sys.executable,'-m','tests.test_loaded_tem_cell_fixture','--timing-worker',
+             '--mesh',str(n),'--control',control,'--element-scale',str(element_scale),'--out',str(out)]
+    code=None;failure=None;start,wall=time.monotonic(),time.time()
+    with out.with_suffix('.log').open('x',encoding='utf-8') as log:
+        proc=popen_group(command,cwd=f.ROOT/'python',stdout=log,stderr=subprocess.STDOUT,
+            env={**os.environ,'OPENBLAS_NUM_THREADS':'1','OMP_NUM_THREADS':'1'})
+        try:code=wait_owned(proc,seconds=600.)
+        except BaseException as error:failure=repr(error);raise
+        finally:
+            if proc.poll() is None:terminate_group(proc.pid,grace=0,job=proc.win_job);proc.wait(timeout=15)
+            release_group(proc)
+            f.save(out.with_suffix('.worker.json'),dict(pid=proc.pid,exit_code=code,failure=failure,
+                wall_seconds=time.time()-wall,monotonic_seconds=time.monotonic()-start,deadline_seconds=600.))
+    if code!=0:raise RuntimeError('timing worker failed; epoch retained')
+    record=json.loads((out/'timing.json').read_text())
+    audit_header(out.with_suffix('.log').read_text(encoding='utf-8'),record)
+    native=record['native'];record.update(estimated_seconds=estimate,
+        conservative_rate_mcps=.8*native['cells']*native['timesteps']/native['iteration_wall_s']/1e6)
+    return record
+
+
 def synthetic(s,n=4):
     """Independent traveling waves at local probe coordinates, including reverse waves."""
     nf=len(f.FREQUENCIES);v=np.empty((2,2,3,nf),complex);i=np.empty((2,2,2,2,nf),complex)
@@ -112,6 +167,68 @@ def synthetic(s,n=4):
 
 
 class LoadedTEMReferenceTests(unittest.TestCase):
+    def test_timing_budget_refuses_before_launch_and_refined_worker_is_forwarded(self):
+        with tempfile.TemporaryDirectory() as tmp,patch(__name__+'.popen_group') as launch:
+            root=Path(tmp)/'absent'
+            with self.assertRaisesRegex(ValueError,'defer'):
+                timing_serial(root,4,'element',.0001,8)
+            self.assertFalse(root.exists())
+            launch.assert_not_called()
+        proc=Mock(pid=1234,win_job=object());proc.poll.return_value=1
+        with tempfile.TemporaryDirectory() as tmp,patch(__name__+'.popen_group',return_value=proc) as launch,\
+             patch(__name__+'.wait_owned',side_effect=TimeoutError('owned deadline')) as wait,\
+             patch(__name__+'.release_group'),patch.object(f,'runtime_identity',return_value={}):
+            root=Path(tmp)/'failed'
+            with self.assertRaises(TimeoutError):
+                acquire_serial(root,4,1,'loaded','element',1000.,element_scale=8)
+            wait.assert_called_once_with(proc,seconds=1800.)
+            command=launch.call_args.args[0]
+            self.assertEqual(command[command.index('--element-scale')+1],'8')
+            self.assertEqual(json.loads((root/'port1.worker.json').read_text())['deadline_seconds'],1800.)
+            self.assertFalse((root/'matrix.npz').exists())
+
+    def test_separate_spread_reference_matches_independent_nodal_shunts(self):
+        for scale in f.ELEMENT_SCALES:
+            dx=f.HEIGHT/f.CONTROL_MESH/scale
+            lengths=[f.PERIOD/2-dx,dx,dx,f.PERIOD/2-dx]
+            lines=[(j,j+1,f.Z0,length/f.C0) for j,length in enumerate(lengths)]
+            loads=[(j,-1,2j*np.pi*f.FREQUENCIES*f.CAPACITANCE/3) for j in (1,2,3)]
+            nodal=network_s(f.FREQUENCIES,[0,4],lines,admittances=loads)
+            actual,cell=f.spread_reference(dx)
+            np.testing.assert_allclose(actual,nodal,rtol=0,atol=3e-14)
+            np.testing.assert_allclose(f.chain(actual),cell,rtol=0,atol=3e-12)
+        point,_=f.reference()
+        np.testing.assert_allclose(f.spread_reference(0.)[0],point,rtol=0,atol=1e-15)
+
+    def test_fixed_total_capacitance_has_a_shrinking_support_limit(self):
+        point,_=f.reference()
+        errors=[abs(f.spread_reference(f.HEIGHT/f.CONTROL_MESH/scale)[0]-point).max() for scale in f.ELEMENT_SCALES]
+        self.assertGreater(errors[0],errors[1]);self.assertGreater(errors[1],errors[2])
+        self.assertGreater(errors[0],f.LIMITS['s_control_abs'])
+        self.assertLess(errors[-1],f.LIMITS['s_control_abs'])
+        for spacing in (True,-1.,f.PERIOD/2,float('nan'),float('inf')):
+            with self.assertRaises(ValueError):f.spread_reference(spacing)
+
+    def test_local_mesh_is_limited_and_keeps_physical_planes_and_total_capacitance(self):
+        self.assertEqual(f.MESHES,(4,6,8));self.assertEqual(len(f.configurations()),19)
+        _,base=f.build(4,1,1)
+        for scale in f.ELEMENT_SCALES:
+            for control in ('ordinary','element'):
+                _,meta=f.build(4,1,1,'loaded',control,element_scale=scale)
+                for key in ('planes_m','source_planes_m','physical_pmc_planes_m','width_m','height_m'):
+                    self.assertEqual(meta[key],base[key])
+                self.assertEqual(meta['mesh_mm']['x'][0],base['mesh_mm']['x'][0])
+                self.assertEqual(meta['mesh_mm']['x'][-1],base['mesh_mm']['x'][-1])
+                cap=meta['native_capacitors'][0]
+                self.assertEqual(cap['capacitance_f'],f.CAPACITANCE)
+                self.assertAlmostEqual(cap['native_capacitance_f']-cap['replaced_air_capacitance_f'],f.CAPACITANCE,places=24)
+                spacing=(cap['stop_x_m']-cap['start_x_m'])/2
+                if control=='element':self.assertAlmostEqual(spacing,f.HEIGHT/4/scale,places=15)
+        for n,count,kind,control in ((6,1,'loaded','ordinary'),(4,2,'loaded','ordinary'),(4,1,'unloaded','ordinary'),(4,1,'loaded','boundary')):
+            with self.assertRaises(ValueError):f.build(n,count,1,kind,control,element_scale=4)
+        for value in (True,0,2,4.,float('nan')):
+            with self.assertRaises(ValueError):f.build(4,1,1,element_scale=value)
+
     def test_independent_nodal_cell_cascades(self):
         for count in f.COUNTS:
             for kind in ('loaded','unloaded'):
@@ -351,6 +468,48 @@ class LoadedTEMAdmissionTests(unittest.TestCase):
 
 
 class LoadedTEMRecordTests(unittest.TestCase):
+    def element_records(self,root):
+        records={}
+        for name,n,count,kind,control,scale in f.element_configurations():
+            folder=root/name;folder.mkdir()
+            for port in (1,2):
+                f.save(folder/f'port{port}.worker.json',dict(exit_code=0,failure=None,
+                    deadline_seconds=2700,wall_seconds=10.,monotonic_seconds=10.))
+            s=f.reference()[0] if control=='ordinary' else f.spread_reference(f.HEIGHT/n/scale)[0]
+            records[name]=(s,dict(all_native_complete=True,target_passes=control=='ordinary',
+                contour_s_abs=0.,recurrence_residual=0.,incident_condition=1.,incident_floor=1.,
+                reciprocity_abs=0.,singular_power_max=1.))
+        return records
+
+    def test_regularization_is_separate_from_the_failed_original_control(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root=Path(tmp);rows=self.element_records(root)
+            with patch.object(f,'matrix',side_effect=lambda p:rows[p.name]):result=f.element_study(root)
+        self.assertTrue(result['regularization_passes'],result)
+        self.assertFalse(result['meshes'][0]['point_control_passes'])
+        self.assertFalse(result['original_study_reclassified']);self.assertFalse(result['qualified'])
+
+    def test_failed_receipt_or_unshrinking_support_cannot_pass(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root=Path(tmp);rows=self.element_records(root)
+            failed=root/'scale8_element/port2.worker.json'
+            f.save(failed,dict(exit_code=1,failure='interrupted',deadline_seconds=2700,
+                             wall_seconds=2701.,monotonic_seconds=2701.))
+            with patch.object(f,'matrix',side_effect=lambda p:rows[p.name]):result=f.element_study(root)
+            self.assertFalse(result['regularization_passes']);self.assertTrue(result['rejected'])
+        with tempfile.TemporaryDirectory() as tmp:
+            root=Path(tmp);rows=self.element_records(root)
+            rows['scale8_element']=rows['scale1_element']
+            with patch.object(f,'matrix',side_effect=lambda p:rows[p.name]):result=f.element_study(root)
+            self.assertFalse(result['regularization_passes']);self.assertFalse(result['control_differences_decrease'])
+
+    def test_matching_model_cannot_override_bad_measurement_quality(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root=Path(tmp);rows=self.element_records(root)
+            rows['scale8_element'][1]['contour_s_abs']=.01
+            with patch.object(f,'matrix',side_effect=lambda p:rows[p.name]):result=f.element_study(root)
+            self.assertFalse(result['regularization_passes']);self.assertTrue(result['rejected'])
+
     @staticmethod
     def records():
         target,_=f.reference();v,i=synthetic(target);_,base=f.build(4,1,1)
@@ -433,19 +592,26 @@ class LoadedTEMRecordTests(unittest.TestCase):
 def main():
     parser=argparse.ArgumentParser(description=__doc__)
     mode=parser.add_mutually_exclusive_group(required=True)
-    for name in ('preflight','fdtd','analyse','study','worker-case'):mode.add_argument('--'+name,action='store_true')
+    for name in ('preflight','element-preflight','fdtd','analyse','study','element-study','timing','timing-worker','worker-case'):
+        mode.add_argument('--'+name,action='store_true')
     parser.add_argument('--mesh',type=int,default=4,choices=f.MESHES)
     parser.add_argument('--count',type=int,default=1,choices=f.COUNTS)
     parser.add_argument('--kind',choices=('loaded','unloaded'),default='loaded')
     parser.add_argument('--control',choices=f.CONTROLS,default='ordinary')
     parser.add_argument('--port',type=int,choices=(1,2),default=1)
     parser.add_argument('--rate-mcps',type=float,default=20.)
+    parser.add_argument('--element-scale',type=int,choices=f.ELEMENT_SCALES,default=1)
     parser.add_argument('--out',type=Path,required=True)
     args=parser.parse_args()
     if args.preflight:result=preflight(args.out,args.rate_mcps)
-    elif args.worker_case:result=f.acquire(args.out,args.mesh,args.count,args.port,args.kind,args.control)
-    elif args.fdtd:result=acquire_serial(args.out,args.mesh,args.count,args.kind,args.control,args.rate_mcps)
+    elif args.element_preflight:result=preflight(args.out,args.rate_mcps,element=True)
+    elif args.timing_worker:result=timing_worker(args.out,args.mesh,args.control,args.element_scale)
+    elif args.timing:result=timing_serial(args.out,args.mesh,args.control,args.rate_mcps,args.element_scale)
+    elif args.worker_case:result=f.acquire(args.out,args.mesh,args.count,args.port,args.kind,args.control,element_scale=args.element_scale)
+    elif args.fdtd:result=acquire_serial(args.out,args.mesh,args.count,args.kind,args.control,args.rate_mcps,
+                                      element_scale=args.element_scale)
     elif args.analyse:_,result=f.matrix(args.out)
+    elif args.element_study:result=f.element_study(args.out)
     else:
         result=f.study(args.out)
         if (args.out/'study.json').exists():raise ValueError('preserve prior study output; use an independent audit')
@@ -454,5 +620,5 @@ def main():
 
 
 if __name__=='__main__':
-    if any(x in sys.argv for x in ('--preflight','--fdtd','--analyse','--study','--worker-case')):main()
+    if any(x in sys.argv for x in ('--preflight','--element-preflight','--fdtd','--analyse','--study','--element-study','--timing','--timing-worker','--worker-case')):main()
     else:unittest.main()

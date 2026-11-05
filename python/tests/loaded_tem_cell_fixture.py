@@ -25,6 +25,7 @@ C0, Z0, PERIOD, CAPACITANCE, HEIGHT = 299792458., 50., .01, 2.666e-12, .0005
 WIDTH=ETA0*HEIGHT/Z0
 FREQUENCIES=np.linspace(2.4e9,3.2e9,81)
 MESHES, COUNTS, THREADS, CONTROL_MESH = (4,6,8), (1,2,3), 4, 4
+ELEMENT_SCALES = (1,4,8)
 CONTROLS=('ordinary','boundary','guard','backing','transverse','element','time','dt')
 CAP_S, END_DB, NATIVE_STEP_RATIO_MAX = 12e-9, -100., .97
 PROTOCOL='loaded-tem-cell-v3'
@@ -98,6 +99,32 @@ def chain(s):
     return t
 
 
+def spread_reference(spacing_m,freq=FREQUENCIES):
+    """Separate C/3 shunts at -spacing, 0, +spacing; fixed total C.
+
+    This describes the three native voltage columns, not a replacement for
+    the original point target. At zero spacing it reduces to that target.
+    """
+    if isinstance(spacing_m,bool) or not np.isfinite(spacing_m) or not 0<=spacing_m<PERIOD/2:
+        raise ValueError('finite nonnegative column spacing below half a period required')
+    reference(1,'loaded',freq)  # Keep the same frequency-domain admission.
+    f=np.asarray(freq,float)
+    def line(length):
+        theta=2*np.pi*f*length/C0;t=np.empty((len(f),2,2),complex)
+        t[:,0,0]=t[:,1,1]=np.cos(theta)
+        t[:,0,1],t[:,1,0]=1j*Z0*np.sin(theta),1j*np.sin(theta)/Z0
+        return t
+    shunt=np.broadcast_to(np.eye(2,dtype=complex),(len(f),2,2)).copy()
+    shunt[:,1,0]=2j*np.pi*f*CAPACITANCE/3
+    outer,inner=line(PERIOD/2-spacing_m),line(spacing_m)
+    t=outer@shunt@inner@shunt@inner@shunt@outer
+    a,b,c,d=(t[:,j,k] for j,k in ((0,0),(0,1),(1,0),(1,1)))
+    den=a+b/Z0+c*Z0+d;s=np.empty_like(t)
+    s[:,0,0],s[:,1,1]=(a+b/Z0-c*Z0-d)/den,(-a+b/Z0-c*Z0+d)/den
+    s[:,1,0],s[:,0,1]=2/den,2*(a*d-b*c)/den
+    return s,t
+
+
 def bloch(t):
     """Only a calibrated SINGLE midpoint cell; signed attenuation is retained."""
     t=np.asarray(t,complex)
@@ -124,20 +151,26 @@ class TEMSimulation(Simulation):
         raise ValueError('research TEM probes have no Designer bundle representation')
 
 
-def build(n,count,port,kind='loaded',control='ordinary'):
+def build(n,count,port,kind='loaded',control='ordinary',*,element_scale=1):
     _choice(n,MESHES,'mesh');_choice(count,COUNTS,'cell count');_choice(port,(1,2),'source')
+    _choice(element_scale,ELEMENT_SCALES,'element spacing factor')
+    if element_scale!=1 and (n!=CONTROL_MESH or count!=1 or kind!='loaded' or control not in ('ordinary','element')):
+        raise ValueError('local element refinement is limited to the paired single loaded cell')
     if kind not in ('loaded','unloaded') or control not in CONTROLS or (control!='ordinary' and (count!=1 or kind!='loaded')):
         raise ValueError('declared kind and independent single-loaded-cell control required')
     dx=HEIGHT/n;ny=(8 if control=='transverse' else 4)*n
     extent=(10*count+(40 if control=='boundary' else 30))*n
     x=np.arange(-extent,extent+1)*dx
+    base_x=x
+    pitch=dx/element_scale
+    if element_scale!=1:x=np.unique(np.r_[x,np.arange(-element_scale,element_scale+1)*pitch])
     # PMC walls sit on the first/last H dual planes, not the end E nodes.
     # Keep their physical separation WIDTH at every mesh; E rows 1..ny-1
     # each represent one full dual strip. The end rows are outside the TEM.
     y=(np.arange(ny+1)-.5)*(WIDTH/(ny-1))
     z=np.r_[np.linspace(0.,HEIGHT,n+1),HEIGHT+np.arange(1,3 if control=='backing' else 2)*dx]
     # Every spatial control at a mesh shares its prospective worst clock.
-    dt=(.35 if control=='dt' else .5)/(C0*np.sqrt(2/dx**2+(8*n/WIDTH)**2))
+    dt=(.35 if control=='dt' else .5)/(C0*np.sqrt((element_scale**2+1)/dx**2+(8*n/WIDTH)**2))
     cap=CAP_S*(2 if control=='time' else 1);end=END_DB-(10 if control=='time' else 0)
     steps=math.ceil(cap/dt)
     sim=TEMSimulation(FREQUENCIES[0],FREQUENCIES[-1],excitation='dgauss',
@@ -147,23 +180,25 @@ def build(n,count,port,kind='loaded',control='ordinary'):
     metal=sim.metal('upper_conductor')
     metal.AddBox([x[0]/sim.unit,y[0]/sim.unit,HEIGHT/sim.unit],[x[-1]/sim.unit,y[-1]/sim.unit,z[-1]/sim.unit],priority=10)
     mesh_x=np.asarray(sim.mesh.GetLines('x'))
+    def index(base_index):
+        return int(np.argmin(abs(mesh_x-base_x[base_index]/sim.unit)))
     sources=[]
     guard=(25 if control=='guard' else 20)*n
     for number,sign in ((1,-1),(2,1)):
-        ix=extent+sign*(10*count*n+guard);sx=float(mesh_x[ix]);sources.append(sx*sim.unit)
+        ix=index(extent+sign*(10*count*n+guard));sx=float(mesh_x[ix]);sources.append(sx*sim.unit)
         sim.lumped_port(number,Z0,[sx,y[1]/sim.unit,0.],
             [sx,y[-2]/sim.unit,HEIGHT/sim.unit],'z',excite=number==port)
     native_c=[]
     if kind=='loaded':
         for j in range(count):
-            ix=extent+(2*j-count+1)*10*n
+            ix=index(extent+(2*j-count+1)*10*n)
             radius=1 if control=='element' else 0
             a,b=float(mesh_x[ix-radius]),float(mesh_x[ix+radius])
             # The native parallel RC operator REPLACES each included edge C.
             # Include the known vacuum capacitance of its (2r+1) dual columns
             # so the incremental physical load is CAPACITANCE. Only active E
             # rows are included: no response fit or ghost-row renormalization.
-            air=EPS0*WIDTH*(2*radius+1)*dx/HEIGHT
+            air=EPS0*WIDTH*(2*radius+1)*pitch/HEIGHT
             native=CAPACITANCE+air
             sim.lumped_capacitor(f'cell_C{j+1}',native,[a,y[1]/sim.unit,0.],
                 [b,y[-2]/sim.unit,HEIGHT/sim.unit],'z')
@@ -177,7 +212,7 @@ def build(n,count,port,kind='loaded',control='ordinary'):
     zlo=HEIGHT-dx/2+.01*dx;zhi=HEIGHT+dx/2-.01*dx
     indices={};planes=[]
     for p,sign in enumerate((-1,1)):
-        ix=extent+sign*10*count*n;planes.append(float(mesh_x[ix]*sim.unit))
+        ix=index(extent+sign*10*count*n);planes.append(float(mesh_x[ix]*sim.unit))
         for j in range(3):
             sx=float(mesh_x[ix+j-1])
             sim.csx.AddProbe(f'v{p}_{j}',p_type=0).AddBox([sx,WIDTH/(2*sim.unit),HEIGHT/sim.unit],[sx,WIDTH/(2*sim.unit),0.])
@@ -190,7 +225,7 @@ def build(n,count,port,kind='loaded',control='ordinary'):
                 indices[name]=[[ix+j-1,c['a'],n-1],[ix+j-1,c['b'],n]]
     for prop in sim.csx.GetAllProperties():prop.SetColor((128,128,128),alpha=prop.GetFillColor()[3])
     if sim.csx.Update():raise ValueError('invalid native TEM geometry')
-    return sim,dict(protocol=PROTOCOL,n=n,count=count,excited_port=port,kind=kind,control=control,
+    meta=dict(protocol=PROTOCOL,n=n,count=count,excited_port=port,kind=kind,control=control,
         mesh_mm={a:sim.mesh.GetLines(a).tolist() for a in 'xyz'},grid=[len(x),len(y),len(z)],
         native_cells=int(len(x)*len(y)*len(z)),declared_dt_s=float(dt),max_timesteps=steps,
         cap_s=cap,end_db=end,threads=THREADS,planes_m=planes,source_planes_m=sources,
@@ -198,6 +233,8 @@ def build(n,count,port,kind='loaded',control='ordinary'):
         physical_pmc_planes_m=[float(dual_y[0]),float(dual_y[-1])],
         native_capacitors=native_c,current_contours=contours,expected_current_indices=indices,
         source_duration_s=excitation.dgauss_duration_s(FREQUENCIES[-1]),scope=SCOPE)
+    if element_scale!=1:meta['element_scale']=element_scale
+    return sim,meta
 
 
 def assemble(v,i):
@@ -239,8 +276,8 @@ def required_usage(sim):
             for p in sim.csx.GetAllProperties() if p.GetName() in names}
 
 
-def operator_preflight(out,n,count,port,kind='loaded',control='ordinary'):
-    out=Path(out);sim,meta=build(n,count,port,kind,control)
+def operator_preflight(out,n,count,port,kind='loaded',control='ordinary',*,element_scale=1):
+    out=Path(out);sim,meta=build(n,count,port,kind,control,element_scale=element_scale)
     sim.fdtd.SetTimeStep(0.);sim.fdtd.Write2XML(str(out/'operator-input.xml'))
     run=sim.run(str(out/'operator'),threads=THREADS,exact=True,echo=True,setup_only=True)
     record=dict(setup_only=True,planned_dt_s=meta['declared_dt_s'],run=run,
@@ -320,14 +357,14 @@ def quality(meta):
         energy=run.get('converged') and native['timesteps']<meta['max_timesteps'] and run.get('threads')==THREADS).items()}
 
 
-def acquire(out,n,count,port,kind='loaded',control='ordinary'):
+def acquire(out,n,count,port,kind='loaded',control='ordinary',*,element_scale=1):
     out=Path(out);out.mkdir(parents=True,exist_ok=False)
-    sim,meta=build(n,count,port,kind,control);source,runtime=identity(),runtime_identity()
+    sim,meta=build(n,count,port,kind,control,element_scale=element_scale);source,runtime=identity(),runtime_identity()
     sim.fdtd.Write2XML(str(out/'input.xml'))
     meta.update(source_sha256=source,runtime=runtime,input_sha256=sha(out/'input.xml'),limits=LIMITS,
         started_utc=datetime.now(timezone.utc).isoformat())
     save(out/'declared.json',meta)
-    meta['operator_preflight']=operator_preflight(out,n,count,port,kind,control)
+    meta['operator_preflight']=operator_preflight(out,n,count,port,kind,control,element_scale=element_scale)
     meta['operator_sha256']=sha(out/'operator.json')
     if identity()!=source or runtime_identity()!=runtime:raise RuntimeError('source/runtime changed during setup')
     save(out/'declared.json',meta);print(PROPAGATION_MARKER,flush=True)
@@ -358,7 +395,7 @@ def read(out):
     operator=json.loads((out/'operator.json').read_text())
     if operator!=meta['operator_preflight'] or sha(out/'operator-input.xml')!=operator['input_sha256']:
         raise ValueError('changed operator admission')
-    _,expected=build(meta['n'],meta['count'],meta['excited_port'],meta['kind'],meta['control'])
+    _,expected=build(meta['n'],meta['count'],meta['excited_port'],meta['kind'],meta['control'],element_scale=meta.get('element_scale',1))
     if any(meta[k]!=v for k,v in expected.items()):raise ValueError('changed physical model or sampling planes')
     vn,cn=probe_names()
     if set(meta['raw_traces'])!=set(vn+cn) or source_trace_info(out/'raw/et',meta)!=meta['source_trace']:
@@ -460,3 +497,61 @@ def study(root):
         and all(x['passes'] for x in controls.values()) and all(x['passes'] for x in counts))
     return dict(protocol=PROTOCOL,scope=SCOPE,limits=LIMITS,cohorts=cohorts,missing=missing,rejected=rejected,
         mesh_changes=meshes,controls=controls,cell_count_checks=counts,qualified=bool(qualified))
+
+
+def element_configurations():
+    return [(f'scale{scale}'+('_element' if control=='element' else ''),CONTROL_MESH,1,'loaded',control,scale)
+            for scale in ELEMENT_SCALES for control in ('ordinary','element')]
+
+
+def element_study(root):
+    """A shrinking-support diagnostic, never a replacement for study()."""
+    root=Path(root);rows=[];missing=[];rejected=[]
+    for scale in ELEMENT_SCALES:
+        matrices={};records={}
+        for control in ('ordinary','element'):
+            folder=root/(f'scale{scale}'+('_element' if control=='element' else ''))
+            try:
+                for port in (1,2):
+                    receipt=json.loads((folder/f'port{port}.worker.json').read_text())
+                    limit=receipt['deadline_seconds']
+                    times=(receipt['wall_seconds'],receipt['monotonic_seconds'])
+                    if (receipt['exit_code']!=0 or receipt.get('failure') is not None
+                            or limit not in (1800,2700)
+                            or not all(isinstance(v,(int,float)) and not isinstance(v,bool) and np.isfinite(v) and v>=0 for v in times)
+                            or max(times)>limit):
+                        raise ValueError('owned source deadline/closing receipt failed')
+                matrices[control],records[control]=matrix(folder)
+                record=records[control]
+                measurement=('contour_s_abs','recurrence_residual','incident_condition',
+                             'incident_floor','reciprocity_abs','singular_power_max')
+                if (not record['all_native_complete'] or not all(np.isfinite(record[k])
+                        and (record[k]>=LIMITS[k] if k=='incident_floor' else record[k]<=LIMITS[k]) for k in measurement)):
+                    raise ValueError('native or measurement-quality gate failed')
+            except FileNotFoundError:
+                missing.append(str(folder));continue
+            except (ValueError,AssertionError,KeyError) as error:
+                rejected.append(dict(path=str(folder),reason=repr(error)));continue
+        if len(matrices)!=2:continue
+        a,b=matrices['ordinary'],matrices['element']
+        ga,za=bloch(chain(a));gb,zb=bloch(chain(b))
+        diff=dict(s_abs=float(abs(b-a).max()),phase_deg=phase_change(b,a),
+                  beta_rel=float(abs(gb.imag/ga.imag-1).max()),z_rel=float(abs(zb/za-1).max()))
+        spread,_=spread_reference(HEIGHT/CONTROL_MESH/scale)
+        row=dict(n=CONTROL_MESH,element_scale=scale,column_spacing_mm=HEIGHT/CONTROL_MESH/scale*1e3,point=records['ordinary'],
+            element=records['element'],difference=diff,
+            spread_s_error=float(abs(b-spread).max()),spread_phase_error_deg=phase_change(b,spread))
+        row['spread_reference_passes']=bool(row['spread_s_error']<=LIMITS['s_target_abs']
+            and row['spread_phase_error_deg']<=LIMITS['phase_target_deg'])
+        row['point_control_passes']=bool(all(diff[k]<=LIMITS[gate] for k,gate in
+            (('s_abs','s_control_abs'),('phase_deg','phase_control_deg'),
+             ('beta_rel','beta_control_rel'),('z_rel','z_control_rel'))))
+        rows.append(row)
+    decreasing=bool(len(rows)==3 and all(b['difference'][key]<a['difference'][key]
+        for a,b in zip(rows,rows[1:]) for key in ('s_abs','phase_deg','beta_rel','z_rel')))
+    passed=bool(not missing and not rejected and decreasing and rows[-1]['point_control_passes']
+        and all(v['point']['target_passes'] and v['spread_reference_passes'] for v in rows))
+    return dict(scope='Fixed-C three-column longitudinal regularization; separate from the original study',
+        meshes=rows,missing=missing,rejected=rejected,control_differences_decrease=decreasing,
+        regularization_passes=passed,original_study_reclassified=False,qualified=False,
+        limits=LIMITS,reason='Physical support shrinks with spacing; this is not a same-geometry mesh-convergence or full-example certificate.')
