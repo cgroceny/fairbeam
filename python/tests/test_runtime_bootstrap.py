@@ -5,12 +5,14 @@ import hashlib
 import http.server
 import os
 from pathlib import Path
+import re
 import socket
 import subprocess
 import tempfile
 import threading
+import time
 import unittest
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 from urllib.parse import unquote, urlsplit
 
 
@@ -18,6 +20,7 @@ SCRIPT = Path(__file__).resolve().parents[2] / "runtime" / "setup-runtime.ps1"
 POWERSHELL = r"C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe"
 ACTIVE_SERVERS = []
 DIAGNOSTIC_LIMIT = 2000
+POWERSHELL_TIMEOUT = 30
 
 
 def bounded_output(value, proxy_env=None):
@@ -40,10 +43,11 @@ def bounded_output(value, proxy_env=None):
     return text
 
 
-def timeout_evidence(error, proxy_env=None):
+def timeout_evidence(error, proxy_env=None, observation=None):
     servers = [server.snapshot() for server in ACTIVE_SERVERS]
     return (f"Bootstrap PowerShell timed out after {error.timeout}s; "
             f"local HTTP counters={servers}\n"
+            f"process observation={observation}\n"
             f"stdout:\n{bounded_output(error.stdout, proxy_env)}\n"
             f"stderr:\n{bounded_output(error.stderr, proxy_env)}")
 
@@ -56,7 +60,7 @@ def powershell_setup():
     # Loading the file itself would execute the installer. Parse its top-level
     # function definitions instead, so every request in these tests is local.
     return """
-[Console]::Error.WriteLine('[bootstrap-test] powershell-started')
+[Console]::Error.WriteLine('[bootstrap-test] powershell-started utc_ms=' + [DateTimeOffset]::UtcNow.ToUnixTimeMilliseconds().ToString([Globalization.CultureInfo]::InvariantCulture))
 $ErrorActionPreference = 'Stop'
 $ProgressPreference = 'SilentlyContinue'
 # This fixture only needs a .NET constructor. New-Object would first autoload
@@ -92,21 +96,49 @@ def run_powershell(body, proxy_env=None):
         if name.lower() in {"http_proxy", "https_proxy", "all_proxy", "no_proxy"}:
             del env[name]
     env.update(proxy_env or {})
-    try:
-        return subprocess.run(
-            [POWERSHELL, "-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Bypass",
-             "-EncodedCommand", encoded],
-            capture_output=True,
+    args = [POWERSHELL, "-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Bypass",
+            "-EncodedCommand", encoded]
+    # Start the budget before process creation. Windows process creation itself
+    # cannot be interrupted by communicate's timeout; a late return still fails
+    # immediately instead of receiving another 30 seconds for script execution.
+    started = time.monotonic()
+    parent_utc_ms = time.time_ns() // 1_000_000
+    with subprocess.Popen(args, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
             text=True,
             encoding="utf-8",
             errors="replace",
             env=env,
-            timeout=30,
-        )
-    except subprocess.TimeoutExpired as error:
-        # TimeoutExpired's default traceback prints the large encoded command but
-        # hides captured phase/output evidence. Keep the same timeout and fail.
-        raise AssertionError(timeout_evidence(error, proxy_env)) from None
+            creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0)) as process:
+        launch_seconds = time.monotonic() - started
+        timed_out = False
+        try:
+            remaining = POWERSHELL_TIMEOUT - launch_seconds
+            if remaining <= 0:
+                raise subprocess.TimeoutExpired(args, POWERSHELL_TIMEOUT)
+            stdout, stderr = process.communicate(timeout=remaining)
+        except subprocess.TimeoutExpired:
+            timed_out = True
+            process.kill()
+            stdout, stderr = process.communicate()
+        except BaseException:
+            process.kill()
+            process.communicate()
+            raise
+        elapsed_seconds = time.monotonic() - started
+        # The first marker's wall clock records script entry, not when the parent
+        # received its bytes. Wall-clock adjustment can affect the delta; only the
+        # monotonic clock above governs the deadline. No command/environment is
+        # included, and an absent marker is not assigned an OS or network cause.
+        marker = re.search(r"(?m)^\[bootstrap-test\] powershell-started utc_ms=(\d{1,16})\r?$", stderr or "")
+        observation = dict(pid=process.pid, launch_seconds=round(launch_seconds, 6),
+            elapsed_seconds=round(elapsed_seconds, 6), deadline_seconds=POWERSHELL_TIMEOUT,
+            first_marker_wall_seconds=(int(marker[1])-parent_utc_ms)/1000 if marker else None)
+        if timed_out or elapsed_seconds > POWERSHELL_TIMEOUT:
+            error = subprocess.TimeoutExpired(args, POWERSHELL_TIMEOUT, output=stdout, stderr=stderr)
+            raise AssertionError(timeout_evidence(error, proxy_env, observation)) from None
+        result = subprocess.CompletedProcess(args, process.returncode, stdout, stderr)
+        result.bootstrap_observation = observation
+        return result
 
 
 class LocalHTTPServer(http.server.ThreadingHTTPServer):
@@ -172,24 +204,34 @@ class QuietHandler(http.server.BaseHTTPRequestHandler):
 
 
 class RuntimeBootstrapDiagnostics(unittest.TestCase):
+    @staticmethod
+    def process(stdout=None, stderr=None, *, timed_out=True):
+        process = MagicMock(pid=1515, returncode=0)
+        process.__enter__.return_value = process
+        process.communicate.side_effect = ([subprocess.TimeoutExpired('redacted', 29), (stdout, stderr)]
+            if timed_out else [(stdout, stderr)])
+        return process
+
     def test_timeout_keeps_bounded_phases_and_local_counters_without_command_or_secrets(self):
         secret = "fake:proxy-password"
         address = "http://test-user:fake%3Aproxy-password@127.0.0.1:5515"
-        failure = subprocess.TimeoutExpired(
-            ["powershell", "-EncodedCommand", "DO-NOT-PRINT-COMMAND"], 30,
-            output=("progress " + secret + "x" * 5000).encode(),
-            stderr=("[bootstrap-test] powershell-started\n"
+        process = self.process(
+            "progress " + secret + "x" * 5000,
+            "[bootstrap-test] powershell-started utc_ms=1000250\n"
                     "[bootstrap-test] functions-loaded\n"
-                    "[bootstrap-test] call-started\n" + address).encode(),
+                    "[bootstrap-test] call-started\n" + address,
         )
         with LocalServer(QuietHandler) as server:
             with server.server.counter_lock:
                 server.server.accepted = 2
                 server.server.requests = 1
-            with patch("subprocess.run", side_effect=failure) as run:
+            with patch("subprocess.Popen", return_value=process) as run, \
+                    patch("time.monotonic", side_effect=(10., 11., 40.)), \
+                    patch("time.time_ns", return_value=1_000_000_000_000):
                 with self.assertRaises(AssertionError) as raised:
-                    run_powershell("throw 'unused'", {"HTTP_PROXY": address})
-            self.assertEqual(run.call_args.kwargs["timeout"], 30)
+                    run_powershell("throw 'DO-NOT-PRINT-COMMAND'", {"HTTP_PROXY": address})
+            self.assertEqual(process.communicate.call_args_list[0].kwargs["timeout"], 29)
+            process.kill.assert_called_once_with()
             command = base64.b64decode(run.call_args.args[0][-1]).decode("utf-16le")
             for phase in ("powershell-started", "functions-loaded", "call-started", "call-finished"):
                 self.assertIn(f"[bootstrap-test] {phase}", command)
@@ -197,6 +239,9 @@ class RuntimeBootstrapDiagnostics(unittest.TestCase):
         self.assertIn("accepted': 2", message)
         self.assertIn("requests': 1", message)
         self.assertIn("[bootstrap-test] call-started", message)
+        self.assertIn("'pid': 1515", message)
+        self.assertIn("'first_marker_wall_seconds': 0.25", message)
+        self.assertIn("'deadline_seconds': 30", message)
         self.assertIn("<truncated>", message)
         self.assertIn("<redacted>", message)
         self.assertNotIn(secret, message)
@@ -207,10 +252,60 @@ class RuntimeBootstrapDiagnostics(unittest.TestCase):
         self.assertEqual(ACTIVE_SERVERS, [])
 
     def test_cold_start_timeout_without_output_is_explicit(self):
-        failure = subprocess.TimeoutExpired(["powershell", "secret-command"], 30)
-        with patch("subprocess.run", side_effect=failure):
-            with self.assertRaisesRegex(AssertionError, "stdout:\\n<no output>\\nstderr:\\n<no output>"):
+        process = self.process()
+        with patch("subprocess.Popen", return_value=process), \
+                patch("time.monotonic", side_effect=(10., 10.5, 40.)):
+            with self.assertRaisesRegex(AssertionError, "stdout:\\n<no output>\\nstderr:\\n<no output>") as failure:
                 run_powershell("throw 'unused'")
+        process.kill.assert_called_once_with()
+        self.assertEqual(process.communicate.call_args_list[0].kwargs["timeout"], 29.5)
+        self.assertIn("'first_marker_wall_seconds': None", str(failure.exception))
+
+    def test_slow_process_creation_consumes_the_whole_budget(self):
+        process = self.process("", "", timed_out=False)
+        with patch("subprocess.Popen", return_value=process) as launch, \
+                patch("time.monotonic", side_effect=(10., 41., 41.01)):
+            with self.assertRaisesRegex(AssertionError, "timed out after 30s") as failure:
+                run_powershell("throw 'unused'")
+        launch.assert_called_once()
+        process.kill.assert_called_once_with()
+        process.communicate.assert_called_once_with()  # cleanup only; no extra execution budget
+        self.assertIn("'launch_seconds': 31.0", str(failure.exception))
+        self.assertIn("'first_marker_wall_seconds': None", str(failure.exception))
+
+    def test_success_keeps_only_scalar_observations_and_wall_clock_is_not_a_deadline(self):
+        process = self.process("payload", "[bootstrap-test] powershell-started utc_ms=999750\n", timed_out=False)
+        with patch("subprocess.Popen", return_value=process) as launch, \
+                patch("time.monotonic", side_effect=(10., 10.125, 10.5)), \
+                patch("time.time_ns", return_value=1_000_000_000_000):
+            result = run_powershell("'secret command'", {"HTTP_PROXY": "http://name:password@localhost"})
+        launch.assert_called_once()
+        process.kill.assert_not_called()
+        process.communicate.assert_called_once_with(timeout=29.875)
+        self.assertEqual(result.stdout, "payload")
+        self.assertEqual(result.bootstrap_observation, dict(pid=1515, launch_seconds=.125,
+            elapsed_seconds=.5, deadline_seconds=30, first_marker_wall_seconds=-.25))
+        self.assertNotIn("secret", str(result.bootstrap_observation))
+        self.assertNotIn("password", str(result.bootstrap_observation))
+
+    def test_unexpected_error_reaps_the_owned_process(self):
+        process = self.process()
+        process.communicate.side_effect = [KeyboardInterrupt, ("", "")]
+        with patch("subprocess.Popen", return_value=process), \
+                patch("time.monotonic", side_effect=(10., 10.125)):
+            with self.assertRaises(KeyboardInterrupt):
+                run_powershell("throw 'unused'")
+        process.kill.assert_called_once_with()
+        self.assertEqual(process.communicate.call_count, 2)
+
+    def test_completed_process_after_deadline_does_not_pass(self):
+        process = self.process("late output", "", timed_out=False)
+        with patch("subprocess.Popen", return_value=process), \
+                patch("time.monotonic", side_effect=(10., 10.125, 40.01)):
+            with self.assertRaisesRegex(AssertionError, "timed out after 30s"):
+                run_powershell("'unused'")
+        process.communicate.assert_called_once_with(timeout=29.875)
+        process.kill.assert_not_called()  # communicate has already reaped it
 
 
 @unittest.skipUnless(os.name == "nt" and Path(POWERSHELL).is_file(),
@@ -225,6 +320,7 @@ class RuntimeBootstrapDownload(unittest.TestCase):
             result = run_powershell("Write-Line ([Console]::Out) 'functions ready'")
         self.assertEqual(result.returncode, 0, result.stderr + result.stdout)
         self.assertEqual(result.stdout.strip(), "functions ready")
+        self.assertIsInstance(result.bootstrap_observation["first_marker_wall_seconds"], float)
         for phase in ("encoding-ready", "parse-started", "script-parsed", "functions-loaded", "call-finished"):
             self.assertIn(f"[bootstrap-test] {phase}", result.stderr)
 
