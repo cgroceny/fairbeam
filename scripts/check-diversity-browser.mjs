@@ -15,9 +15,10 @@ await mkdir(out, { recursive: true });
 const fixture = JSON.parse(await readFile(join(root, 'public/projects/dipole.json'), 'utf8'));
 fixture.name = fixture.model.name = 'Synthetic MIMO identity control'; fixture.run = null;
 fixture.ports = [7, 42, 99].map(number => ({ ...structuredClone(fixture.ports[0]), number, excite: true }));
-fixture.results = { frequency: [1e9, 2e9, 3e9], ports: {}, bands: [], farfield: [],
+const sampleCount = 803;
+fixture.results = { frequency: Array.from({ length: sampleCount }, (_, i) => 1e9 + i * 1e6), ports: {}, bands: [], farfield: [],
   sparams: { ports: [1, 2, 3], port_numbers: [7, 42, 99], excited: [1, 2, 3], z_ref: [50, 50, 50], complete: true,
-    method: 'B A^-1', s: Object.fromEntries([1, 2, 3].flatMap(i => [1, 2, 3].map(j => [`${i},${j}`, { re: Array(3).fill(i === j ? i / 10 : 0), im: [0, 0, 0] }]))) } };
+    method: 'B A^-1', s: Object.fromEntries([1, 2, 3].flatMap(i => [1, 2, 3].map(j => [`${i},${j}`, { re: Array(sampleCount).fill(i === j ? i / 10 : 0), im: Array(sampleCount).fill(0) }]))) } };
 const mods = { st: '/src/state.ts', dr: '/src/runner/designRun.ts', rf: '/src/designer/resultFocus.ts', rr: '/src/designer/runResults.ts', ex: '/src/components/exportContext.ts' };
 let stack, browser, page, session, lang;
 const outcomes = [], forbidden = [];
@@ -46,13 +47,32 @@ try {
     await (await page.$('.app-header input[type=file]')).uploadFile(importFile);
     await s.wait('.dock [data-tab="diversity"]'); await s.clickSel('.dock [data-tab="diversity"]');
     const panel = '.dock [data-result-diversity]'; await s.wait(`${panel} [data-mimo-real="7"]`);
-    assert.equal(await page.$$eval(`${panel} [data-mimo-frequency]`, rows => rows.length), 3);
+    const firstPaint = await page.$eval(panel, element => ({ rows: element.querySelectorAll('[data-mimo-frequency]').length, cells: element.querySelectorAll('tbody td, tbody th').length, elements: element.querySelectorAll('*').length }));
+    await writeFile(join(out, `${lang}-table-counts.json`), JSON.stringify(firstPaint, null, 2));
+    assert.equal(firstPaint.rows, 50, 'Large stored-sample tables render one page');
+    const observedFrequencies = [];
+    for (let p = 0; p < Math.ceil(sampleCount / 50); p++) {
+      const frequencies = await page.$$eval(`${panel} [data-mimo-frequency]`, rows => rows.map(row => Number(row.dataset.mimoFrequency)));
+      assert.ok(frequencies.length > 0 && frequencies.length <= 50);
+      observedFrequencies.push(...frequencies);
+      if (p + 1 < Math.ceil(sampleCount / 50)) await s.clickSel(`${panel} [data-mimo-next]`);
+    }
+    assert.deepEqual(observedFrequencies, fixture.results.frequency, 'Every stored frequency is reachable once in order');
+    assert.equal(await page.$eval(`${panel} [data-mimo-next]`, button => button.disabled), true);
+    assert.equal(await page.$eval(`${panel} [data-mimo-last]`, button => button.disabled), true);
+    await s.clickSel(`${panel} [data-mimo-previous]`);
+    assert.equal(await page.$eval(`${panel} [data-mimo-frequency]`, row => Number(row.dataset.mimoFrequency)), fixture.results.frequency[750]);
+    await s.clickSel(`${panel} [data-mimo-first]`);
+    assert.equal(await page.$eval(`${panel} [data-mimo-previous]`, button => button.disabled), true);
     assert.deepEqual(await page.$$eval(`${panel} [data-mimo-pair] option`, options => options.map(o => o.value)), ['7,42', '7,99', '42,99']);
     await page.select(`${panel} [data-mimo-pair]`, '42,99');
     await s.fill(`${panel} [data-mimo-real="7"]`, '0');
     await s.fill(`${panel} [data-mimo-imag="42"]`, '-2,5');
     assert.equal(await page.$eval(`${panel} [data-mimo-imag="42"]`, input => input.value), '-2.5', 'Excitation entry normalizes comma decimals in both languages');
     await s.fill(`${panel} [data-mimo-imag="42"]`, '-2');
+    assert.equal(await page.$eval(`${panel} [data-mimo-pair]`, select => select.value), '42,99', 'Weight edits preserve the displayed selected pair');
+    await page.focus(`${panel} [data-mimo-last]`); await page.keyboard.press('Enter');
+    assert.equal(await page.$$eval(`${panel} [data-mimo-frequency]`, rows => rows.length), 3, 'Last page is reachable with the keyboard');
     const before = new Set(await readdir(downloads)); await s.click('mimo.csv', { within: panel, sel: 'button', exact: true });
     let csvName;
     for (let i = 0; i < 100; i++) { csvName = (await readdir(downloads)).find(name => !before.has(name) && name.endsWith('.csv')); if (csvName) break; await new Promise(r => setTimeout(r, 100)); }
@@ -60,6 +80,8 @@ try {
     const csv = await readFile(join(downloads, csvName), 'utf8');
     assert.match(csv, /P42 \/ P99/); assert.match(csv, /P7=0\+j\(0\); P42=1\+j\(-2\); P99=1\+j\(0\)/);
     assert.doesNotMatch(csv, /P7 \/ P42|NaN|Infinity/);
+    assert.equal(csv.trim().split(/\r?\n/).length, 1 + sampleCount * 9, 'CSV keeps every frequency and all nine selected metrics');
+    assert.ok(csv.includes(String(fixture.results.frequency.at(-1))), 'CSV includes the final page');
     await s.fill(`${panel} [data-mimo-real="7"]`, '1e');
     assert.equal(await page.$eval(`${panel} [data-mimo-real="7"]`, input => input.getAttribute('aria-invalid')), 'true');
     assert.equal(await page.$eval(`${panel} [data-mimo-frequency] td:nth-of-type(5)`, cell => cell.textContent.trim()), '—', 'Incomplete excitation is unavailable instead of zero');
@@ -70,6 +92,33 @@ try {
     assert.equal(await s.ev((_, m) => m.ex.contextualExportActions().some(a => a.id === 'result-touchstone' || a.id === 'result-csv'), null, mods), false);
     await page.screenshot({ path: join(out, `${lang}-viewer.png`) });
 
+    // Replace the source while the same panel stays mounted on its last page.
+    // 503 samples would clamp to page 11, so page 1 proves a reset, not a clamp.
+    await page.$eval(panel, element => { element.dataset.testInstance = 'retained'; });
+    const replacement = structuredClone(fixture);
+    replacement.results.frequency = replacement.results.frequency.slice(0, 503).map(f => f + 1e9);
+    for (const series of Object.values(replacement.results.sparams.s)) { series.re = series.re.slice(0, 503); series.im = series.im.slice(0, 503); }
+    await s.ev((bundle, m) => m.st.openBundle(bundle, 'synthetic-replacement.json'), replacement, mods);
+    assert.equal(await page.$eval(panel, element => element.dataset.testInstance), 'retained', 'The same diversity panel receives the replacement');
+    assert.equal(await page.$eval(`${panel} [data-mimo-frequency]`, row => Number(row.dataset.mimoFrequency)), 2e9);
+    assert.equal(await page.$eval(`${panel} [data-mimo-previous]`, button => button.disabled), true);
+    assert.equal(await page.$eval(`${panel} [data-mimo-range]`, element => element.textContent), await s.T('mimo.sampleRange', { first: 1, last: 50, total: 503 }));
+    assert.equal(await page.$eval(`${panel} [data-mimo-pair]`, select => select.value), '7,42');
+    assert.equal(await page.$eval(`${panel} [data-mimo-real="7"]`, input => input.value), '1');
+    assert.equal(await page.$eval(`${panel} [data-mimo-imag="42"]`, input => input.value), '0');
+    await page.setViewport({ width: 768, height: 1000 });
+    await page.$eval(`${panel} [data-mimo-range]`, element => element.scrollIntoView({ block: 'center' }));
+    const pagingBounds = await page.$eval(`${panel} [data-mimo-range]`, element => { const group = element.parentElement; return { width: group.clientWidth, scroll: group.scrollWidth }; });
+    assert.ok(pagingBounds.width > 200 && pagingBounds.scroll <= pagingBounds.width + 1, JSON.stringify(pagingBounds));
+    await page.screenshot({ path: join(out, `${lang}-paging-768.png`) });
+    await page.setViewport({ width: 1440, height: 1000 });
+    replacement.results.frequency = replacement.results.frequency.slice(0, 3);
+    for (const series of Object.values(replacement.results.sparams.s)) { series.re = series.re.slice(0, 3); series.im = series.im.slice(0, 3); }
+    await s.ev((bundle, m) => m.st.openBundle(bundle, 'synthetic-small-replacement.json'), replacement, mods);
+    assert.equal(await page.$eval(panel, element => element.dataset.testInstance), 'retained');
+    assert.equal(await page.$$eval(`${panel} [data-mimo-frequency]`, rows => rows.length), 3);
+    assert.equal(await page.$$eval(`${panel} [data-mimo-next]`, buttons => buttons.length), 0);
+
     // A new Designer run uses real project files/index admission and resets viewer edits.
     await s.click('header.screen.start', { within: '.mode-switch', exact: true }); await s.wait('.home');
     await page.locator('input[name="home-template"][value="patch"]').click();
@@ -77,6 +126,8 @@ try {
     await s.click('home.newProject.create'); await s.wait('.rb');
     const own = await s.store((_, m) => m.s.file()), originalDesign = JSON.stringify(own.design);
     const a = structuredClone(fixture), b = structuredClone(fixture); a.model.id = b.model.id = own.design.model.id;
+    a.results.frequency = a.results.frequency.slice(0, 3);
+    for (const series of Object.values(a.results.sparams.s)) { series.re = series.re.slice(0, 3); series.im = series.im.slice(0, 3); }
     b.name = b.model.name = 'Synthetic partial MIMO refusal'; b.results.sparams.complete = false;
     const files = [`${own.id}--mimo-a.json`, `${own.id}--mimo-b.json`];
     for (const [i, data] of [a, b].entries()) await writeFile(join(stack.projects, files[i]), JSON.stringify(data));
@@ -92,6 +143,8 @@ try {
     const designPanel = '.dw-result [data-result-diversity]'; await s.wait(`${designPanel} [data-mimo-real="7"]`);
     assert.equal(await page.$eval(`${designPanel} [data-mimo-real="7"]`, input => input.value), '1');
     assert.equal(await page.$eval(`${designPanel} [data-mimo-pair]`, select => select.value), '7,42');
+    assert.equal(await page.$$eval(`${designPanel} [data-mimo-frequency]`, rows => rows.length), 3, 'Small replacement shows every sample');
+    assert.equal(await page.$$eval(`${designPanel} [data-mimo-next]`, buttons => buttons.length), 0, 'Small tables do not expose redundant page controls');
     assert.equal(await page.$$eval('.dw-result-bar .rdk-compare-control, .dw-result-bar .result-format, .dw-result-bar .rdk-copy', elements => elements.length), 0);
     assert.equal(await s.ev((_, m) => m.ex.contextualExportActions().length, null, mods), 0);
     for (const width of [1280, 768]) {
@@ -114,7 +167,7 @@ try {
     assert.equal(await page.$$eval(`${designPanel} [data-mimo-frequency]`, rows => rows.length), 0);
     assert.equal(JSON.stringify(await s.store((_, m) => m.s.file().design)), originalDesign);
     assert.deepEqual(forbidden, []); assert.deepEqual(s.consoleIssues, []);
-    outcomes.push({ lang, viewerAndDesigner: true, physicalPairAndWeights: true, csv: true, invalidWeights: true, partialRefusal: true, reset: true, oneRunWithComparisonPresent: true, responsive: [1280, 768], designUnchanged: true, syntheticOnly: true });
+    outcomes.push({ lang, viewerAndDesigner: true, physicalPairAndWeights: true, csv: true, invalidWeights: true, partialRefusal: true, reset: true, sameComponentReplacement: true, oneRunWithComparisonPresent: true, responsive: [1280, 768], designUnchanged: true, syntheticOnly: true });
     await context.close();
   }
   await writeFile(join(out, 'result.json'), JSON.stringify({ outcomes, forbidden }, null, 2));

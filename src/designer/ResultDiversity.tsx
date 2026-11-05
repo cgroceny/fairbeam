@@ -11,25 +11,33 @@ import NumberField from "../components/NumberField";
 import { t } from "../i18n";
 import "../styles/diversity.css";
 
+const SAMPLE_PAGE_SIZE = 50;
+
 /** Stateless bundle boundary: pair and excitation edits are session-only and reset on
  * source replacement. Root can capture the exact table/CSV snapshot via onAnalysis. */
 export default function ResultDiversity(props: { b: Bundle; onAnalysis?: (analysis: MimoAnalysis, pair: [number, number] | undefined) => void }) {
   const initial = createMemo(() => mimoAnalysis(props.b));
   const [pairKey, setPairKey] = createSignal("");
   const [inputs, setInputs] = createSignal<Record<number, [string, string]>>({});
+  const [samplePage, setSamplePage] = createSignal(0);
   createEffect(() => {
     const ports = initial().ports;
     setPairKey(ports.length >= 2 ? `${ports[0]},${ports[1]}` : "");
     setInputs(Object.fromEntries(ports.map(port => [port, ["1", "0"] as [string, string]])));
+    setSamplePage(0);
   });
   const weights = createMemo(() => new Map(initial().ports.map(port => {
     const v = inputs()[port] ?? ["", ""];
     return [port, v.map(x => x.trim() === "" ? NaN : Number(x)) as unknown as MimoComplex] as const;
   })));
   const analysis = createMemo(() => mimoAnalysis(props.b, weights()));
-  const pairs = createMemo(() => analysis().rows[0]?.pairs.map(p => p.ports) ?? []);
+  const pairs = createMemo(() => initial().rows[0]?.pairs.map(p => p.ports) ?? []);
   const selectedPair = createMemo(() => pairs().find(p => p.join(",") === pairKey()));
   const rows = createMemo(() => analysis().rows.map(row => ({ ...row, pair: row.pairs.find(p => p.ports.join(",") === pairKey()) })));
+  const lastPage = createMemo(() => Math.max(0, Math.ceil(rows().length / SAMPLE_PAGE_SIZE) - 1));
+  const currentPage = createMemo(() => Math.min(samplePage(), lastPage()));
+  const firstSample = createMemo(() => currentPage() * SAMPLE_PAGE_SIZE);
+  const visibleRows = createMemo(() => rows().slice(firstSample(), firstSample() + SAMPLE_PAGE_SIZE));
   const warnings = createMemo(() => [...new Set(rows().flatMap(row => row.pair?.warnings ?? row.warnings))]);
   createEffect(() => props.onAnalysis?.(analysis(), selectedPair()));
   const shown = (v?: MimoValue) => v?.value == null ? "—" : num(v.value, 5);
@@ -67,13 +75,24 @@ export default function ResultDiversity(props: { b: Bundle; onAnalysis?: (analys
           <label class="cluster-sm"><span>{t("mimo.imag")}</span><NumberField step="any" value={inputs()[port]?.[1] ?? ""} aria-label={t("mimo.imagPort", { port })} data-mimo-imag={port} onChange={e => edit(port, 1, e.currentTarget.value)} /></label>
         </div>}</For></div>
       </fieldset>
+      <Show when={rows().length > SAMPLE_PAGE_SIZE}>
+        <div class="cluster" role="group" aria-label={t("mimo.samplePages")}>
+          <p class="note" role="status" aria-live="polite" aria-atomic="true" data-mimo-range>{t("mimo.sampleRange", { first: firstSample() + 1, last: firstSample() + visibleRows().length, total: rows().length })}</p>
+          <div class="cluster-sm">
+            <button type="button" class="btn-sm" data-mimo-first disabled={currentPage() === 0} onClick={() => setSamplePage(0)}>{t("mimo.firstPage")}</button>
+            <button type="button" class="btn-sm" data-mimo-previous disabled={currentPage() === 0} onClick={() => setSamplePage(currentPage() - 1)}>{t("mimo.previousPage")}</button>
+            <button type="button" class="btn-sm" data-mimo-next disabled={currentPage() === lastPage()} onClick={() => setSamplePage(currentPage() + 1)}>{t("mimo.nextPage")}</button>
+            <button type="button" class="btn-sm" data-mimo-last disabled={currentPage() === lastPage()} onClick={() => setSamplePage(lastPage())}>{t("mimo.lastPage")}</button>
+          </div>
+        </div>
+      </Show>
       <div class="mimo-table" tabindex="0" role="region" aria-label={t("mimo.table")}>
         <table class="table"><caption>{t("mimo.table")}</caption><thead><tr>
           <th scope="col">{t("farfield.frequency")}</th><th scope="col">{t("mimo.eccS")}</th><th scope="col">{t("mimo.eccField")}</th>
           <th scope="col">{t("mimo.dgS")}<span class="th-unit">dB</span></th><th scope="col">{t("mimo.dgField")}<span class="th-unit">dB</span></th>
           <th scope="col">{t("mimo.tarc")}</th><th scope="col">{t("mimo.ccl")}<span class="th-unit">bits/s/Hz</span></th>
           <For each={selectedPair() ?? []}>{port => <th scope="col">{t("mimo.meg", { port })}</th>}</For>
-        </tr></thead><tbody><For each={rows()}>{row => <tr data-mimo-frequency={row.frequency}>
+        </tr></thead><tbody><For each={visibleRows()}>{row => <tr data-mimo-frequency={row.frequency}>
           <th scope="row">{freqText(row.frequency)}</th>
           <For each={[row.pair?.eccS, row.pair?.eccField, row.pair?.dgS, row.pair?.dgField, row.tarc, row.ccl]}>{v => <td class="num" title={reason(v)} aria-label={v?.value == null ? reason(v) : undefined}>{shown(v)}</td>}</For>
           <For each={selectedPair() ?? []}>{port => { const metric = () => row.meg.find(m => m.port === port)?.estimate; return <td class="num" title={reason(metric())} aria-label={metric()?.value == null ? reason(metric()) : undefined}>{shown(metric())}</td>; }}</For>
