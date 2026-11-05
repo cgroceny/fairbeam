@@ -1186,6 +1186,14 @@ gaps and unmeasured external/radiation-Q partitions remain excluded. Examples
 6.7/6.8 are calculation-only. The record links the fixture PRs and reproduction
 commands; no gallery model, generated bundle or textbook content is added.
 
+The separate radial-PMC calibration associated with 6.5 now records a fixed-clock
+n12/16/20 family and independent time, azimuth and axial-tail controls in
+[the chapter record](benchmarks/pozar-chapter-06.md#separate-radial-pmc-calibration-for-65).
+The fine family passes its frozen finite mesh/reference gates; its n20 errors
+are 0.04324452% in frequency and 0.44823796% in Q. This prescribed magnetic-wall
+problem leaves the original radiating open example and the failed old n8 cohort
+unqualified. The record identifies its isolated native SDK and source epochs.
+
 The three approved long boxed-microstrip refinements for 6.2 are complete.
 Their stopping, successive mesh and air-clearance controls pass, but the fine
 frequency error is 1.017947%, above the unchanged 1% target. This scope remains
