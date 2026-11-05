@@ -5,6 +5,8 @@ a cylinder into CSXCAD. The designer's side is scripts/check-boolean-curved.mjs;
 the shared cases in test_boolean_live.py (fixtures/boolean_parity.json)."""
 
 import math
+import copy
+import json
 import sys
 import unittest
 from pathlib import Path
@@ -55,6 +57,26 @@ def cell_volume(p):
 
 
 class AddAndInsert(unittest.TestCase):
+    def test_labels_survive_nested_add_reload_and_parameter_changes(self):
+        a = part("sleeve", [cyl("z", [0, 0], "r", [0, 3], inner_radius=0.5, label="slv_body", priority=7)])
+        b = part("disc", [cyl("z", [0, 0], 2, [3, 4], inner_radius=0.5, label="sleevedisc_body", priority=7)],
+                 transforms=[{"type": "mirror", "plane": "x", "keep": True}])
+        history = {"operation": "add", "A": a, "B": b, "live": True}
+        original = copy.deepcopy(history)
+        nested = part("sleeve", run("add", a, b, {"r": 1}), booleanHistory=history)
+        for radius in [1, 1.5, 1]:
+            restored = json.loads(json.dumps(nested))
+            result = run("add", restored, part("extra", [{**KINDS["sphere"], "priority": 7}]), {"r": radius})
+            self.assertEqual([p["label"] for p in result], ["slv_body", "sleevedisc_body", "sleevedisc_body", "extra"])
+            self.assertEqual(result[0]["radius"], radius)
+            self.assertTrue(all(p["priority"] == 7 and not p.get("void") for p in result))
+        self.assertEqual(history, original)
+
+    def test_add_missing_labels_use_original_source_order(self):
+        a = part("source", [box([0, 0, 0], [1, 1, 1]), KINDS["sphere"]], label="Named source")
+        result = run("add", a, part("other", [KINDS["torus"]]))
+        self.assertEqual([p["label"] for p in result], ["Named source 1", "Named source 2", "other"])
+
     def test_add_keeps_every_kind(self):
         for name, shape in KINDS.items():
             with self.subTest(kind=name):

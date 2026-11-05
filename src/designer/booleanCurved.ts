@@ -69,11 +69,12 @@ export function worldShapes(part: DesignPart, names: Record<string, number>, pri
   const cuts = resolveCuts(part.cuts, names);
   const base = primitives.flatMap((pr) => {
     const r = resolveShape(pr, names, 0);
-    return pr.void ? [{ hole: true, r }] : applyShapeCuts([r], cuts).map((s) => ({ hole: false, r: s }));
+    return pr.void ? [{ hole: true, r, label: pr.label }] : applyShapeCuts([r], cuts).map((s) => ({ hole: false, r: s, label: pr.label }));
   });
-  return maps(part.transforms, names).flatMap((m) => base.map(({ hole, r }) => {
+  return maps(part.transforms, names).flatMap((m) => base.map(({ hole, r, label }) => {
     if (m.linear) throw new Error("live Booleans do not support arbitrary rotations of their operands; use quarter turns or materialise the result first");
     const out = unresolve(mapShape(r, m));
+    if (label !== undefined) out.label = label;
     return hole ? { ...out, void: true } : out;
   }));
 }

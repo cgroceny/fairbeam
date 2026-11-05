@@ -39,6 +39,28 @@ const base = (parts) => ({
 const open = (parts) => { const d = base(parts); store.setDraft(structuredClone(d)); store.setFile({ file: 'check', hash: '1', design: d }); store.setMessage(null); };
 const part = (name, primitives, extra = {}) => ({ name, material: 'copper', primitives, ...extra });
 
+// #360: real store edits, persistence, and history restoration retain operand labels.
+{
+  const tube = (label, radius) => ({ kind: 'cylinder', axis: 'z', center: [0, 0], radius, range: [0, 3], inner_radius: 0.5, label });
+  const operands = [part('sleeve', [tube('slv_body', 1)]), part('disc', [tube('sleevedisc_body', 2)])];
+  open(operands);
+  assert.equal(booleans.runBoolean('add', 0, 1), true);
+  const labels = () => store.draft.parts[0].primitives.map(p => p.label);
+  assert.deepEqual(labels(), ['slv_body', 'sleevedisc_body']);
+  store.edit(d => { d.model.name = 'Renamed design'; });
+  assert.equal(store.draft.parts[0].booleanHistory.live, true);
+  assert.deepEqual(labels(), ['slv_body', 'sleevedisc_body']);
+  store.undo(); store.undo();
+  assert.deepEqual(JSON.parse(JSON.stringify(store.draft.parts)), operands);
+  store.redo();
+  assert.deepEqual(labels(), ['slv_body', 'sleevedisc_body']);
+  const saved = JSON.parse(JSON.stringify(store.draft.parts));
+  open(saved);
+  assert.deepEqual(labels(), ['slv_body', 'sleevedisc_body']);
+  booleans.restoreBooleanPart(0);
+  assert.deepEqual(JSON.parse(JSON.stringify(store.draft.parts)), operands);
+}
+
 // ---- Subtract: one undo step, the toast counts the shapes and says what became of B
 open([part('brick', [box([0, 0, 0], [10, 10, 4])]), part('pocket', [box([3, 3, 2], [7, 7, 5])])]);
 assert.equal(booleans.runBoolean('subtract', 0, 1), true);

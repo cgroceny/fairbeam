@@ -1755,7 +1755,8 @@
      "range": [
       2,
       5
-     ]
+     ],
+     "label": "A 2"
     }
    ],
    [
@@ -1794,7 +1795,8 @@
      "range": [
       2,
       3
-     ]
+     ],
+     "label": "A 2"
     }
    ]
   ]
@@ -1891,7 +1893,8 @@
       2,
       2,
       2
-     ]
+     ],
+     "label": "A 1"
     },
     {
      "kind": "box",
@@ -1904,7 +1907,8 @@
       -2,
       2,
       2
-     ]
+     ],
+     "label": "A 1"
     },
     {
      "kind": "sphere",
@@ -1913,7 +1917,8 @@
       1,
       3
      ],
-     "radius": 0.8
+     "radius": 0.8,
+     "label": "A 2"
     },
     {
      "kind": "sphere",
@@ -1922,7 +1927,8 @@
       1,
       3
      ],
-     "radius": 0.8
+     "radius": 0.8,
+     "label": "A 2"
     },
     {
      "kind": "cone",
@@ -1936,7 +1942,8 @@
      "range": [
       3,
       6
-     ]
+     ],
+     "label": "B 1"
     },
     {
      "kind": "torus",
@@ -1947,7 +1954,8 @@
       5
      ],
      "major_radius": 3,
-     "minor_radius": 0.5
+     "minor_radius": 0.5,
+     "label": "B 2"
     }
    ],
    [
@@ -1962,7 +1970,8 @@
       2,
       2,
       2
-     ]
+     ],
+     "label": "A 1"
     },
     {
      "kind": "box",
@@ -1975,7 +1984,8 @@
       -2,
       2,
       2
-     ]
+     ],
+     "label": "A 1"
     },
     {
      "kind": "sphere",
@@ -1984,7 +1994,8 @@
       1,
       3.5
      ],
-     "radius": 0.8
+     "radius": 0.8,
+     "label": "A 2"
     },
     {
      "kind": "sphere",
@@ -1993,7 +2004,8 @@
       1,
       3.5
      ],
-     "radius": 0.8
+     "radius": 0.8,
+     "label": "A 2"
     },
     {
      "kind": "cone",
@@ -2007,7 +2019,8 @@
      "range": [
       3,
       6
-     ]
+     ],
+     "label": "B 1"
     },
     {
      "kind": "torus",
@@ -2018,7 +2031,8 @@
       5
      ],
      "major_radius": 3,
-     "minor_radius": 0.5
+     "minor_radius": 0.5,
+     "label": "B 2"
     }
    ]
   ]
@@ -3975,7 +3989,8 @@
      "range": [
       3,
       6
-     ]
+     ],
+     "label": "A 2"
     },
     {
      "kind": "wire",
@@ -3991,7 +4006,8 @@
        6
       ]
      ],
-     "radius": 0.2
+     "radius": 0.2,
+     "label": "B 1"
     },
     {
      "kind": "polyhedron",
@@ -4038,7 +4054,8 @@
        3,
        2
       ]
-     ]
+     ],
+     "label": "B 2"
     }
    ],
    [
@@ -4118,7 +4135,8 @@
      "range": [
       3,
       8.5
-     ]
+     ],
+     "label": "A 2"
     },
     {
      "kind": "wire",
@@ -4134,7 +4152,8 @@
        6
       ]
      ],
-     "radius": 0.2
+     "radius": 0.2,
+     "label": "B 1"
     },
     {
      "kind": "polyhedron",
@@ -4181,7 +4200,8 @@
        3,
        2
       ]
-     ]
+     ],
+     "label": "B 2"
     }
    ]
   ]
@@ -7053,6 +7073,173 @@
       5
      ],
      "radius": 4
+    }
+   ]
+  ]
+ },
+ {
+  "name": "named tubes retain labels through transforms and parameter changes",
+  "history": {
+   "operation": "add",
+   "A": {
+    "name": "sleeve",
+    "material": "copper",
+    "primitives": [
+     {
+      "kind": "cylinder",
+      "axis": "z",
+      "center": [
+       0,
+       0
+      ],
+      "radius": "r",
+      "range": [
+       0,
+       3
+      ],
+      "inner_radius": 0.5,
+      "label": "slv_body",
+      "priority": 7
+     }
+    ]
+   },
+   "B": {
+    "name": "disc",
+    "material": "copper",
+    "primitives": [
+     {
+      "kind": "cylinder",
+      "axis": "z",
+      "center": [
+       0,
+       0
+      ],
+      "radius": 2,
+      "range": [
+       3,
+       4
+      ],
+      "inner_radius": 0.5,
+      "label": "sleevedisc_body",
+      "priority": 7
+     }
+    ],
+    "transforms": [
+     {
+      "type": "mirror",
+      "plane": "x",
+      "keep": true
+     }
+    ]
+   }
+  },
+  "values": [
+   {
+    "r": 1
+   },
+   {
+    "r": 1.5
+   }
+  ],
+  "expected": [
+   [
+    {
+     "kind": "cylinder",
+     "axis": "z",
+     "center": [
+      0,
+      0
+     ],
+     "radius": 1,
+     "inner_radius": 0.5,
+     "range": [
+      0,
+      3
+     ],
+     "label": "slv_body",
+     "priority": 7
+    },
+    {
+     "kind": "cylinder",
+     "axis": "z",
+     "center": [
+      0,
+      0
+     ],
+     "radius": 2,
+     "inner_radius": 0.5,
+     "range": [
+      3,
+      4
+     ],
+     "label": "sleevedisc_body",
+     "priority": 7
+    },
+    {
+     "kind": "cylinder",
+     "axis": "z",
+     "center": [
+      0,
+      0
+     ],
+     "radius": 2,
+     "inner_radius": 0.5,
+     "range": [
+      3,
+      4
+     ],
+     "label": "sleevedisc_body",
+     "priority": 7
+    }
+   ],
+   [
+    {
+     "kind": "cylinder",
+     "axis": "z",
+     "center": [
+      0,
+      0
+     ],
+     "radius": 1.5,
+     "inner_radius": 0.5,
+     "range": [
+      0,
+      3
+     ],
+     "label": "slv_body",
+     "priority": 7
+    },
+    {
+     "kind": "cylinder",
+     "axis": "z",
+     "center": [
+      0,
+      0
+     ],
+     "radius": 2,
+     "inner_radius": 0.5,
+     "range": [
+      3,
+      4
+     ],
+     "label": "sleevedisc_body",
+     "priority": 7
+    },
+    {
+     "kind": "cylinder",
+     "axis": "z",
+     "center": [
+      0,
+      0
+     ],
+     "radius": 2,
+     "inner_radius": 0.5,
+     "range": [
+      3,
+      4
+     ],
+     "label": "sleevedisc_body",
+     "priority": 7
     }
    ]
   ]

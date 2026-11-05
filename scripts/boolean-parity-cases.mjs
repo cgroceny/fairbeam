@@ -87,6 +87,10 @@ export const cases = [
   { name: "cylinder clipped by a brick over its ring stays a cylinder", history: { operation: "intersect", A: part("A", [cyl("z", [5, 5], 3, [0, 4])]), B: part("B", [box([-9, -9, 1], [19, 19, "t"])]) }, values: [{ t: 3 }, { t: 5 }] },
   { name: "cylinder clipped by a polygon: a 64-gon prism", history: { operation: "intersect", A: part("A", [cyl("z", [5, 5], 3, [0, 4])]), B: part("B", [poly([[4, 0], [10, 0], [10, "y1"], [4, "y1"]], 1, 2)]) }, values: [{ y1: 6 }, { y1: 4 }], tol: 1e-9 },
   { name: "sphere inside a brick stays a sphere", history: { operation: "intersect", A: part("A", [{ kind: "sphere", center: [5, 5, 5], radius: "r" }]), B: part("B", [box([0, 0, 0], [10, 10, 10])]) }, values: [{ r: 2 }, { r: 4 }] },
+  { name: "named tubes retain labels through transforms and parameter changes", history: { operation: "add",
+    A: part("sleeve", [{ ...cyl("z", [0, 0], "r", [0, 3]), inner_radius: 0.5, label: "slv_body", priority: 7 }]),
+    B: part("disc", [{ ...cyl("z", [0, 0], 2, [3, 4]), inner_radius: 0.5, label: "sleevedisc_body", priority: 7 }], { transforms: [{ type: "mirror", plane: "x", keep: true }] }) },
+    values: [{ r: 1 }, { r: 1.5 }] },
 ];
 
 // Refusals: the same message in both implementations

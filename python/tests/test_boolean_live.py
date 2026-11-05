@@ -74,7 +74,7 @@ class BooleanLive(unittest.TestCase):
                          [(b[1], b[2]) for b in boxes(case["expected"][0])])
 
     def test_unbuildable_values_name_the_history(self):
-        case = json.loads(FIXTURE.read_text())[0]
+        case = next(c for c in json.loads(FIXTURE.read_text()) if c["name"] == "moved and quarter-turned brick minus a brick")
         with self.assertRaises(DesignError) as err:
             # H = -3 puts the brick below the slab (they only touch): the intersection is empty
             boolean_primitives({**case["history"], "operation": "intersect"}, {"W": 4, "H": -3}, "parts[0].booleanHistory")
