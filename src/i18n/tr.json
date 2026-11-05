@@ -258,6 +258,8 @@
   "boolean.differentB": "B için farklı bir katı seçin.",
   "boolean.dismiss": "Kapat",
   "boolean.editedDirectly": "{part} doğrudan düzenlendi, bu yüzden Boolean sonucu artık işlenenlerinden yeniden hesaplanmıyor (Boolean geçmişindeki İşlenenleri geri yükle onları geri getirir).",
+  "boolean.labelNeedsSource": "{part}: bu şekli yeniden adlandırmak için tek bir kaynak şekil belirlenemiyor. Etiketi ve canlı Boolean geçmişi korundu. İşlenenleri geri yükle ile kaynak şekli yeniden adlandırıp Boolean işlemini tekrar uygulayın.",
+  "boolean.labelCannotClear": "{part}: bu canlı Boolean sonucu boş bir şekil etiketini koruyamıyor. Mevcut etiket ve geçmiş korundu. Bir ad girin veya kaynak şekli düzenlemek için İşlenenleri geri yükle seçeneğini kullanın.",
   "boolean.emptyResult": "sonuç boş",
   "boolean.history": "Boolean geçmişi",
   "boolean.nothingInCommon": "Ortak hacim yok: uygulamak {a} ve {b} katılarını kaldırır.",

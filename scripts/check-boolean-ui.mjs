@@ -36,7 +36,7 @@ const base = (parts) => ({
   materials: [{ name: 'copper', kind: 'metal' }],
   parts, ports: [], resistors: [], simulation: { f_min: 1, f_max: 2, boundaries: 'MUR' }, mesh: { mode: 'auto', cells_per_wavelength: 20 }, far_field: { enabled: false },
 });
-const open = (parts) => { const d = base(parts); store.setDraft(structuredClone(d)); store.setFile({ file: 'check', hash: '1', design: d }); store.setMessage(null); };
+const open = (parts, params = []) => { const d = { ...base(parts), params }; store.setDraft(structuredClone(d)); store.setFile({ file: 'check', hash: '1', design: d }); store.setMessage(null); };
 const part = (name, primitives, extra = {}) => ({ name, material: 'copper', primitives, ...extra });
 
 // #360: real store edits, persistence, and history restoration retain operand labels.
@@ -59,6 +59,128 @@ const part = (name, primitives, extra = {}) => ({ name, material: 'copper', prim
   assert.deepEqual(labels(), ['slv_body', 'sleevedisc_body']);
   booleans.restoreBooleanPart(0);
   assert.deepEqual(JSON.parse(JSON.stringify(store.draft.parts)), operands);
+}
+
+// A Properties shape-name edit stays in the retained operand, including after save/reopen.
+// Assert the observable store history and geometry, not the tracing helper's implementation.
+{
+  const tube = (label, radius) => ({ kind: 'cylinder', axis: 'z', center: [0, 0], radius, range: [0, 3], inner_radius: 0.5, label, priority: 7 });
+  const copy = x => JSON.parse(JSON.stringify(x));
+  const labels = () => store.draft.parts[0].primitives.map(p => p.label);
+  const shapes = () => copy(store.draft.parts[0].primitives).map(({ label, ...p }) => p);
+  const operands = [part('sleeve', [tube('slv_body', 'r')]), part('disc', [tube('sleevedisc_body', 2)])];
+  open(operands, [{ key: 'r', default: 1 }]);
+  assert.equal(booleans.runBoolean('add', 0, 1), true);
+  const original = copy(store.draft.parts[0]);
+  const originalShapes = shapes();
+  store.edit(d => { d.parts[0].primitives[0].label = 'Sleeve body'; });
+  assert.deepEqual(labels(), ['Sleeve body', 'sleevedisc_body']);
+  assert.equal(store.draft.parts[0].booleanHistory.live, true, 'renaming a shape keeps its history live');
+  assert.equal(store.draft.parts[0].booleanHistory.A.primitives[0].label, 'Sleeve body');
+  assert.equal(store.draft.parts[0].booleanHistory.A.primitives[0].radius, 'r', 'the source expression is retained');
+  assert.deepEqual(shapes(), originalShapes, 'a label edit changes no geometry or priority');
+  const renamed = copy(store.draft.parts[0]);
+  store.undo(); assert.deepEqual(copy(store.draft.parts[0]), original, 'one undo restores both label and history');
+  store.redo(); assert.deepEqual(copy(store.draft.parts[0]), renamed, 'redo restores both atomically');
+  store.edit(d => { d.params[0].default = 1.5; });
+  assert.deepEqual(labels(), ['Sleeve body', 'sleevedisc_body']);
+  assert.equal(store.draft.parts[0].primitives[0].radius, 1.5, 'the renamed shape still follows its parameter');
+  const saved = copy(store.draft);
+  open(saved.parts, saved.params);
+  store.edit(d => { d.model.name = 'Reopened renamed design'; });
+  assert.deepEqual(labels(), ['Sleeve body', 'sleevedisc_body'], 'reopening and recomputing preserves the rename');
+  assert.equal(store.draft.parts[0].booleanHistory.live, true);
+  booleans.restoreBooleanPart(0);
+  const expected = copy(operands); expected[0].primitives[0].label = 'Sleeve body';
+  assert.deepEqual(copy(store.draft.parts), expected, 'Restore operands returns the renamed parametric source');
+
+  // Nested live histories and their cached geometry both retain the edit when restored in stages.
+  open([...operands, part('cap', [tube('cap_body', 3)])], [{ key: 'r', default: 1 }]);
+  assert.equal(booleans.runBoolean('add', 0, 1), true);
+  assert.equal(booleans.runBoolean('add', 0, 1), true);
+  store.edit(d => { d.parts[0].primitives[0].label = 'Inner sleeve'; });
+  assert.equal(store.draft.parts[0].booleanHistory.A.booleanHistory.A.primitives[0].label, 'Inner sleeve');
+  assert.equal(store.draft.parts[0].booleanHistory.A.primitives[0].label, 'Inner sleeve', 'Restore operands cache is current');
+  store.edit(d => { d.params[0].default = 1.25; });
+  assert.deepEqual(labels(), ['Inner sleeve', 'sleevedisc_body', 'cap_body']);
+  assert.equal(store.draft.parts[0].primitives[0].radius, 1.25);
+  const nestedSaved = copy(store.draft);
+  open(nestedSaved.parts, nestedSaved.params);
+  store.edit(d => { d.model.name = 'Reopened nested design'; });
+  booleans.restoreBooleanPart(0);
+  assert.equal(store.draft.parts[0].booleanHistory.live, true);
+  assert.equal(store.draft.parts[0].primitives[0].label, 'Inner sleeve');
+  booleans.restoreBooleanPart(0);
+  assert.equal(store.draft.parts[0].primitives[0].label, 'Inner sleeve');
+  assert.equal(store.draft.parts[0].primitives[0].radius, 'r');
+
+  // Identical user labels are different sources; a sentinel-like user label/name is ordinary text.
+  open([part('__fairbeam_source_label_0', [tube('__fairbeam_source_label_0', 1)]), part('B', [tube('__fairbeam_source_label_0', 2)])]);
+  assert.equal(booleans.runBoolean('add', 0, 1), true);
+  store.edit(d => { d.parts[0].primitives[1].label = 'Second source'; });
+  assert.deepEqual(labels(), ['__fairbeam_source_label_0', 'Second source']);
+  assert.equal(store.draft.parts[0].booleanHistory.A.primitives[0].label, '__fairbeam_source_label_0');
+  assert.equal(store.draft.parts[0].booleanHistory.B.primitives[0].label, 'Second source');
+  assert.equal(store.draft.parts[0].booleanHistory.live, true);
+
+  // A frozen nested result is itself the source: its inactive history must remain untouched.
+  const frozen = copy(renamed); frozen.booleanHistory.live = false;
+  open([frozen, part('cap', [tube('cap_body', 3)])]);
+  assert.equal(booleans.runBoolean('add', 0, 1), true);
+  store.edit(d => { d.parts[0].primitives[0].label = 'Frozen surface'; });
+  assert.equal(store.draft.parts[0].booleanHistory.A.primitives[0].label, 'Frozen surface');
+  assert.deepEqual(copy(store.draft.parts[0].booleanHistory.A.booleanHistory), frozen.booleanHistory);
+  assert.equal(store.draft.parts[0].booleanHistory.live, true);
+
+  // Multiple output copies of one source cannot receive different persistent names. Refuse
+  // the complete edit, even when it also contains a valid rename on another source.
+  open([part('copies', [tube('Repeated', 1)], { transforms: [{ type: 'translate', copies: 1, step: [4, 0, 0] }] }), part('single', [tube('Single', 2)])]);
+  assert.equal(booleans.runBoolean('add', 0, 1), true);
+  const repeated = copy(store.draft.parts[0]);
+  assert.equal(labels().filter(label => label === 'Repeated').length, 2);
+  store.edit(d => { d.parts[0].primitives.find(p => p.label === 'Repeated').label = 'Only one copy'; });
+  assert.deepEqual(copy(store.draft.parts[0]), repeated, 'ambiguous rename leaves the live result and all sources intact');
+  assert.equal(store.message().tone, 'warn');
+  assert.match(store.message().text, /Restore operands/);
+  store.edit(d => {
+    d.parts[0].primitives.find(p => p.label === 'Single').label = 'Valid rename';
+    d.parts[0].primitives.find(p => p.label === 'Repeated').label = 'Ambiguous rename';
+  });
+  assert.deepEqual(copy(store.draft.parts[0]), repeated, 'mixed valid and ambiguous edits are refused atomically');
+
+  open([part('brick', [box([0, 0, 0], [3, 3, 3])]), part('other', [box([2, 0, 0], [5, 3, 3])])]);
+  assert.equal(booleans.runBoolean('add', 0, 1), true);
+  const united = copy(store.draft.parts[0]);
+  store.edit(d => { d.parts[0].primitives[0].label = 'Merged surface'; });
+  assert.deepEqual(copy(store.draft.parts[0]), united, 'new merged topology does not acquire an arbitrary source identity');
+  assert.equal(store.message().tone, 'warn');
+
+  open(operands, [{ key: 'r', default: 1 }]);
+  assert.equal(booleans.runBoolean('add', 0, 1), true);
+  const beforeClear = copy(store.draft.parts[0]);
+  store.edit(d => { delete d.parts[0].primitives[0].label; });
+  assert.deepEqual(copy(store.draft.parts[0]), beforeClear, 'clearing cannot silently replace the name with the part-name fallback');
+  assert.match(store.message().text, /cannot retain an empty shape label/);
+  assert.equal(store.message().tone, 'warn');
+  // Geometry edits still deliberately detach, and undo restores the previous live result.
+  store.edit(d => { d.parts[0].primitives[0].radius = 1.75; });
+  assert.equal(store.draft.parts[0].booleanHistory.live, false);
+  assert.equal(store.draft.parts[0].primitives[0].radius, 1.75);
+  store.undo(); assert.deepEqual(copy(store.draft.parts[0]), beforeClear);
+  store.redo();
+  store.edit(d => { d.params[0].default = 1.25; });
+  assert.equal(store.draft.parts[0].primitives[0].radius, 1.75, 'manual geometry remains detached from later parameter changes');
+
+  // A curved Insert retains A, while B remains separately editable. Renaming A must not
+  // stop B synchronization or reset retained metadata on a later B edit.
+  open(operands, [{ key: 'r', default: 1 }]);
+  assert.equal(booleans.runBoolean('insert', 0, 1), true);
+  store.edit(d => { d.parts[0].primitives[0].label = 'Inserted sleeve'; });
+  store.edit(d => { d.parts[1].primitives[0].radius = 2.5; });
+  assert.deepEqual(labels(), ['Inserted sleeve']);
+  assert.equal(store.draft.parts[0].booleanHistory.live, true);
+  assert.equal(store.draft.parts[0].booleanHistory.B.primitives[0].radius, 2.5);
+  assert.equal(store.draft.parts[0].primitives[0].priority, 7);
 }
 
 // ---- Subtract: one undo step, the toast counts the shapes and says what became of B

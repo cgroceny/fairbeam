@@ -404,7 +404,13 @@ function InspectorAdvanced(props: { children: JSX.Element }) {
 }
 function InspectorTitle(props: { label: string; value: string | undefined; fallback: string; path: string; onChange: (value: string) => void }) {
   return <input autocomplete="off" class="rp-input dz-input dz-inspector-title" id={fieldId(props.path)} aria-label={props.label}
-    type="text" value={props.value ?? ""} placeholder={props.fallback} onInput={(e) => props.onChange(e.currentTarget.value)} />;
+    type="text" value={props.value ?? ""} placeholder={props.fallback} onInput={(e) => {
+      const input = e.currentTarget;
+      props.onChange(input.value);
+      // A refused live-history edit can leave the store value unchanged. Restore the
+      // accepted text explicitly, since that unchanged reactive value may not rerender.
+      if (input.value !== (props.value ?? "")) input.value = props.value ?? "";
+    }} />;
 }
 
 function PartInspector(props: { i: number; j?: number }) {

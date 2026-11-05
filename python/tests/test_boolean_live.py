@@ -9,7 +9,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from fairbeam.design import DesignError, blank_design, boolean_primitives, check_design, resolve_parts  # noqa: E402
+from fairbeam.design import DesignError, blank_design, boolean_primitives, check_design, live_primitives, resolve_parts  # noqa: E402
 
 FIXTURE = Path(__file__).parent / "fixtures" / "boolean_parity.json"
 
@@ -79,6 +79,35 @@ class BooleanLive(unittest.TestCase):
             # H = -3 puts the brick below the slab (they only touch): the intersection is empty
             boolean_primitives({**case["history"], "operation": "intersect"}, {"W": 4, "H": -3}, "parts[0].booleanHistory")
         self.assertTrue(err.exception.where.startswith("parts[0].booleanHistory"))
+
+    def test_manual_nested_rename_reopens_and_builds_at_new_values(self):
+        case = next(c for c in json.loads(FIXTURE.read_text())
+                    if c["name"] == "manually renamed nested live source survives reopen and build values")
+        design = blank_design("renamed-live", "Renamed live source")
+        design["params"] = [{"key": "r", "default": 1}]
+        design["parts"] = [{"name": "sleeve", "material": "copper", "primitives": case["expected"][0],
+                            "booleanHistory": case["history"]}]
+        reopened = json.loads(json.dumps(design))
+        check_design(reopened)
+        retained = reopened["parts"][0]["booleanHistory"]
+        self.assertTrue(retained["live"])
+        self.assertTrue(retained["A"]["booleanHistory"]["live"])
+        source = retained["A"]["booleanHistory"]["A"]["primitives"][0]
+        self.assertEqual(source["label"], "Renamed sleeve")
+        self.assertEqual(source["radius"], "r")
+        self.assertEqual(retained["A"]["primitives"][0]["label"], "Renamed sleeve")
+        for radius in (1, 1.5):
+            with self.subTest(radius=radius):
+                # Labels belong to the saved/materialized Design. resolve_parts deliberately
+                # reduces those shapes to the native builder's numerical geometry contract.
+                materialized = live_primitives(reopened["parts"][0], {"r": radius}, "parts[0]")
+                self.assertEqual([p["label"] for p in materialized],
+                                 ["Renamed sleeve", "sleevedisc_body", "cap_body"])
+                primitives = resolve_parts(reopened, {"r": radius})[0]["prims"]
+                self.assertEqual(primitives[0]["radius"], radius)
+                self.assertEqual([p["priority"] for p in primitives], [7, 7, 7])
+                self.assertFalse(any(p.get("void") for p in primitives))
+        self.assertEqual(design, reopened, "build-time resolution does not rewrite the saved source history")
 
 
 if __name__ == "__main__":
