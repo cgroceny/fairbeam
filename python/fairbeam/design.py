@@ -4099,7 +4099,9 @@ def empty_design(id_: str, name: str) -> dict:
     return {
         "schema": DESIGN_SCHEMA,
         "model": {"id": id_, "name": name, "description": ""},
-        "params": [{"key": "f0", "default": 2.45, "label": "Design frequency", "unit": "GHz", "min": 0.1, "max": 100}],
+        # Empty designs have no model-specific frequency range. The simulation checks still
+        # require a positive, ordered band; saved projects keep their explicit parameter limits.
+        "params": [{"key": "f0", "default": 2.45, "label": "Design frequency", "unit": "GHz"}],
         "simulation": {"f_min": "f0 * 0.6", "f_max": "f0 * 1.4", "boundaries": "MUR", "end_criteria_db": -50},
         # a copy of the material library's value (fairbeam.materials): the file stays self-contained
         "materials": [design_material("pec")],

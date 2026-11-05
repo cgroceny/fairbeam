@@ -110,6 +110,12 @@ export default {
   await s.step('new parameter and import diagnostics use the selected UI language',async()=>{
    s.consoleAllow.push(/Failed to load resource:.*422/);
    await s.store((_,m)=>m.s.setParamAsks([{key:'for'}]));await s.wait('.np');
+   assert.equal(await s.text('#new-parameter-units-note'),await s.T('params.unitsNote'));
+   const unit=await s.field(await s.T('newParam.unit'),{within:'.np'});
+   await s.fill(unit,'cm');
+   assert.equal(await unit.evaluate(el=>el.getAttribute('aria-describedby')),'new-parameter-units-note');
+   const value=await s.field(await s.T('newParam.value'),{within:'.np'});
+   assert.equal(await value.evaluate(el=>el.closest('label').querySelector('.dz-label').textContent.includes('cm')),false,'a free-form unit annotation is not a numeric value badge');
    const keyword=await s.T('checks.sub.structure.why.keyword');
    await s.wait('.np .dz-bad',keyword.charAt(0).toLocaleUpperCase(s.lang==='tr'?'tr-TR':'en-US')+keyword.slice(1));
    await s.fill(await s.field(await s.T('newParam.value'),{within:'.np'}),'Missing/2');
@@ -124,6 +130,35 @@ export default {
    await(await s.wait('.parameter-transfer-dialog input[type=file]')).uploadFile(bad);
    await s.wait('.parameter-transfer-dialog [role=alert]',await s.T('checks.msg.parameter-import.json'));
    await s.click('common.close',{within:'.parameter-transfer-dialog'});
+  });
+  await s.step('Empty design admits HF and explains canonical parameter units',async()=>{
+   await s.store(async(_,m)=>{await m.s.save();m.s.closeDesign();});
+   await s.page.goto(s.url,{waitUntil:'domcontentloaded'});await s.wait('.home');
+   await s.fill(await s.field(await s.T('home.newProject.name')),`HF units ${s.lang} ${ctx.stamp}`,{blur:false});
+   await(await s.wait('label, .home-tpl',await s.T('templates.empty.name'))).click();
+   await s.click('home.newProject.create');await s.wait('.rb');
+   await s.ev(async()=>{(await import('/src/designer/dockState.ts')).openParametersTab();});
+   assert.equal(await s.text('#parameter-units-note'),await s.T('params.unitsNote'));
+   assert.equal(await s.store((_,m)=>Object.hasOwn(m.s.draft.params[0],'min')),false);
+   const f0=await s.wait('#dz-params-0--default');await s.fill(f0,'0.026');
+   assert.equal(await f0.evaluate(el=>el.getAttribute('aria-invalid')),'false');
+   assert.ok((await f0.evaluate(el=>el.getAttribute('aria-describedby'))).includes('parameter-units-note'));
+   await s.store((_,m)=>m.s.edit(d=>{
+    d.params.push({key:'bw',default:0.048,unit:'GHz'},{key:'w',default:1,unit:'mm'});
+    d.simulation.f_min='f0 - bw/2';d.simulation.f_max='f0 + bw/2';
+    d.parts.push({name:'brick',material:d.materials[0].name,primitives:[{kind:'box',start:['-w/2',-10,-0.5],stop:['w/2',10,0.5]}]});
+   }));
+   const annotation=await s.wait('#dz-params-2--unit');await s.fill(annotation,'cm');
+   assert.equal(await annotation.evaluate(el=>el.getAttribute('aria-describedby')),'parameter-units-note');
+   const width=async()=>s.ev((_,m)=>{
+    const v=m.e.paramValues(m.s.draft.params).names,q=m.g.quickBundle(m.s.draft,v,null).parts[0].primitives[0];
+    return {width:q.stop[0]-q.start[0],band:[m.e.evaluate(m.s.draft.simulation.f_min,v),m.e.evaluate(m.s.draft.simulation.f_max,v)]};
+   },null,{s:'/src/designer/store.ts',e:'/src/designer/expr.ts',g:'/src/designer/geometry.ts'});
+   let actual=await width();assert.equal(actual.width,1);assert.ok(Math.abs(actual.band[0]-0.002)<1e-12);assert.ok(Math.abs(actual.band[1]-0.05)<1e-12);
+   await s.fill(await s.wait('#dz-params-2--default'),'10');assert.equal((await width()).width,10);
+   await s.store(async(_,m)=>{await m.s.save();const id=m.s.file().id;m.s.closeDesign();await m.s.openDesign(id);});
+   assert.equal(await s.store((_,m)=>m.s.draft.params[2].unit),'cm','saved annotations are preserved without rescaling');
+   assert.equal((await width()).width,10);
   });
  }
 };

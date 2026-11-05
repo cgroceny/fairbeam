@@ -275,6 +275,27 @@ fx.cases.forEach((c, i) => {
     const qb = quickBundle(want.design, paramValues(want.design.params).names, null);
     check(qb !== null, where, "the preview builds");
     if (!qb) return;
+    if (g.name === "HF empty design uses GHz and mm with annotation-only units") {
+      const d = want.design, names = paramValues(d.params).names;
+      check(near(evaluate(d.simulation.f_min, names), 0.002) && near(evaluate(d.simulation.f_max, names), 0.05), where, "2–50 MHz is expressed as 0.002–0.05 GHz");
+      check(!designChecks(d).some((c) => ["param-range", "f-min", "f-order"].includes(c.code)), where, "an Empty design has no artificial HF parameter floor");
+      for (const f_min of [0, -0.002]) {
+        const bad = structuredClone(d); bad.simulation.f_min = f_min;
+        check(designChecks(bad).some((c) => c.code === "f-min"), where, "nonpositive frequency stays invalid");
+      }
+      const reversed = structuredClone(d); reversed.simulation.f_max = 0.001;
+      check(designChecks(reversed).some((c) => c.code === "f-order"), where, "reversed bands stay invalid");
+      for (const unit of ["mm", "cm", ""]) {
+        const labeled = structuredClone(d);
+        labeled.params.push({ key: "w", default: 1, unit });
+        labeled.parts[0].primitives[0].start[0] = "-w/2"; labeled.parts[0].primitives[0].stop[0] = "w/2";
+        const view = quickBundle(labeled, paramValues(labeled.params).names, null);
+        check(view !== null && near(view.parts[0].primitives[0].stop[0] - view.parts[0].primitives[0].start[0], 1), where, "a unit annotation does not rescale saved geometry");
+        labeled.params.at(-1).default = 10;
+        const centimetre = quickBundle(labeled, paramValues(labeled.params).names, null);
+        check(centimetre !== null && near(centimetre.parts[0].primitives[0].stop[0] - centimetre.parts[0].primitives[0].start[0], 10), where, "entering 10 makes a 1 cm width in mm geometry");
+      }
+    }
     for (const group of want.groups ?? []) {
       const p = qb.ports.find((p) => p.number === group.number);
       check(JSON.stringify(p?.group) === JSON.stringify(group.group), where, "all physical feeds and signs survive the instant preview");

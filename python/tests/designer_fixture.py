@@ -27,9 +27,9 @@ def set_path(obj, path: str, value):
 
 
 def case_design(case: dict) -> dict:
-    from fairbeam.design import blank_design
+    from fairbeam.design import template_design
 
-    d = blank_design("case", "Case")
+    d = template_design(case.get("template", "patch"), "case", "Case")
     for path, value in (case.get("set") or {}).items():
         set_path(d, path, value)
     for key, item in (case.get("append") or {}).items():
