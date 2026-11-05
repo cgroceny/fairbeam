@@ -194,5 +194,30 @@ and other applications' entries unchanged, as described in
   its jobs; canceling then terminates the job object after the grace period (5 s), so openEMS
   stops without its graceful abort. The result is the same: no bundle, no processes left. (Not
   tried: every verified setup ran the server from a console.)
-- The installer is not code-signed: SmartScreen shows "Windows protected your PC" on the first run
-  of the downloaded `.exe` (More info › Run anyway). The macOS build is signed with a Developer ID and notarized by Apple.
+- The Windows installer and application do not currently have Windows Authenticode publisher
+  signatures. A downloaded installer can show a SmartScreen reputation warning. Windows Smart
+  App Control is a separate policy and can block execution completely; see below. The macOS
+  build is signed with a Developer ID and notarized by Apple.
+
+### Smart App Control and blocked runtime files
+
+Windows Smart App Control can block `fairbeam.exe`, the managed `python.exe`, or a loaded native
+extension such as `CSXCAD.cp313-win_amd64.pyd`. If it reports that an Application Control policy
+blocked a file, keep the protection enabled. Reinstalling Fairbeam, repairing the runtime, or
+selecting another Python does not establish trust in that blocked file or its dependencies.
+
+Microsoft documents [no individual-app exception for Smart App Control](https://support.microsoft.com/en-gb/windows/security/threat-malware-protection/smart-app-control-frequently-asked-questions).
+SmartScreen's **More info** flow does not provide such an exception. Fairbeam currently has no
+verified supported workaround for this block while Smart App Control remains enforced.
+
+The release work needed is trusted Windows publisher signing for the application and affected
+runtime components, followed by installation and import checks with Smart App Control enabled.
+The updater's `.sig` files and download checksums verify the update/download contract; they are
+not Windows Authenticode signatures. See [Microsoft's signing guidance](https://learn.microsoft.com/en-us/windows/apps/develop/smart-app-control/code-signing-for-smart-app-control)
+and [the release signing notes](RELEASES.md#windows-publisher-signing).
+
+For a support report, include the Fairbeam version, the blocked filename and the policy message.
+CodeIntegrity events 3077 or 3033 may help identify the blocked component. Remove private paths
+and account details before sharing logs. If Windows blocks `fairbeam.exe` itself, an in-app
+repair or help screen cannot run. Progress is tracked in
+[Windows Smart App Control support](https://github.com/ismailakdag/fairbeam-releases/issues/5).

@@ -48,6 +48,25 @@ pack. It holds release files and the issue tracker for app users, and no source.
 Build only from a tag on `main` of the source repository (`git tag v<version>`), after the checks in
 [CONTRIBUTING.md](../CONTRIBUTING.md) pass.
 
+### Windows publisher signing
+
+The Windows release currently has updater signatures, but no Authenticode publisher-signing
+pipeline. This does not establish Smart App Control compatibility. A signing change must cover
+the installer/application and the executable runtime dependencies that Windows loads, including
+Python launchers and native `.pyd`/`.dll` files; signing only the installer cannot attest to those
+other files.
+
+Use a trusted code-signing provider or Microsoft's Artifact Signing service, as described in
+[Microsoft's Smart App Control signing guidance](https://learn.microsoft.com/en-us/windows/apps/develop/smart-app-control/code-signing-for-smart-app-control).
+Keep signing credentials outside the repository. Sign before final packaging and hashing;
+changed runtime archives or wheels require reviewed pins/requirements and corresponding source
+retention. Verify publisher signatures on the delivered files, then test installation, runtime
+imports and application startup with Smart App Control enabled. Until those checks pass, retain
+the [documented limitation](WINDOWS.md#smart-app-control-and-blocked-runtime-files). Tauri updater
+signature verification remains a separate required release check.
+
+### Build and publish
+
 When example conversion changes, also run `python scripts/check-gallery-designs.py --out gallery-check.json`
 with an openEMS/CSXCAD Python environment. This opt-in check copies every actual gallery selection
 into a temporary workspace and verifies preview, editable Design creation and native geometry
