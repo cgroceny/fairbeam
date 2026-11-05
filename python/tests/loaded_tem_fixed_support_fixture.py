@@ -40,7 +40,9 @@ def build(n, count, port, kind='loaded', control='ordinary', *, pilot=False, ele
     sim, meta = _build(n, count, port, kind, control)
     old_x = np.asarray(meta['mesh_mm']['x'])
     x = old_x * sim.unit
-    core = x[abs(x) <= HALF_DOMAIN-PML_WIDTH+1e-14]
+    # Replace coarse nodes inside the fixed patch. Interleaving them with
+    # the patch can create subpitch slivers (notably for mesh 6).
+    core = x[(abs(x) <= HALF_DOMAIN-PML_WIDTH+1e-14) & (abs(x) > 8*PITCH+1e-14)]
     faces = np.linspace(HALF_DOMAIN-PML_WIDTH, HALF_DOMAIN, 9)
     x = np.unique(np.round(np.r_[core, faces, -faces, np.arange(-8, 9)*PITCH], 15))
     z = np.r_[np.linspace(0., f.HEIGHT, n+1), f.HEIGHT+BACKING_PITCH]

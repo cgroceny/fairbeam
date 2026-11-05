@@ -255,6 +255,17 @@ class FixedSupportTests(unittest.TestCase):
                     self.assertEqual(meta['native_cells'], math.prod(meta['grid']))
             run.assert_not_called()
 
+    def test_fixed_patch_has_no_interleaved_slivers_and_clock_fits_actual_grid(self):
+        with patch.object(f.Simulation, 'run', side_effect=AssertionError('no native runs')) as run:
+            for n in f.MESHES:
+                for control in ('ordinary', 'element'):
+                    sim, meta = m.build(n, 1, 1, control=control)
+                    spacing = [float(np.diff(meta['mesh_mm'][axis]).min())*sim.unit for axis in 'xyz']
+                    self.assertGreaterEqual(min(spacing), m.PITCH*(1-1e-9))
+                    cfl = 1/(f.C0*np.sqrt(sum(1/step**2 for step in spacing)))
+                    self.assertLessEqual(meta['declared_dt_s'], .5*cfl)
+            run.assert_not_called()
+
     def test_point_reference_matches_independent_original_abcd_and_spread_is_lossless(self):
         np.testing.assert_allclose(m.reference('ordinary'), f.reference()[0], rtol=0, atol=3e-14)
         s = m.reference('element')
