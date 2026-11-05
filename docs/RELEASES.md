@@ -209,6 +209,15 @@ editing them, or the prefill stops working.
 One entry per release, newest first. The installers are on the
 [release page](https://github.com/ismailakdag/fairbeam-releases/releases) of each version.
 
+### 0.8.6-preview.1, 2026-11-06 (macOS preview, prerelease)
+
+- A signed and notarized Apple silicon preview for HF bands and canonical unit labels. It is a
+  prerelease and never becomes Latest; installed apps are not offered it.
+- HF example runs complete, but their numerical validation against an independent solver has not
+  converged; the examples are not accuracy-qualified.
+- See the [0.8.6-preview.1 notes](release-notes/0.8.6-preview.1.md) for the changes since 0.8.5
+  and how to return to the stable release.
+
 ### 0.8.5, 2026-10-29
 
 - Add qualified antenna/network analysis, sweep trends, band objectives, MIMO and array
