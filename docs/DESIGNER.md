@@ -1897,3 +1897,21 @@ radiation, power and solver evidence remain original. See [Results](RESULTS.md#d
 for the transform order, supported references, missing-data rules and limitations.
 Complex references disable the standard Smith/VSWR views and Touchstone; CSV remains
 available. Real-reference modal Touchstone uses explicit version 2.0 mode metadata.
+
+### Reusing simulation and optimizer settings
+
+In **Simulation settings > Run profile**, use **Export settings** to save mesh settings,
+frequency band, boundaries and solver limits as a `simulation-settings.json` file. In another
+Design, **Import settings** replaces those settings in one undoable edit. Cancel restores the
+state at dialog open; Undo restores an accepted import. Geometry, materials, ports, monitors
+and parameter definitions are not copied. Coordinates remain in mm and frequencies in GHz,
+regardless of the display units. Expressions use the destination parameters; referenced names
+and units must match. Review local refinement boxes and manual mesh coordinates for the new
+geometry and regenerate its preview before running.
+
+The **Optimizer** form has its own **Export settings** and **Import settings** controls for
+parameter ranges and starting values, goals, method, evaluation budget and excitation choice.
+The target model must provide the same numeric parameter names, types and units, compatible
+bounds and goal ports. An invalid or incompatible file leaves the form unchanged. Engine and
+CPU-thread selection stay local. Neither import starts an optimization or simulation. The two
+file types are separate and cannot be used interchangeably; files are limited to 256 KB.

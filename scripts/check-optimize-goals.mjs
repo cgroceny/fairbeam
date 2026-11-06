@@ -11,7 +11,7 @@ import tr from '../src/i18n/tr.json' with {type:'json'};
 const read=path=>readFileSync(new URL(`../${path}`,import.meta.url),'utf8');
 const source=read('src/runner/optimize.ts'),ast=parse(source,{sourceType:'module',plugins:['typescript']});
 const declarations=ast.program.body.map(node=>node.type==='ExportNamedDeclaration'?node.declaration:node).filter(Boolean);
-const names=['MAX_OPT_EVALS','GOAL_PRESETS','presetOf','goalDraft','setGoalKind','optPlan','startOptimize','goalValue','evaluationGoalValue'];
+const names=['MAX_OPT_EVALS','GOAL_PRESETS','presetOf','goalDraft','setGoalKind','optimizerPlan','optimizerSettings','optPlan','startOptimize','goalValue','evaluationGoalValue'];
 const picked=names.map(name=>{
  const node=declarations.find(node=>node.type==='FunctionDeclaration'?node.id?.name===name:node.type==='VariableDeclaration'&&node.declarations.some(d=>d.id.name===name));
  assert.ok(node,`production ${name} exists`);return source.slice(node.start,node.end);

@@ -5762,5 +5762,14 @@
   "nf2ff.badSteps": "Both angular steps must be between 0.25 and 90 degrees.",
   "nf2ff.budget": "This frequency and angle combination exceeds the storage budget. Use fewer frequencies or larger steps.",
   "nf2ff.outsideBand": "Every frequency must stay inside each original driven port’s excitation band.",
-  "nf2ff.fdOnly": "Frequency-domain recordings support only their listed recorded frequencies."
+  "nf2ff.fdOnly": "Frequency-domain recordings support only their listed recorded frequencies.",
+  "settingsFile.export": "Export settings",
+  "settingsFile.import": "Import settings",
+  "settingsFile.simulationHint": "Reuse mesh, frequency band, boundaries and solver limits in another design. Import replaces these settings; Cancel or Undo restores them. Expressions use the destination parameters. Geometry and monitors stay unchanged.",
+  "settingsFile.optimizationHint": "Reuse parameter ranges, goals, method and evaluation budget. Import replaces this form without starting a run. Parameter names, types, units, limits and ports must match. Engine and CPU threads stay unchanged.",
+  "settingsFile.invalid": "This is not a supported settings file. Choose a Fairbeam settings JSON file smaller than 256 KB.",
+  "settingsFile.incompatible": "These settings do not fit this design. Check parameter names, units, ranges, ports and mesh coordinates before importing.",
+  "settingsFile.changed": "The active model changed while reading the file. Import again for the current model.",
+  "settingsFile.failed": "Could not read or export the settings. Check the file and try again.",
+  "settingsFile.applied": "Settings imported. Review them before running."
 }

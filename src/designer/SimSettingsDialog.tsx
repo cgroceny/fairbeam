@@ -26,6 +26,9 @@ import { RequirementsEditor } from "../components/RequirementsPanel";
 import { editRequirements } from "./store";
 import { openDesignerOptimize } from "./OptimizeDialog";
 import { applyRunProfile, RUN_PROFILES, runProfileSupported, type RunProfile } from "./runProfiles";
+import SettingsTransfer from '../components/SettingsTransfer';
+import { exportSimulationSettings, importSimulationSettings } from './settingsTransfer';
+import { file } from './store';
 
 /** monitors is optional in the design format (python/fairbeam/design.py): surface-current maps and
  * the efficiency over the band. */
@@ -347,6 +350,12 @@ export default function SimSettingsDialog() {
           <div class="ss-pane" ref={pane} onScroll={onScroll}>
             <section id="ss-profile" class="stack" aria-labelledby="ss-profile-title">
               <h3 id="ss-profile-title">{t("sim.profile.title")}</h3>
+              <SettingsTransfer name="simulation-settings.json" hint="settingsFile.simulationHint" identity={() => file()}
+                export={() => exportSimulationSettings(d())} import={text => {
+                  const settings = importSimulationSettings(text, d());
+                  edit(x => { x.mesh = settings.mesh; x.simulation = settings.simulation; }, 'import-simulation-settings');
+                  setApplied(null);
+                }} />
               <p class="note">{t("sim.profile.note")}</p>
               <div class="cluster">
                 <label class="field">

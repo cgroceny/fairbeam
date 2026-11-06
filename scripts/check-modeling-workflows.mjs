@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import './check-settings-transfer.mjs';
 import {writeFileSync} from 'node:fs';
 import {treatedBox} from '../src/designer/edgeTreatment.ts';
 import {componentTree} from '../src/designer/navModel.ts';

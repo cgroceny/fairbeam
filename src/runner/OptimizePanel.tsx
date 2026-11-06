@@ -8,6 +8,8 @@ import {
   addVary,
   drivenPorts,
   ensureOptimizeForm,
+  exportOptimizerSettings,
+  importOptimizerSettings,
   excite,
   GOAL_PRESETS,
   goals,
@@ -36,8 +38,9 @@ import {
   startOptimize,
   vary,
 } from "./optimize";
-import { health, meshSource, runName, setRunName, specs, submitError, submitting, threads, setThreads } from "./store";
+import { currentModel, health, meshSource, runName, setRunName, specs, submitError, submitting, threads, setThreads } from "./store";
 import { t } from "../i18n";
+import SettingsTransfer from '../components/SettingsTransfer';
 import NumberField from "../components/NumberField";
 import { PreflightNote } from "../designer/PreflightNote";
 import { methodName } from "../designer/optimizationResults";
@@ -86,6 +89,8 @@ export default function OptimizePanel(props: { onStarted?: (job: import("./api")
 
   return (
     <div class="stack op-form">
+      <SettingsTransfer name="optimization-settings.json" hint="settingsFile.optimizationHint" identity={() => currentModel()}
+        export={exportOptimizerSettings} import={importOptimizerSettings} />
       <div class="op-block stack-sm">
         <div class="op-head">
           <span class="op-title">{t("opt.vary")}</span>
