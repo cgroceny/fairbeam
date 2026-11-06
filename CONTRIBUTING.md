@@ -27,6 +27,13 @@ the version and the operating system. Attach the design file or the model when y
 6. Say in the pull request what you changed, how you tested it, and whether you used AI
    assistance. The [AI policy](AI_POLICY.md) explains what we ask for.
 
+Keep intermediate work in a draft PR: its automatic CI runs editing guards, not full
+qualification. Finish the local tests, then mark the final PR ready or dispatch `ci` on its
+branch if it must stay a draft. Wait for the full run to pass before merging that exact commit;
+otherwise the main push has to repeat the full suite. CI-policy changes always run full checks.
+See [CI and website publishing](docs/CI.md) for scope and reuse rules. Website deployment stays
+manual and batched; a test-only change does not require a deployment.
+
 ## Ground rules
 
 - **No benchmarks against proprietary simulators.** Fairbeam names CST only for file
