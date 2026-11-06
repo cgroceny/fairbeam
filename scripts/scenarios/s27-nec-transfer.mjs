@@ -81,13 +81,24 @@ export default {
           start_mm:gw.slice(2,5).map(x=>x*1000),end_mm:gw.slice(5,8).map(x=>x*1000),radius_mm:gw[8]*1000});
       });
       await s.step('unsupported ground and malformed UTF-8 preserve the last accepted model', async () => {
+        // This step deliberately submits one unsupported NEC card. Assert that
+        // exact response; the malformed UTF-8 file must never reach the API.
+        s.consoleAllow.push(/Failed to load resource:.*422/);
+        const requests = [];
+        const record = r => { if (new URL(r.url()).pathname === '/api/nec/transfer' && r.method() === 'POST') requests.push(r); };
+        s.page.on('request', record);
+        const refused = response();
         for (const bad of [deck.replace('GN -1', 'GN 1'), Buffer.from([0xff])]) {
           await upload(bad);
           await s.wait(panel+' [role="alert"]');
           assert.deepEqual(JSON.parse(await downloaded('record')), imported);
         }
+        assert.equal((await refused).status(), 422);
+        s.page.off('request', record);
+        assert.equal(requests.length, 1, 'malformed UTF-8 is rejected before an HTTP request');
       });
       await s.step('invalid wire edits are refused; Cancel retains the model; valid edits revalidate it', async () => {
+        s.consoleAllow.push(/Failed to load resource:.*422/); // asserted invalid-radius response below
         await s.page.click('.nec-wire-table button');
         const fields = await s.page.$$('.nec-wire-editor input');
         await s.fill(fields[7], '100', {blur:false});
@@ -124,6 +135,17 @@ export default {
         assert.equal(JSON.parse(await downloaded('model')).wires.length, 26);
         await s.click('necTransfer.previous', {within:panel});
         assert.equal(await s.page.$$eval('.nec-wire-table tbody tr', rows=>rows.length), 25);
+        await s.page.setViewport({width:390,height:900});
+        await s.page.$eval(panel, element=>element.scrollIntoView({block:'start',inline:'nearest'}));
+        const bounds = await s.page.evaluate(() => {
+          const panel = document.querySelector('[data-testid="nec-transfer"]');
+          const scroll = panel.querySelector('.nec-wire-scroll');
+          const rect = panel.getBoundingClientRect();
+          return {left:rect.left,right:rect.right,width:innerWidth,
+            scrollClient:scroll.clientWidth,scrollContent:scroll.scrollWidth};
+        });
+        assert.ok(bounds.left >= 0 && bounds.right <= bounds.width, JSON.stringify(bounds));
+        assert.ok(bounds.scrollContent > bounds.scrollClient, 'wide wire table scrolls within the panel');
         if (process.env.FAIRBEAM_SCENARIO_SCREENSHOTS) {
           mkdirSync(process.env.FAIRBEAM_SCENARIO_SCREENSHOTS, {recursive:true});
           for (const width of [1440, 390]) {
@@ -131,8 +153,8 @@ export default {
             await s.page.$eval(panel, element=>element.scrollIntoView());
             await s.page.screenshot({path:join(process.env.FAIRBEAM_SCENARIO_SCREENSHOTS, `S27-${s.lang}-${width}.png`)});
           }
-          await s.page.setViewport({width:1440,height:900});
         }
+        await s.page.setViewport({width:1440,height:900});
       });
       await s.step('Cancel ignores a late edit response and stored exports remain available offline', async () => {
         const before = JSON.parse(await downloaded('record'));
