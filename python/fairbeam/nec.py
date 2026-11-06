@@ -28,11 +28,17 @@ C0 = 299792458.0
 
 
 def _number(value, name, *, positive=False):
-    if isinstance(value, bool) or not isinstance(value, (int, float)) or not math.isfinite(value):
+    if isinstance(value, bool) or not isinstance(value, (int, float)):
         raise ValueError(f"{name} must be a finite number")
-    if positive and value <= 0:
+    try:
+        number = float(value)
+    except OverflowError:
+        raise ValueError(f"{name} must be a finite number") from None
+    if not math.isfinite(number):
+        raise ValueError(f"{name} must be a finite number")
+    if positive and number <= 0:
         raise ValueError(f"{name} must be positive")
-    return float(value)
+    return number
 
 
 def _integer(value, name, low, high):

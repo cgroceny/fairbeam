@@ -47,7 +47,7 @@ class ImportControls(unittest.TestCase):
 
     def test_reference_resistance_is_an_explicit_import_setting(self):
         self.assertEqual(parse_deck(self.text, reference_ohm=123)['model']['reference_ohm'], 123)
-        for bad in (True, 0, -1, float('nan'), float('inf')):
+        for bad in (True, 0, -1, float('nan'), float('inf'), 10**400):
             with self.subTest(bad=bad), self.assertRaises(ValueError):
                 parse_deck(self.text, reference_ohm=bad)
 

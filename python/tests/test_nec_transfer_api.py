@@ -83,6 +83,9 @@ class TransferApi(unittest.TestCase):
         requests = [
             {"source": nec.deck(model).replace("GN -1", "GN 1"), "reference_ohm": 50},
             {"source": nec.deck(model), "reference_ohm": True},
+            {"source": nec.deck(model), "reference_ohm": 10**400},
+            {"dipole": {"length_mm": 10**400, "radius_mm": .05, "segments": 31,
+                        "frequency_ghz": [.3], "reference_ohm": 50}},
             {"model": model, "pattern": 1},
             {"model": model, "pattern": False, "solver": "anything"},
             {"model": {**model, "ground": True}, "pattern": False},
@@ -101,6 +104,18 @@ class TransferApi(unittest.TestCase):
 
 
 class TransferCli(unittest.TestCase):
+    def test_oversized_json_number_is_a_validation_error_before_capture(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            source, output = root / "model.json", root / "capture"
+            model = nec.dipole(475, .05, 31, [.3])
+            model["reference_ohm"] = 10**400
+            source.write_text(json.dumps(model))
+            with redirect_stderr(io.StringIO()) as error:
+                self.assertEqual(cli.main(["nec-run", str(source), "--solver", "unused", "--out", str(output)]), 2)
+            self.assertIn("finite number", error.getvalue())
+            self.assertFalse(output.exists())
+
     def test_actual_cli_captures_source_and_refuses_overwrite_without_solving(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
