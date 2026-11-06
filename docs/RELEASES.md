@@ -209,6 +209,15 @@ editing them, or the prefill stops working.
 One entry per release, newest first. The installers are on the
 [release page](https://github.com/ismailakdag/fairbeam-releases/releases) of each version.
 
+### 0.8.6-preview.2, 2026-11-06 (macOS preview, prerelease)
+
+- A second signed and notarized Apple silicon preview: pick the length and frequency units shown
+  and typed, HF dipole examples at 7.1 and 14.2 MHz, and free file names for new designs. It is a
+  prerelease and never becomes Latest.
+- HF example runs complete, but their numerical validation against an independent solver has not
+  converged; the examples are not accuracy-qualified.
+- See the [0.8.6-preview.2 notes](release-notes/0.8.6-preview.2.md).
+
 ### 0.8.6-preview.1, 2026-11-06 (macOS preview, prerelease)
 
 - A signed and notarized Apple silicon preview for HF bands and canonical unit labels. It is a
