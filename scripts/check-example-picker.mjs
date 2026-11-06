@@ -49,8 +49,10 @@ check(/fallback=\{\s*<p class="muted" role="status">\{t\(DEMO \|\| isDesktopShel
   "an empty workspace says what happened instead of an empty card");
 const css0 = read("src/styles/designer.css");
 check(/\.home-examples \.home-item-name \{ white-space: normal; overflow-wrap: anywhere; \}/.test(css0), "Start's example names wrap instead of being cut");
-eq(groups.map((g) => g.label), ["uav", "printed", "horns", "arrays", "wire"], "groups follow the category order; the empty category (other) is hidden");
+eq(groups.map((g) => g.label), ["uav", "printed", "horns", "arrays", "wire", "hf"], "groups follow the category order; the empty category (other) is hidden");
 eq(exampleCategory("yagi_867"), "uav", "an 867 model is in the UAV group");
+eq(exampleCategory("hf-dipole-7mhz"), "hf", "an HF dipole is in the HF group, not with the wire antennas");
+eq(exampleDetail({ bands: [0.007], band_ranges: [{ lo: 0.0068, hi: 0.0074, edge_lo: false, edge_hi: false }], cells: 196560 }), "7.1 MHz · 196.6 k cells", "HF bands read in MHz");
 eq(exampleCategory("patch-array-2x1"), "arrays", "an array beats the patch rule");
 eq(exampleCategory("something-new"), "other", "an unknown model falls into Other");
 eq(groups.find((g) => g.label === "printed")?.items.filter((i) => i.file.startsWith("sierpinski")).length, 2, "the two Sierpinski runs share one group");

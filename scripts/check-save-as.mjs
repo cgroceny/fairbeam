@@ -29,7 +29,9 @@ assert.deepEqual(freeDesignId("Patch antenna", []), { id: "patch_antenna_2", res
 assert.deepEqual(freeDesignId("Patch antenna", ["patch_antenna_2"]), { id: "patch_antenna_3", reserved: "patch_antenna" });
 assert.deepEqual(freeDesignId("UAV yagi 867", []), { id: "uav_yagi_867", reserved: null });
 assert.deepEqual(freeDesignId("Yagi 867", []), { id: "yagi_867_2", reserved: "yagi_867" });
-assert.deepEqual(freeDesignId("My patch", ["my_patch"]), { id: "my_patch", reserved: null }, "an id in use is left to designIdError");
+assert.deepEqual(freeDesignId("My patch", ["my_patch"]), { id: "my_patch_2", reserved: "my_patch", taken: true }, "an id in use gets the next free suffix");
+assert.deepEqual(freeDesignId("Empty design", ["empty_design", "empty_design_2"]), { id: "empty_design_3", reserved: "empty_design", taken: true });
+assert.equal(designFileHint("Empty design", ["empty_design"]), "File: empty_design_2.design.json (empty_design is in use)");
 assert.deepEqual(freeDesignId("con", []), { id: "con", reserved: null }, "a device name keeps its own message");
 assert.equal(designFileHint("Patch antenna", []), "File: patch_antenna_2.design.json (patch_antenna is a bundled example's name)");
 assert.equal(designFileHint("My patch", []), "File: my_patch.design.json");

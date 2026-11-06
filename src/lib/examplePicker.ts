@@ -29,13 +29,14 @@ export interface PickerGroup {
 const ghz = (f: number) => fmt.num(f, 2);
 
 /** The example categories, in display order; their headings are the `examples.group.<id>` texts. */
-export const EXAMPLE_CATEGORIES = ["uav", "printed", "horns", "arrays", "wire", "other"] as const;
+export const EXAMPLE_CATEGORIES = ["uav", "printed", "horns", "arrays", "wire", "hf", "other"] as const;
 export type ExampleCategory = (typeof EXAMPLE_CATEGORIES)[number];
 
 /** The category of an example's model id: "patch-array-2x1" is an array, "microstrip-line" is printed, and so on. */
 export function exampleCategory(model: string): ExampleCategory {
   const m = model.toLowerCase();
   if (/867/.test(m)) return "uav";
+  if (/^hf[-_]/.test(m)) return "hf";
   if (/array/.test(m)) return "arrays";
   if (/patch|microstrip|coupler|divider|lowpass|filter|sierpinski|minkowski/.test(m)) return "printed";
   if (/horn|waveguide/.test(m)) return "horns";
@@ -47,10 +48,14 @@ export function exampleCategory(model: string): ExampleCategory {
  * band centres and ranges of src/lib/bands.ts); bands and cells are left out when the index does not
  * have them. */
 export function exampleDetail(p: Pick<ProjectIndexEntry, "bands" | "band_ranges" | "cells" | "engine">): string {
-  const bands = pickerBands(p, ghz);
+  // bands below 0.1 GHz (HF, VHF) read in MHz: 7.1 MHz rather than 0.01 GHz
+  const ranges = (p.band_ranges ?? []).filter((r) => Number.isFinite(r?.hi));
+  const tops = ranges.length ? ranges.map((r) => r.hi) : (p.bands ?? []).filter((f) => Number.isFinite(f));
+  const low = tops.length > 0 && tops.every((f) => f < 0.1);
+  const bands = pickerBands(p, low ? (f: number) => fmt.num(f * 1000, 1) : ghz);
   const parts: string[] = [];
   // Turkish numbers have a decimal comma, so its bands are separated by a semicolon
-  if (bands.length) parts.push(`${bands.join(decimalComma() ? "; " : ", ")} GHz`);
+  if (bands.length) parts.push(`${bands.join(decimalComma() ? "; " : ", ")} ${low ? "MHz" : "GHz"}`);
   if (Number.isFinite(p.cells) && p.cells > 0) parts.push(t("examples.detail.cells", { cells: compact(p.cells) }));
   if (p.engine) parts.push(p.engine);
   return parts.join(" · ");

@@ -812,7 +812,8 @@ function layoutAt(ctx: Ctx, s: number): { items: Placed[]; w: number; h: number 
   return { items, w: u[2] - u[0], h: u[3] - u[1] };
 }
 
-const SCALES = [20, 10, 5, 2, 1, 0.5, 0.2, 0.1, 0.05, 0.02, 0.01];
+// ISO 5455 scales; the small ones (down to 1:1000) fit HF antennas, which are meters to tens of meters long
+const SCALES = [20, 10, 5, 2, 1, 0.5, 0.2, 0.1, 0.05, 0.02, 0.01, 0.005, 0.002, 0.001];
 
 export function scaleLabel(s: number): string {
   if (s >= 1) return `${Number(s.toPrecision(3))}:1`;

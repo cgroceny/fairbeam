@@ -21,6 +21,12 @@
    {"machine":"AMD Ryzen 9 7900X","host_cpu":"AMD Ryzen 9 7900X 12-Core Processor","engine":"cpu","threads":4,"timesteps":[17270],"solver_s":489.39,"mcells_s":49.1,"params":{},"grid":[91,91,168],"source":"docs/benchmarks/windows-7900x.json"},
    {"machine":"AMD Ryzen 9 7900X","host_cpu":"AMD Ryzen 9 7900X 12-Core Processor","engine":"cpu","threads":24,"all_threads":true,"timesteps":[17270],"solver_s":336.43,"mcells_s":71.4,"params":{},"grid":[91,91,168],"source":"docs/benchmarks/windows-7900x.json"}
   ],
+  "hf-dipole-14mhz": [
+   {"machine":"Apple M5 Pro","host_cpu":"Apple M5 Pro","engine":"cpu","threads":2,"timesteps":[9658],"solver_s":12.88,"mcells_s":155.1,"params":{},"grid":[57,55,66],"date":"2026-11-06","source":"public/projects/hf-dipole-14mhz.json"}
+  ],
+  "hf-dipole-7mhz": [
+   {"machine":"Apple M5 Pro","host_cpu":"Apple M5 Pro","engine":"cpu","threads":2,"timesteps":[9658],"solver_s":13.36,"mcells_s":149.6,"params":{},"grid":[57,55,66],"date":"2026-11-06","source":"public/projects/hf-dipole-7mhz.json"}
+  ],
   "inset-patch": [
    {"machine":"Apple M5 Pro","host_cpu":"Apple M5 Pro","engine":"cpu","threads":4,"timesteps":[9440],"solver_s":12.07,"mcells_s":136,"params":{},"grid":[59,67,44],"date":"2026-09-24","source":"public/projects/inset-patch.json"},
    {"machine":"AMD Ryzen 9 7900X","host_cpu":"AMD Ryzen 9 7900X 12-Core Processor","engine":"cpu","threads":4,"timesteps":[6966],"solver_s":45.73,"mcells_s":26.5,"params":{},"grid":[59,67,44],"source":"docs/benchmarks/windows-7900x.json"},

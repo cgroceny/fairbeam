@@ -201,7 +201,7 @@ try {
   assert.match(home, /const create = async \(e: Event\) => \{\s*e\.preventDefault\(\);/, 'create() handles the submit event');
   assert.match(rename, /<form ref=\{box\}[^>]*onSubmit=\{save\}>[\s\S]*?type="submit"/, 'Rename is a form: Enter saves');
   // the starter's name follows the interface language until the user types one
-  assert.match(home, /createEffect\(on\(\[template, online, locale\], \(\) => \{/, 'the default name is re-read when the language changes');
+  assert.match(home, /createEffect\(on\(\[template, online, locale, models\], \(\) => \{/, 'the default name is re-read when the language changes and when the design list loads');
   // every example has a source for "Open as new design…": a bundled Python model or, for the
   // 867 MHz designs, an example design shipped read-only into the models folder
   const index = JSON.parse(read('public/projects/index.json')).projects;
@@ -212,8 +212,9 @@ try {
   assert.deepEqual(pySet('BUNDLED_PROJECT_FILES'), new Set(files), 'the server accepts every bundled example as the project of a copy');
   const tauri = JSON.parse(read('src-tauri/tauri.conf.json'));
   assert.equal(tauri.bundle.resources['../examples/designs/*_867.design.json'], 'models/', 'the 867 MHz example designs ship into the models folder');
+  assert.equal(tauri.bundle.resources['../examples/designs/hf_*.design.json'], 'models/', 'the HF example designs ship into the models folder');
   assert.equal(tauri.bundle.resources['../python/models/*.py'], 'models/');
-  const shippedDesigns = readdirSync(`${root}examples/designs`).filter((f) => /_867\.design\.json$/.test(f)).map((f) => f.replace('.design.json', ''));
+  const shippedDesigns = readdirSync(`${root}examples/designs`).filter((f) => /(_867|^hf_.*)\.design\.json$/.test(f)).map((f) => f.replace('.design.json', ''));
   assert.deepEqual(new Set(shippedDesigns), pySet('BUNDLED_DESIGNS'), 'the shipped example designs are the read-only ones');
   assert.ok(!shippedDesigns.includes('ux_inset_patch_24'));
   const sources = new Map([

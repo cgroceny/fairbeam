@@ -55,7 +55,7 @@ class ExampleDesignTests(unittest.TestCase):
         from fairbeam.modelfiles import BUNDLED_DESIGNS
         from fairbeam.preview import handle
 
-        self.assertEqual(len(BUNDLED_DESIGNS), 5)
+        self.assertEqual(len(BUNDLED_DESIGNS), 7)
         for key in sorted(BUNDLED_DESIGNS):
             with self.subTest(model=key):
                 source = MODELS.parents[1] / "examples" / "designs" / f"{key}.design.json"

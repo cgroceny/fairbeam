@@ -13,6 +13,8 @@ export const BUNDLED_EXAMPLE_FILES = [
   // 867 MHz UAV designs (examples/designs/)
   "wideband-dipole-867.json", "meander-dipole-867.json", "sleeve-dipole-867.json",
   "collinear-867.json", "yagi-867.json",
+  // HF dipoles (examples/designs/)
+  "hf-dipole-7mhz.json", "hf-dipole-14mhz.json",
 ] as const;
 const bundledExamples = new Set<string>(BUNDLED_EXAMPLE_FILES);
 export const isExample = (entry: Pick<ProjectIndexEntry, "file">) => bundledExamples.has(entry.file);
