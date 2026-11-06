@@ -1,21 +1,48 @@
 # CI and website publishing
 
-PRs remain the qualification point. Application changes run the web checks and full EN/TR
-Windows browser suite, Python suite and one real coarse openEMS smoke. Native, dependency,
-script and unknown-path changes use the same full qualification. Documentation/site-only PRs run
-web/documentation/site checks without starting a Windows runner. Manual CI runs always use
-the full suite. The web checks finish before Windows starts, so a manifest or static-check
-failure does not consume a native runner at the same time.
+Finish edits and local checks before asking hosted CI to qualify the final commit:
+
+1. **While editing, keep the PR a draft.** Application drafts run the inexpensive web guards
+   (types, licenses, documents, legal/export contracts and documentation checks). They defer
+   the full check groups, builds, browsers, Python suite and solver. A green draft `gate` means
+   only those editing checks passed; it is not merge or release qualification.
+2. **Qualify the frozen final commit once.** Mark the PR ready for review, or, when the review
+   workflow requires a draft, run `ci` manually on its branch from Actions. Manual runs always
+   use the full suite. Application changes run full web checks, EN/TR Windows browser suites,
+   the Python suite and one real coarse openEMS smoke. Unknown paths remain in this full scope.
+   Changes to `.github/`, `scripts/ci-*` or `scripts/check-ci-*` always run full CI, even in a
+   draft, so the scheduling policy cannot hide its own validation.
+3. **Wait for that full run to succeed before merging the exact SHA.** Merging while its checks
+   are still running starts a second full main run because no successful evidence exists yet.
+   Do not use a lightweight draft result as approval to merge. If the source changes, qualify
+   the new source. New PR updates cancel superseded work for that PR; converting back to draft
+   cancels its automatic full run and returns to editing checks. A separately dispatched run
+   has its own concurrency group and should not be started alongside an automatic full run.
+
+Documentation/site-only PRs and pushes run web/documentation/site checks without a Windows
+runner. The web checks finish before Windows starts, so a manifest or static-check failure does
+not consume a native runner at the same time. There is no scheduled/nightly GitHub workflow.
 
 After a normal merge, the planner compares the final merge tree with the PR head tree and
-checks GitHub for a successful `ci.yml` PR run at that exact head. Only when both match are
-the duplicate jobs skipped. A direct push, changed merge tree, missing token, API failure,
-or missing successful run falls back to full qualification. A summary records the decision;
+checks GitHub for a successful `ci.yml` PR or manual run at that exact head, with successful
+`plan`, `web`, `windows` and `gate` jobs. A successful draft run with Windows skipped cannot
+be reused. Only when both source and full job evidence match are the duplicate jobs skipped.
+A direct application push, changed merge tree, missing token, API failure or missing full run
+falls back to qualification. A documentation-only push keeps its documentation scope.
+A summary records the decision;
 the final `gate` job fails when any required job fails or is cancelled.
 
 The openEMS download archive is cached by OS/architecture, Python ABI and upstream tag;
 installation still runs each time. npm uses its download cache, never shared node_modules.
 Failure artifacts and smoke bundles are retained for seven days.
+
+The full web job uses `node scripts/check-ci-web.mjs` for the existing designer, CST-compatible VBA macro, export and
+state-lifecycle groups. It expands the package scripts and executes each identical Node command
+once, preserving different arguments/flags and failing immediately on an error. The current
+groups have 103 command occurrences and 100 unique commands. This removes three repetitions,
+not any unique test. Standalone npm groups remain available. Use `--list` to inspect the plan;
+`node scripts/check-ci-web-plan.mjs` checks coverage and refusal behavior without running a browser
+or solver. No timeout, assertion, retry policy or cross-platform check is relaxed.
 
 ## Publish the website once per reviewed batch
 
@@ -88,7 +115,8 @@ preview build as though it were the tested production artifact. This publishes t
 not a desktop installer or updater release. Re-enable Git deployment explicitly if the team
 later chooses automatic publishing again.
 
-Before pushing, run `node scripts/check-ci-scope.mjs`. Workflow changes still require a full
+Before pushing, run `node scripts/check-ci-scope.mjs` and `node scripts/check-ci-web-plan.mjs`.
+Workflow changes still require a full
 remote qualification once; a green path-classification test alone is not enough.
 
 ## Deployment storage maintenance

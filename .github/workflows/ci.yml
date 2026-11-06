@@ -9,6 +9,7 @@ name: ci
 on:
   pull_request:
     branches: [main]
+    types: [opened, synchronize, reopened, ready_for_review, converted_to_draft]
   push:
     branches: [main]
   workflow_dispatch:
@@ -29,6 +30,8 @@ jobs:
       full: ${{ steps.scope.outputs.full }}
       native: ${{ steps.scope.outputs.native }}
       reuse: ${{ steps.scope.outputs.reuse }}
+      docs: ${{ steps.scope.outputs.docs }}
+      deferred: ${{ steps.scope.outputs.deferred }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -37,6 +40,7 @@ jobs:
         with:
           node-version: 22
       - run: node scripts/check-ci-scope.mjs
+      - run: node scripts/check-ci-web-plan.mjs
       - id: scope
         run: node scripts/ci-scope.mjs
         env:
@@ -80,13 +84,10 @@ jobs:
           python -m pip install --only-binary=:all: "numpy>=1.24"
           echo "FAIRBEAM_PYTHON=${{ steps.web-python.outputs.python-path }}" >> "$GITHUB_ENV"
       - if: needs.plan.outputs.full == 'true'
-        run: npm run -s check:designer
-      - if: needs.plan.outputs.full == 'true'
         run: npm run -s build
-      - if: needs.plan.outputs.full == 'true'
-        run: npm run -s check:cst
-      - if: needs.plan.outputs.full == 'true'
-        run: npm run -s check:exports
+      - name: Designer, CST, exports and state checks (each exact command once)
+        if: needs.plan.outputs.full == 'true'
+        run: node scripts/check-ci-web.mjs
       - name: Result export contracts
         run: |
           node --experimental-strip-types scripts/check-result-data.mjs
@@ -94,10 +95,8 @@ jobs:
           node --experimental-strip-types scripts/check-result-compare.mjs
       - run: npm run -s check:docs-translations
       - run: npm run -s check:docs-highlight
-      - if: needs.plan.outputs.full == 'true'
-        run: npm run -s check:state-lifecycle
       - name: Documentation and website build
-        if: needs.plan.outputs.full != 'true'
+        if: needs.plan.outputs.docs == 'true'
         run: npm run build:site
       - name: Manual browser regressions
         if: needs.plan.outputs.full == 'true'
@@ -296,6 +295,7 @@ jobs:
           WINDOWS: ${{ needs.windows.result }}
           REUSE: ${{ needs.plan.outputs.reuse }}
           FULL: ${{ needs.plan.outputs.full }}
+          DEFERRED: ${{ needs.plan.outputs.deferred }}
         run: |
           test "$PLAN" = success
           if [ "$REUSE" = true ]; then
@@ -303,4 +303,7 @@ jobs:
           else
             test "$WEB" = success
             if [ "$FULL" = true ]; then test "$WINDOWS" = success; else test "$WINDOWS" = skipped; fi
+          fi
+          if [ "$DEFERRED" = true ]; then
+            echo 'Draft editing checks passed. Full qualification is still required before merge/release.' >> "$GITHUB_STEP_SUMMARY"
           fi
