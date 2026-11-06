@@ -8,6 +8,7 @@ import { EventEmitter } from 'node:events';
 import { spawn } from 'node:child_process';
 import { channel } from 'node:diagnostics_channel';
 import { launchWithEvidence, observeLaunchOutput } from './scenarios/launch-evidence.mjs';
+import { browserIdentitySelfTest } from './check-browser-identity.mjs';
 
 function fixtureChannel() {
   const subscribers = new Set();
@@ -213,6 +214,7 @@ process.once('message', async () => {
 }
 
 export async function browserLaunchEvidenceSelfTest() {
+  await browserIdentitySelfTest();
   const root = await mkdtemp(join(tmpdir(), 'fairbeam-launch-evidence-test-'));
   const records = async directory => {
     const entries = await readdir(directory);
@@ -242,7 +244,13 @@ export async function browserLaunchEvidenceSelfTest() {
       assert.deepEqual(Object.keys(supplied).sort(), [...Object.keys(options), 'logger'].sort());
       for (const key of Object.keys(options)) assert.equal(supplied[key], options[key], `Preserve option ${key}`);
       const { read } = await records(directory);
-      assert.equal((await read('prelaunch.json')).phase, 'before-launch');
+      const prelaunch = await read('prelaunch.json');
+      assert.equal(prelaunch.phase, 'before-launch');
+      assert.equal(prelaunch.executableIdentity.scope, 'selected-executable-on-disk-before-launch');
+      assert.equal(prelaunch.executableIdentity.status, 'unavailable');
+      assert.equal(prelaunch.executableIdentity.sha256, null);
+      assert(Number.isSafeInteger(prelaunch.prelaunchPreparationMs) && prelaunch.prelaunchPreparationMs >= 0);
+      assert.deepEqual(Object.keys(prelaunch.hostedImage).sort(), ['imageOS', 'imageVersion', 'runnerArch', 'runnerOS']);
       events.push('launch');
       assert.equal(supplied.logger('puppeteer:protocol:SEND ►'), undefined);
       const log = supplied.logger('puppeteer:browsers:launcher');
@@ -281,6 +289,24 @@ export async function browserLaunchEvidenceSelfTest() {
     const success = await records(successDir);
     assert.equal((await success.read('launched.json')).phase, 'launched');
     await assert.rejects(success.read('failure.json'), { code: 'ENOENT' });
+
+    // An existing non-executable fixture exercises the actual prelaunch disk read
+    // without executing a browser or treating an absent version resource as fatal.
+    const fixturePath = join(root, 'metadata-only.bin');
+    await writeFile(fixturePath, 'abc');
+    const metadataDir = join(root, 'metadata');
+    assert.equal(await launchWithEvidence({ launch: async supplied => {
+      assert.equal(supplied.executablePath, fixturePath);
+      const { read } = await records(metadataDir);
+      const identity = (await read('prelaunch.json')).executableIdentity;
+      assert.equal(identity.status, 'recorded');
+      assert.equal(identity.stableDuringRead, true);
+      assert.equal(identity.bytes, 3);
+      assert.equal(identity.sha256, 'ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad');
+      assert.equal(identity.fileVersion, null);
+      assert.equal(identity.productVersion, null);
+      return browser;
+    } }, { ...options, executablePath: fixturePath }, { directory: metadataDir }), browser);
 
     const badDirectory = join(root, 'regular-file');
     await writeFile(badDirectory, 'not a directory');
