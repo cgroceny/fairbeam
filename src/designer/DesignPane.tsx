@@ -4,6 +4,7 @@
 // value field takes a number or an expression over the parameters and shows its value as you type;
 // the geometry preview in the 3D view follows the unsaved draft.
 import { createEffect, createSignal, createUniqueId, For, onCleanup, onMount, Show, type JSX } from "solid-js";
+import { fromTyped, shownUnit, toShown } from "../lib/displayUnits";
 import { Box, CircleAlert, CircleCheck, Cone, Info, MousePointer2, Scissors, Spline, Torus, CopyPlus, Cylinder, FlipHorizontal2, Globe, Hexagon, Plus, Trash2, Triangle, TriangleAlert } from "lucide-solid";
 import { openSimSettings } from "./simSettingsState";
 import { radioGroupKeys } from "../lib/a11y";
@@ -95,7 +96,10 @@ export function ExprField(props: {
   /** Keep dock cells on one line; expose validation on focus or hover. */
   inline?: boolean;
   placeholder?: string;
+  /** the canonical unit ("mm", "GHz") a plain number is converted from, when the label shows no unit */
+  convert?: string;
 }) {
+  const canonical = () => props.convert ?? props.unit;
   const r = () => tryEvaluate(props.value, names().names);
   const issue = () => props.issue ?? issues()[props.path];
   const bad = () => issue()?.severity === "error" || (!!r().error && !(props.optional && (props.value === "" || props.value === undefined)));
@@ -104,7 +108,7 @@ export function ExprField(props: {
   const messageId = `${createUniqueId()}-message`;
   // a problem reads as in the Checks list (checkTitle: translated, first word capitalised), so a field
   // and its check never differ in case ("Unknown name xs" in both)
-  const detail = () => (issue() && checkTitle(issue()!)) ?? (r().error ? (props.optional && (props.value === "" || props.value === undefined) ? "" : checkTitle({ code: "expr", message: r().error! })) : isNumber() ? "" : `= ${fmt(r().value!)}`);
+  const detail = () => (issue() && checkTitle(issue()!)) ?? (r().error ? (props.optional && (props.value === "" || props.value === undefined) ? "" : checkTitle({ code: "expr", message: r().error! })) : isNumber() ? "" : `= ${fmt(toShown(r().value!, canonical()))}`);
   const describedBy = () => [detail() ? messageId : null, props.describedBy].filter(Boolean).join(" ") || undefined;
   let input!: HTMLInputElement;
   // the text as typed while focused: "-0" stored as the number -0 would render as "0" and eat the sign
@@ -146,10 +150,10 @@ export function ExprField(props: {
   };
   return (
     <div class="dz-field" classList={{ "dz-compact": props.compact, "dz-inline": props.inline }} onKeyDown={onEscape}>
-      <label class="dz-label" for={id()}>{props.label}{props.unit ? <span class="dz-unit"> {props.unit}</span> : null}</label>
-      <input autocomplete="off" ref={input} id={id()} placeholder={props.placeholder} title={props.inline ? detail() || String(props.value ?? "") : undefined} class="rp-input dz-input mono" type="text" spellcheck={false} value={text() ?? props.value ?? ""}
+      <label class="dz-label" for={id()}>{props.label}{props.unit ? <span class="dz-unit"> {shownUnit(props.unit)}</span> : null}</label>
+      <input autocomplete="off" ref={input} id={id()} placeholder={props.placeholder} title={props.inline ? detail() || String(props.value ?? "") : undefined} class="rp-input dz-input mono" type="text" spellcheck={false} value={text() ?? (typeof props.value === "number" ? toShown(props.value, canonical()) : props.value) ?? ""}
         aria-invalid={bad()} aria-describedby={describedBy()} classList={{ "dz-input-warn": !bad() && issue()?.severity === "warning" }}
-        onFocus={onFocus} onInput={(e) => { setText(e.currentTarget.value); props.onChange(toExpr(e.currentTarget.value)); }} onBlur={onBlur}
+        onFocus={onFocus} onInput={(e) => { setText(e.currentTarget.value); props.onChange(fromTyped(e.currentTarget.value, canonical()) ?? toExpr(e.currentTarget.value)); }} onBlur={onBlur}
         onKeyDown={(e) => { if (e.key === "Enter" && offer()) e.preventDefault(); }} />
       <span id={messageId} class="dz-value" classList={{ "dz-bad": bad(), "dz-warn": !bad() && issue()?.severity === "warning" }}>{detail()}</span>
       <Show when={offering()}><For each={unknown().filter((key) => paramOfferOwners()[key] === offerEntry.id)}>{(key) =>
@@ -170,14 +174,14 @@ function VecField(props: { label: string; value: Vec3; path: string; onChange: (
   const groupMessageId = () => issues()[props.path] ? `${fieldId(props.path)}-message` : undefined;
   return (
     <fieldset class="dz-vec">
-      <legend class="dz-label">{props.label} <span class="dz-unit">mm</span></legend>
+      <legend class="dz-label">{props.label} <span class="dz-unit">{shownUnit("mm")}</span></legend>
       <Show when={props.picked !== false ? picked() : null}>{(point) =>
         <button type="button" class="linklike" title={t("props.fillVector", { point: point().label })}
           onClick={() => props.onPicked?.([...point().point] as Vec3)}>{t("props.usePicked")}</button>
       }</Show>
       <div class="dz-vec-row">
         <For each={[0, 1, 2]}>
-          {(k) => <ExprField compact label={props.axes?.[k] ?? AXES[k]} value={props.value[k]} path={`${props.path}[${k}]`} describedBy={groupMessageId()} onChange={(v) => props.onChange(k, v)} />}
+          {(k) => <ExprField compact convert="mm" label={props.axes?.[k] ?? AXES[k]} value={props.value[k]} path={`${props.path}[${k}]`} describedBy={groupMessageId()} onChange={(v) => props.onChange(k, v)} />}
         </For>
       </div>
       <GroupIssue path={props.path} />

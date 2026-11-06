@@ -1,6 +1,7 @@
 import { createEffect, createSignal, For, on, Show } from "solid-js";
 import { Copy, Download, Plus, Tag, Trash2, TriangleAlert, Upload, X } from "lucide-solid";
 import { ExprField } from "./DesignPane";
+import { kindOf, shownUnit, toShown } from "../lib/displayUnits";
 import { type Check, parseLimit } from "./checks";
 import { checkMessage, parameterErrorTitle } from "./checkText";
 import { paramKeyError } from "./expr";
@@ -237,7 +238,7 @@ export default function ParametersDock() {
             </div></td>
             <td><div class="param-expression">
               <span class="param-derived" title={t(p.expr !== undefined ? "params.derived" : "params.defaultValue")}>{p.expr !== undefined ? "=" : ""}</span>
-              <ExprField inline label={t("params.expression", { key: p.key })} value={p.expr ?? p.default}
+              <ExprField inline convert={p.unit} label={t("params.expression", { key: p.key })} value={p.expr ?? p.default}
                 path={path(p.expr !== undefined ? "expr" : "default")} describedBy="parameter-units-note" newParamAt={i()}
                 onChange={(v) => {
                   // Numeric spelling changes (32 -> 32.0) stay in the input, not the
@@ -249,7 +250,7 @@ export default function ParametersDock() {
                   }, "value");
                 }} />
             </div></td>
-            <td class="num mono" title={names().errors[p.key]}>{names().names[p.key] === undefined ? "—" : fmt(names().names[p.key])}</td>
+            <td class="num mono" title={names().errors[p.key]}>{names().names[p.key] === undefined ? "—" : kindOf(p.unit) ? `${fmt(toShown(names().names[p.key], p.unit))} ${shownUnit(p.unit)}` : fmt(names().names[p.key])}</td>
             <td>{text("unit", t("params.col.unit"))}</td>
             <Show when={ranges()}><Show when={p.expr === undefined} fallback={<td colSpan={2}><InactiveLimits p={p} /></td>}>
               <td><LimitField label={t("params.min", { key: p.key })} name="minimum" value={p.min ?? undefined} path={path("min")} onChange={(v) => limit("min", v)} /></td>

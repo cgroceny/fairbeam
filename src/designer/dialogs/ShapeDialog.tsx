@@ -11,6 +11,7 @@ import { draft, names } from "../store";
 import { isReservedName } from "../../lib/legacy";
 import { fmt, tryEvaluate } from "../expr";
 import { ExprField, SelectField } from "../DesignPane";
+import { shownUnit, toShown } from "../../lib/displayUnits";
 import { insertShape, NEW_METAL, newPartName, planeAxes, setGhost, setShapeRequest, shapeRequest, type ShapeRequest } from "../draw";
 import { discSegments, quickBundle } from "../geometry";
 import { setPreviewGeometry } from "../transforms";
@@ -444,9 +445,15 @@ function ShapeDialog(props: { req: ShapeRequest; onClose: () => void }) {
   );
 }
 
-/** One line under the dialog: the evaluated size (numbers with the locale's decimal separator). */
+/** One line under the dialog: the evaluated size (numbers with the locale's decimal separator), in
+ * the chosen length unit (the texts say mm, the unit the design stores). */
 function summary(q: DesignPrimitive, val: (e: Expr | undefined) => number | undefined, L: (a: Axis, upper?: boolean) => string): string {
-  const num = (v: number) => (decimalComma() ? fmt(v).replace(".", ",") : fmt(v));
+  const unit = shownUnit("mm") ?? "mm";
+  return unit === "mm" ? summaryMm(q, val, L) : summaryMm(q, val, L).replace(/\bmm\b/g, unit);
+}
+
+function summaryMm(q: DesignPrimitive, val: (e: Expr | undefined) => number | undefined, L: (a: Axis, upper?: boolean) => string): string {
+  const num = (v: number) => { const x = toShown(v, "mm"); return decimalComma() ? fmt(x).replace(".", ",") : fmt(x); };
   const f = (v: number | undefined) => (v === undefined ? "?" : num(v));
   const span = (lo: number | undefined, hi: number | undefined) => (lo === undefined || hi === undefined ? "?" : num(hi - lo));
   if (q.kind === "box") {

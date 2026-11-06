@@ -4,6 +4,7 @@
 // in DesignPane.tsx chooses between these and the shape inspectors.
 import { createSignal, For, Show } from "solid-js";
 import { ExprField } from "./DesignPane";
+import { shownUnit, toShown } from "../lib/displayUnits";
 import { namesIn } from "./expr";
 import { shown as fmtValue } from "./displayNumber.ts";
 import { draft, edit, fieldId, focusPath, names } from "./store";
@@ -48,7 +49,7 @@ export function ParamInspector(props: { i: number }) {
   );
   const evaluated = () => {
     const v = names().names[p().key];
-    return v === undefined ? "—" : fmtValue(v);
+    return v === undefined ? "—" : fmtValue(toShown(v, p().unit));
   };
   const used = () => shapesUsing(p().key);
   return (
@@ -83,7 +84,7 @@ export function ParamInspector(props: { i: number }) {
         }} />
       <dl class="dz-facts">
         <dt>{t("params.col.evaluated")}</dt>
-        <dd class="mono" title={names().errors[p().key]}>{evaluated()}{p().unit ? ` ${p().unit}` : ""}</dd>
+        <dd class="mono" title={names().errors[p().key]}>{evaluated()}{p().unit ? ` ${shownUnit(p().unit)}` : ""}</dd>
       </dl>
       {text("unit", t("params.col.unit"))}
       {text("description", t("params.col.description"))}

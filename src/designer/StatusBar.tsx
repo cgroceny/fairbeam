@@ -4,7 +4,9 @@
 // important items give way first (container queries in designer-sim.css), so nothing is clipped.
 // After a failed server preview the mesh numbers are labelled as the last successful ones and the
 // failure (with Retry) stays visible at every width until a preview of the current draft succeeds.
-import { onCleanup, onMount, Show } from "solid-js";
+import { createSignal, For, onCleanup, onMount, Show } from "solid-js";
+import { Portal } from "solid-js/web";
+import { displayUnits, FREQUENCY_UNITS, LENGTH_UNITS, setDisplayUnits, type FrequencyUnit, type LengthUnit } from "../lib/displayUnits";
 import { CircleAlert, CircleCheck, Clock, Info, LoaderCircle, LocateFixed, RotateCw, TriangleAlert, X } from "lucide-solid";
 import { num } from "../lib/format";
 import { viewCursor } from "../state";
@@ -102,7 +104,7 @@ export default function StatusBar() {
           WCS <span class="mono">{t("status.wcs.global")}</span>
         </span>
       </Show>
-      <span class="sb-item sb-t1" title={t("status.units.title")}>mm · GHz</span>
+      <UnitsMenu />
       <button class="sb-item sb-btn sb-mesh" aria-pressed={meshView()} onClick={toggleMeshView} data-fresh={fresh()} title={meshTitle()}>
         <span class="mono sb-text">{meshText()}</span>
       </button>
@@ -153,5 +155,48 @@ export default function StatusBar() {
         <span class={`sb-dot sb-dot-${serverState()}`} aria-hidden="true" /> <span class="sb-t3">{server()}</span>
       </button>
     </footer>
+  );
+}
+
+/** "mm · GHz": the units lengths and frequencies are shown and typed in (src/lib/displayUnits.ts).
+ * The design itself always stores mm and GHz. */
+function UnitsMenu() {
+  const [open, setOpen] = createSignal(false);
+  let menu: HTMLDivElement | undefined;
+  // in a portal, fixed: the status bar clips its overflow and is a container (a containing block)
+  const [at, setAt] = createSignal({ left: 0, bottom: 0 });
+  const toggle = () => {
+    const r = button?.getBoundingClientRect();
+    if (r) setAt({ left: Math.max(8, Math.min(r.left, window.innerWidth - 248)), bottom: window.innerHeight - r.top + 4 });
+    setOpen(!open());
+  };
+  let box: HTMLSpanElement | undefined;
+  let button: HTMLButtonElement | undefined;
+  const close = (focus = false) => { setOpen(false); if (focus) button?.focus(); };
+  const onDocDown = (e: PointerEvent) => { if (open() && box && !box.contains(e.target as Node) && !menu?.contains(e.target as Node)) close(); };
+  document.addEventListener("pointerdown", onDocDown);
+  onCleanup(() => document.removeEventListener("pointerdown", onDocDown));
+  const label = () => `${displayUnits().length} · ${displayUnits().frequency}`;
+  const item = (text: string, checked: () => boolean, pick: () => void) => (
+    <button type="button" role="menuitemradio" class="sb-units-item" aria-checked={checked()} onClick={() => { pick(); close(true); }}>{text}</button>
+  );
+  return (
+    <span class="sb-units" ref={box} onKeyDown={(e) => { if (e.key === "Escape" && open()) { e.stopPropagation(); close(true); } }}>
+      <button ref={button} type="button" class="sb-item sb-btn mono" aria-haspopup="menu" aria-expanded={open()}
+        title={t("status.units.title", { length: displayUnits().length, frequency: displayUnits().frequency })} onClick={toggle}>{label()}</button>
+      <Show when={open()}><Portal>
+        <div class="sb-units-menu" ref={menu} onKeyDown={(e) => { if (e.key === "Escape") { e.stopPropagation(); close(true); } }} role="menu" aria-label={t("status.units.menu")} style={{ left: `${at().left}px`, bottom: `${at().bottom}px` }}>
+          <div class="sb-units-group" role="group" aria-label={t("status.units.length")}>
+            <span class="sb-units-head">{t("status.units.length")}</span>
+            <For each={Object.keys(LENGTH_UNITS) as LengthUnit[]}>{(u) => item(u, () => displayUnits().length === u, () => setDisplayUnits({ length: u }))}</For>
+          </div>
+          <div class="sb-units-group" role="group" aria-label={t("status.units.frequency")}>
+            <span class="sb-units-head">{t("status.units.frequency")}</span>
+            <For each={Object.keys(FREQUENCY_UNITS) as FrequencyUnit[]}>{(u) => item(u, () => displayUnits().frequency === u, () => setDisplayUnits({ frequency: u }))}</For>
+          </div>
+          <p class="sb-units-note">{t("status.units.note")}</p>
+        </div>
+      </Portal></Show>
+    </span>
   );
 }
