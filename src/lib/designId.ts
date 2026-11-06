@@ -12,6 +12,7 @@ export const BUNDLED_EXAMPLE_IDS = [
   "branchline_coupler", "dipole", "helix_axial", "inset_patch", "lowpass_stepped", "microstrip_line", "minkowski_patch",
   "patch_antenna", "patch_array_2x1", "patch_array_4x1", "pyramidal_horn", "sierpinski_monopole", "wilkinson_divider",
   "collinear_867", "meander_dipole_867", "sleeve_dipole_867", "wideband_dipole_867", "yagi_867",
+  "hf_dipole_7mhz", "hf_dipole_14mhz",
 ] as const;
 const bundledIds = new Set<string>(BUNDLED_EXAMPLE_IDS);
 
@@ -23,17 +24,19 @@ export function suggestDesignId(name: string): string {
 }
 
 /** The file id for a new design called `name`: its ASCII form, or, when that is a bundled example's
- * id, the first free "<id>_2", "<id>_3"… ("Patch antenna" becomes patch_antenna_2). `reserved` is
- * the id the name asked for when it had to be changed. An id that an existing design or model
- * already uses, or a Windows device name, is left as it is: designIdError says so. */
-export function freeDesignId(name: string, existingIds: readonly string[]): { id: string; reserved: string | null } {
+ * id or an id an existing design or model already uses, the first free "<id>_2", "<id>_3"…
+ * ("Patch antenna" becomes patch_antenna_2, a second "Empty design" empty_design_2). `reserved` is
+ * the id the name asked for when it had to be changed, `taken` says why. A Windows device name is
+ * left as it is: designIdError says so. */
+export function freeDesignId(name: string, existingIds: readonly string[]): { id: string; reserved: string | null; taken?: boolean } {
   const base = suggestDesignId(name);
-  if (!DESIGN_ID_RE.test(base) || !bundledIds.has(base)) return { id: base, reserved: null };
   const taken = new Set(existingIds);
+  if (!DESIGN_ID_RE.test(base) || (!bundledIds.has(base) && !taken.has(base))) return { id: base, reserved: null };
+  const inUse = !bundledIds.has(base);
   for (let n = 2; n < 1000; n++) {
     const tail = `_${n}`;
     const id = `${base.slice(0, 41 - tail.length)}${tail}`;
-    if (!taken.has(id) && !isReservedDesignId(id)) return { id, reserved: base };
+    if (!taken.has(id) && !isReservedDesignId(id)) return inUse ? { id, reserved: base, taken: true } : { id, reserved: base };
   }
   return { id: base, reserved: null };
 }
@@ -48,7 +51,8 @@ export function designIdError(id: string, existingIds: readonly string[]): strin
 
 /** The line under a Name field: the file the design is saved as, and why its id has a suffix. */
 export function designFileHint(name: string, existingIds: readonly string[]): string {
-  const { id, reserved } = freeDesignId(name, existingIds);
+  const { id, reserved, taken } = freeDesignId(name, existingIds);
   const file = `${id}.design.json`;
-  return reserved ? t("designId.fileReserved", { file, id: reserved }) : t("designId.file", { file });
+  if (!reserved) return t("designId.file", { file });
+  return t(taken ? "designId.fileTaken" : "designId.fileReserved", { file, id: reserved });
 }

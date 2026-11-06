@@ -239,11 +239,13 @@ async function copyResources(root) {
     { prefix: 'python/models/', destination: 'models', extension: '.py' },
     // the 867 MHz example designs: read-only sources of their examples (tauri.conf.json resources)
     { prefix: 'examples/designs/', destination: 'models', extension: '_867.design.json' },
+    // the HF example designs (tauri.conf.json resources: examples/designs/hf_*.design.json)
+    { prefix: 'examples/designs/', destination: 'models', extension: '.design.json', include: /^examples\/designs\/hf_[^/]+$/ },
     { prefix: 'python/templates/', destination: 'templates', extension: '.py' },
     { prefix: 'public/projects/', destination: 'projects' },
   ];
   for (const spec of specs) {
-    const matches = tracked.filter((file) => file.startsWith(spec.prefix) && (!spec.extension || file.endsWith(spec.extension)));
+    const matches = tracked.filter((file) => file.startsWith(spec.prefix) && (!spec.extension || file.endsWith(spec.extension)) && (!spec.include || spec.include.test(file)));
     for (const file of matches) {
       const tail = file.slice(spec.prefix.length).split('/').join(sep);
       const destination = join(root, spec.destination, tail);

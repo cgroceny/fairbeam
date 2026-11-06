@@ -84,6 +84,44 @@
       ]
     },
     {
+      "file": "hf-dipole-14mhz.json",
+      "name": "HF strip dipole (14.2 MHz)",
+      "model": "hf-dipole-14mhz",
+      "created": "2026-11-06T10:42:00+0300",
+      "simulated": true,
+      "bands": [
+        0.014
+      ],
+      "cells": 196560,
+      "band_ranges": [
+        {
+          "lo": 0.0135,
+          "hi": 0.0153,
+          "edge_lo": false,
+          "edge_hi": false
+        }
+      ]
+    },
+    {
+      "file": "hf-dipole-7mhz.json",
+      "name": "HF strip dipole (7.1 MHz)",
+      "model": "hf-dipole-7mhz",
+      "created": "2026-11-06T10:41:47+0300",
+      "simulated": true,
+      "bands": [
+        0.007
+      ],
+      "cells": 196560,
+      "band_ranges": [
+        {
+          "lo": 0.0067,
+          "hi": 0.0077,
+          "edge_lo": false,
+          "edge_hi": false
+        }
+      ]
+    },
+    {
       "file": "inset-patch.json",
       "name": "Inset-fed patch (FR4, 2.4 GHz)",
       "model": "inset-patch",

@@ -52,6 +52,7 @@
       "../python/fairbeam_elmer.py": "python/fairbeam_elmer.py",
       "../python/models/*.py": "models/",
       "../examples/designs/*_867.design.json": "models/",
+      "../examples/designs/hf_*.design.json": "models/",
       "../python/templates/*.py": "templates/",
       "../public/projects/": "projects/",
       "../runtime/pins.json": "runtime/pins.json",

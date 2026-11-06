@@ -1,0 +1,120 @@
+{
+  "schema": "fairbeam.design/1",
+  "model": {
+    "id": "hf-dipole-14mhz",
+    "name": "HF strip dipole (14.2 MHz)",
+    "description": "A center-fed half-wave dipole for the 20 m amateur band: a thin PEC strip of length L and width w in free space, with a lumped port across the center gap g. Lengths are in mm and frequencies in GHz, so f0 = 0.0142 is 14.2 MHz. The mesh is automatic, so L, w and g can be changed. The strip stands in for a wire: this is a working HF example, not a measured antenna."
+  },
+  "params": [
+    {
+      "key": "f0",
+      "default": 0.014199999999999999,
+      "label": "Design frequency",
+      "unit": "GHz"
+    },
+    {
+      "key": "f_low",
+      "default": 0.01,
+      "unit": "GHz"
+    },
+    {
+      "key": "f_high",
+      "default": 0.018,
+      "unit": "GHz"
+    },
+    {
+      "key": "L",
+      "default": 9802.816901408452,
+      "unit": "mm"
+    },
+    {
+      "key": "w",
+      "default": 169.01408450704227,
+      "unit": "mm"
+    },
+    {
+      "key": "g",
+      "default": 169.01408450704227,
+      "unit": "mm"
+    }
+  ],
+  "simulation": {
+    "f_min": "f_low",
+    "f_max": "f_high",
+    "boundaries": "PML_8",
+    "end_criteria_db": -50,
+    "max_timesteps": 60000
+  },
+  "materials": [
+    {
+      "name": "copper",
+      "kind": "metal",
+      "library": "pec"
+    }
+  ],
+  "parts": [
+    {
+      "name": "arms",
+      "material": "copper",
+      "label": "Dipole arms",
+      "primitives": [
+        {
+          "kind": "box",
+          "start": [
+            "-w/2",
+            0,
+            "g/2"
+          ],
+          "stop": [
+            "w/2",
+            0,
+            "L/2"
+          ]
+        },
+        {
+          "kind": "box",
+          "start": [
+            "-w/2",
+            0,
+            "-L/2"
+          ],
+          "stop": [
+            "w/2",
+            0,
+            "-g/2"
+          ]
+        }
+      ]
+    }
+  ],
+  "ports": [
+    {
+      "type": "lumped",
+      "number": 1,
+      "R": 73.0,
+      "start": [
+        "-w/2",
+        0,
+        "-g/2"
+      ],
+      "stop": [
+        "w/2",
+        0,
+        "g/2"
+      ],
+      "direction": "z"
+    }
+  ],
+  "resistors": [],
+  "mesh": {
+    "mode": "design",
+    "overrides": {},
+    "refine_features": false
+  },
+  "far_field": {
+    "enabled": true,
+    "frequencies": [
+      "f0"
+    ]
+  }
+}

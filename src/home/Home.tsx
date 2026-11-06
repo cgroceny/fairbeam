@@ -86,7 +86,8 @@ export default function Home() {
     while (base && models().some((m) => m.key === freeDesignId(n, modelKeys()).id) && k < 100) n = `${base} ${k++}`;
     return n;
   };
-  createEffect(on([template, online, locale], () => {
+  // models too: the list loads after the server is online, and the name must then skip the taken ones
+  createEffect(on([template, online, locale, models], () => {
     if (!online() || (name().trim() && name() !== autoName())) return;
     const n = starterName(template());
     setAutoName(n);

@@ -1,11 +1,11 @@
 # Örnek tasarımlar
 
 Tasarımcı dosyaları (`<name>.design.json`; biçim için [docs/DESIGNER.md](../../docs/DESIGNER.md#files)).
-`*_867` tasarımları, uygulamadaki 867 MHz örneklerinin kaynaklarıdır. Masaüstü uygulaması bunları
+`*_867` ve `hf_*` tasarımları, uygulamadaki 867 MHz ve HF örneklerinin kaynaklarıdır. Masaüstü uygulaması bunları
 çalışma klasörünün modeller klasörüne salt okunur olarak kurar. Bu örneklerden birinde
 **Yeni tasarım olarak aç…** seçildiğinde Ana ekran › Tasarımlarınız altında düzenlenebilir bir
 kopya oluşturulur. Depodan çalışıyorsanız düzenlemek için dosyayı yeni bir adla `python/models/`
-altına kopyalayın (`*_867` adları örneklere ayrılmıştır). Diğer modeller gibi komut satırından da çalıştırabilirsiniz:
+altına kopyalayın (`*_867` ve `hf_*` adları örneklere ayrılmıştır). Diğer modeller gibi komut satırından da çalıştırabilirsiniz:
 
 ```bash
 fairbeam run examples/designs/wideband_dipole_867.design.json --engine gpu --out /tmp/wideband
@@ -792,3 +792,16 @@ kazancı kadar (8,2 dB) düşürmelidir. Alış yönünde 8,4 dB'nin tamamı kor
 - **Kayıplar.** Metal kayıpsızdır (PEC). Alüminyum 867 MHz'de verimde yüzde birkaç ondalık puan kaybettirir.
 - **Çevre.** Antenin önünde birkaç dalga boyu içindeki binalar, araçlar ve insanlar örüntüyü
   değiştirir, sinyali yansıtır. Anteni yüksek ve çevresi açık bir yere monte edin.
+
+## HF şerit dipoller, 7,1 ve 14,2 MHz (`hf_dipole_7mhz.design.json`, `hf_dipole_14mhz.design.json`)
+
+40 m ve 20 m amatör bantları için boş uzayda iki merkezden beslemeli yarım dalga dipol. Her biri
+`L` uzunluğunda ve `w` genişliğinde ince bir PEC şerittir; ortadaki `g` aralığına toplu bir port
+bağlanır. 14,2 MHz'lik dipol, 7,1 MHz'lik dipolün yarı ölçekli kopyasıdır. Bir HF bandının standart
+birimlerle nasıl girildiğini gösterirler: uzunluklar mm, frekanslar GHz cinsindendir; yani
+`f0 = 0.0071` 7,1 MHz'tir ve `L` yaklaşık 19,6 m'dir (19606 mm). Sınırlar PML (8 hücre), mesh
+otomatiktir; bu yüzden `L`, `w` ve `g` değiştirilebilir.
+
+Bir dizüstü bilgisayar CPU'sunda her biri yaklaşık 10–15 saniyede çalışır (yaklaşık 200 000 hücre,
+−50 dB'ye kadar 9658 zaman adımı). Şerit bir telin yerini tutar: bunlar ölçülmüş antenler değil,
+çalışan HF örnekleridir; mesh yakınsaması ya da başka bir çözücüyle karşılaştırma iddia edilmez.

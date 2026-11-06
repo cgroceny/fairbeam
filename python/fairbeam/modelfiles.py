@@ -30,7 +30,8 @@ ID_RE = re.compile(r"^[a-z][a-z0-9_]{1,40}$")
 RESERVED_ID_RE = re.compile(r"^(con|prn|aux|nul|com[0-9]|lpt[0-9])$")
 RESERVED_ID_MSG = "a name Windows reserves for devices (con, prn, aux, nul, com0–9, lpt0–9)"
 # The sources of the bundled examples, copied into the workspace's models folder: Python models
-# (python/models/<id>.py) and the 867 MHz example designs (examples/designs/<id>.design.json).
+# (python/models/<id>.py) and the example designs (examples/designs/<id>.design.json: the 867 MHz
+# UAV antennas and the HF dipoles).
 BUNDLED_MODELS = frozenset({
     "branchline_coupler", "dipole", "helix_axial", "inset_patch", "lowpass_stepped",
     "microstrip_line", "minkowski_patch", "patch_antenna", "patch_array_2x1",
@@ -38,6 +39,7 @@ BUNDLED_MODELS = frozenset({
 })
 BUNDLED_DESIGNS = frozenset({
     "collinear_867", "meander_dipole_867", "sleeve_dipole_867", "wideband_dipole_867", "yagi_867",
+    "hf_dipole_7mhz", "hf_dipole_14mhz",
 })
 # Every id a bundled example uses (src/lib/designId.ts BUNDLED_EXAMPLE_IDS mirrors it). A model and a
 # design share one key space, so no new file of either kind may take one, whether or not the
@@ -52,6 +54,7 @@ BUNDLED_PROJECT_FILES = frozenset({
     "wilkinson-divider.json",
     "collinear-867.json", "meander-dipole-867.json", "sleeve-dipole-867.json",
     "wideband-dipole-867.json", "yagi-867.json",
+    "hf-dipole-7mhz.json", "hf-dipole-14mhz.json",
 })
 MAX_SOURCE = 256 * 1024
 # a design file is data, not code: one with mesh solids from a scan (a micro-CT tooth: about 30 000 triangles) is a few MB

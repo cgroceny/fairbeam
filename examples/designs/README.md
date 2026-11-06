@@ -1,10 +1,10 @@
 # Example designs
 
 Designer files (`<name>.design.json`, format in [docs/DESIGNER.md](../../docs/DESIGNER.md#files)).
-The `*_867` designs are the sources of the app's 867 MHz examples: the desktop app installs them,
+The `*_867` and `hf_*` designs are the sources of the app's 867 MHz and HF examples: the desktop app installs them,
 read-only, in the workspace's models folder, and **Open as new design…** on one of those examples
 makes an editable copy under Start › Your designs. In a checkout, copy one under a new file name into
-`python/models/` to edit it (the `*_867` names are reserved for the examples). They also run from the
+`python/models/` to edit it (the `*_867` and `hf_*` names are reserved for the examples). They also run from the
 command line like any model:
 
 ```bash
@@ -794,3 +794,15 @@ Yagi's gain over a dipole (8.2 dB) to stay within it. The receive direction keep
 - **Losses.** The metal is lossless (PEC). Aluminum costs a few tenths of a per cent at 867 MHz.
 - **Surroundings.** Buildings, vehicles and people within a few wavelengths in front of the
   antenna change the pattern and reflect the signal. Mount it high and clear.
+
+## HF strip dipoles, 7.1 and 14.2 MHz (`hf_dipole_7mhz.design.json`, `hf_dipole_14mhz.design.json`)
+
+Two center-fed half-wave dipoles for the 40 m and 20 m amateur bands, in free space. Each is a thin
+PEC strip of length `L` and width `w` with a lumped port across the center gap `g`; the 14.2 MHz one
+is the 7.1 MHz one scaled by one half. They show how an HF band is entered with the canonical units:
+lengths in mm and frequencies in GHz, so `f0 = 0.0071` is 7.1 MHz and `L` is about 19.6 m (19606 mm).
+The boundaries are PML (8 cells) and the mesh is automatic, so `L`, `w` and `g` can be changed.
+
+On a laptop CPU each runs in about 10 to 15 s (about 200 000 cells, 9658 timesteps to −50 dB). The
+strip stands in for a wire: these are working HF examples, not measured antennas, and no mesh
+convergence or comparison with another solver is claimed.
