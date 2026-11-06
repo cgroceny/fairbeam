@@ -7,6 +7,7 @@ import { antennaDraft } from './antennaDraft';
 import { createDesign } from '../designer/store';
 import { models, serverState } from '../runner/store';
 import { freeDesignId } from '../lib/designId';
+import NecTransferPanel from './NecTransfer';
 
 // Local Start-screen extension: incumbent controls/colors, one native disclosure,
 // inputs beside estimates on desktop and stacked on narrow screens. No solver launch.
@@ -79,5 +80,6 @@ export default function AntennaCalculator() {
     </div>
     <p class="note">{t(`antennaCalc.draft.${kind()}`)} {serverState() !== 'online' ? t('antennaCalc.needsServer') : ''}</p>
     <p class="note" role="status">{message()}</p>
+    <NecTransferPanel dipole={kind()==='dipole' && dimensions() ? {lengthMm:dimensions()!.lengthMm,frequencyGHz:input().frequencyGHz} : undefined} />
   </details>;
 }

@@ -27,6 +27,59 @@ model fields are rejected. NEC-2 itself has other formulations; this adapter's
 scope does not describe all NEC capabilities. In particular, Fairbeam's existing
 strip dipole example is not an equivalent round-wire model.
 
+## Import and edit a numeric deck
+
+On Start, open **Antenna starting dimensions → NEC wire model**. Create a
+separate round-wire dipole from the estimated length, or select a UTF-8 NEC
+file. Set the reference resistance explicitly; NEC cards do not store the S11
+reference. The run server validates the geometry without starting a solver,
+creating a Design, or writing to the workspace.
+
+Review the stored frequencies, source wire/segment and all wire endpoints.
+The table shows 25 wires per page; exports always contain every wire. **Edit
+wire** changes endpoints, radius or segment count and rechecks the whole model.
+Invalid edits retain the last accepted model. Input changes above the table
+apply to the next creation/import, not to an already stored model.
+
+Download the NEC deck, wire-model JSON or complete transfer record before
+leaving Start; this panel is not a saved project. The JSON model can be passed
+to `nec-run`. A transfer record includes the exported deck hash and assumptions,
+and, for an unedited import, the original UTF-8 source hash and card counts.
+After an edit, the record describes the new geometry, not the original source.
+No import, edit or export implies a successful simulation.
+
+The importer accepts at most 1 MiB, 4096 lines and 512 characters per card.
+Fields must be explicit whitespace-separated numbers. Supported cards are
+`CM/CE`, `GW`, `GE 0`, `GN -1`, `EK 0`, optional `PT -1`, one real 1 V
+`EX 0` source, linear `FR 0` requests followed by `XQ 0` or the adapter's
+whole-sphere `RP` request, and final `EN`. Both free space and the extended
+thin-wire kernel must be explicit. Every frequency request must use the same
+pattern mode. Units convert from m/MHz to mm/GHz. Deck export retains 12
+significant digits; it does not promise a lossless float64 round trip.
+
+Unknown cards, omitted fields, ground, loads, kernel changes, expressions,
+includes and changes of the model between frequency requests are rejected.
+This is a bounded numeric transfer format, not a general 4nec2 interpreter.
+The physical admission limits above still apply.
+
+The CLI also captures the original source bytes in a fresh directory:
+
+```sh
+python -m fairbeam nec-import antenna.nec --reference-ohm 50 --out imported-wire
+```
+
+It validates before creating the directory, never overwrites an existing
+directory, and writes `source.nec`, `model.json`, `model.nec`, `manifest.json`
+and `import.json`. It does not download or run NEC2++.
+
+`POST /api/nec/transfer` accepts exactly one of `{source, reference_ohm}`,
+`{model, pattern}`, or `{dipole: {length_mm, radius_mm, segments,
+frequency_ghz, reference_ohm}}`. It returns the validated model, pattern flag,
+deck, export manifest and import report (null for newly created or edited
+models). Invalid models return 422. The existing local-host/origin checks and
+1 MiB JSON request limit apply; JSON escaping can make this limit smaller than
+the CLI's file limit.
+
 ## Run
 
 From the repository's configured Python environment:

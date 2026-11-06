@@ -450,6 +450,11 @@ def optimize_dipole(length_bounds: tuple[float, float], radius_mm: float, segmen
 
 def add_commands(sub):
     """CLI-only opt-in entry points; no solver download or launch during import."""
+    p = sub.add_parser("nec-import", help="import an explicit numeric free-space PEC wire deck without solving")
+    p.add_argument("source", type=Path)
+    p.add_argument("--reference-ohm", type=float, default=50, help="S11 reference, not stored in NEC cards")
+    p.add_argument("--out", type=Path, required=True, help="new capture directory")
+    p.set_defaults(func=_cmd_import)
     p = sub.add_parser("nec-dipole", help="export or solve a free-space PEC thin-wire dipole with NEC2++")
     p.add_argument("--length-mm", type=float, required=True)
     p.add_argument("--radius-mm", type=float, required=True)
@@ -501,6 +506,11 @@ def _cmd_dipole(args):
     model = dipole(args.length_mm, args.radius_mm, args.segments, args.frequency_ghz, args.reference_ohm)
     return _cli_call(lambda: solve(model, args.out, args.solver, timeout=args.timeout, pattern=args.pattern)
                      if args.solver else export(model, args.out, pattern=args.pattern))
+
+
+def _cmd_import(args):
+    from .nec_import import import_file
+    return _cli_call(lambda: import_file(args.source, args.out, reference_ohm=args.reference_ohm))
 
 
 def _cmd_run(args):

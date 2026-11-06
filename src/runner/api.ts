@@ -8,6 +8,12 @@ import type { TemplateKey } from "../designer/templates";
 import { t } from "../i18n/index.ts";
 import { serverMessage } from "../lib/serverMessages";
 
+export interface NecWire { tag: number; segments: number; start_mm: number[]; end_mm: number[]; radius_mm: number }
+export interface NecModel { schema: 'fairbeam.nec/1'; name: string; wires: NecWire[]; feed: { tag: number; segment: number }; frequency_ghz: number[]; reference_ohm: number }
+export interface NecTransfer { model: NecModel; pattern: boolean; deck: string; manifest: Record<string, unknown>; report: Record<string, unknown> | null }
+export type NecTransferInput = { source: string; reference_ohm: number } | { model: NecModel; pattern: boolean }
+  | { dipole: { length_mm: number; radius_mm: number; segments: number; frequency_ghz: number[]; reference_ohm: number } };
+
 /** The optional managed Elmer package (python/fairbeam/elmer_runtime.py). */
 export interface ElmerRuntime {
   supported: boolean; installed: boolean; path: string; version: string; size: number; license: string; source: string;
@@ -621,6 +627,7 @@ export const api = {
    * and the design checks */
   importCst: (body: { source: string; filename?: string; name?: string }) =>
     call<{ design: Design; report: CstImportReport; checks: DesignCheck[] }>("POST", "/import/cst", body),
+  necTransfer: (body: NecTransferInput, signal?: AbortSignal) => call<NecTransfer>('POST', '/nec/transfer', body, signal),
   design: (id: string) => call<DesignFile>("GET", `/designs/${encodeURIComponent(id)}`),
   saveDesign: (id: string, design: Design, baseHash: string, scope?: string) =>
     call<{ id: string; hash: string; backup: string | null; backup_scope?: string; validation: Validation }>("PUT", `/designs/${encodeURIComponent(id)}`, { design, base_hash: baseHash, backup_scope: scope }),
