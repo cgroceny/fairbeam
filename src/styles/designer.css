@@ -163,6 +163,7 @@ textarea.dz-autogrow { resize: none; overflow-y: auto; min-height: 0; max-height
 .antenna-calculator > summary { cursor: pointer; font-weight: 600; }
 .antenna-calculator > summary:focus-visible { outline: 2px solid var(--al-focus); outline-offset: 4px; }
 .antenna-calculator > p, .antenna-calc-grid { margin-block: var(--al-space-3); }
+.antenna-calc-actions { display: flex; flex-wrap: wrap; gap: var(--al-space-2); }
 .antenna-calc-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: var(--al-space-5); }
 .antenna-calc-inputs { display: grid; gap: var(--al-space-3); align-content: start; }
 .antenna-calc-inputs label { display: grid; gap: var(--al-space-1); }

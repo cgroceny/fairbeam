@@ -6,6 +6,21 @@ or rectangular patch, enter frequency in GHz and read dimensions in mm.
 Export estimate (JSON) retains the inputs, dimensions, units and assumptions.
 The file is an estimate record, not a runnable Design.
 
+With the run server connected, **Create editable design** opens a new Design from
+the current inputs. An existing unsaved design still gets the normal Save / Don't
+save / Cancel prompt. Creation starts a geometry preview, not a simulation. The
+frequency and dimensions remain editable parameters; repeated creation chooses
+a free file name rather than replacing an existing project.
+
+Dipole and monopole drafts use PEC strips. Their width and feed gap start at
+`wavelength / 125`; the estimated length includes the gap. The monopole has a
+finite square ground `0.8 * wavelength` wide, so it does not reproduce the
+calculator's infinite-ground assumption. Patch drafts have a lossless substrate,
+a finite PEC ground, and an editable lumped probe at `L/3` from the center.
+These feed and ground choices are starting layouts, not matching or radiation
+validation. Inspect the geometry and run mesh/domain convergence before relying
+on simulated results.
+
 The free-space wavelength is `299.792458 / f_GHz` mm. Dipole **total** length is
 `k * wavelength / 2`; each arm is half that length. Monopole length is
 `k * wavelength / 4` and assumes an ideal infinite PEC ground plane. The
