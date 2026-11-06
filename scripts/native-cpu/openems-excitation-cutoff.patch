@@ -1,0 +1,27 @@
+--- a/FDTD/excitation.cpp
++++ b/FDTD/excitation.cpp
+@@ -26,6 +26,8 @@
+ 
+ Excitation::Excitation()
+ {
++	m_f0 = 0;
++	m_fc = 0;
+ 	m_signal_volt = 0;
+ 	m_signal_curr = 0;
+ 
+@@ -67,6 +69,7 @@
+ {
+ 	m_Excit_Type = Excitation::Sinusoidal;
+ 	m_f0 = f0;
++	m_fc = 0;
+ 	m_f_max = f0;
+ 	m_SignalPeriod = 1/f0;
+ }
+@@ -90,6 +93,7 @@
+ 	m_Excit_Type = Excitation::CustomExcite;
+ 	m_CustomExc_Str = str;
+ 	m_f0 = f0;
++	m_fc = 0;
+ 	m_SignalPeriod = 0;
+ 	m_f_max = fmax;
+ }
