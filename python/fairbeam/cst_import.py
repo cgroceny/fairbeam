@@ -3194,6 +3194,7 @@ def _keep_exported_lines(imp: _Importer, design: dict) -> None:
     otherwise (a Python model's own mesh rules, a part CST could not carry) the design uses those
     lines as a manual mesh and keeps the settings for Mesh settings' "Switch to automatic mesh"."""
     from .design import build   # the design module builds the openEMS model (and imports this one lazily)
+    import numpy as np
     auto = design["mesh"]
     try:
         values = {p["key"]: p["default"] for p in design["params"] if "expr" not in p}
@@ -3202,8 +3203,13 @@ def _keep_exported_lines(imp: _Importer, design: dict) -> None:
         if not _rebuild_is_bounded(design, imp.exact_lines, resolve_names(design, values)):
             raise _Refuse("the automatic settings would mesh far finer than the exported lines")
         sim = build(design, values)
+        # The bundle rounds ordinary mesh axes to four decimals. Check that
+        # representation too: a raw line inside the tolerance can round outside
+        # it on a large HF model. In that case retain the exported lines instead
+        # of accepting an automatic mesh that drifts on the next export.
         same = all(len(got := list(sim.mesh.GetLines(k))) == len(want := imp.exact_lines[a])
-                   and all(abs(x - y) <= 1e-4 for x, y in zip(got, want)) for k, a in enumerate("xyz"))
+                   and all(abs(x - y) <= 1e-4 and abs(q - y) <= 1e-4
+                           for x, q, y in zip(got, np.round(got, 4), want)) for k, a in enumerate("xyz"))
     except Exception:  # noqa: BLE001 - any failure: the exported lines are the safe choice
         same = False
     if same:
