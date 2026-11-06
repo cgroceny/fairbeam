@@ -2,6 +2,7 @@
 import { mkdir, mkdtemp, readFile, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { channel } from 'node:diagnostics_channel';
+import { browserExecutableIdentity, hostedImageIdentity } from './browser-identity.mjs';
 
 const LIMIT = 64;
 const text = (value, limit = 4000) => {
@@ -157,11 +158,13 @@ export async function launchWithEvidence(puppeteer, options, { directory, stack,
     installedPackages: { puppeteerCore: await installedVersion('puppeteer-core'), browsers: await installedVersion('@puppeteer/browsers') },
     puppeteerModuleOverride: Boolean(process.env.FAIRBEAM_PUPPETEER),
     executablePath: text(options.executablePath), headless: options.headless,
+    executableIdentity: await browserExecutableIdentity(options.executablePath), hostedImage: hostedImageIdentity(),
     approvedArguments: (options.args ?? []).filter(arg => knownArgs.has(arg)).slice(0, LIMIT),
     // Report whether defaults apply; never copy an arbitrary profile, argument or environment payload.
     explicitProfile: typeof options.userDataDir === 'string' || (options.args ?? []).some(arg => typeof arg === 'string' && arg.startsWith('--user-data-dir')),
     explicitTimeout: Object.hasOwn(options, 'timeout'), explicitTransport: Object.hasOwn(options, 'pipe'),
   };
+  intent.prelaunchPreparationMs = Date.now() - started;
   await write('prelaunch.json', intent);
   const observer = observeLaunchOutput(options.executablePath, () => ambiguousPid ? null : ownedPid, processChannel);
   try {
