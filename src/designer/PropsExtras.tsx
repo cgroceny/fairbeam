@@ -4,7 +4,7 @@
 // in DesignPane.tsx chooses between these and the shape inspectors.
 import { createSignal, For, Show } from "solid-js";
 import { ExprField } from "./DesignPane";
-import { shownUnit, toShown } from "../lib/displayUnits";
+import { shownUnit, storedUnitLabel, toShown } from "../lib/displayUnits";
 import { namesIn } from "./expr";
 import { shown as fmtValue } from "./displayNumber.ts";
 import { draft, edit, fieldId, focusPath, names } from "./store";
@@ -43,8 +43,9 @@ export function ParamInspector(props: { i: number }) {
   const text = (key: "unit" | "description", label: string) => (
     <label class="dz-field">
       <span class="dz-label">{label}</span>
-      <input autocomplete="off" class="rp-input dz-input" id={fieldId(path(key))} value={p()[key] ?? ""}
-        onInput={(e) => { const v = e.currentTarget.value; set((q) => { q[key] = v; }, key); }} />
+      <input autocomplete="off" class="rp-input dz-input" id={fieldId(path(key))} value={(key === "unit" ? shownUnit(p().unit) : p()[key]) ?? ""}
+        onInput={(e) => { const v = e.currentTarget.value; set((q) => { q[key] = v; }, key); }}
+        onChange={key === "unit" ? (e) => { const v = storedUnitLabel(e.currentTarget.value); if (v !== p().unit) set((q) => { q.unit = v; }, "unit"); } : undefined} />
     </label>
   );
   const evaluated = () => {
