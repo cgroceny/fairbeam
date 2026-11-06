@@ -769,3 +769,24 @@ sırasını, referansları ve eksik veri kurallarını açıklar. Karmaşık ref
 Smith/VSWR ve Touchstone kullanılamaz; CSV kullanılabilir. Gerçek referanslı mod dışa
 aktarımı açık mod bilgisiyle Touchstone 2.0'dır. Karma mod içe aktarımı desteklenmez;
 bu dışa aktarım değişikliği içe aktarıcının reddetme davranışını değiştirmez.
+
+### Simülasyon ve optimizasyon ayarlarını yeniden kullanma
+
+**Simülasyon ayarları > Çalıştırma profili** bölümünde **Ayarları dışa aktar** ile ağ
+ayarlarını, frekans bandını, sınır koşullarını ve çözücü sınırlarını bir
+`simulation-settings.json` dosyasına kaydedin. Başka bir tasarımda **Ayarları içe aktar**,
+bu ayarları tek bir geri alınabilir işlemle değiştirir. İptal, pencere açıldığındaki
+durumu; Geri al ise kabul edilen içe aktarmadan önceki durumu getirir. Geometri,
+malzemeler, portlar, izleyiciler ve parametre tanımları kopyalanmaz. Gösterim biriminden
+bağımsız olarak koordinatlar mm, frekanslar GHz kalır. İfadeler hedef tasarımın
+parametrelerini kullanır; başvurulan adlar ve birimler uyuşmalıdır. Yerel inceltme
+kutularını ve elle tanımlanmış ağ koordinatlarını yeni geometri için gözden geçirin,
+çalıştırmadan önce önizlemesini yeniden oluşturun.
+
+**Optimizasyon** formunun kendi **Ayarları dışa aktar** ve **Ayarları içe aktar**
+kontrolleri parametre aralıklarını, başlangıç değerlerini, hedefleri, yöntemi,
+değerlendirme bütçesini ve uyarım seçimini taşır. Hedef modelde aynı sayısal parametre
+adları, türleri ve birimleri, uyumlu sınırlar ve hedef portları bulunmalıdır. Geçersiz
+veya uyumsuz dosya formu değiştirmez. Motor ve CPU iş parçacığı seçimi yerel kalır.
+İçe aktarma optimizasyon veya simülasyon başlatmaz. İki dosya türü birbirinin yerine
+kullanılamaz; dosya boyutu 256 KB ile sınırlıdır.

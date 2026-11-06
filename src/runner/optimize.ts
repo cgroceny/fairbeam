@@ -1,6 +1,6 @@
 // Optimizer (Run panel "Optimize" mode): the form state, submission, and derived views of the
 // live optimize job's events (python/fairbeam/optimize.py, POST /api/optimizations).
-import { createMemo, createRoot, createSignal } from "solid-js";
+import { batch, createMemo, createRoot, createSignal } from "solid-js";
 import { createStore, reconcile } from "solid-js/store";
 import { pinAll } from "../compare/store";
 import { OPTIMIZE_SPAN, pickVaryParam, rangeAround } from "../lib/rangeDefaults";
@@ -29,6 +29,8 @@ import {
   threads,
   values,
 } from "./store";
+
+import { exportOptimizationSettings, importOptimizationSettings, type OptimizationSettings } from './optimizationSettings';
 
 export const MAX_OPT_EVALS = 40;
 
@@ -252,8 +254,8 @@ export function prepareRequirementGoals(input: OptGoal[]): void {
 }
 
 /** Client-side check (the server validates again). */
-export const optPlan = createRoot(() =>
-  createMemo(() => {
+export function optimizerPlan(state: OptimizationSettings) {
+    const { vary, goals, maxEvals, method } = state;
     const errors: Record<string, string> = {};
     vary.forEach((v, i) => {
       const s = specs().find((p) => p.key === v.key);
@@ -283,11 +285,30 @@ export const optPlan = createRoot(() =>
     });
     if (!vary.length) errors.vary = t("opt.err.noVary");
     if (!goals.length) errors.goals = t("opt.err.noGoal");
-    if (!(maxEvals() >= 1 && maxEvals() <= MAX_OPT_EVALS)) errors.max_evals = t("opt.err.maxEvals", { max: MAX_OPT_EVALS });
+    if (!(maxEvals >= 1 && maxEvals <= MAX_OPT_EVALS)) errors.max_evals = t("opt.err.maxEvals", { max: MAX_OPT_EVALS });
     const auto = vary.length === 1 && goals.length === 1 && goals[0].kind === "f0" ? "secant" : "nelder-mead";
-    return { errors, ok: Object.keys(errors).length === 0, method: method() === "auto" ? auto : method() };
-  }),
-);
+    return { errors, ok: Object.keys(errors).length === 0, method: method === "auto" ? auto : method };
+}
+
+function optimizerSettings(): OptimizationSettings {
+  return { vary: JSON.parse(JSON.stringify(vary)), goals: JSON.parse(JSON.stringify(goals)),
+    maxEvals: maxEvals(), method: method(), excite: excite() };
+}
+export const optPlan = createRoot(() => createMemo(() => optimizerPlan(optimizerSettings())));
+export function exportOptimizerSettings(): string {
+  if (!optPlan().ok) throw new Error('settingsFile.incompatible');
+  return exportOptimizationSettings(optimizerSettings(), specs());
+}
+export function importOptimizerSettings(text: string): void {
+  const next = importOptimizationSettings(text, specs());
+  if (!optimizerPlan(next).ok || next.method === 'secant' && (next.vary.length !== 1 || !next.goals.some(g => g.kind === 'f0')))
+    throw new Error('settingsFile.incompatible');
+  batch(() => {
+    setVary(reconcile(next.vary)); setGoals(reconcile(next.goals));
+    setMaxEvals(next.maxEvals); setMethod(next.method); setExcite(next.excite); setOptErrors({});
+    formModel = currentModel()?.key ?? '';
+  });
+}
 
 /** Time of one openEMS run (one driven port) of the current model on the chosen engine, from the
  * last finished run: its duration divided by the number of ports it drove. */

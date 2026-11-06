@@ -5678,5 +5678,14 @@
   "nf2ff.badSteps": "Her iki açı adımı da 0.25 ile 90 derece arasında olmalıdır.",
   "nf2ff.budget": "Bu frekans ve açı birleşimi depolama sınırını aşıyor. Daha az frekans veya daha büyük adımlar kullanın.",
   "nf2ff.outsideBand": "Her frekans, uyarılan tüm özgün portların uyarım bandında kalmalıdır.",
-  "nf2ff.fdOnly": "Frekans alanındaki kayıtlar yalnızca listelenen kayıt frekanslarını destekler."
+  "nf2ff.fdOnly": "Frekans alanındaki kayıtlar yalnızca listelenen kayıt frekanslarını destekler.",
+  "settingsFile.export": "Ayarları dışa aktar",
+  "settingsFile.import": "Ayarları içe aktar",
+  "settingsFile.simulationHint": "Ağ, frekans bandı, sınır koşulları ve çözücü sınırlarını başka bir tasarımda kullanın. İçe aktarma bu ayarları değiştirir; İptal veya Geri al önceki ayarları getirir. İfadeler hedef tasarımın parametrelerini kullanır. Geometri ve izleyiciler değişmez.",
+  "settingsFile.optimizationHint": "Parametre aralıklarını, hedefleri, yöntemi ve değerlendirme bütçesini yeniden kullanın. İçe aktarma çalıştırma başlatmadan bu formu değiştirir. Parametre adları, türleri, birimleri, sınırları ve portlar uyuşmalıdır. Motor ve CPU iş parçacıkları değişmez.",
+  "settingsFile.invalid": "Bu dosya desteklenen bir ayar dosyası değil. 256 KB boyutundan küçük bir Fairbeam ayar JSON dosyası seçin.",
+  "settingsFile.incompatible": "Bu ayarlar tasarımla uyuşmuyor. İçe aktarmadan önce parametre adlarını, birimleri, aralıkları, portları ve ağ koordinatlarını kontrol edin.",
+  "settingsFile.changed": "Dosya okunurken etkin model değişti. Geçerli model için yeniden içe aktarın.",
+  "settingsFile.failed": "Ayarlar okunamadı veya dışa aktarılamadı. Dosyayı kontrol edip yeniden deneyin.",
+  "settingsFile.applied": "Ayarlar içe aktarıldı. Çalıştırmadan önce gözden geçirin."
 }

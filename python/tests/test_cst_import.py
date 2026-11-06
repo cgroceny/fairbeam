@@ -273,6 +273,21 @@ def waveguide_design() -> dict:
 class ExportedDesigns(RoundTrip):
     """design -> bundle -> src/export/cst.ts -> import -> the same bundle."""
 
+    def test_hf_mesh_survives_preview_rounding(self):
+        # A large HF mesh can pass the raw-line tolerance but cross it after the
+        # preview rounds to four decimals. Exercise the exporter without relying
+        # on generated examples/cst files being present in the checkout.
+        for name in ("hf_dipole_7mhz", "hf_dipole_14mhz"):
+            with self.subTest(design=name):
+                design = json.loads((REPO / "examples" / "designs" / f"{name}.design.json").read_text())
+                original = build_preview(None, {}, design=design)["bundle"]
+                result = import_cst(_export(original), filename=f"{name}.bas")
+                self.assertEqual(result["report"]["refused"], 0)
+                restored = build_preview(None, {}, design=result["design"])["bundle"]
+                for axis in "xyz":
+                    self.assertTrue(same_numbers(original["mesh"][axis], restored["mesh"][axis], 1e-4), axis)
+                self.assert_runnable(result["design"], name)
+
     def round_trip(self, design: dict, label: str):
         original = build_preview(None, {}, design=design)["bundle"]
         macro, stls = _export_all(original)

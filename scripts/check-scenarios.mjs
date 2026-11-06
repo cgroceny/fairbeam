@@ -38,7 +38,7 @@ const t0 = Date.now();
 const stamp = t0.toString(36).slice(-4); // design names stay unique when a dev stack is reused
 
 const SCENARIOS = [];
-for (const file of ['s1-build-patch', 's2-import', 's3-sweep-optimize', 's4-results', 's5-python-edit', 's6-python-design', 's7-designer-workflow', 's8-ports-fieldmap', 's8-appearance-export', 's9-context-export', 's10-rf-workflows', 's11-python-folders', 's12-single-solid-tree', 's13-appearance-presets', 's14-home-design-actions', 's16-cross-project-overlays', 's18-planar-ports', 's20-escape-ownership', 's22-designer-input-feedback', 's23-viewer-feedback', 's24-settings-navigation']) {
+for (const file of ['s1-build-patch', 's2-import', 's3-sweep-optimize', 's4-results', 's5-python-edit', 's6-python-design', 's7-designer-workflow', 's8-ports-fieldmap', 's8-appearance-export', 's9-context-export', 's10-rf-workflows', 's11-python-folders', 's12-single-solid-tree', 's13-appearance-presets', 's14-home-design-actions', 's16-cross-project-overlays', 's18-planar-ports', 's20-escape-ownership', 's22-designer-input-feedback', 's23-viewer-feedback', 's24-settings-navigation', 's25-settings-transfer']) {
   SCENARIOS.push((await import(`./scenarios/${file}.mjs`)).default);
 }
 
