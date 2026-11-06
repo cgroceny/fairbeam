@@ -142,13 +142,16 @@ def admit_closing(folder, n, control):
         raise ValueError('matching full fixed-support protocol required')
     for port in (1, 2):
         closing = json.loads((folder/f'port{port}.worker.json').read_text())
-        meta = json.loads((folder/f'port{port}/report.json').read_text())
         times = closing['wall_seconds'], closing['monotonic_seconds']
+        # A failed worker may never reach its report writer. Keep its explicit
+        # closing failure visible instead of classifying it as missing data.
         if (closing['exit_code'] != 0 or closing.get('failure') is not None
                 or closing['deadline_seconds'] != DEADLINE
                 or not all(isinstance(x, (int, float)) and not isinstance(x, bool)
-                           and np.isfinite(x) and 0 <= x <= DEADLINE for x in times)
-                or meta['pilot_only'] or meta['fixed_support_protocol_sha256'] != f.sha(protocol_path)):
+                           and np.isfinite(x) and 0 <= x <= DEADLINE for x in times)):
+            raise ValueError('owned full-source closing admission failed')
+        meta = json.loads((folder/f'port{port}/report.json').read_text())
+        if meta['pilot_only'] or meta['fixed_support_protocol_sha256'] != f.sha(protocol_path):
             raise ValueError('owned full-source closing admission failed')
         pid = closing['pid']
         if (isinstance(pid, bool) or not isinstance(pid, int) or pid <= 0
