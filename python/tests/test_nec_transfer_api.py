@@ -102,6 +102,15 @@ class TransferApi(unittest.TestCase):
         status, _ = self.post({"source": "EN", "reference_ohm": 50}, "https://untrusted.example")
         self.assertEqual(status, 403)
 
+    def test_unrepresentable_wire_length_is_rejected_before_pairwise_division(self):
+        model = {"schema": nec.SCHEMA, "wires": [
+            {"tag": i+1, "segments": 1, "start_mm": [0, i, 0],
+             "end_mm": [0, i, 1e-200], "radius_mm": 1e-202} for i in range(2)],
+            "feed": {"tag": 1, "segment": 1}, "frequency_ghz": [.3], "reference_ohm": 50}
+        status, result = self.post({"model": model, "pattern": False})
+        self.assertEqual(status, 422)
+        self.assertIn("numeric precision", result["error"])
+
 
 class TransferCli(unittest.TestCase):
     def test_oversized_json_number_is_a_validation_error_before_capture(self):

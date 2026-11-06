@@ -51,6 +51,26 @@ class ImportControls(unittest.TestCase):
             with self.subTest(bad=bad), self.assertRaises(ValueError):
                 parse_deck(self.text, reference_ohm=bad)
 
+    def test_export_rejects_collapsed_numeric_geometry_and_frequency(self):
+        tiny_radius = nec.dipole(475, 5e-324, 31, [.3])
+        short = {"schema": nec.SCHEMA, "wires": [{"tag": 1, "segments": 1,
+            "start_mm": [1e8, 0, 0], "end_mm": [1e8+.00001, 0, 0], "radius_mm": 1e-7}],
+            "feed": {"tag": 1, "segment": 1}, "frequency_ghz": [.3], "reference_ohm": 50}
+        frequencies = nec.dipole(475, .05, 31, [.3, .30000000000001])
+        for model in (tiny_radius, short, frequencies):
+            nec.validate(model)  # valid before decimal serialization
+            with self.subTest(model=model), self.assertRaises(ValueError):
+                nec.deck(model)
+
+    def test_export_cannot_turn_a_detached_wire_into_a_connected_junction(self):
+        model = {"schema": nec.SCHEMA, "wires": [
+            {"tag": 1, "segments": 1, "start_mm": [1e8-1, 0, 0], "end_mm": [1e8, 0, 0], "radius_mm": 1e-7},
+            {"tag": 2, "segments": 1, "start_mm": [1e8+.00001, 0, 0], "end_mm": [1e8+.00001, 1, 0], "radius_mm": 1e-7}],
+            "feed": {"tag": 1, "segment": 1}, "frequency_ghz": [.3], "reference_ohm": 50}
+        nec.validate(model)
+        with self.assertRaisesRegex(ValueError, "endpoint connections"):
+            nec.deck(model)
+
     def test_unrecognized_physics_or_executable_cards_are_rejected(self):
         for card in ('LD 5 1 0 0 58000000', 'GN 1', 'GS 0 0 .5', 'GM 0 1 0 0 0 0 0 1',
                      'SY length=.5', 'IN model.nec', 'GF 0', 'NX', 'NE 0 1 1 1 0 0 0 0 0 0',

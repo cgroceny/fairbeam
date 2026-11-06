@@ -56,6 +56,8 @@ whole-sphere `RP` request, and final `EN`. Both free space and the extended
 thin-wire kernel must be explicit. Every frequency request must use the same
 pattern mode. Units convert from m/MHz to mm/GHz. Deck export retains 12
 significant digits; it does not promise a lossless float64 round trip.
+The serialized numbers are validated again. Export refuses a collapsed radius,
+wire or frequency, invalid rounded geometry, or changed endpoint connectivity.
 
 Unknown cards, omitted fields, ground, loads, kernel changes, expressions,
 includes and changes of the model between frequency requests are rejected.
