@@ -42,6 +42,8 @@ Endpoints (all JSON unless noted)::
                                     as a new design, under a free id from its name when no id is given
     POST /api/import/cst            {source, filename?, name?} a CST-compatible VBA macro (.bas, .mcs, .txt) as a design
                                     (not saved): {design, report, checks}
+    POST /api/nec/transfer          {source, reference_ohm} | {model, pattern} | {dipole: {...}}
+                                    explicit PEC wire validation/export; no files, jobs or solver execution
     POST /api/import/pcb            {files: [{name, content_base64}], options?: {layer_map?, substrate?, thickness?, eps_r?,
                                     tan_d?, f0?, units?, chord_tol?, margin?, origin?}, name?} PCB artwork (DXF, Gerber,
                                     Excellon) as a design (not saved): {design, report, layers, checks}; at most 12 files,
@@ -1085,6 +1087,31 @@ class App:
         (the Start page shows them before the design is named and created)."""
         imported = self._import_cst(body.get("source"), body.get("filename"), body.get("name"), "imported-cst")
         return {**imported, "checks": self._fit_imported_mesh(imported["design"], imported["report"])}
+
+    def nec_transfer(self, body: dict) -> dict:
+        """Stateless text exchange: no files, subprocesses, jobs or Design conversion."""
+        from . import nec
+        from .nec_import import parse_deck
+        try:
+            if set(body) == {"source", "reference_ohm"}:
+                result = parse_deck(body["source"], reference_ohm=body["reference_ohm"])
+            elif set(body) == {"model", "pattern"}:
+                if type(body["pattern"]) is not bool:
+                    raise ValueError("pattern must be a boolean")
+                result = {"model": nec.validate(body["model"]), "pattern": body["pattern"], "report": None}
+            elif set(body) == {"dipole"}:
+                args = body["dipole"]
+                expected = {"length_mm", "radius_mm", "segments", "frequency_ghz", "reference_ohm"}
+                if not isinstance(args, dict) or set(args) != expected:
+                    raise ValueError("provide explicit dipole length, radius, segments, frequencies and reference resistance")
+                model = nec.dipole(args["length_mm"], args["radius_mm"], args["segments"], args["frequency_ghz"], args["reference_ohm"])
+                result = {"model": model, "pattern": False, "report": None}
+            else:
+                raise ValueError("provide NEC source and reference resistance, dipole inputs, or an explicit wire model and pattern flag")
+            text = nec.deck(result["model"], pattern=result["pattern"])
+            return {**result, "deck": text, "manifest": nec.manifest(result["model"], text)}
+        except ValueError as error:
+            raise ApiError(422, str(error), fields={"nec": str(error)}) from None
 
     PCB_OPTIONS = {"layer_map", "substrate", "thickness", "eps_r", "tan_d", "f0", "units", "chord_tol", "margin", "origin"}
 
@@ -2149,6 +2176,7 @@ class Handler(BaseHTTPRequestHandler):
             ("POST", r"/api/designs", lambda: self._json(201, app.create_design(self._body(MAX_PCB_BODY)))),
             ("POST", r"/api/design/from-python", lambda: self._json(200, app.design_from_python(self._body()))),
             ("POST", r"/api/import/cst", lambda: self._json(200, app.import_cst(self._body()))),
+            ("POST", r"/api/nec/transfer", lambda: self._json(200, app.nec_transfer(self._body()))),
             ("POST", r"/api/import/pcb", lambda: self._json(200, app.import_pcb(self._body(MAX_PCB_BODY)))),
             ("GET", r"/api/designs/([a-z][a-z0-9_]*)",
              lambda i: self._json(200, app.design_file(i))),

@@ -28,11 +28,17 @@ C0 = 299792458.0
 
 
 def _number(value, name, *, positive=False):
-    if isinstance(value, bool) or not isinstance(value, (int, float)) or not math.isfinite(value):
+    if isinstance(value, bool) or not isinstance(value, (int, float)):
         raise ValueError(f"{name} must be a finite number")
-    if positive and value <= 0:
+    try:
+        number = float(value)
+    except OverflowError:
+        raise ValueError(f"{name} must be a finite number") from None
+    if not math.isfinite(number):
+        raise ValueError(f"{name} must be a finite number")
+    if positive and number <= 0:
         raise ValueError(f"{name} must be positive")
-    return float(value)
+    return number
 
 
 def _integer(value, name, low, high):
@@ -125,6 +131,8 @@ def validate(model: dict) -> dict:
                 raise ValueError("wire coordinates exceed the supported range")
         radius = _number(wire["radius_mm"], "radius_mm", positive=True)
         length = math.dist(wire["start_mm"], wire["end_mm"])
+        if length * length == 0:
+            raise ValueError("wire length is below supported numeric precision")
         segment_length = length / segments
         if segment_length < 8 * radius:
             raise ValueError("segment length must be at least 8 wire radii; refine radius/model, not just segmentation")
@@ -157,6 +165,15 @@ def dipole(length_mm: float, radius_mm: float, segments: int, frequencies: list[
                      "feed": {"tag": 1, "segment": (segments + 1) // 2}})
 
 
+def _endpoint_groups(model):
+    """Connected endpoint identities, independent of coordinate formatting."""
+    groups = {}
+    for wire in model["wires"]:
+        for endpoint in ("start_mm", "end_mm"):
+            groups.setdefault(tuple(wire[endpoint]), []).append((wire["tag"], endpoint))
+    return sorted(tuple(sorted(group)) for group in groups.values() if len(group) > 1)
+
+
 def deck(model: dict, *, frequency_ghz: float | None = None, pattern=False) -> str:
     """Numeric NEC cards; no user strings enter command cards or comment lines."""
     model = validate(model)
@@ -166,14 +183,25 @@ def deck(model: dict, *, frequency_ghz: float | None = None, pattern=False) -> s
             raise ValueError("requested frequency is absent from the model")
         frequencies = [frequency_ghz]
     lines = ["CM Fairbeam PEC thin-wire model; free space; coordinates in meters", "CE"]
-    for w in model["wires"]:
+    serialized = copy.deepcopy(model)
+    for w, rounded in zip(model["wires"], serialized["wires"]):
         coords = [*w["start_mm"], *w["end_mm"], w["radius_mm"]]
-        lines.append(f"GW {w['tag']} {w['segments']} " + " ".join(format(x / 1000, ".12g") for x in coords))
+        fields = [format(x / 1000, ".12g") for x in coords]
+        actual = [float(value) * 1000 for value in fields]
+        rounded.update(start_mm=actual[:3], end_mm=actual[3:6], radius_mm=actual[6])
+        lines.append(f"GW {w['tag']} {w['segments']} " + " ".join(fields))
+    frequency_fields = [format(f * 1000, ".12g") for f in frequencies]
+    serialized["frequency_ghz"] = [float(value) / 1000 for value in frequency_fields]
+    # Validate what NEC will actually read. Unit conversion and decimal
+    # formatting must not collapse a radius, segment, frequency or junction.
+    validate(serialized)
+    if _endpoint_groups(serialized) != _endpoint_groups(model):
+        raise ValueError("NEC decimal export would change wire endpoint connections; rescale the geometry")
     lines += ["GE 0", "GN -1", "EK 0", "PT -1"]
     feed = model["feed"]
     lines.append(f"EX 0 {feed['tag']} {feed['segment']} 0 1 0")
-    for f in frequencies:
-        lines.append(f"FR 0 1 0 0 {f * 1000:.12g} 0")
+    for frequency in frequency_fields:
+        lines.append(f"FR 0 1 0 0 {frequency} 0")
         # A complete sphere, including its seam. Output is a sampled pattern, not a peak guarantee.
         lines.append("RP 0 19 37 1000 0 0 10 10 0 0" if pattern else "XQ 0")
     lines.append("EN")
@@ -450,6 +478,11 @@ def optimize_dipole(length_bounds: tuple[float, float], radius_mm: float, segmen
 
 def add_commands(sub):
     """CLI-only opt-in entry points; no solver download or launch during import."""
+    p = sub.add_parser("nec-import", help="import an explicit numeric free-space PEC wire deck without solving")
+    p.add_argument("source", type=Path)
+    p.add_argument("--reference-ohm", type=float, default=50, help="S11 reference, not stored in NEC cards")
+    p.add_argument("--out", type=Path, required=True, help="new capture directory")
+    p.set_defaults(func=_cmd_import)
     p = sub.add_parser("nec-dipole", help="export or solve a free-space PEC thin-wire dipole with NEC2++")
     p.add_argument("--length-mm", type=float, required=True)
     p.add_argument("--radius-mm", type=float, required=True)
@@ -501,6 +534,11 @@ def _cmd_dipole(args):
     model = dipole(args.length_mm, args.radius_mm, args.segments, args.frequency_ghz, args.reference_ohm)
     return _cli_call(lambda: solve(model, args.out, args.solver, timeout=args.timeout, pattern=args.pattern)
                      if args.solver else export(model, args.out, pattern=args.pattern))
+
+
+def _cmd_import(args):
+    from .nec_import import import_file
+    return _cli_call(lambda: import_file(args.source, args.out, reference_ohm=args.reference_ohm))
 
 
 def _cmd_run(args):

@@ -159,16 +159,28 @@ textarea.dz-autogrow { resize: none; overflow-y: auto; min-height: 0; max-height
 .home-inner { max-width: 1100px; margin: 0 auto; padding: var(--al-space-6) var(--al-space-5); display: grid; gap: var(--al-space-5); }
 .home-head h1 { font-size: var(--al-text-xl); font-weight: 600; letter-spacing: -0.01em; }
 .home-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: var(--al-space-5); align-items: start; }
-.antenna-calculator { border-block: 1px solid var(--al-border); padding-block: var(--al-space-3); }
+.antenna-calculator { min-width: 0; border-block: 1px solid var(--al-border); padding-block: var(--al-space-3); }
 .antenna-calculator > summary { cursor: pointer; font-weight: 600; }
 .antenna-calculator > summary:focus-visible { outline: 2px solid var(--al-focus); outline-offset: 4px; }
 .antenna-calculator > p, .antenna-calc-grid { margin-block: var(--al-space-3); }
+.antenna-calc-actions { display: flex; flex-wrap: wrap; gap: var(--al-space-2); }
 .antenna-calc-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: var(--al-space-5); }
 .antenna-calc-inputs { display: grid; gap: var(--al-space-3); align-content: start; }
 .antenna-calc-inputs label { display: grid; gap: var(--al-space-1); }
 .antenna-calc-inputs input, .antenna-calc-inputs select { width: 100%; min-width: 0; }
 .antenna-calc-results { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: var(--al-space-2); }
 .antenna-calc-results dd { margin: 0; font-variant-numeric: tabular-nums; text-align: right; }
+.nec-transfer { margin-top: var(--al-space-4); padding-top: var(--al-space-3); border-top: 1px solid var(--al-border); min-width: 0; }
+.nec-transfer summary { cursor: pointer; }
+.nec-transfer summary:focus-visible, .nec-wire-scroll:focus-visible { outline: 2px solid var(--al-focus); outline-offset: 3px; }
+.nec-transfer-inputs, .nec-edit-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: var(--al-space-3); margin-block: var(--al-space-3); }
+.nec-wire-scroll { max-width: 100%; overflow-x: auto; margin-block: var(--al-space-3); }
+.nec-wire-table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
+.nec-wire-table th, .nec-wire-table td { padding: var(--al-space-2); text-align: left; border-bottom: 1px solid var(--al-border); white-space: nowrap; }
+.nec-wire-editor { min-width: 0; margin-block: var(--al-space-3); border: 1px solid var(--al-border); }
+.nec-edit-grid label { display: grid; gap: var(--al-space-1); }
+.nec-edit-grid input { width: 100%; min-width: 0; }
+.nec-frequency-list { overflow-wrap: anywhere; font-variant-numeric: tabular-nums; }
 @media (max-width: 650px) { .antenna-calc-grid { grid-template-columns: minmax(0, 1fr); } }
 .home-card { display: grid; gap: var(--al-space-3); padding: var(--al-space-4); border: 1px solid var(--al-border); border-radius: var(--al-radius-lg); background: var(--al-surface); }
 .home-card h2 { display: flex; align-items: center; gap: var(--al-space-2); font-size: var(--al-text-ui); font-weight: 600; }

@@ -36,6 +36,15 @@ The openEMS download archive is cached by OS/architecture, Python ABI and upstre
 installation still runs each time. npm uses its download cache, never shared node_modules.
 Failure artifacts and smoke bundles are retained for seven days.
 
+Browser launch evidence records the selected executable's SHA-256 and size before launch
+(up to 64 MiB), Windows file-version resources, and allowlisted hosted-image labels. The
+version reader is a hidden, bounded metadata query; it does not start Chrome. Missing metadata
+is recorded without retrying or preventing the browser launch. A file that changes during the
+read is explicitly marked. This identifies an on-disk file at collection time, not the image
+loaded by the browser process, and does not establish the cause of a startup failure.
+The prelaunch preparation time is recorded separately; the browser's own launch timeout
+and launch options remain unchanged.
+
 The full web job uses `node scripts/check-ci-web.mjs` for the existing designer, CST-compatible VBA macro, export and
 state-lifecycle groups. It expands the package scripts and executes each identical Node command
 once, preserving different arguments/flags and failing immediately on an error. The current

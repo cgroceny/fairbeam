@@ -3,6 +3,11 @@ import NumberField from '../components/NumberField';
 import { t } from '../i18n';
 import { saveDownload, downloadMessage } from '../lib/download';
 import { antennaDimensions, calculatorRecord, type AntennaKind, type CalculatorInput } from './antennaDimensions';
+import { antennaDraft } from './antennaDraft';
+import { createDesign } from '../designer/store';
+import { models, serverState } from '../runner/store';
+import { freeDesignId } from '../lib/designId';
+import NecTransferPanel from './NecTransfer';
 
 // Local Start-screen extension: incumbent controls/colors, one native disclosure,
 // inputs beside estimates on desktop and stacked on narrow screens. No solver launch.
@@ -14,6 +19,7 @@ export default function AntennaCalculator() {
   const [height, setHeight] = createSignal('1.6');
   const [message, setMessage] = createSignal('');
   const [saving, setSaving] = createSignal(false);
+  const [creating, setCreating] = createSignal(false);
   const number = (s: string) => s.trim() === '' ? NaN : Number(s);
   const input = (): CalculatorInput => ({ kind: kind(), frequencyGHz: number(frequency()), shortening: number(shortening()), epsilonR: number(epsilon()), heightMm: number(height()) });
   const result = createMemo(() => antennaDimensions(input()));
@@ -29,6 +35,15 @@ export default function AntennaCalculator() {
     try { setMessage(downloadMessage(await saveDownload('antenna-estimate.json', JSON.stringify(record, null, 2) + '\n', 'application/json'))); }
     catch { setMessage(t('antennaCalc.exportFailed')); }
     finally { setSaving(false); }
+  };
+  const create = async () => {
+    if (!result().ok || creating() || serverState() !== 'online') return;
+    const values=input(), name=`${t(`antennaCalc.${values.kind}`)} (${values.frequencyGHz} GHz)`;
+    const id=freeDesignId(name,models().map(m=>m.key)).id;
+    setCreating(true);setMessage('');
+    try { await createDesign({id,name,design:antennaDraft(values,id,name)}); }
+    catch { setMessage(t('antennaCalc.createFailed')); }
+    finally { setCreating(false); }
   };
   return <details class="antenna-calculator" data-testid="antenna-calculator">
     <summary>{t('antennaCalc.title')}</summary>
@@ -59,7 +74,12 @@ export default function AntennaCalculator() {
         </>}</Show>
       </div>
     </div>
-    <button class="btn" disabled={!result().ok || saving()} onClick={() => void download()}>{t('antennaCalc.export')}</button>
+    <div class="antenna-calc-actions">
+      <button class="btn" disabled={!result().ok || saving()} onClick={() => void download()}>{t('antennaCalc.export')}</button>
+      <button class="btn" data-testid="antenna-create" disabled={!result().ok || creating() || serverState() !== 'online'} onClick={() => void create()}>{t('antennaCalc.create')}</button>
+    </div>
+    <p class="note">{t(`antennaCalc.draft.${kind()}`)} {serverState() !== 'online' ? t('antennaCalc.needsServer') : ''}</p>
     <p class="note" role="status">{message()}</p>
+    <NecTransferPanel dipole={kind()==='dipole' && dimensions() ? {lengthMm:dimensions()!.lengthMm,frequencyGHz:input().frequencyGHz} : undefined} />
   </details>;
 }
