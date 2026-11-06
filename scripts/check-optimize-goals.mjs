@@ -5,32 +5,37 @@ import {readFileSync} from 'node:fs';
 import {stripTypeScriptTypes} from 'node:module';
 import {parse} from '@babel/parser';
 import {fmtG,goalText} from '../src/runner/optimizeGoals.ts';
+import {exportOptimizationSettings,importOptimizationSettings} from '../src/runner/optimizationSettings.ts';
 import en from '../src/i18n/en.json' with {type:'json'};
 import tr from '../src/i18n/tr.json' with {type:'json'};
 
 const read=path=>readFileSync(new URL(`../${path}`,import.meta.url),'utf8');
 const source=read('src/runner/optimize.ts'),ast=parse(source,{sourceType:'module',plugins:['typescript']});
 const declarations=ast.program.body.map(node=>node.type==='ExportNamedDeclaration'?node.declaration:node).filter(Boolean);
-const names=['MAX_OPT_EVALS','GOAL_PRESETS','presetOf','goalDraft','setGoalKind','optimizerPlan','optimizerSettings','optPlan','startOptimize','goalValue','evaluationGoalValue'];
+const names=['MAX_OPT_EVALS','GOAL_PRESETS','presetOf','goalDraft','setGoalKind','optimizerPlan','optimizerSettings','optPlan','exportOptimizerSettings','importOptimizerSettings','startOptimize','goalValue','evaluationGoalValue'];
 const picked=names.map(name=>{
  const node=declarations.find(node=>node.type==='FunctionDeclaration'?node.id?.name===name:node.type==='VariableDeclaration'&&node.declarations.some(d=>d.id.name===name));
  assert.ok(node,`production ${name} exists`);return source.slice(node.start,node.end);
 }).join('\n');
 const goals=[],vary=[{key:'width',min:'1',max:'5',start:'2.123456789012345'}];
 let ports=[1,2,3],submitting=false,lastRequest=null,lastErrors=null,evalBudget=12;
+let parameterType='float',optMethod='auto',optExcite='auto';
 const translate=(key,values)=>Object.entries(values??{}).reduce((s,[k,v])=>s.replaceAll(`{${k}}`,String(v)),en[key]??key);
 const deps={
  createRoot:fn=>fn(),createMemo:fn=>fn,goals,vary,modelPorts:()=>ports,
- setGoals:(i,...args)=>{if(args.length===2)goals[i][args[0]]=args[1];else Object.assign(goals[i],args[0]);},bandCentre:()=>2.4,
- specs:()=>[{key:'width',minimum:1,maximum:5,unit:'mm'}],maxEvals:()=>evalBudget,method:()=>'auto',
+ setGoals:(i,...args)=>{if(Array.isArray(i))goals.splice(0,goals.length,...i);else if(args.length===2)goals[i][args[0]]=args[1];else Object.assign(goals[i],args[0]);},bandCentre:()=>2.4,
+ specs:()=>[{key:'width',minimum:1,maximum:5,unit:'mm',type:parameterType}],maxEvals:()=>evalBudget,method:()=>optMethod,
+ exportOptimizationSettings,importOptimizationSettings,batch:fn=>fn(),reconcile:value=>value,
+ setVary:value=>vary.splice(0,vary.length,...value),setMaxEvals:value=>{evalBudget=value;},
+ setMethod:value=>{optMethod=value;},setExcite:value=>{optExcite=value;},
  currentModel:()=>({key:'synthetic-goal-control'}),submitting:()=>submitting,setSubmitting:value=>{submitting=value;},
  setSubmitError:value=>{lastErrors=value;},setOptErrors:()=>{},setFieldErrors:()=>{},setNotice:()=>{},
  paramPayload:()=>({width:999,fixed:1.23456789012345}),threadsForEngine:()=>2,threads:()=>2,health:()=>({default_threads:2}),
- optEngine:()=>'cpu',meshStats:()=>null,meshSource:()=>null,runName:()=>'',excite:()=>'auto',
+ optEngine:()=>'cpu',meshStats:()=>null,meshSource:()=>null,runName:()=>'',excite:()=>optExcite,
  api:{submitOptimization:async body=>{lastRequest=body;return{id:'captured-only'};}},attach:()=>{},refreshRuns:()=>{},
  t:translate,fmtG,
 };
-const unit=new Function(...Object.keys(deps),stripTypeScriptTypes(picked)+`;return {${names.join(',')}};`)(...Object.values(deps));
+const unit=new Function(...Object.keys(deps),'let formModel="";'+stripTypeScriptTypes(picked)+`;return {${names.join(',')}};`)(...Object.values(deps));
 const draft=(kind,changes={})=>({...unit.goalDraft(kind,'2.40000123456789'),...changes});
 const install=(...list)=>{goals.splice(0,goals.length,...list);};
 const valid=(goal)=>{install(goal);assert.equal(unit.optPlan().ok,true,JSON.stringify(unit.optPlan().errors));};
@@ -130,4 +135,18 @@ const field=(value,bad)=>({value,dataset:bad?{badInput:'true'}:{},hasAttribute:n
 onUpper({currentTarget:field('',true)});assert.ok(unit.optPlan().errors['goals.0'],'malformed nonempty upper frequency blocks submission');
 onUpper({currentTarget:field('',false)});assert.equal(unit.optPlan().ok,true,'actual empty upper frequency remains a point goal');
 onUpper({currentTarget:field('2.5',false)});assert.equal(unit.optPlan().ok,true);assert.equal(goals[0].atHi,'2.5');
-console.log('Optimizer goal controls: draft/validation, precision-preserving request/history, null/zero/band handling, EN/TR labels and best-value units passed. No browser/server/solver.');
+// Integer model parameters still accept continuous search bounds/start: the server rounds
+// each evaluated candidate. A valid saved form must survive the actual UI export/import.
+parameterType='int';install(draft('f0'));
+vary.splice(0,vary.length,{key:'width',min:'1.25',max:'4.75',start:'2.5'});
+assert.equal(unit.optPlan().ok,true);
+const portable=unit.exportOptimizerSettings(),expected=JSON.parse(portable).settings;
+vary[0].start='3';evalBudget=3;
+unit.importOptimizerSettings(portable);
+assert.deepEqual(unit.optimizerSettings(),expected,'integer parameter search drafts round trip without rounding or rejection');
+for(const mutate of [x=>x.vary[0].min='0.5',x=>x.vary[0].start='9',x=>x.maxEvals=41]) {
+ const invalidFile=JSON.parse(portable);mutate(invalidFile.settings);
+ assert.throws(()=>unit.importOptimizerSettings(JSON.stringify(invalidFile)),/incompatible/);
+ assert.deepEqual(unit.optimizerSettings(),expected,'invalid imported draft leaves the current form unchanged');
+}
+console.log('Optimizer goal controls: draft/validation, precision-preserving request/history, null/zero/band handling, EN/TR labels, best-value units and integer search settings round trips passed. No browser/server/solver.');

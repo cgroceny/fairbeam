@@ -301,9 +301,8 @@ export function exportOptimizerSettings(): string {
 }
 export function importOptimizerSettings(text: string): void {
   const next = importOptimizationSettings(text, specs());
-  if (!optimizerPlan(next).ok || next.method === 'secant' && (next.vary.length !== 1 || !next.goals.some(g => g.kind === 'f0'))
-      || next.vary.some(v => specs().find(s => s.key === v.key)?.type === 'int' &&
-        ![v.min, v.max, v.start].every(n => Number.isInteger(Number(n))))) throw new Error('settingsFile.incompatible');
+  if (!optimizerPlan(next).ok || next.method === 'secant' && (next.vary.length !== 1 || !next.goals.some(g => g.kind === 'f0')))
+    throw new Error('settingsFile.incompatible');
   batch(() => {
     setVary(reconcile(next.vary)); setGoals(reconcile(next.goals));
     setMaxEvals(next.maxEvals); setMethod(next.method); setExcite(next.excite); setOptErrors({});
