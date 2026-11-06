@@ -1,2 +1,2 @@
-__version__ = "0.8.6-preview.2"
+__version__ = "0.8.6-preview.3"
 BUNDLE_SCHEMA = "fairbeam.project/1"
