@@ -157,7 +157,7 @@ export default {
    let actual=await width();assert.equal(actual.width,1);assert.ok(Math.abs(actual.band[0]-0.002)<1e-12);assert.ok(Math.abs(actual.band[1]-0.05)<1e-12);
    await s.fill(await s.wait('#dz-params-2--default'),'10');assert.equal((await width()).width,10);
    await s.store(async(_,m)=>{await m.s.save();const id=m.s.file().id;m.s.closeDesign();await m.s.openDesign(id);});
-   assert.equal(await s.store((_,m)=>m.s.draft.params[2].unit),'cm','saved annotations are preserved without rescaling');
+   assert.equal(await s.store((_,m)=>m.s.draft.params[2].unit),'mm','a length unit label is saved as mm, the unit of the value, and the value is not rescaled');
    assert.equal((await width()).width,10);
   });
  }

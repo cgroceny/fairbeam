@@ -1,7 +1,7 @@
 import { createEffect, createSignal, For, on, Show } from "solid-js";
 import { Copy, Download, Plus, Tag, Trash2, TriangleAlert, Upload, X } from "lucide-solid";
 import { ExprField } from "./DesignPane";
-import { kindOf, shownUnit, toShown } from "../lib/displayUnits";
+import { kindOf, shownUnit, storedUnitLabel, toShown } from "../lib/displayUnits";
 import { type Check, parseLimit } from "./checks";
 import { checkMessage, parameterErrorTitle } from "./checkText";
 import { paramKeyError } from "./expr";
@@ -192,7 +192,8 @@ export default function ParametersDock() {
           const snapshot = (): DesignParam => JSON.parse(JSON.stringify(p));
           const text = (key: "unit" | "description" | "label", label: string) => <input autocomplete="off" class="rp-input dz-input" id={fieldId(path(key))}
             aria-label={`${p.key}: ${label}`} title={p[key] ?? ""} aria-describedby={key === "unit" ? "parameter-units-note" : undefined}
-            placeholder={key === "description" && !p.description ? paramLabelText(p.label) : undefined} value={p[key] ?? ""} onInput={(e) => { const v = e.currentTarget.value; set((q) => { q[key] = v; }, key); }} />;
+            placeholder={key === "description" && !p.description ? paramLabelText(p.label) : undefined} value={(key === "unit" ? shownUnit(p.unit) : p[key]) ?? ""} onInput={(e) => { const v = e.currentTarget.value; set((q) => { q[key] = v; }, key); }}
+            onChange={key === "unit" ? (e) => { const v = storedUnitLabel(e.currentTarget.value); if (v !== p.unit) set((q) => { q.unit = v; }, "unit"); } : undefined} />;
           const keyInput = () => <input autocomplete="off" class="rp-input dz-input" id={fieldId(path("key"))}
             aria-label={`${p.key}: ${t("params.col.key")}`} aria-invalid={!!keyError()}
             aria-describedby={keyError() ? `${fieldId(path("key"))}-error` : undefined}

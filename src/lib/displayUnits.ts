@@ -76,3 +76,14 @@ export function fromTyped(text: string, canonical: string | undefined, u: Displa
   if (f === undefined) return null;
   return tidy(Number(m[1]) * f);
 }
+
+/** A parameter's unit label as stored: any length unit is saved as "mm" and any frequency unit as
+ * "GHz", because the value itself is always in those units (the label then shows the chosen unit);
+ * other labels (Ω, deg, a note) are kept as typed. */
+export function storedUnitLabel(typed: string): string {
+  // case matters for lengths ("M" is not meters); frequencies are read in any case (mhz, MHz)
+  const x = typed.trim();
+  if (Object.hasOwn(LENGTH_UNITS, x) || x === "inch") return "mm";
+  if (["khz", "mhz", "ghz"].includes(x.toLowerCase())) return "GHz";
+  return typed;
+}

@@ -3,7 +3,7 @@
 // what fields show and how typed numbers are read.
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
-import { fromTyped, kindOf, shownUnit, toShown } from "../src/lib/displayUnits.ts";
+import { fromTyped, kindOf, shownUnit, storedUnitLabel, toShown } from "../src/lib/displayUnits.ts";
 
 const mmGHz = { length: "mm", frequency: "GHz" };
 const cmMHz = { length: "cm", frequency: "MHz" };
@@ -29,9 +29,16 @@ assert.equal(fromTyped("1 MHz", "mm", mmGHz), null, "a unit of the other kind is
 assert.equal(fromTyped("1", "deg", cmMHz), null, "fields without a length or frequency unit are left alone");
 for (const x of [0.3, 17.5, 19605.633802816905]) assert.ok(Math.abs(fromTyped(String(toShown(x, "mm", cmMHz)), "mm", cmMHz) - x) <= 1e-12 * x, `round trip ${x}`);
 
+assert.equal(storedUnitLabel("MHz"), "GHz", "a frequency unit label is stored as GHz");
+assert.equal(storedUnitLabel(" cm "), "mm", "a length unit label is stored as mm");
+assert.equal(storedUnitLabel("Ω"), "Ω", "other labels are kept");
+assert.equal(storedUnitLabel("M"), "M", "a half-typed label is kept");
+
 const read = (f) => readFileSync(new URL(`../${f}`, import.meta.url), "utf8");
 assert.match(read("src/designer/StatusBar.tsx"), /<UnitsMenu \/>/, "the status bar's units open a menu");
 assert.match(read("src/designer/DesignPane.tsx"), /fromTyped\(e\.currentTarget\.value, canonical\(\)\) \?\? toExpr/, "value fields convert typed numbers");
 assert.match(read("src/designer/RibbonField.tsx"), /fromTyped\(value, props\.unit\)/);
+assert.match(read("src/designer/ParametersDock.tsx"), /shownUnit\(p\.unit\)/, "the parameter unit label follows the chosen unit");
+assert.match(read("src/designer/PropsExtras.tsx"), /storedUnitLabel/, "the inspector stores unit labels canonically");
 assert.match(read("src/components/GeneralSettings.tsx"), /setDisplayUnits\(\{ length:/, "Settings picks the units too");
 console.log("display units: conversion, parsing and entry points ok");
